@@ -7,7 +7,7 @@ describe('task harness', () => {
   describe('container-based tasks', () => {
     it('should spawn a container but not until the task runs', () => {
       let givenContainer = null;
-      const testTask = task.withContainer('test', (container) => () => {
+      const testTask = task.withContainer((container) => () => {
         givenContainer = container;
         should.exist(container.db);
         return resolve(true);
@@ -17,7 +17,7 @@ describe('task harness', () => {
     });
 
     it('should pass arguments to the task', () =>
-      task.withContainer('test', () => (x, y, z) => {
+      task.withContainer(() => (x, y, z) => {
         x.should.equal(1);
         y.should.equal(2);
         z.should.equal(3);
@@ -25,15 +25,15 @@ describe('task harness', () => {
       })(1, 2, 3));
 
     it('should reuse containers for nested tasks', () =>
-      task.withContainer('test', (containerA) => () =>
-        task.withContainer('test', (containerB) => () => {
+      task.withContainer((containerA) => () =>
+        task.withContainer((containerB) => () => {
           containerA.should.equal(containerB);
           return resolve(true);
         })())());
 
     it.skip('should teardown containers after completion', () => {
       let torndown = false;
-      const outer = task.withContainer('test', (container) => () => {
+      const outer = task.withContainer((container) => () => {
         // hijack the destroy func:
         const origDestroy = container.db.destroy;
         // eslint-disable-next-line no-param-reassign
@@ -41,7 +41,7 @@ describe('task harness', () => {
           torndown = true;
           origDestroy.call(container.db);
         };
-        return task.withContainer('test', () => () => {
+        return task.withContainer(() => () => {
           torndown.should.equal(false);
           return resolve(true);
         })().then(() => torndown.should.equal(false));
