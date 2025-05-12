@@ -1147,6 +1147,25 @@ describe('api: /forms/:id/submissions', () => {
               body[0].userAgent.should.equal('central/test');
             })))));
 
+    const lengthyUserAgent = 'Enketo/7.5.1 Mozilla/5.0 (iPhone; CPU iPhone OS 18_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/22E252 [FBAN/FBIOS;FBAV/512.0.0.52.99;FBBV/731098301;FBDV/iPhone15,4;FBMD/iPhone;FBSN/iOS;FBSV/18.4.1;FBSS/3;FBID/phone;FBLC/en_US;FBOP/5;FBRV/733464354;IABMV/1]';
+    const lengthyDeviceId = 'Lorem Ipsum: In ea cillum aliqua voluptate est non aute aute dolor. Non amet sit deserunt amet quis qui voluptate ad dolor magna do adipisicing. Laboris mollit anim exercitation anim Lorem ullamco culpa nulla sit qui. Occaecat laboris minim ea ut laboris mollit quis. Proident pariatur Lorem adipisicing nisi enim minim.';
+    it('should not fail if longer userAgent and deviceId is provided', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/1/forms/simple/submissions?deviceID=${lengthyDeviceId}`)
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .set('User-Agent', lengthyUserAgent)
+          .expect(200)
+          .then(({ body }) => {
+            body.deviceId.should.startWith('Lorem Ipsum');
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+            .expect(200)
+            .then(({ body }) => {
+              body[0].deviceId.should.startWith('Lorem Ipsum');
+              body[0].userAgent.should.startWith('Enketo/7.5.1');
+            })))));
+
     it('should accept a submission for an old form version', testService((service, { Submissions, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/draft')
