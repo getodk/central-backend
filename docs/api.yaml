@@ -54,6 +54,7 @@ info:
     - Draft Submission can be created using draft token by adding `/test/{token}` to [Creating a draft Submission](/central-api-submission-management/#id1) endpoint.
     - [Dataset Metadata](/central-api-dataset-management/#dataset-metadata) now includes a new property, `lastUpdate`, which is the timestamp of the latest modification to the datasets or its entities.
     - After a file is uploaded for a Form Attachment via the POST endpoint, the response is now the updated Attachment.
+    - `userAgent` and `deviceId` longer than 255 characters will be truncated in [Submissions APIs](/central-api-submission-management)
 
     ## ODK Central v2024.3
 
@@ -13012,10 +13013,12 @@ components:
           description: The ID of the `Actor` (`App User`, `User`, or `Public Link`) that submitted this `Submission` version.
         deviceId:
           type: string
+          maxLength: 255
           example: imei:123456
           description: The self-identified `deviceId` of the device that submitted the `Submission` version.
         userAgent:
           type: string
+          maxLength: 255
           example: Enketo/3.0.4
           description: The self-identified `userAgent` of the device that submitted the `Submission` version.
         createdAt:
