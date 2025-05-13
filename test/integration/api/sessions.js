@@ -162,7 +162,7 @@ describe('api: /sessions', () => {
       service.get('/v1/sessions/restore')
         .set('X-Forwarded-Proto', 'https')
         .set('Cookie', 'session: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-        .expect(404)));
+        .expect(401)));
 
     it('should return the active session if it exists', testService((service) =>
       service.authenticateUser('alice')
@@ -182,7 +182,7 @@ describe('api: /sessions', () => {
   describe('/:token DELETE', () => {
     it('should return a 403 if the token does not exist', testService((service) =>
       service.delete('/v1/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-        .expect(403)));
+        .expect(401)));
 
     it('should return a 403 if the user cannot delete the given token', testService((service) =>
       service.authenticateUser('alice')
@@ -319,7 +319,7 @@ describe('api: /sessions', () => {
   describe('/current DELETE', () => {
     it('should return a 404 if no token was specified', testService(service =>
       service.delete('/v1/sessions/current')
-        .expect(404)));
+        .expect(401)));
 
     it('should invalidate the token if successful', testService(async (service) => {
       const token = await service.authenticateUser('alice');
