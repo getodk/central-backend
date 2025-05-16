@@ -289,7 +289,7 @@ describe('preprocessors', () => {
             )
           )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
-        it('should reject cookie auth with incorrect session token for non-GET requests', () =>
+        it('should reject cookie auth with incorrect session token', () =>
           Promise.resolve(authHandler(
             { Auth, Sessions: mockSessionsWithCsrf('alohomora', 'secretcsrf') },
             new Context(

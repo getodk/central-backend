@@ -478,18 +478,16 @@ describe('/projects/:id/assignments', () => {
             .expect(403))))));
 
     it('should return notfound if the project does not exist', testService((service) =>
-      service.login('alice', (asAlice) =>
-        service.login('bob', (asBob) =>
-          asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
-            .then((bobId) => asAlice.delete('/v1/projects/99/assignments/manager/' + bobId)
-              .expect(404))))));
+      service.login(['alice', 'bob'], (asAlice, asBob) =>
+        asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          .then((bobId) => asAlice.delete('/v1/projects/99/assignments/manager/' + bobId)
+            .expect(404)))));
 
     it('should return notfound if the role does not exist', testService((service) =>
-      service.login('alice', (asAlice) =>
-        service.login('bob', (asBob) =>
-          asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
-            .then((bobId) => asAlice.delete('/v1/projects/1/assignments/99/' + bobId)
-              .expect(404))))));
+      service.login(['alice', 'bob'], (asAlice, asBob) =>
+        asBob.get('/v1/users/current').expect(200).then(({ body }) => body.id)
+          .then((bobId) => asAlice.delete('/v1/projects/1/assignments/99/' + bobId)
+            .expect(404)))));
 
     it('should return notfound if the user does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
