@@ -40,6 +40,11 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2025.2
+
+    **Added**:
+    - Datasets now have a boolean property named `ownerOnly`. This is a flag that has an effect on Actors who are either an App User or a Web User with a role of Data Collector. If `ownerOnly` is `true`, and the Actor is one of the above, then only Entities created by the Actor will be downloaded to the OpenRosa client.
+
     ## ODK Central v2025.1
 
     **Added**:
@@ -8541,6 +8546,7 @@ paths:
                   createdAt: '2018-01-19T23:58:03.395Z'
                   projectId: 1
                   approvalRequired: true
+                  ownerOnly: false
             application/json; extended:
               schema:
                 type: array
@@ -8551,6 +8557,7 @@ paths:
                   createdAt: '2018-01-19T23:58:03.395Z'
                   projectId: 1
                   approvalRequired: true
+                  ownerOnly: false
                   lastEntity: '2018-04-18T03:04:51.695Z'
                   entities: 10
                   conflicts: 2
@@ -8596,6 +8603,10 @@ paths:
                     type: boolean
                     description: Control whether a Submission should be approved before an Entity is created from it.
                     required: false
+                  ownerOnly:
+                    type: boolean
+                    description: If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be downloaded.
+                    required: false
                 example:
                   name: Trees
                   approvalRequired: false
@@ -8612,6 +8623,7 @@ paths:
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: false
+                ownerOnly: false
                 lastUpdate: '2018-01-19T23:58:03.395Z'
                 sourceForms: []
                 linkedForms: []
@@ -8673,6 +8685,7 @@ paths:
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                ownerOnly: false
                 lastUpdate: '2020-10-10T03:04:51.695Z'
                 sourceForms:
                 - xmlFormId: treeRegistration
@@ -8699,9 +8712,11 @@ paths:
       summary: Update Dataset Metadata
       operationId: Update Dataset Metadata
       description: |-
-        You can only update `approvalRequired` using this endpoint. `approvalRequired` flag controls the Entity creation flow; if it is `true` then the Submission must be approved before an Entity can be created from it and if it is `false` then an Entity is created as soon as the Submission is received by the ODK Central.
+        You can use this endpoint o update `approvalRequired` and `ownerOnly`. However, you cannot update other properties, such as `name`.
 
-        By default `approvalRequired` is `false` for the Datasets created after v2023.3. Datasets created prior to that will have `approvalRequired` set to `true`.
+        The `approvalRequired` flag controls the Entity creation flow. If it is `true`, then the Submission must be approved before an Entity can be created from it. If it is `false`, then an Entity is created as soon as the Submission is received by ODK Central. By default, `approvalRequired` is `false` for Datasets created after v2023.3. Datasets created prior to that will have `approvalRequired` set to `true`.
+
+        The `ownerOnly` flag determines which Entities in the Dataset are downloaded for use in an OpenRosa client. More specifically, it determines which Entities are included in a Form Attachment that has been linked to the Dataset. If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, then only Entities created by the Actor will be included. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be included. By default, `ownerOnly` is `false`.
       parameters:
         - name: projectId
           in: path
@@ -8727,6 +8742,10 @@ paths:
                   type: boolean
                   description: Control whether a Submission should be approved before an Entity is created from it.
                   example: true
+                ownerOnly:
+                  type: boolean
+                  description: If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be downloaded.
+                  example: false
               example:
                 approvalRequired: true
       responses:
@@ -8741,6 +8760,7 @@ paths:
                 createdAt: '2018-01-19T23:58:03.395Z'
                 projectId: 1
                 approvalRequired: true
+                ownerOnly: false
                 lastUpdate: '2020-10-10T03:04:51.695Z'
                 sourceForms:
                 - xmlFormId: treeRegistration
@@ -12763,6 +12783,10 @@ components:
           type: boolean
           description: Control whether a Submission should be approved before an Entity is created from it.
           example: true
+        ownerOnly:
+          type: boolean
+          description: If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be downloaded.
+          example: false
     ExtendedDataset:
       allOf:
       - $ref: '#/components/schemas/Dataset'
