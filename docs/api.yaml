@@ -8712,7 +8712,7 @@ paths:
       summary: Update Dataset Metadata
       operationId: Update Dataset Metadata
       description: |-
-        You can use this endpoint o update `approvalRequired` and `ownerOnly`. However, you cannot update other properties, such as `name`.
+        You can use this endpoint to update `approvalRequired` and `ownerOnly`. However, you cannot update other properties, such as `name`.
 
         The `approvalRequired` flag controls the Entity creation flow. If it is `true`, then the Submission must be approved before an Entity can be created from it. If it is `false`, then an Entity is created as soon as the Submission is received by ODK Central. By default, `approvalRequired` is `false` for Datasets created after v2023.3. Datasets created prior to that will have `approvalRequired` set to `true`.
 
