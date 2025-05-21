@@ -462,6 +462,24 @@ describe('api: /users', () => {
             body.verbs.should.be.an.Array();
             body.verbs.length.should.equal(0);
           }))));
+
+    it('should return 404 for app user', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((fk) => service.get(`/v1/key/${fk.token}/users/current`)
+            .expect(404)))));
+
+    it('should return 404 for public link', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link1' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((link) => service.get(`/v1/users/current?st=${link.token}`)
+            .expect(404)))));
   });
 
   describe('/users/:id GET', () => {
