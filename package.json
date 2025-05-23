@@ -67,7 +67,7 @@
     "oidc-provider": "^8.4.5",
     "should": "~13",
     "streamtest": "~1.2",
-    "supertest": "^7.1.0",
+    "supertest": "^7.1.1",
     "tmp": "~0.2",
     "xml2js": "^0.6.2"
   }
