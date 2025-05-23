@@ -30,7 +30,7 @@
     "minio": "^8.0.5",
     "morgan": "~1.10",
     "multer": "^2.0.0",
-    "mustache": "~2.3",
+    "mustache": "~4.2",
     "nodemailer": "~6",
     "odata-v4-parser": "~0.1",
     "openid-client": "^5.7.1",
