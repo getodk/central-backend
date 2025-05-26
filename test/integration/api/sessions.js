@@ -322,6 +322,14 @@ describe('api: /sessions', () => {
       service.delete('/v1/sessions/current')
         .expect(401)));
 
+    if (process.env.TEST_AUTH !== 'oidc') {
+      it('should return a 404 if basic auth provided', testService(service =>
+        service.delete('/v1/sessions/current')
+          .set('x-forwarded-proto', 'https')
+          .auth('alice@getodk.org', 'password4alice')
+          .expect(404)));
+    }
+
     it('should invalidate the token if successful', testService(async (service) => {
       const token = await service.authenticateUser('alice');
       const { body } = await service.delete('/v1/sessions/current')

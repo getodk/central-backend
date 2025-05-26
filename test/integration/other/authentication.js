@@ -7,7 +7,7 @@ describe('authentication', () => {
   ];
 
   describe('anonymous endpoints', () => {
-    anonymousEndpoints.filter(e => !e.skipForOidc).forEach(({ method, url }) => {
+    anonymousEndpoints.filter(e => process.env.TEST_AUTH !== 'oidc' || !e.skipForOidc).forEach(({ method, url }) => {
       it(`should not return 401 for ${method} ${url}`, testService(async service => {
         await service[method.toLowerCase()](url)
           .then((res) => {
@@ -191,12 +191,14 @@ describe('authentication', () => {
     { method: 'GET',    url: '/v1/users/1' },
     { method: 'PUT',    url: '/v1/users/1/password', skipForOidc: true },
     { method: 'GET',    url: '/v1/users/current' },
+    // This endpoint requires auth only if `invalidate=true` is requested
+    { method: 'POST',   url: '/v1/users/reset/initiate?invalidate=true', skipForOidc: true },
     { method: 'POST',   url: '/v1/users/reset/verify', skipForOidc: true }
   ];
   /* eslint-enable no-multi-spaces */
 
   describe('restricted endpoints', () => {
-    restrictedEndpoints.filter(e => !e.skipForOidc).forEach(({ method, url, openrosa }) => {
+    restrictedEndpoints.filter(e => process.env.TEST_AUTH !== 'oidc' || !e.skipForOidc).forEach(({ method, url, openrosa }) => {
       it(`should return 401 for the ${method} ${url}`, testService(async service => {
         let request = service[method.toLowerCase()](url);
 

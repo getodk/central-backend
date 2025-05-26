@@ -341,10 +341,16 @@ describe('api: /users', () => {
                 body[0].details.data.should.eql({ password: true });
               }))));
 
-        it('should fail the request if invalidation is requested but not allowed', testService((service) =>
+        it('should fail the request if invalidation is requested and no auth provided', testService((service) =>
           service.post('/v1/users/reset/initiate?invalidate=true')
             .send({ email: 'alice@getodk.org' })
             .expect(401)));
+
+        it('should fail the request if invalidation is requested but user is not authorized', testService((service) =>
+          service.login('chelsea', (asChelsea) =>
+            asChelsea.post('/v1/users/reset/initiate?invalidate=true')
+              .send({ email: 'alice@getodk.org' })
+              .expect(403))));
 
         it('should invalidate the existing password if requested', testService((service) =>
           service.login('alice', (asAlice) =>
