@@ -161,8 +161,8 @@ describe('api: /sessions', () => {
     it('should fail if no valid session exists', testService((service) =>
       service.get('/v1/sessions/restore')
         .set('X-Forwarded-Proto', 'https')
-        .set('Cookie', 'session: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-        .expect(404)));
+        .set('Cookie', 'session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+        .expect(401)));
 
     it('should return the active session if it exists', testService((service) =>
       service.authenticateUser('alice')
@@ -181,8 +181,9 @@ describe('api: /sessions', () => {
 
   describe('/:token DELETE', () => {
     it('should return a 403 if the token does not exist', testService((service) =>
-      service.delete('/v1/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-        .expect(403)));
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+          .expect(403))));
 
     it('should return a 403 if the user cannot delete the given token', testService((service) =>
       service.authenticateUser('alice')
@@ -317,9 +318,17 @@ describe('api: /sessions', () => {
   });
 
   describe('/current DELETE', () => {
-    it('should return a 404 if no token was specified', testService(service =>
+    it('should return a 401 if no token was specified', testService(service =>
       service.delete('/v1/sessions/current')
-        .expect(404)));
+        .expect(401)));
+
+    if (process.env.TEST_AUTH !== 'oidc') {
+      it('should return a 404 if basic auth provided', testService(service =>
+        service.delete('/v1/sessions/current')
+          .set('x-forwarded-proto', 'https')
+          .auth('alice@getodk.org', 'password4alice')
+          .expect(404)));
+    }
 
     it('should invalidate the token if successful', testService(async (service) => {
       const token = await service.authenticateUser('alice');
