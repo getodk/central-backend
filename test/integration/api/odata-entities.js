@@ -58,6 +58,15 @@ describe('api: /datasets/:name.svc', () => {
       await exhaust(container);
     };
 
+    const createEntity = async (user, datasetName, label) => {
+      await user.post(`/v1/projects/1/datasets/${datasetName}/entities`)
+        .send({
+          uuid: uuid(),
+          label
+        })
+        .expect(200);
+    };
+
     it('should return all entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -327,6 +336,78 @@ describe('api: /datasets/:name.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body.value.length.should.be.eql(2);
+        });
+    }));
+
+    it('should return only searched entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createEntity(asAlice, 'people', 'John Doe');
+      await createEntity(asAlice, 'people', 'Jane Doe');
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$search=john')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.be.eql(1);
+          body.value[0].label.should.be.eql('John Doe');
+        });
+    }));
+
+    it('should return only searched and filtered entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createEntity(asAlice, 'people', 'John Doe');
+      await createEntity(asAlice, 'people', 'Jane Doe');
+      await createEntity(asBob, 'people', 'John Doe (r)');
+      await createEntity(asBob, 'people', 'Jane Doe (r)');
+
+      const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$search=john&$filter=__system/creatorId eq ${bobId}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.be.eql(1);
+          body.value[0].label.should.be.eql('John Doe (r)');
+        });
+    }));
+
+    it('should return only searched entities with pagination', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createEntity(asAlice, 'people', 'John Doe');
+      await createEntity(asAlice, 'people', 'Jane Doe');
+      await createEntity(asAlice, 'people', 'John Doe (r)');
+      await createEntity(asAlice, 'people', 'Jane Doe (r)');
+
+      const nextlink = await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$top=1&$search=john`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.be.eql(1);
+          body.value[0].label.should.be.eql('John Doe (r)');
+          return body['@odata.nextLink'];
+        });
+
+      await asAlice.get(nextlink.replace('http://localhost:8989', ''))
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].label.should.be.eql('John Doe');
+          should.not.exist(body['@odata.nextLink']);
         });
     }));
 
@@ -861,6 +942,18 @@ describe('api: /datasets/:name.svc', () => {
           </Annotation>
           <Annotation Term="Org.OData.Capabilities.V1.ExpandRestrictions">
             <Record><PropertyValue Property="Expandable" Bool="false"/></Record>
+          </Annotation>
+          <Annotation Term="Org.OData.Capabilities.V1.SearchRestrictions">
+            <Record>
+              <PropertyValue Property="Searchable" Bool="true" />
+              <PropertyValue Property="UnsupportedExpressions">
+              <Collection>
+                <EnumMember>Org.OData.Capabilities.V1.SearchExpressions/And</EnumMember>
+                <EnumMember>Org.OData.Capabilities.V1.SearchExpressions/Not</EnumMember>
+                <EnumMember>Org.OData.Capabilities.V1.SearchExpressions/Group</EnumMember>
+              </Collection>
+            </PropertyValue>
+            </Record>
           </Annotation>
         </EntitySet>
       </EntityContainer>
