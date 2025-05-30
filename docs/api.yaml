@@ -40,6 +40,11 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2025.2
+
+    **Changed**:
+    - [Entities OData](/central-api-odata-endpoints/#id3) now supports `$search` query parameter.
+
     ## ODK Central v2025.1
 
     **Added**:
@@ -11124,6 +11129,13 @@ paths:
         The [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) will return just the fields you specify and is supported on `__id`, `__system`, `__system/creatorId`, `__system/createdAt` and `__system/updatedAt`, as well as on user defined properties.
 
         The [`$orderby` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358952) will return Entities sorted by different fields, which come from the same list used by `$filter`, as noted above. The order can be specified as `ASC` (ascending) or `DESC` (descending), which are case-insensitive. Multiple sort expressions can be used together, separated by commas, e.g. `$orderby=__system/creatorId ASC, __system/conflict DESC`.
+
+        The [`$search` query parameter](https://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionsearch) can be used to search entity data (user-defined properties) and the `label` field. Central does not implement the OData specification's suggested search techniques—such as `AND`, `NOT`, and parentheses grouping—exactly as described. Instead, the search behavior is similar to that of a web search engine:
+
+        - Multiple words return entities that contain **all** the searched words (logical AND operation).
+        - The `OR` keyword can be used to find entities that contain **any** of the searched words.
+        - Quoted text (e.g., `"quoted text"`) searches for entities containing the **exact** phrase.
+        - A dash (`-`) before a word excludes entities that contain that word (logical NOT).
 
         As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
       operationId: Data Document for Dataset
