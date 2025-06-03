@@ -1401,7 +1401,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               should.not.exist(body.details);
             }))));
 
-      it('should reject if the user cannot modify', testService((service) =>
+      it.only('should reject if the user does not have project-specific permissions', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple)
@@ -1410,6 +1410,31 @@ describe('api: /projects/:id/forms (drafts)', () => {
             .then(() => service.login('chelsea', (asChelsea) =>
               asChelsea.get('/v1/projects/1/forms/simple/draft')
                 .expect(403))))));
+
+      [
+        'app-user',
+        'formfill',
+        'formview',
+        'pub-link',
+        'pwreset',
+        'viewer',
+      ].forEach(role => {
+        it.only(`should reject if the user has role "${role}"`, testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms/simple/draft')
+              .send(testData.forms.simple)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => service.login('chelsea', (asChelsea) =>
+                asChelsea.get('/v1/users/current')
+                  .expect(200)
+                  .then(({ body }) => body)
+                  .then((chelsea) => 
+                    asAlice.post(`/v1/projects/1/assignments/${role}/${chelsea.id}`)
+                      .expect(200))
+                  .then(() => asChelsea.get('/v1/projects/1/forms/simple/draft')
+                    .expect(403)))))));
+      });
 
       it('should give basic draft details', testService((service) =>
         service.login('alice', (asAlice) =>
