@@ -148,6 +148,36 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should return count of entities not the entity_defs', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      const uuids = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$count=true')
+        .expect(200)
+        .then(({ body }) => {
+          body['@odata.count'].should.be.eql(2);
+          return body.value.map(e => e.__id);
+        });
+
+      await asAlice.patch(`/v1/projects/1/datasets/people/entities/${uuids[0]}?force=true`)
+        .send({
+          label: 'changed'
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$count=true')
+        .expect(200)
+        .then(({ body }) => {
+          body['@odata.count'].should.be.eql(2);
+        });
+    }));
+
     it('should return count of filtered entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
