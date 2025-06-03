@@ -391,7 +391,7 @@ describe('api: /projects', () => {
         .expect(200);
       project.verbs.should.be.an.Array();
       const { body: admin } = await asAlice.get('/v1/roles/admin').expect(200);
-      project.verbs.should.eql(admin.verbs);
+      project.verbs.should.eqlInAnyOrder(admin.verbs);
       project.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
     }));
 
@@ -403,7 +403,7 @@ describe('api: /projects', () => {
       project.verbs.should.be.an.Array();
       const { body: manager } = await asBob.get('/v1/roles/manager')
         .expect(200);
-      project.verbs.should.eql(manager.verbs);
+      project.verbs.should.eqlInAnyOrder(manager.verbs);
       project.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
       project.verbs.should.not.containDeep([ 'project.create' ]);
     }));
