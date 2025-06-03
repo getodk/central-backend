@@ -32,11 +32,16 @@ describe('parsing dataset from entity block', () => {
         .replace('2024.1.0', '2024.1.123'))
         .should.be.fulfilled());
 
+    it('should validate any version that starts with 2025.1.', () =>
+      getDataset(testData.forms.offlineEntity
+        .replace('2024.1.0', '2025.1.123'))
+        .should.be.fulfilled());
+
     it('should reject probable future version', () =>
       getDataset(testData.forms.simpleEntity2022
-        .replace('2022.1.0', '2025.1.0'))
+        .replace('2022.1.0', '2026.1.0'))
         .should.be.rejectedWith(Problem, { problemCode: 400.25,
-          message: 'The entity definition within the form is invalid. Entities specification version [2025.1.0] is not supported.' }));
+          message: 'The entity definition within the form is invalid. Entities specification version [2026.1.0] is not supported.' }));
 
     it('should complain if version is wrong', () =>
       getDataset(testData.forms.simpleEntity2022
