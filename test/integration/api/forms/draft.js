@@ -1401,7 +1401,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
               should.not.exist(body.details);
             }))));
 
-      it.only('should reject if the user does not have project-specific permissions', testService((service) =>
+      it('should reject if the user does not have project-specific permissions', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple)
@@ -1428,7 +1428,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 asChelsea.get('/v1/users/current')
                   .expect(200)
                   .then(({ body }) => body)
-                  .then((chelsea) => 
+                  .then((chelsea) =>
                     asAlice.post(`/v1/projects/1/assignments/${role}/${chelsea.id}`)
                       .expect(200))
                   .then(() => asChelsea.get('/v1/projects/1/forms/simple/draft')
