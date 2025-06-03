@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { getFormFields } = require(appRoot + '/lib/data/schema');
-const { getDatasets, validateDatasetName, validatePropertyName } = require(appRoot + '/lib/data/dataset');
+const { getDatasets, matchFieldsWithDatasets, validateDatasetName, validatePropertyName } = require(appRoot + '/lib/data/dataset');
 const testData = require(appRoot + '/test/data/xml');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
@@ -480,5 +480,165 @@ describe('property name validation', () => {
 
   it('should reject name with unicode', () => {
     validatePropertyName('unicode÷divide').should.equal(false);
+  });
+});
+
+describe('entities from repeats', () => {
+  it('should retrieve the name of a dataset in an entity block that is not at the top level', async () => {
+    const xml = `
+    <?xml version="1.0"?>
+    <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:head>
+        <model entities:entities-version="2025.1.0">
+          <instance>
+            <data id="FooForm">
+              <person>
+                <name/>
+                <age/>
+                <meta>
+                  <entities:entity dataset="people" create="">
+                    <entities:label/>
+                  </entities:entity>
+                </meta>
+              </person>
+              <meta>
+                <instanceID/>
+              </meta>
+            </data>
+          </instance>
+          <bind nodeset="/data/person/name" type="geopoint" entities:saveto="first_name" />
+          <bind nodeset="/data/person/age" type="string" entities:saveto="age" />
+        </model>
+      </h:head>
+    </h:html>`;
+    const ds = await getDatasets(xml);
+    ds.get().datasets[0].should.eql({
+      name: 'people',
+      actions: ['create'],
+      path: '/person'
+    });
+  });
+
+  it('should retrieve the name of a datasets at multiple levels', async () => {
+    const xml = `
+    <?xml version="1.0"?>
+    <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:head>
+        <model entities:entities-version="2025.1.0">
+          <instance>
+            <data id="FooForm">
+              <household/>
+              <person>
+                <name/>
+                <age/>
+                <meta>
+                  <entities:entity dataset="people" create="">
+                    <entities:label/>
+                  </entities:entity>
+                </meta>
+              </person>
+              <meta>
+                <entities:entity dataset="households" create="">
+                  <entities:label/>
+                </entities:entity>
+                <instanceID/>
+              </meta>
+            </data>
+          </instance>
+          <bind nodeset="/data/household" type="integer" entities:saveto="household_id" />
+          <bind nodeset="/data/person/name" type="geopoint" entities:saveto="first_name" />
+          <bind nodeset="/data/person/age" type="string" entities:saveto="age" />
+        </model>
+      </h:head>
+    </h:html>`;
+    const ds = await getDatasets(xml);
+    ds.get().datasets.should.eql([
+      {
+        name: 'people',
+        actions: ['create'],
+        path: '/person'
+      },
+      {
+        name: 'households',
+        actions: ['create'],
+        path: '/'
+      },
+    ]);
+  });
+
+  it('should match form fields with the correct datasets', async () => {
+    const xml = `
+    <?xml version="1.0"?>
+    <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:head>
+        <model entities:entities-version="2025.1.0">
+          <instance>
+            <data id="FooForm">
+              <household/>
+              <person>
+                <name/>
+                <age/>
+                <meta>
+                  <entities:entity dataset="people" create="">
+                    <entities:label/>
+                  </entities:entity>
+                </meta>
+              </person>
+              <meta>
+                <entities:entity dataset="households" create="">
+                  <entities:label/>
+                </entities:entity>
+                <instanceID/>
+              </meta>
+            </data>
+          </instance>
+          <bind nodeset="/data/household" type="integer" entities:saveto="household_id" />
+          <bind nodeset="/data/person/name" type="geopoint" entities:saveto="first_name" />
+          <bind nodeset="/data/person/age" type="string" entities:saveto="age" />
+        </model>
+      </h:head>
+    </h:html>`;
+    const ds = await getDatasets(xml);
+    const ff = await getFormFields(xml);
+    const res = matchFieldsWithDatasets(ds.get().datasets, ff);
+    res[0].should.eql({
+      dataset: {
+        name: 'people',
+        actions: ['create'],
+        path: '/person'
+      },
+      fields: [
+        {
+          name: 'name',
+          order: 2,
+          path: '/person/name',
+          propertyName: 'first_name',
+          type: 'geopoint'
+        },
+        {
+          name: 'age',
+          order: 3,
+          path: '/person/age',
+          propertyName: 'age',
+          type: 'string'
+        }
+      ]
+    });
+    res[1].should.eql({
+      dataset: {
+        name: 'households',
+        actions: ['create'],
+        path: '/'
+      },
+      fields: [
+        {
+          name: 'household',
+          order: 0,
+          path: '/household',
+          propertyName: 'household_id',
+          type: 'integer'
+        }
+      ]
+    });
   });
 });
