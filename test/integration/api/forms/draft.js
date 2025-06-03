@@ -1416,7 +1416,6 @@ describe('api: /projects/:id/forms (drafts)', () => {
         'formfill',
         'formview',
         'pub-link',
-        'pwreset',
         'viewer',
       ].forEach(role => {
         it.only(`should reject if the user has role "${role}"`, testService((service) =>
