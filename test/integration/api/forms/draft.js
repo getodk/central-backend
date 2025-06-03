@@ -1418,7 +1418,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         'pub-link',
         'viewer',
       ].forEach(role => {
-        it.only(`should reject if the user has role "${role}"`, testService((service) =>
+        it(`should reject if the user has role "${role}"`, testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/projects/1/forms/simple/draft')
               .send(testData.forms.simple)
