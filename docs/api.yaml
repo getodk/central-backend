@@ -40,6 +40,11 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2025.2
+
+    **Changed**:
+    - [Entities OData](/central-api-odata-endpoints/#id3) now supports `$search` query parameter.
+
     ## ODK Central v2025.1
 
     **Added**:
@@ -54,6 +59,7 @@ info:
     - Draft Submission can be created using draft token by adding `/test/{token}` to [Creating a draft Submission](/central-api-submission-management/#id1) endpoint.
     - [Dataset Metadata](/central-api-dataset-management/#dataset-metadata) now includes a new property, `lastUpdate`, which is the timestamp of the latest modification to the datasets or its entities.
     - After a file is uploaded for a Form Attachment via the POST endpoint, the response is now the updated Attachment.
+    - `userAgent` and `deviceId` longer than 255 characters will be truncated in [Submissions APIs](/central-api-submission-management)
 
     ## ODK Central v2024.3
 
@@ -11124,6 +11130,13 @@ paths:
 
         The [`$orderby` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358952) will return Entities sorted by different fields, which come from the same list used by `$filter`, as noted above. The order can be specified as `ASC` (ascending) or `DESC` (descending), which are case-insensitive. Multiple sort expressions can be used together, separated by commas, e.g. `$orderby=__system/creatorId ASC, __system/conflict DESC`.
 
+        The [`$search` query parameter](https://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionsearch) can be used to search entity data (user-defined properties) and the `label` field. Central does not implement the OData specification's suggested search techniques—such as `AND`, `NOT`, and parentheses grouping—exactly as described. Instead, the search behavior is similar to that of a web search engine:
+
+        - Multiple words return entities that contain **all** the searched words (logical AND operation).
+        - The `OR` keyword can be used to find entities that contain **any** of the searched words.
+        - Quoted text (e.g., `"quoted text"`) searches for entities containing the **exact** phrase.
+        - A dash (`-`) before a word excludes entities that contain that word (logical NOT).
+
         As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
       operationId: Data Document for Dataset
       parameters:
@@ -13012,10 +13025,12 @@ components:
           description: The ID of the `Actor` (`App User`, `User`, or `Public Link`) that submitted this `Submission` version.
         deviceId:
           type: string
+          maxLength: 255
           example: imei:123456
           description: The self-identified `deviceId` of the device that submitted the `Submission` version.
         userAgent:
           type: string
+          maxLength: 255
           example: Enketo/3.0.4
           description: The self-identified `userAgent` of the device that submitted the `Submission` version.
         createdAt:
