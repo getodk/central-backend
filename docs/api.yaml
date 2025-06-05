@@ -47,6 +47,11 @@ info:
 
     ## ODK Central v2025.1
 
+    **Changed**:
+    - [Form attachment manifest API](/central-api-openrosa-endpoints/#openrosa-form-manifest-api) returns `type="approvalEntityList"` in the `mediaFile` element for the Datasets that require Submission approval to create Entities.
+    
+    ## ODK Central v2025.1
+
     **Added**:
     - [RESTORE](/central-api-entity-management/#restoring-a-deleted-entity) endpoint for Entities.
     - Entities that have been soft-deleted for 30 days will automatically be purged. 
@@ -9860,7 +9865,7 @@ paths:
 
         [Offline Entities support](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052):
 
-        * If an attachment is linked to a Dataset, then `type="entityList"` attribute is added to the `mediaFile` element.
+        * If an attachment is linked to a Dataset, then `type="entityList"` attribute is added to the `mediaFile` element. If the Dataset requires approval of Submission to create new Entity then `type="approvalEntityList"` is added instead.
 
         * `integrityUrl` is also returned for the attachments that are linked to a Dataset.
       operationId: OpenRosa Form Manifest API
