@@ -455,6 +455,12 @@ should.Assertion.add('EntitySourceSubmissionDetails', function SubmissionDetails
   this.obj.should.have.property('instanceName'); // can be null
 });
 
+should.Assertion.add('Symbol', function() {
+  this.params = { operator: 'to be a Symbol' };
+
+  (typeof this.obj).should.equal('symbol');
+});
+
 should.Assertion.add('skiptoken', function skiptoken(expected) {
   this.params = { operator: 'to have a skiptoken' };
 
