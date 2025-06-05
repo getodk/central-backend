@@ -3006,7 +3006,7 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should return md5 of last Entity timestamp in the manifest', testService(async (service) => {
+      it('should return approvalEntityList as the type attribute of mediaFile for datasets that require approval', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/datasets')
