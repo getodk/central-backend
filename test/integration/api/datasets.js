@@ -3000,6 +3000,41 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should return approvalEntityList as the type attribute of mediaFile for datasets that require approval', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people', approvalRequired: true })
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200);
+
+        const etag = result.get('ETag');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => {
+            const domain = config.get('default.env.domain');
+            text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+    <mediaFile type="approvalEntityList">
+      <filename>people.csv</filename>
+      <hash>md5:${etag.replace(/"/g, '')}</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/people/integrity</integrityUrl>
+    </mediaFile>
+  </manifest>`);
+          });
+
+      }));
+
       it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 

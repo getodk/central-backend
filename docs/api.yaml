@@ -45,6 +45,10 @@ info:
     **Added**:
     - Datasets now have a boolean property named `ownerOnly`. This is a flag that has an effect on Actors who are either an App User or a Web User with a role of Data Collector. If `ownerOnly` is `true`, and the Actor is one of the above, then only Entities created by the Actor will be downloaded to the OpenRosa client.
 
+    **Changed**:
+    - [Entities OData](/central-api-odata-endpoints/#id3) now supports `$search` query parameter.
+    - [Form attachment manifest API](/central-api-openrosa-endpoints/#openrosa-form-manifest-api) returns `type="approvalEntityList"` in the `mediaFile` element for the Datasets that require Submission approval to create Entities.
+    
     ## ODK Central v2025.1
 
     **Added**:
@@ -9875,7 +9879,7 @@ paths:
 
         [Offline Entities support](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052):
 
-        * If an attachment is linked to a Dataset, then `type="entityList"` attribute is added to the `mediaFile` element.
+        * If an attachment is linked to a Dataset, then `type="entityList"` attribute is added to the `mediaFile` element. If the Dataset requires approval of Submission to create new Entity then `type="approvalEntityList"` is added instead.
 
         * `integrityUrl` is also returned for the attachments that are linked to a Dataset.
       operationId: OpenRosa Form Manifest API
@@ -11144,6 +11148,13 @@ paths:
         The [`$select` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358942) will return just the fields you specify and is supported on `__id`, `__system`, `__system/creatorId`, `__system/createdAt` and `__system/updatedAt`, as well as on user defined properties.
 
         The [`$orderby` query parameter](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358952) will return Entities sorted by different fields, which come from the same list used by `$filter`, as noted above. The order can be specified as `ASC` (ascending) or `DESC` (descending), which are case-insensitive. Multiple sort expressions can be used together, separated by commas, e.g. `$orderby=__system/creatorId ASC, __system/conflict DESC`.
+
+        The [`$search` query parameter](https://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#sec_SystemQueryOptionsearch) can be used to search entity data (user-defined properties) and the `label` field. Central does not implement the OData specification's suggested search techniques—such as `AND`, `NOT`, and parentheses grouping—exactly as described. Instead, the search behavior is similar to that of a web search engine:
+
+        - Multiple words return entities that contain **all** the searched words (logical AND operation).
+        - The `OR` keyword can be used to find entities that contain **any** of the searched words.
+        - Quoted text (e.g., `"quoted text"`) searches for entities containing the **exact** phrase.
+        - A dash (`-`) before a word excludes entities that contain that word (logical NOT).
 
         As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
       operationId: Data Document for Dataset
