@@ -9,7 +9,7 @@ const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
 const { createConflict } = require('../../util/scenarios');
-const { omit } = require('ramda');
+const { omit, last } = require('ramda');
 const xml2js = require('xml2js');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -6153,6 +6153,219 @@ describe('datasets and entities', () => {
           });
       }));
     });
+  });
+
+  describe('ownerOnly', () => {
+    // Sets up the data for each test to follow.
+    const createData = async (asAlice) => {
+      // Create an entity list named people.
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people', ownerOnly: true })
+        .expect(200);
+
+      // Publish a form that uses the entity list, linking a form attachment to
+      // the entity list.
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments
+          .replace('goodone.csv', 'people.csv'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          const csv = body.find(attachment => attachment.name === 'people.csv');
+          should.exist(csv);
+          csv.datasetExists.should.be.true();
+        });
+
+      // Publish a form that updates the entity list. Actors who can only
+      // submission.create, not entity.create, will use this form to create
+      // entities.
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Have Alice create an entity.
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789aaa',
+          label: 'Made by Alice'
+        })
+        .expect(200);
+    };
+    // Parses an entities .csv file, returning the entity labels.
+    const parseLabels = (text) => {
+      const rows = text.split('\n');
+      rows.length.should.be.above(1);
+
+      // Discard column headers.
+      rows[0].should.match(/^(__id|name),label,/);
+      rows.shift();
+
+      // Discard the last row.
+      last(rows).should.equal('');
+      rows.pop();
+
+      return rows.map(row => {
+        const match = row.match(/^[\w-]+,([^,]+),/);
+        should.exist(match);
+        return match[1];
+      });
+    };
+
+    it('ignores the flag for an admin', testService(async (service) => {
+      const [asAlice, asBob] = await service.login(['alice', 'bob']);
+      await createData(asAlice);
+
+      // Have Bob create an entity.
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Made by Bob'
+        })
+        .expect(200);
+
+      // All entities are returned to Alice.
+      await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eqlInAnyOrder(['Made by Alice', 'Made by Bob']);
+        });
+      await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eqlInAnyOrder(['Made by Alice', 'Made by Bob']);
+        });
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities')
+        .expect(200)
+        .then(({ body }) => {
+          const labels = body.value.map(entity => entity.label);
+          labels.should.eqlInAnyOrder(['Made by Alice', 'Made by Bob']);
+        });
+    }));
+
+    it('ignores the flag for a project manager', testService(async (service) => {
+      const [asAlice, asBob] = await service.login(['alice', 'bob']);
+      await createData(asAlice);
+
+      // All entities (i.e., the one created by Alice) are returned to Bob.
+      await asBob.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+      await asBob.get('/v1/projects/1/datasets/people/entities.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+      await asBob.get('/v1/projects/1/datasets/people.svc/Entities')
+        .expect(200)
+        .then(({ body }) => {
+          const labels = body.value.map(entity => entity.label);
+          labels.should.eql(['Made by Alice']);
+        });
+    }));
+
+    it('ignores the flag for a project viewer', testService(async (service) => {
+      const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+      await createData(asAlice);
+
+      // Make Chelsea a project viewer.
+      const chelseaId = await asChelsea.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body.id);
+      await asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
+        .expect(200);
+
+      // All entities (i.e., the one created by Alice) are returned to Chelsea.
+      await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+      await asChelsea.get('/v1/projects/1/datasets/people/entities.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+      await asChelsea.get('/v1/projects/1/datasets/people.svc/Entities')
+        .expect(200)
+        .then(({ body }) => {
+          const labels = body.value.map(entity => entity.label);
+          labels.should.eqlInAnyOrder(['Made by Alice']);
+        });
+    }));
+
+    it('ignores the flag in /v1/test', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createData(asAlice);
+
+      // Create a form draft.
+      await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+        .expect(200);
+      const draftToken = await asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+        .expect(200)
+        .then(({ body }) => body.draftToken);
+
+      // All entities (i.e., the one created by Alice) are returned from /v1/test.
+      await service.get(`/v1/test/${draftToken}/projects/1/forms/withAttachments/draft/attachments/people.csv`)
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+    }));
+
+    it('limits entity access for a Data Collector', testService(async (service, container) => {
+      const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+      await createData(asAlice);
+
+      // Make Chelsea a Data Collector.
+      const chelseaId = await asChelsea.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body.id);
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+        .expect(200);
+
+      // Have Chelsea create an entity.
+      await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      // Only the entity that Chelsea created is returned.
+      await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Alice (88)']);
+        });
+    }));
+
+    it('does not limit access if the flag is false', testService(async (service) => {
+      const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+      await createData(asAlice);
+
+      // Make Chelsea a Data Collector.
+      const chelseaId = await asChelsea.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body.id);
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+        .expect(200);
+
+      // Change ownerOnly to false.
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: false })
+        .expect(200);
+
+      // All entities (i.e., the one created by Alice) are returned to Chelsea.
+      await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+    }));
   });
 
   // OpenRosa endpoint
