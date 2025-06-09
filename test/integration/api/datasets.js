@@ -6203,7 +6203,7 @@ describe('datasets and entities', () => {
       rows[0].should.match(/^(__id|name),label,/);
       rows.shift();
 
-      // Discard the last row.
+      // Discard the last row, which is empty.
       last(rows).should.equal('');
       rows.pop();
 
