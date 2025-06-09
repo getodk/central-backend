@@ -356,22 +356,35 @@ should.Assertion.add('subsetOf', function(array) {
   for (const x of this.obj) array.should.containEql(x);
 });
 
-should.Assertion.add('Dataset', function assertDataset() {
+should.Assertion.add('Dataset', function assertDataset(extraKeys = []) {
   this.params = { operator: 'to be a Dataset' };
 
-  Object.keys(this.obj).should.containDeep([ 'projectId', 'name', 'createdAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([
+    'projectId', 'name', 'approvalRequired', 'ownerOnly', 'createdAt',
+    // Optional metadata
+    'properties', 'linkedForms', 'sourceForms', 'lastUpdate',
+    ...extraKeys
+  ]);
   this.obj.projectId.should.be.a.Number();
   this.obj.name.should.be.a.String();
+  this.obj.approvalRequired.should.be.a.Boolean();
+  this.obj.ownerOnly.should.be.a.Boolean();
   this.obj.createdAt.should.be.an.isoDate();
+
+  // Optional metadata
+  if (this.obj.properties != null) this.obj.properties.should.be.an.Array();
+  if (this.obj.linkedForms != null) this.obj.linkedForms.should.be.an.Array();
+  if (this.obj.sourceForms != null) this.obj.sourceForms.should.be.an.Array();
+  if (this.obj.lastUpdate != null) this.obj.lastUpdate.should.be.an.isoDate();
 });
 
 should.Assertion.add('ExtendedDataset', function assertExtendedDataset() {
   this.params = { operator: 'to be an extended Dataset' };
 
-  this.obj.should.be.a.Dataset();
-  Object.keys(this.obj).should.containDeep([ 'entities', 'lastEntity', 'conflicts' ]);
+  this.obj.should.be.a.Dataset([ 'entities', 'lastEntity', 'conflicts' ]);
   this.obj.entities.should.be.a.Number();
   if (this.obj.lastEntity != null) this.obj.lastEntity.should.be.an.isoDate();
+  this.obj.conflicts.should.be.a.Number();
 });
 
 should.Assertion.add('Entity', function assertEntity() {
