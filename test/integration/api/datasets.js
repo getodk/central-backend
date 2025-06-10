@@ -6533,7 +6533,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.not.equal(hashAfterDelete);
       }));
 
-      it.skip('changes hash after an entity is undeleted, then another entity is deleted', testServiceFullTrx(async (service, container) => {
+      it('changes hash after an entity is undeleted, then another entity is deleted', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
