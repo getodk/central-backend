@@ -6194,11 +6194,11 @@ describe('datasets and entities', () => {
         })
         .expect(200);
     };
-    const assignToProject = async (asAlice, asActor, role) => {
-      const actorId = await asActor.get('/v1/users/current')
+    const assignToProject = async (asAlice, asAssignee, role) => {
+      const assigneeId = await asAssignee.get('/v1/users/current')
         .expect(200)
         .then(({ body }) => body.id);
-      await asAlice.post(`/v1/projects/1/assignments/${role}/${actorId}`)
+      await asAlice.post(`/v1/projects/1/assignments/${role}/${assigneeId}`)
         .expect(200);
     };
     // Parses an entities .csv file, returning the entity labels.
@@ -6360,13 +6360,13 @@ describe('datasets and entities', () => {
     // are important for verification. In contrast, testService wraps everything
     // in a transaction, which freezes some timestamps.
     describe('OpenRosa hash', () => {
-      const getHash = async (asActor) => {
-        const hash = await asActor.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+      const getHash = async (asUser) => {
+        const hash = await asUser.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
           .expect(200)
           .then(response => response.get('ETag').replaceAll('"', ''));
 
         // Check that the hash from the REST API matches the OpenRosa manifest.
-        const { text: manifest } = await asActor.get('/v1/projects/1/forms/withAttachments/manifest')
+        const { text: manifest } = await asUser.get('/v1/projects/1/forms/withAttachments/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200);
         manifest.replace(/\s/g, '').should.containEql(`<filename>people.csv</filename><hash>md5:${hash}</hash>`);
