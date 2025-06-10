@@ -6416,6 +6416,45 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.equal(await getHash(asAlice));
       }));
 
+      it('does not change hash of a different dataset', testService(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Create a new dataset that's set up similarly to people, but for which
+        // ownerOnly is false.
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees', ownerOnly: false })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments
+            .replace('id="withAttachments"', 'id="withTrees"')
+            .replace('goodone.csv', 'trees.csv'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/trees/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'elm'
+          })
+          .expect(200);
+
+        // Alice and Chelsea get different hashes for people, but the same hash
+        // for trees. The fact that ownerOnly is set on people does not affect
+        // trees.
+        (await getHash(asChelsea)).should.not.equal(await getHash(asAlice));
+        const treeETagForAlice = await asAlice.get('/v1/projects/1/forms/withTrees/attachments/trees.csv')
+          .expect(200)
+          .then(response => {
+            response.text.split('\n').length.should.equal(3);
+            return response.get('ETag').replaceAll('"', '');
+          });
+        const treeETagForChelsea = await asChelsea.get('/v1/projects/1/forms/withTrees/attachments/trees.csv')
+          .expect(200)
+          .then(response => response.get('ETag').replaceAll('"', ''));
+        treeETagForAlice.should.equal(treeETagForChelsea);
+      }));
+
       it('changes hash after a data collector creates an entity', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
