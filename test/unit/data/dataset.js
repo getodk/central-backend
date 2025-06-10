@@ -1,51 +1,56 @@
 const appRoot = require('app-root-path');
 const should = require('should');
 const { getFormFields } = require(appRoot + '/lib/data/schema');
-const { getDataset, validateDatasetName, validatePropertyName } = require(appRoot + '/lib/data/dataset');
+const { getDatasets, validateDatasetName, validatePropertyName } = require(appRoot + '/lib/data/dataset');
 const testData = require(appRoot + '/test/data/xml');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
 
 describe('parsing dataset from entity block', () => {
   it('should run but find no dataset on non-entity forms', () =>
-    getDataset(testData.forms.simple).then((res) =>
+    getDatasets(testData.forms.simple).then((res) =>
       res.should.equal(Option.none())));
 
   describe('versioning', () => {
     it('should validate any version that starts with 2022.1.', () =>
-      getDataset(testData.forms.simpleEntity2022
+      getDatasets(testData.forms.simpleEntity2022
         .replace('2022.1.0', '2022.1.123'))
         .should.be.fulfilled());
 
     it('should validate a version between major releases, e.g. 2023.2.0', () =>
-      getDataset(testData.forms.updateEntity2023
+      getDatasets(testData.forms.updateEntity2023
         .replace('2023.1.0', '2023.2.0'))
         .should.be.fulfilled());
 
     it('should validate any version that starts with 2023.1.', () =>
-      getDataset(testData.forms.updateEntity2023
+      getDatasets(testData.forms.updateEntity2023
         .replace('2023.1.0', '2023.1.123'))
         .should.be.fulfilled());
 
     it('should validate any version that starts with 2024.1.', () =>
-      getDataset(testData.forms.offlineEntity
+      getDatasets(testData.forms.offlineEntity
         .replace('2024.1.0', '2024.1.123'))
         .should.be.fulfilled());
 
+    it('should validate any version that starts with 2025.1.', () =>
+      getDatasets(testData.forms.offlineEntity
+        .replace('2024.1.0', '2025.1.123'))
+        .should.be.fulfilled());
+
     it('should reject probable future version', () =>
-      getDataset(testData.forms.simpleEntity2022
-        .replace('2022.1.0', '2025.1.0'))
+      getDatasets(testData.forms.simpleEntity2022
+        .replace('2022.1.0', '2026.1.0'))
         .should.be.rejectedWith(Problem, { problemCode: 400.25,
-          message: 'The entity definition within the form is invalid. Entities specification version [2025.1.0] is not supported.' }));
+          message: 'The entity definition within the form is invalid. Entities specification version [2026.1.0] is not supported.' }));
 
     it('should complain if version is wrong', () =>
-      getDataset(testData.forms.simpleEntity2022
+      getDatasets(testData.forms.simpleEntity2022
         .replace('entities-version="2022.1.0"', 'entities-version="bad-version"'))
         .should.be.rejectedWith(Problem, { problemCode: 400.25,
           message: 'The entity definition within the form is invalid. Entities specification version [bad-version] is not supported.' }));
 
     it('should complain if version is missing', () =>
-      getDataset(testData.forms.simpleEntity2022
+      getDatasets(testData.forms.simpleEntity2022
         .replace('entities-version="2022.1.0"', ''))
         .should.be.rejectedWith(Problem, { problemCode: 400.25,
           message: 'The entity definition within the form is invalid. Entities specification version is missing.' }));
@@ -72,8 +77,8 @@ describe('parsing dataset from entity block', () => {
           </model>
         </h:head>
       </h:html>`;
-      return getDataset(xml).then((res) =>
-        res.get().name.should.eql('foo'));
+      return getDatasets(xml).then((res) =>
+        res.get().datasets[0].name.should.eql('foo'));
     });
 
     it('should retrieve the name of a dataset with namespace prefix on dataset attribute ', () => {
@@ -96,8 +101,8 @@ describe('parsing dataset from entity block', () => {
           </model>
         </h:head>
       </h:html>`;
-      return getDataset(xml).then((res) =>
-        res.get().name.should.eql('foo'));
+      return getDatasets(xml).then((res) =>
+        res.get().datasets[0].name.should.eql('foo'));
     });
 
     it('should find dataset name even if other fields are in meta block before entity block', () => {
@@ -124,8 +129,8 @@ describe('parsing dataset from entity block', () => {
                 </model>
           </h:head>
       </h:html>`;
-      return getDataset(xml).then((res) =>
-        res.get().name.should.eql('bar'));
+      return getDatasets(xml).then((res) =>
+        res.get().datasets[0].name.should.eql('bar'));
     });
 
     it('should return rejected promise if dataset name is missing', () => {
@@ -148,7 +153,7 @@ describe('parsing dataset from entity block', () => {
           </model>
         </h:head>
       </h:html>`;
-      return getDataset(xml).should.be.rejectedWith(Problem, {
+      return getDatasets(xml).should.be.rejectedWith(Problem, {
         // Problem.user.invalidEntityForm
         problemCode: 400.25,
         message: 'The entity definition within the form is invalid. Dataset name is missing.'
@@ -175,7 +180,7 @@ describe('parsing dataset from entity block', () => {
           </model>
         </h:head>
       </h:html>`;
-      return getDataset(xml).should.be.rejectedWith(Problem, {
+      return getDatasets(xml).should.be.rejectedWith(Problem, {
         // Problem.user.invalidEntityForm
         problemCode: 400.25,
         message: 'The entity definition within the form is invalid. Invalid dataset name.'
@@ -202,7 +207,7 @@ describe('parsing dataset from entity block', () => {
           </model>
         </h:head>
       </h:html>`;
-      return getDataset(xml).should.be.rejectedWith(Problem, {
+      return getDatasets(xml).should.be.rejectedWith(Problem, {
         problemCode: 400.25,
         message: 'The entity definition within the form is invalid. Dataset name is missing.'
       });
@@ -211,29 +216,29 @@ describe('parsing dataset from entity block', () => {
 
   describe('parsing entity actions', () => {
     it('should return create for a create form', async () => {
-      const result = await getDataset(testData.forms.simpleEntity);
-      result.get().actions.should.eql(['create']);
+      const result = await getDatasets(testData.forms.simpleEntity);
+      result.get().datasets[0].actions.should.eql(['create']);
     });
 
     it('should return update for an update form', async () => {
-      const result = await getDataset(testData.forms.updateEntity);
-      result.get().actions.should.eql(['update']);
+      const result = await getDatasets(testData.forms.updateEntity);
+      result.get().datasets[0].actions.should.eql(['update']);
     });
 
     it('should return create and update for a form that can do both', async () => {
-      const result = await getDataset(testData.forms.updateEntity
+      const result = await getDatasets(testData.forms.updateEntity
         .replace('update=""', 'create="" update=""'));
-      result.get().actions.should.eql(['create', 'update']);
+      result.get().datasets[0].actions.should.eql(['create', 'update']);
     });
 
     it('should strip namespaces from action attributes', async () => {
-      const result = await getDataset(testData.forms.updateEntity
+      const result = await getDatasets(testData.forms.updateEntity
         .replace('update=""', 'entities:create="" entities:update=""'));
-      result.get().actions.should.eql(['create', 'update']);
+      result.get().datasets[0].actions.should.eql(['create', 'update']);
     });
 
     it('should reject for an entity form without an action', () => {
-      const promise = getDataset(testData.forms.simpleEntity
+      const promise = getDatasets(testData.forms.simpleEntity
         .replace('create=""', ''));
       return promise.should.be.rejectedWith(Problem, {
         problemCode: 400.25,
@@ -324,14 +329,14 @@ describe('parsing dataset from entity block', () => {
 
 describe('dataset name validation', () => {
   it('should have name be case sensitive', () =>
-    getDataset(testData.forms.simpleEntity
+    getDatasets(testData.forms.simpleEntity
       .replace('people', 'PeopleWithACapitalP')).then((res) =>
-      res.get().name.should.eql('PeopleWithACapitalP')));
+      res.get().datasets[0].name.should.eql('PeopleWithACapitalP')));
 
   it('should strip whitespace from name', () =>
-    getDataset(testData.forms.simpleEntity
+    getDatasets(testData.forms.simpleEntity
       .replace('people', '   people ')).then((res) =>
-      res.get().name.should.eql('people')));
+      res.get().datasets[0].name.should.eql('people')));
 
   it('should reject empty name', () => {
     validateDatasetName('').should.equal(false);
@@ -341,7 +346,7 @@ describe('dataset name validation', () => {
     const name = '   ';
     validateDatasetName(name).should.equal(false);
     const xml = testData.forms.simpleEntity.replace('people', name);
-    return getDataset(xml).should.be.rejectedWith(Problem, {
+    return getDatasets(xml).should.be.rejectedWith(Problem, {
       problemCode: 400.25,
       message: 'The entity definition within the form is invalid. Invalid dataset name.'
     });
