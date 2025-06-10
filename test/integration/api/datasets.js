@@ -6194,6 +6194,13 @@ describe('datasets and entities', () => {
         })
         .expect(200);
     };
+    const assignToProject = async (asAlice, asActor, role) => {
+      const actorId = await asActor.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body.id);
+      await asAlice.post(`/v1/projects/1/assignments/${role}/${actorId}`)
+        .expect(200);
+    };
     // Parses an entities .csv file, returning the entity labels.
     const parseLabels = (text) => {
       const rows = text.split('\n');
@@ -6271,13 +6278,7 @@ describe('datasets and entities', () => {
     it('ignores the flag for a project viewer', testService(async (service) => {
       const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
       await createData(asAlice);
-
-      // Make Chelsea a project viewer.
-      const chelseaId = await asChelsea.get('/v1/users/current')
-        .expect(200)
-        .then(({ body }) => body.id);
-      await asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
-        .expect(200);
+      await assignToProject(asAlice, asChelsea, 'viewer');
 
       // All entities (i.e., the one created by Alice) are returned to Chelsea.
       await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
@@ -6320,13 +6321,7 @@ describe('datasets and entities', () => {
     it('limits entity access for a Data Collector', testService(async (service, container) => {
       const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
       await createData(asAlice);
-
-      // Make Chelsea a Data Collector.
-      const chelseaId = await asChelsea.get('/v1/users/current')
-        .expect(200)
-        .then(({ body }) => body.id);
-      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
-        .expect(200);
+      await assignToProject(asAlice, asChelsea, 'formfill');
 
       // Have Chelsea create an entity.
       await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
@@ -6346,13 +6341,7 @@ describe('datasets and entities', () => {
     it('does not limit access if the flag is false', testService(async (service) => {
       const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
       await createData(asAlice);
-
-      // Make Chelsea a Data Collector.
-      const chelseaId = await asChelsea.get('/v1/users/current')
-        .expect(200)
-        .then(({ body }) => body.id);
-      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
-        .expect(200);
+      await assignToProject(asAlice, asChelsea, 'formfill');
 
       // Change ownerOnly to false.
       await asAlice.patch('/v1/projects/1/datasets/people')
@@ -6366,6 +6355,230 @@ describe('datasets and entities', () => {
           parseLabels(text).should.eql(['Made by Alice']);
         });
     }));
+
+    // Most of these tests use testServiceFullTrx, because accurate timestamps
+    // are important for verification. In contrast, testService wraps everything
+    // in a transaction, which freezes some timestamps.
+    describe('OpenRosa hash', () => {
+      const getHash = async (asActor) => {
+        const hash = await asActor.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .expect(200)
+          .then(response => response.get('ETag').replaceAll('"', ''));
+
+        // Check that the hash from the REST API matches the OpenRosa manifest.
+        const { text: manifest } = await asActor.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200);
+        manifest.replace(/\s/g, '').should.containEql(`<filename>people.csv</filename><hash>md5:${hash}</hash>`);
+
+        return hash;
+      };
+
+      it('returns same hash as normal for users who can entity.list', testService(async (service, container) => {
+        const [asAlice, asBob, asChelsea] = await service.login(['alice', 'bob', 'chelsea']);
+        await createData(asAlice);
+        assignToProject(asAlice, asChelsea, 'viewer');
+
+        const originalHash = await getHash(asAlice);
+        (await getHash(asBob)).should.equal(originalHash);
+        (await getHash(asChelsea)).should.equal(originalHash);
+
+        // Change ownerOnly to false.
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: false })
+          .expect(200);
+        // Delete the latest audit log entry about toggling ownerOnly, which
+        // would affect the hash.
+        await container.run(sql`DELETE FROM audits WHERE id = (SELECT MAX(id) FROM audits)`);
+
+        (await getHash(asAlice)).should.equal(originalHash);
+        (await getHash(asBob)).should.equal(originalHash);
+        (await getHash(asChelsea)).should.equal(originalHash);
+      }));
+
+      it('returns different hash for a data collector', testService(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+        (await getHash(asChelsea)).should.not.equal(await getHash(asAlice));
+      }));
+
+      it('returns same hash as normal for a data collector if flag is false', testService(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Change ownerOnly to false.
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: false })
+          .expect(200);
+
+        (await getHash(asChelsea)).should.equal(await getHash(asAlice));
+      }));
+
+      it('changes hash after a data collector creates an entity', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+        const originalHash = await getHash(asChelsea);
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
+      it('does not change hash after someone else creates an entity', testServiceFullTrx(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+        const originalHash = await getHash(asChelsea);
+
+        // Have Alice create a second entity.
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Made by Alice (2)'
+          })
+          .expect(200);
+
+        (await getHash(asChelsea)).should.equal(originalHash);
+      }));
+
+      it('changes hash after an entity is updated', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        const originalHash = await getHash(asChelsea);
+
+        // Update the entity.
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '120' } })
+          .expect(200);
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
+      it('changes hash after an entity is deleted', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        const originalHash = await getHash(asChelsea);
+
+        // Delete the entity.
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .expect(200);
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
+      it('does not change hash after an entity is purged', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        // Delete the entity.
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        const hashAfterDelete = await getHash(asChelsea);
+
+        // Purge the entity.
+        await container.Entities.purge(true);
+        (await getHash(asChelsea)).should.equal(hashAfterDelete);
+      }));
+
+      it('changes hash after an entity is restored', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        // Delete the entity.
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        const hashAfterDelete = await getHash(asChelsea);
+
+        // Restore the entity.
+        await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+          .expect(200);
+        (await getHash(asChelsea)).should.not.equal(hashAfterDelete);
+      }));
+
+      it.skip('changes hash after an entity is undeleted, then another entity is deleted', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create 3 entities.
+        for (const name of ['one', 'three', 'four']) {
+          // eslint-disable-next-line no-await-in-loop
+          await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+            .send(testData.instances.simpleEntity[name])
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+          // eslint-disable-next-line no-await-in-loop
+          await exhaust(container);
+        }
+        const hash1 = await getHash(asChelsea);
+
+        // Delete `one`.
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        const hash2 = await getHash(asChelsea);
+
+        // Restore `one`, then delete `three`.
+        await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+          .expect(200);
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789bbb')
+          .expect(200);
+        const hash3 = await getHash(asChelsea);
+
+        new Set([hash1, hash2, hash3]).size.should.equal(3);
+      }));
+
+      it('changes hash after a dataset property is added', testServiceFullTrx(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+        const originalHash = await getHash(asChelsea);
+
+        // Add an entity property.
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'foo' })
+          .expect(200);
+
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+    });
   });
 
   // OpenRosa endpoint
