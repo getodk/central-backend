@@ -20,7 +20,7 @@
     "csv-parse": "~4",
     "csv-stringify": "~5",
     "digest-stream": "~2",
-    "entities": "^6.0.0",
+    "entities": "^6.0.1",
     "express": "~4.21",
     "express-graceful-exit": "~0.5",
     "fast-myers-diff": "~3",
