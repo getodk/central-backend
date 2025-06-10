@@ -27,7 +27,7 @@
     "htmlparser2": "~3.9",
     "knex": "~0.21",
     "luxon": "~0.3",
-    "minio": "^8.0.5",
+    "minio": "8.0.4",
     "morgan": "^1.10.0",
     "multer": "^2.0.0",
     "mustache": "^4.2.0",
