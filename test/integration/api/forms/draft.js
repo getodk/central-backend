@@ -1401,40 +1401,45 @@ describe('api: /projects/:id/forms (drafts)', () => {
               should.not.exist(body.details);
             }))));
 
-      it('should reject if the user does not have project-specific permissions', testService((service) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/draft')
-            .send(testData.forms.simple)
-            .set('Content-Type', 'application/xml')
+      const withRole = role => [
+        `has role "${role}"`,
+        (service, asAlice) => service.login('chelsea', async (asChelsea) => {
+          await asChelsea.get('/v1/users/current')
             .expect(200)
-            .then(() => service.login('chelsea', (asChelsea) =>
-              asChelsea.get('/v1/projects/1/forms/simple/draft')
-                .expect(403))))));
+            .then(({ body }) => body)
+            .then((chelsea) =>
+              asAlice.post(`/v1/projects/1/assignments/${role}/${chelsea.id}`)
+                .expect(200));
+          return asChelsea;
+        }),
+      ];
+
+      const noExtraRoles = () => [
+        'does not have project-specific permissions',
+        (service) => service.login('chelsea'),
+      ];
 
       [
-        'app-user',
-        'formfill',
-        'formview',
-        'pub-link',
-        'viewer',
-      ].forEach(role => {
-        it(`should reject if the user has role "${role}"`, testService((service) =>
-          service.login('alice', (asAlice) =>
-            asAlice.post('/v1/projects/1/forms/simple/draft')
-              .send(testData.forms.simple)
-              .set('Content-Type', 'application/xml')
-              .expect(200)
-              .then(() => service.login('chelsea', (asChelsea) =>
-                asChelsea.get('/v1/users/current')
-                  .expect(200)
-                  .then(({ body }) => body)
-                  .then((chelsea) =>
-                    asAlice.post(`/v1/projects/1/assignments/${role}/${chelsea.id}`)
-                      .expect(200))
-                  .then(() => asChelsea.get('/v1/projects/1/forms/simple/draft')
-                    .expect(403)))))));
+        noExtraRoles(),
+        withRole('app-user'),
+        withRole('formfill'),
+        withRole('formview'),
+        withRole('pub-link'),
+        withRole('viewer'),
+      ].forEach(([ description, setupChelsea ]) => {
+        it(`should reject if the user ${description}`, testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-        it(`should reject if the user has role "${role}", even if there is _also_ a published version of the form`, testService(async (service) => {
+          const asChelsea = await setupChelsea(service, asAlice);
+          return asChelsea.get('/v1/projects/1/forms/simple/draft')
+            .expect(403);
+        }));
+
+        it(`should reject if the user ${description}, even if there is _also_ a published version of the form`, testService(async (service) => {
           const asAlice = await service.login('alice');
           await asAlice.post('/v1/projects/1/forms?publish=true')
             .set('Content-Type', 'application/xml')
@@ -1443,19 +1448,14 @@ describe('api: /projects/:id/forms (drafts)', () => {
           await asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple)
             .set('Content-Type', 'application/xml')
-            .expect(200)
-            .then(() => service.login('chelsea', (asChelsea) =>
-              asChelsea.get('/v1/users/current')
-                .expect(200)
-                .then(({ body }) => body)
-                .then((chelsea) =>
-                  asAlice.post(`/v1/projects/1/assignments/${role}/${chelsea.id}`)
-                    .expect(200))
-                .then(() => asChelsea.get('/v1/projects/1/forms/simple/draft')
-                  .expect(403))));
+            .expect(200);
+
+          const asChelsea = await setupChelsea(service, asAlice);
+          return asChelsea.get('/v1/projects/1/forms/simple/draft')
+            .expect(403);
         }));
 
-        it(`should reject if the user has role "${role}", even if the form is closed`, testService(async (service) => {
+        it(`should reject if the user ${description}, even if the form is closed`, testService(async (service) => {
           const asAlice = await service.login('alice');
           await asAlice.post('/v1/projects/1/forms/simple/draft')
             .send(testData.forms.simple)
@@ -1464,15 +1464,10 @@ describe('api: /projects/:id/forms (drafts)', () => {
           await asAlice.patch('/v1/projects/1/forms/simple')
             .send({ state: 'closed' })
             .expect(200);
-          return service.login('chelsea', (asChelsea) =>
-            asChelsea.get('/v1/users/current')
-              .expect(200)
-              .then(({ body }) => body)
-              .then((chelsea) =>
-                asAlice.post(`/v1/projects/1/assignments/${role}/${chelsea.id}`)
-                  .expect(200))
-              .then(() => asChelsea.get('/v1/projects/1/forms/simple/draft')
-                .expect(403)));
+
+          const asChelsea = await setupChelsea(service, asAlice);
+          return asChelsea.get('/v1/projects/1/forms/simple/draft')
+            .expect(403);
         }));
       });
 
