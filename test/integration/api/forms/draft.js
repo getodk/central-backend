@@ -1454,6 +1454,26 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .then(() => asChelsea.get('/v1/projects/1/forms/simple/draft')
                   .expect(403))));
         }));
+
+        it(`should reject if the user has role "${role}", even if the form is closed`, testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await asAlice.post('/v1/projects/1/forms/simple/draft')
+            .send(testData.forms.simple)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+          await asAlice.patch('/v1/projects/1/forms/simple')
+            .send({ state: 'closed' })
+            .expect(200);
+          return service.login('chelsea', (asChelsea) =>
+            asChelsea.get('/v1/users/current')
+              .expect(200)
+              .then(({ body }) => body)
+              .then((chelsea) =>
+                asAlice.post(`/v1/projects/1/assignments/${role}/${chelsea.id}`)
+                  .expect(200))
+              .then(() => asChelsea.get('/v1/projects/1/forms/simple/draft')
+                .expect(403)));
+        }));
       });
 
       it('should give basic draft details', testService((service) =>
