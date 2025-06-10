@@ -6522,7 +6522,7 @@ describe('datasets and entities', () => {
         const originalHash = await getHash(asChelsea);
 
         // Delete the entity.
-        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .expect(200);
         (await getHash(asChelsea)).should.not.equal(originalHash);
       }));
