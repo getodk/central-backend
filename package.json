@@ -6,10 +6,10 @@
     "node": "22"
   },
   "volta": {
-    "node": "22.14.0"
+    "node": "22.16.0"
   },
   "dependencies": {
-    "@sentry/node": "~9",
+    "@sentry/node": "^9.27.0",
     "archiver": "^7.0.1",
     "bcrypt": "^6.0.0",
     "body-parser": "~1.20",
@@ -20,7 +20,7 @@
     "csv-parse": "~4",
     "csv-stringify": "~5",
     "digest-stream": "~2",
-    "entities": "^6.0.0",
+    "entities": "^6.0.1",
     "express": "~4.21",
     "express-graceful-exit": "~0.5",
     "fast-myers-diff": "~3",
