@@ -1086,7 +1086,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('X-OpenRosa-Version', '1.0')
             .expect(403))));
 
-      it.only('should not return a manifest if form is not published', testService((service) =>
+      it('should not return a manifest if form is not published', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
