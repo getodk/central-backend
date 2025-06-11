@@ -6538,15 +6538,18 @@ describe('datasets and entities', () => {
           .set('Content-Type', 'application/xml')
           .expect(200);
         await exhaust(container);
+        const hash1 = await getHash(asChelsea);
 
         // Delete the entity.
         await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .expect(200);
-        const hashAfterDelete = await getHash(asChelsea);
+        const hash2 = await getHash(asChelsea);
 
         // Purge the entity.
         await container.Entities.purge(true);
-        (await getHash(asChelsea)).should.equal(hashAfterDelete);
+        const hash3 = await getHash(asChelsea);
+        hash3.should.equal(hash2);
+        hash3.should.not.equal(hash1);
       }));
 
       it('changes hash after an entity is restored', testServiceFullTrx(async (service, container) => {
@@ -6560,16 +6563,19 @@ describe('datasets and entities', () => {
           .set('Content-Type', 'application/xml')
           .expect(200);
         await exhaust(container);
+        const hash1 = await getHash(asChelsea);
 
         // Delete the entity.
         await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .expect(200);
-        const hashAfterDelete = await getHash(asChelsea);
+        const hash2 = await getHash(asChelsea);
 
         // Restore the entity.
         await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
           .expect(200);
-        (await getHash(asChelsea)).should.not.equal(hashAfterDelete);
+        const hash3 = await getHash(asChelsea);
+
+        [hash1, hash2, hash3].should.be.unique();
       }));
 
       it('changes hash after an entity is undeleted, then another entity is deleted', testServiceFullTrx(async (service, container) => {
@@ -6601,7 +6607,7 @@ describe('datasets and entities', () => {
           .expect(200);
         const hash3 = await getHash(asChelsea);
 
-        new Set([hash1, hash2, hash3]).size.should.equal(3);
+        [hash1, hash2, hash3].should.be.unique();
       }));
 
       it('changes hash after a dataset property is added', testServiceFullTrx(async (service) => {
