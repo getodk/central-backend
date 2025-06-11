@@ -14,6 +14,7 @@ const xml2js = require('xml2js');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
+const { md5sum } = require(appRoot + '/lib/util/crypto');
 
 const testEntities = (test) => testService(async (service, container) => {
   const asAlice = await service.login('alice');
@@ -6622,6 +6623,38 @@ describe('datasets and entities', () => {
           .expect(200);
 
         (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
+      it('computes hash based on timestamps and the entity count', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        const { loggedAt } = await asAlice.get('/v1/audits?action=dataset.update')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            return body[0];
+          });
+        (await getHash(asChelsea)).should.equal(md5sum(`0,${loggedAt}`));
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        const { createdAt } = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => body);
+        (await getHash(asChelsea)).should.equal(md5sum(`1,${createdAt}`));
+
+        // Update the entity.
+        const { updatedAt } = await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '120' } })
+          .expect(200)
+          .then(({ body }) => body);
+        (await getHash(asChelsea)).should.equal(md5sum(`1,${updatedAt}`));
       }));
     });
   });
