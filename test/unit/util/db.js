@@ -407,6 +407,7 @@ returning *`);
 
   describe('QueryOptions', () => {
     const { QueryOptions } = util;
+
     it('should cascade conditions properly', () => {
       const query = QueryOptions.extended.withCondition({ a: 1 }).withCondition({ b: 2 });
       query.condition.should.eql({ a: 1, b: 2 });
@@ -420,16 +421,18 @@ returning *`);
       (new QueryOptions({ skiptoken: 'foo' })).hasPaging().should.equal(true);
     });
 
-    it('should transfer allowed args from quarantine on allowArgs', () => {
-      (new QueryOptions({ argData: { a: 1, b: 2, c: 3, d: 4 } }))
-        .allowArgs('b', 'c', 'e')
-        .args.should.eql({ b: 2, c: 3 });
-    });
+    describe('allowArgs', () => {
+      it('should transfer allowed args from quarantine on allowArgs', () => {
+        (new QueryOptions({ argData: { a: 1, b: 2, c: 3, d: 4 } }))
+          .allowArgs('b', 'c', 'e')
+          .args.should.eql({ b: 2, c: 3 });
+      });
 
-    it('should merge with existing args on allowArgs', () => {
-      (new QueryOptions({ args: { b: 4, f: 9 }, argData: { a: 1, b: 2, c: 3, d: 4 } }))
-        .allowArgs('b', 'c', 'e')
-        .args.should.eql({ b: 2, c: 3, f: 9 });
+      it('should merge with existing args on allowArgs', () => {
+        (new QueryOptions({ args: { b: 4, f: 9 }, argData: { a: 1, b: 2, c: 3, d: 4 } }))
+          .allowArgs('b', 'c', 'e')
+          .args.should.eql({ b: 2, c: 3, f: 9 });
+      });
     });
 
     it('should create and parse cursor token', () => {
@@ -441,7 +444,7 @@ returning *`);
       QueryOptions.parseSkiptoken(token).should.be.eql(data);
     });
 
-    describe('related functions', () => {
+    describe('ifArg()', () => {
       it('should run the handler only if the arg is present', () => {
         let ran = false;
         const options = new QueryOptions({ args: { b: 42 }, argData: { c: 17 } });
@@ -463,6 +466,20 @@ returning *`);
 
       it('should return blank if the arg is not present', () => {
         QueryOptions.none.ifArg('z', () => {}).should.eql(sql``);
+      });
+    });
+
+    describe('with()', () => {
+      it('should add a custom option', () => {
+        const options = QueryOptions.none.with({ datasetMetadata: true });
+        options.datasetMetadata.should.be.true();
+      });
+
+      it('should not overwrite an existing option', () => {
+        const options = new QueryOptions({ argData: { a: 1, b: 2 } })
+          .allowArgs('a');
+        for (const prop of ['condition', 'argData', 'args'])
+          (() => options.with({ [prop]: {} })).should.throw();
       });
     });
   });
