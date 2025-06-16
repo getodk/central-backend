@@ -621,6 +621,20 @@ describe('entities from repeats', () => {
           path: '/person/age',
           propertyName: 'age',
           type: 'string'
+        },
+        {
+          name: 'entity',
+          order: 5,
+          path: '/person/meta/entity',
+          propertyName: '__entity',
+          type: 'structure'
+        },
+        {
+          name: 'label',
+          order: 6,
+          path: '/person/meta/entity/label',
+          propertyName: '__label',
+          type: 'unknown'
         }
       ]
     });
@@ -637,6 +651,20 @@ describe('entities from repeats', () => {
           path: '/household',
           propertyName: 'household_id',
           type: 'integer'
+        },
+        {
+          name: 'entity',
+          order: 8,
+          path: '/meta/entity',
+          propertyName: '__entity',
+          type: 'structure'
+        },
+        {
+          name: 'label',
+          order: 9,
+          path: '/meta/entity/label',
+          propertyName: '__label',
+          type: 'unknown'
         }
       ]
     });
