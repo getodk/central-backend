@@ -43,7 +43,7 @@ info:
     ## ODK Central v2025.2
 
     **Added**:
-    - Datasets now have a boolean property named `ownerOnly`. This is a flag that has an effect on Actors who are either an App User or a Web User with a role of Data Collector. If `ownerOnly` is `true`, and the Actor is one of the above, then only Entities created by the Actor will be downloaded to the OpenRosa client.
+    - Datasets now have a boolean property named `ownerOnly`. This is a flag that has an effect on Actors who only have access to the Dataset CSV file via linked Form Attachments: App Users, Web Users with a role of Data Collector, and Public Access Links. If `ownerOnly` is `true`, and the Actor is one of the above, then only Entities created by the Actor will be downloaded to the OpenRosa client.
 
     **Changed**:
     - [Entities OData](/central-api-odata-endpoints/#id3) now supports `$search` query parameter.
@@ -8610,7 +8610,7 @@ paths:
                     required: false
                   ownerOnly:
                     type: boolean
-                    description: If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be downloaded.
+                    description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
                     required: false
                 example:
                   name: Trees
@@ -8721,7 +8721,7 @@ paths:
 
         The `approvalRequired` flag controls the Entity creation flow. If it is `true`, then the Submission must be approved before an Entity can be created from it. If it is `false`, then an Entity is created as soon as the Submission is received by ODK Central. By default, `approvalRequired` is `false` for Datasets created after v2023.3. Datasets created prior to that will have `approvalRequired` set to `true`.
 
-        The `ownerOnly` flag determines which Entities in the Dataset are downloaded for use in an OpenRosa client. More specifically, it determines which Entities are included in a Form Attachment that has been linked to the Dataset. If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, then only Entities created by the Actor will be included. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be included. By default, `ownerOnly` is `false`.
+        The `ownerOnly` flag determines which Entities in the Dataset are included for download to an OpenRosa client. More specifically, it determines which Entities are included in a Form Attachment that has been linked to the Dataset. If `ownerOnly` is `true`, and the Actor using the OpenRosa client only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be included. This is true of App Users, Web Users with a role of Data Collector, and Public Access Links. If `ownerOnly` is `false`, or if the Actor has direct access to the Dataset CSV file, then all Entities will be included. By default, `ownerOnly` is `false`.
       parameters:
         - name: projectId
           in: path
@@ -8749,7 +8749,7 @@ paths:
                   example: true
                 ownerOnly:
                   type: boolean
-                  description: If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be downloaded.
+                  description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
                   example: false
               example:
                 approvalRequired: true
@@ -12797,7 +12797,7 @@ components:
           example: true
         ownerOnly:
           type: boolean
-          description: If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be downloaded.
+          description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
           example: false
     ExtendedDataset:
       allOf:
