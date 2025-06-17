@@ -356,6 +356,13 @@ should.Assertion.add('subsetOf', function(array) {
   for (const x of this.obj) array.should.containEql(x);
 });
 
+should.Assertion.add('unique', function() {
+  this.params = { operator: 'to have unique values' };
+
+  const array = [...this.obj];
+  array.should.eql([...new Set(array)]);
+});
+
 should.Assertion.add('Dataset', function assertDataset(extraKeys = []) {
   this.params = { operator: 'to be a Dataset' };
 
