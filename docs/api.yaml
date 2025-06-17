@@ -902,7 +902,6 @@ tags:
     * `submission.backlog.hold` when an Entity Submission is first held in processing backlog.
     * `submission.backlog.reprocess` when an Entity Submission is reprocessed and removed from the backlog.
     * `submission.backlog.force` when an Entity Submission is force-processed after being in backlog.
-    * `upgrade.process.form.entities_version` when Central flags an Entity-related Form for a potential automatic upgrade.
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
@@ -914,6 +913,8 @@ tags:
     * `entity.restore` when a deleted Entity is restored.
     * `entity.purge` when a deleted Entity is purged (ppermanently deleted).
     * `config.set` when a system configuration is set.
+    * `upgrade.server` when Central is upgraded to a new version.
+    * `upgrade.process.form.entities_version` when Central flags an Entity-related Form for a potential automatic upgrade.
     * `analytics` when a Usage Report is attempted.
     * `blobs.s3.upload` when blobs are moved from the database to external storage.
     * `blobs.s3.failed-to-pending` when blobs that failed to upload are reset to the pending state to be retried.
