@@ -48,7 +48,7 @@ describe('blob query module', () => {
               .replace('<file1>my_file1.mp4</file1>', '<file1>my_file2.mp4</file1>')),
             { filename: 'data.xml' },
           )
-          .attach('my_file2.mp4', Buffer.from('this is test file one'), { filename: 'my_file2.mp4' })
+          .attach('my_file2.mp4', Buffer.from('this is test file one'), { filename: 'my_file2.mp4', contentType: 'text/plain' })
           .expect(201))
         .then(() => container.oneFirst(sql`select count(*) from blobs`))
         .then((count) => count.should.equal(2))
