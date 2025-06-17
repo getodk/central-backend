@@ -214,7 +214,7 @@ info:
       * [DELETE .../draft/attachments/:name](/central-api-form-management/#clearing-a-draft-form-attachment) will unlink the Dataset if there's a Dataset link to the attachment.
       * [GET .../draft/attachments/:filename](/central-api-form-management/#downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
       * [GET .../draft/attachments](/central-api-form-management/#listing-expected-draft-form-attachments) returns two additional flags `blobExists` and `datasetExists`.
-      * In the [OpenRosa Form Manifest](/central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
+      * In the [OpenRosa Form Manifest](/central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset, then the value of `hash` is an MD5 sum derived from the last updated timestamp of the Dataset. `hash` is not the MD5 sum for the content of the Dataset CSV file.
 
     ## ODK Central v1.5.3
 
@@ -9875,7 +9875,7 @@ paths:
 
         * The Manifest will only output information for files the server actually has in its possession. Any missing expected files will be omitted, as we cannot provide a `hash` or `downloadUrl` for them.
 
-        * For Attachments that are linked to a Dataset, the value of `hash` is calculated using the MD5 of the last updated timestamp of the Dataset, instead of the content of the Dataset.
+        * For Attachments that are linked to a Dataset, the value of `hash` is an MD5 sum derived from the last updated timestamp of the Dataset. It is not the MD5 sum for the content of the Dataset CSV file.
 
         [Offline Entities support](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052):
 
