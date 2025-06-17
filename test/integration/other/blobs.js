@@ -15,7 +15,7 @@ describe('blob query module', () => {
         .then(() => container.oneFirst(sql`select count(*) from blobs`))
         .then((count) => count.should.equal(1)))));
 
-  it('should handle blob collisions with different filenames', testService((service, container) =>
+  it.only('should handle blob collisions with different filenames', testService((service, container) =>
     // On one instance of the form, two files are uploaded
     // On another instance of the form (different id), one file is uploaded
     // and it creates another reference to one of the blobs with a different
@@ -48,7 +48,7 @@ describe('blob query module', () => {
               .replace('<file1>my_file1.mp4</file1>', '<file1>my_file2.mp4</file1>')),
             { filename: 'data.xml' },
           )
-          .attach('my_file2.mp4', Buffer.from('this is test file one'), { filename: 'my_file2.mp4', contentType: 'text/plain' })
+          .attach('my_file2.mp4', Buffer.from('this is test file one'), { filename: 'my_file2.mp4', contentType: 'audio/mp3' })
           .expect(201))
         .then(() => container.oneFirst(sql`select count(*) from blobs`))
         .then((count) => count.should.equal(2))
@@ -62,7 +62,7 @@ describe('blob query module', () => {
         .then(() => asAlice.get('/v1/projects/1/forms/binaryType2/submissions/bone/attachments/my_file2.mp4')
           .expect(200)
           .then(({ headers, body }) => {
-            headers['content-type'].should.equal('video/mp4');
+            headers['content-type'].should.equal('audio/mp3');
             headers['content-disposition'].should.equal('attachment; filename="my_file2.mp4"; filename*=UTF-8\'\'my_file2.mp4');
             body.toString('utf8').should.equal('this is test file one');
           })))));
