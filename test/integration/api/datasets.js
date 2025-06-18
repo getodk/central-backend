@@ -2057,7 +2057,7 @@ describe('datasets and entities', () => {
 
         // For bookkeeping later
         // Get blob id of original CSV file
-        const form = await Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound);
+        const form = await Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.NoDefRequired).then(getOrNotFound);
         const attachment = await FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound);
 
         // Update attachment to link to dataset instead of csv file
@@ -2249,7 +2249,8 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
               .then(() =>
-                Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+                Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.PublishedVersion)
+                  .then(getOrNotFound)
                   .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                     .then(attachment => {
                       attachment.get().datasetId.should.not.be.null();
@@ -2274,7 +2275,8 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200))
             .then(() =>
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion)
+                .then(getOrNotFound)
                 .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
                     should(attachment.get().datasetId).be.null();
@@ -2299,7 +2301,8 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200))
             .then(() =>
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion)
+                .then(getOrNotFound)
                 .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
                     should(attachment.get().datasetId).not.be.null();
@@ -2318,7 +2321,8 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
               .then(() =>
-                Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+                Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.PublishedVersion)
+                  .then(getOrNotFound)
                   .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people')
                     .then(attachment => {
                       should(attachment.get().datasetId).be.null();
@@ -2714,7 +2718,7 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'text/csv')
               .expect(200))
             .then(() => Promise.all([
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.NoDefRequired).then(getOrNotFound),
               Datasets.get(1, 'goodone').then(getOrNotFound)
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then(getOrNotFound)
@@ -2732,7 +2736,7 @@ describe('datasets and entities', () => {
             .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
               .send(testData.forms.simpleEntity))
             .then(() => Promise.all([
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then(getOrNotFound),
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.NoDefRequired).then(getOrNotFound),
               Datasets.get(1, 'people').then(getOrNotFound)
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodtwo.mp3').then(getOrNotFound)
