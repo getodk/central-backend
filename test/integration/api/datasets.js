@@ -2251,7 +2251,7 @@ describe('datasets and entities', () => {
               .then(() =>
                 Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.PublishedVersion)
                   .then(getOrNotFound)
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people.csv')
                     .then(attachment => {
                       attachment.get().datasetId.should.not.be.null();
                     })))))));
@@ -2277,7 +2277,7 @@ describe('datasets and entities', () => {
             .then(() =>
               Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion)
                 .then(getOrNotFound)
-                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people.csv')
                   .then(attachment => {
                     should(attachment.get().datasetId).be.null();
                     should(attachment.get().blobId).not.be.null();
@@ -2303,7 +2303,7 @@ describe('datasets and entities', () => {
             .then(() =>
               Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion)
                 .then(getOrNotFound)
-                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people.csv')
                   .then(attachment => {
                     should(attachment.get().datasetId).not.be.null();
                     should(attachment.get().blobId).be.null();
@@ -2323,7 +2323,7 @@ describe('datasets and entities', () => {
               .then(() =>
                 Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.PublishedVersion)
                   .then(getOrNotFound)
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people')
                     .then(attachment => {
                       should(attachment.get().datasetId).be.null();
                     })))))));
