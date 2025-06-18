@@ -25,7 +25,7 @@ const submitThree = (asAlice) =>
       .set('Content-Type', 'text/xml')
       .expect(200));
 
-describe('/audits', () => {
+describe.only('/audits', () => {
   describe('GET', () => {
     it('should reject if the user cannot read audits', testService((service) =>
       service.login('chelsea', (asChelsea) =>
