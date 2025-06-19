@@ -726,7 +726,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             .expect(200)
             .then(() => service.login('chelsea', (asChelsea) =>
-              asChelsea.get('/v1/projects/1/forms/simple2.xlsx')
+              asChelsea.get('/v1/projects/1/forms/simple2/draft.xlsx')
                 .expect(403))))));
 
       it('should return xls notfound given xlsx file', testService((service) =>
@@ -735,7 +735,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
             .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xls')
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xls')
               .expect(404)))));
 
       it('should return the xlsx file originally provided', testService((service) => {
