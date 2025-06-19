@@ -5,7 +5,7 @@ const assert = require('assert');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { exhaust } = require(appPath + '/lib/worker/worker');
-
+const { Form } = require(appPath + '/lib/model/frames');
 
 describe('query module form purge', () => {
   it('should purge a form deleted over 30 days ago', testService((service, container) =>

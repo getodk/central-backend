@@ -7,6 +7,7 @@ const { testTask } = require('../setup');
 const { purgeTask } = require(appRoot + '/lib/task/purge');
 const { Blob } = require(appRoot + '/lib/model/frames');
 const Problem = require(appRoot + '/lib/util/problem');
+const { Form } = require(appRoot + '/lib/model/frames');
 
 // The basics of this task are tested here, including returning the message
 // of purged forms, but the full functionality is more thoroughly tested in

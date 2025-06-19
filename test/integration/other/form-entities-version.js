@@ -6,6 +6,7 @@ const { testService } = require('../setup');
 const testData = require('../../data/xml');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { Form } = require(appRoot + '/lib/model/frames');
 
 const upgradedUpdateEntity = `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">

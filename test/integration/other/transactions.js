@@ -6,6 +6,7 @@ const { Frame } = require(appRoot + '/lib/model/frame');
 const { injector } = require(appRoot + '/lib/model/container');
 const { endpointBase } = require(appRoot + '/lib/http/endpoint');
 const { noop } = require(appRoot + '/lib/util/util');
+const { Form } = require(appRoot + '/lib/model/frames');
 
 describe('transaction integration', () => {
   it('should run all operations within the correct transaction context', () => {
