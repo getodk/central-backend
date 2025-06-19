@@ -8,6 +8,7 @@ const { Actor } = require('../../../lib/model/frames');
 const { createConflict } = require('../../util/scenarios');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 
 describe('api: /projects', () => {
   describe('GET', () => {
@@ -990,7 +991,7 @@ describe('api: /projects', () => {
           ]))
           .then(async ([ bob, audits ]) => {
             const actor = new Actor(bob);
-            const forms = await Projects.getById(1).then((o) => o.get())
+            const forms = await Projects.getById(1).then(getOrNotFound)
               .then((project) => Forms.getByProjectId(Auth.by(actor), project.id, false, Form.AnyVersion));
 
             audits.length.should.equal(2);
