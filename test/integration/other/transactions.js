@@ -42,7 +42,7 @@ describe('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     const { Audits, Forms, oneFirst } = container;
 
-    const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple')).get();
+    const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get();
     await Audits.log(null, 'form.update.publish', simple);
 
     let flush;
@@ -55,7 +55,7 @@ describe('enketo worker transaction', () => {
 
     // now we wait to see if we have deadlocked, which we want.
     await sometime(400);
-    (await Forms.getByProjectAndXmlFormId(1, 'simple')).get()
+    (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get()
       .state.should.equal('open');
 
     // now finally resolve the locks.
