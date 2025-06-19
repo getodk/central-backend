@@ -1334,7 +1334,7 @@ describe('api: /projects', () => {
               Actors.getById(fk.id).then((o) => o.get()),
               Projects.getById(1).then((o) => o.get())
                 // eslint-disable-next-line no-multi-spaces
-                .then((project) => Forms.getByProjectAndXmlFormId(project.id,  'simple')).then((o) => o.get()),
+                .then((project) => Forms.getByProjectAndXmlFormId(project.id,  'simple', false, Form.NoDefRequired)).then((o) => o.get()),
               Audits.getLatestByAction('field_key.assignment.delete').then((o) => o.get())
             ]))
             .then(([ bob, appUserRoleId, fullfk, form, audit ]) => {
