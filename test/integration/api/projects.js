@@ -1270,7 +1270,7 @@ describe('api: /projects', () => {
               asBob.get('/v1/projects/1/forms/simple/assignments')
                 .expect(200)
                 .then(({ body }) => { body.should.eql([]); }),
-              container.Forms.getByProjectAndXmlFormId(1, 'simple2')
+              container.Forms.getByProjectAndXmlFormId(1, 'simple2', false, Form.NoDefRequired)
                 .then((o) => o.get())
                 .then(({ acteeId }) => container.Assignments.getByActeeId(acteeId))
                 .then((result) => {
