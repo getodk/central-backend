@@ -1226,7 +1226,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
               .then(() => service.login('chelsea', (asChelsea) =>
-                asChelsea.get('/v1/projects/1/forms/withAttachments/attachments')
+                asChelsea.get('/v1/projects/1/forms/withAttachments/draft/attachments')
                   .expect(403))))));
 
         it('should return an empty list if no attachments exist', testService((service) =>
