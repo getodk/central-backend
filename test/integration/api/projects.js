@@ -4,7 +4,7 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
-const { Actor } = require('../../../lib/model/frames');
+const { Actor, Form } = require('../../../lib/model/frames');
 const { createConflict } = require('../../util/scenarios');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -1192,7 +1192,7 @@ describe('api: /projects', () => {
             .then(() => Promise.all([
               asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
               Actors.getById(fk.id).then((o) => o.get()),
-              Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
+              Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired).then((o) => o.get()),
               Audits.getLatestByAction('field_key.assignment.create').then((o) => o.get())
             ]))
             .then(([ bob, fullfk, form, audit ]) => {
