@@ -267,7 +267,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
             .expect(200)
             .then(({ body }) => {
               should.not.exist(body.publishedAt);
@@ -399,7 +399,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         global.enketo.callCount.should.equal(1);
         await exhaust(container);
         global.enketo.callCount.should.equal(2);
-        const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple2/draft')
           .expect(200);
         global.enketo.createData.should.eql({
           openRosaUrl: `${container.env.domain}/v1/test/${body.draftToken}/projects/1/forms/simple2/draft`,
