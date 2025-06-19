@@ -991,7 +991,7 @@ describe('api: /projects', () => {
           .then(async ([ bob, audits ]) => {
             const actor = new Actor(bob);
             const forms = await Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectId(Auth.by(actor), project.id));
+              .then((project) => Forms.getByProjectId(Auth.by(actor), project.id, false, Form.AnyVersion));
 
             audits.length.should.equal(2);
 
