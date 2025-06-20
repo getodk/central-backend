@@ -6,6 +6,7 @@ const { Frame } = require(appRoot + '/lib/model/frame');
 const { injector } = require(appRoot + '/lib/model/container');
 const { endpointBase } = require(appRoot + '/lib/http/endpoint');
 const { noop } = require(appRoot + '/lib/util/util');
+const { Form } = require(appRoot + '/lib/model/frames');
 
 describe('transaction integration', () => {
   it('should run all operations within the correct transaction context', () => {
@@ -40,31 +41,35 @@ const sometime = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
 describe('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
+    let flush;
+    let workerTicket;
+
     const { Audits, Forms, oneFirst } = container;
 
-    const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple')).get();
-    await Audits.log(null, 'form.update.publish', simple);
+    try {
+      const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get();
+      await Audits.log(null, 'form.update.publish', simple);
 
-    let flush;
-    global.enketo.wait = (f) => { flush = f; };
-    const workerTicket = exhaust(container);
-    // eslint-disable-next-line no-await-in-loop
-    while (flush == null) await sometime(50);
+      global.enketo.wait = (f) => { flush = f; };
+      workerTicket = exhaust(container);
+      // eslint-disable-next-line no-await-in-loop
+      while (flush == null) await sometime(50);
 
-    Forms.update(simple, { state: 'closed' });
+      Forms.update(simple, { state: 'closed' });
 
-    // now we wait to see if we have deadlocked, which we want.
-    await sometime(400);
-    (await Forms.getByProjectAndXmlFormId(1, 'simple')).get()
-      .state.should.equal('open');
+      // now we wait to see if we have deadlocked, which we want.
+      await sometime(400);
+      const form2 = (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get();
+      form2.state.should.equal('open');
+    } finally {
+      // now finally resolve the locks.
+      flush();
+      if (workerTicket) await workerTicket;
+      await sometime(100); // TODO: oh NO why is this necessary now?
 
-    // now finally resolve the locks.
-    flush();
-    await workerTicket;
-    await sometime(100); // TODO: oh NO why is this necessary now?
-
-    (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
-      .should.equal('closed');
+      (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
+        .should.equal('closed');
+    }
   }));
 });
 
