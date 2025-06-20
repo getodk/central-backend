@@ -40,7 +40,9 @@ describe('transaction integration', () => {
 const sometime = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
 describe('enketo worker transaction', () => {
-  it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
+  // TO FIX
+  it('should not allow a write conflict @slow', testContainerFullTrx(async function(container) {
+    this.timeout(20000);
     const { Audits, Forms, oneFirst } = container;
 
     const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get();

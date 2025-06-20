@@ -633,6 +633,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         const withRenamedTitleAndVersion = (newTitle, newVersion='2.1') => testData.forms.simple2
           .replace('Simple 2', `${newTitle}`).replace('version="2.1"', `version="${newVersion}"`);
 
+        // TO FIX
         it('should update form title with draft title when no published form exists', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/projects/1/forms')
@@ -2103,6 +2104,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   text.should.equal('test,csv\n1,2');
                 })))));
 
+        // TO FIX
         it('should upload form definition and form attachment with cookie auth', testService(async (service) => {
           const token = await service.authenticateUser('alice');
 
