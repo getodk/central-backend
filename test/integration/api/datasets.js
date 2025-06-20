@@ -2919,7 +2919,7 @@ describe('datasets and entities', () => {
 
         await asAlice.delete('/v1/projects/1/datasets/goodone/entities/12345678-1234-4123-8234-111111111bbb');
 
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
           .expect(200)
           .then(r => r.text);
 
