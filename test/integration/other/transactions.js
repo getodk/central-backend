@@ -59,8 +59,8 @@ describe('enketo worker transaction', () => {
 
       // now we wait to see if we have deadlocked, which we want.
       await sometime(400);
-      const form2 = (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get();
-      form2.state.should.equal('open');
+      (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get()
+        .state.should.equal('open');
     } finally {
       // now finally resolve the locks.
       flush();
