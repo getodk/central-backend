@@ -41,43 +41,35 @@ const sometime = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
 describe('enketo worker transaction', () => {
   // TO FIX
-  it.only('should not allow a write conflict @slow', testContainerFullTrx(async function(container) { // eslint-disable-line no-only-tests/no-only-tests
-    this.timeout(20000);
+  it.only('should not allow a write conflict @slow', testContainerFullTrx(async (container) => { // eslint-disable-line no-only-tests/no-only-tests
+    let flush;
+    let workerTicket;
     const { Audits, Forms, oneFirst } = container;
 
-    console.log('[test] Getting form 1...'); // eslint-disable-line no-console
-    const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get();
-    console.log('[test] Got form 1.'); // eslint-disable-line no-console
-    await Audits.log(null, 'form.update.publish', simple);
+    try {
+      const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get();
+      await Audits.log(null, 'form.update.publish', simple);
 
-    let flush;
-    global.enketo.wait = (f) => { flush = f; };
-    console.log('[test] Exhausting...'); // eslint-disable-line no-console
-    const workerTicket = exhaust(container);
-    // eslint-disable-next-line no-await-in-loop
-    while (flush == null) await sometime(50);
-    console.log('[test] Flushed.'); // eslint-disable-line no-console
+      global.enketo.wait = (f) => { flush = f; };
+      workerTicket = exhaust(container);
+      // eslint-disable-next-line no-await-in-loop
+      while (flush == null) await sometime(50);
 
-    console.log('[test] Updating...'); // eslint-disable-line no-console
-    Forms.update(simple, { state: 'closed' });
-    console.log('[test] Updated.'); // eslint-disable-line no-console
+      Forms.update(simple, { state: 'closed' });
 
-    // now we wait to see if we have deadlocked, which we want.
-    console.log('[test] Waiting...'); // eslint-disable-line no-console
-    await sometime(400);
-    console.log('[test] Getting form 2...'); // eslint-disable-line no-console
-    (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get()
-      .state.should.equal('open');
+      // now we wait to see if we have deadlocked, which we want.
+      await sometime(400);
+      const form2 = (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)).get();
+      form2.state.should.equal('open');
+    } finally {
+      // now finally resolve the locks.
+      flush();
+      if (workerTicket) await workerTicket;
+      await sometime(100); // TODO: oh NO why is this necessary now?
 
-    // now finally resolve the locks.
-    console.log('[test] Resolving locks...'); // eslint-disable-line no-console
-    flush();
-    await workerTicket;
-    console.log('[test] Waiting a bit more...'); // eslint-disable-line no-console
-    await sometime(100); // TODO: oh NO why is this necessary now?
-
-    (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
-      .should.equal('closed');
+      (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
+        .should.equal('closed');
+    }
   }));
 });
 
