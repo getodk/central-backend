@@ -1,4 +1,3 @@
-const appRoot = require('app-root-path');
 const should = require('should');
 const { testService } = require('../setup');
 
