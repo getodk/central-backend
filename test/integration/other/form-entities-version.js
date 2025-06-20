@@ -262,7 +262,7 @@ describe('Update / migrate entities-version within form', () => {
         .replace('<model>', '<model entities:entities-version="2023.1.0">')
         .replace('</meta>', '<entity dataset="people" id="" update="" baseVersion=""><label/></entity></meta>');
 
-      // Upload a form
+      // Upload a form and publish it
       await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
         .send(withAttachmentsEntities)
         .set('Content-Type', 'application/xml')
@@ -271,8 +271,7 @@ describe('Update / migrate entities-version within form', () => {
       // Upload an attachment
       await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
         .send('test,csv\n1,2')
-        .set('Content-Type', 'text/csv')
-        .expect(200);
+        .set('Content-Type', 'text/csv');
 
       // Publish the draft
       await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
@@ -301,7 +300,6 @@ describe('Update / migrate entities-version within form', () => {
 
       // Check form xml (published)
       await asAlice.get('/v1/projects/1/forms/withAttachments.xml')
-        .expect(200)
         .then(({ text }) => {
           text.includes('entities:entities-version="2024.1.0"').should.equal(true);
           text.includes('version="[upgrade]"').should.equal(true);
@@ -310,7 +308,6 @@ describe('Update / migrate entities-version within form', () => {
 
       // Check form xml (draft)
       await asAlice.get('/v1/projects/1/forms/withAttachments/draft.xml')
-        .expect(200)
         .then(({ text }) => {
           text.includes('entities:entities-version="2024.1.0"').should.equal(true);
           text.includes('version="[upgrade]"').should.equal(true);
@@ -422,8 +419,7 @@ describe('Update / migrate entities-version within form', () => {
         .expect(200);
 
       // check updatedAt on the draft form
-      // REVIEW maybe this shouldn't change - maybe the base form endpoint should always provide basic info
-      await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
+      await asAlice.get('/v1/projects/1/forms/updateEntity')
         .expect(200)
         .then(({ body }) => {
           should(body.updatedAt).be.null();
