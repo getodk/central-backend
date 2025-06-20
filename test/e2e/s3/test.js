@@ -340,7 +340,7 @@ describe('s3 support', () => {
         ))
     );
 
-    await apiPostJson(`projects/${projectId}/forms/${xmlFormId}/draft/publish`, {});
+    await api.apiPostJson(`projects/${projectId}/forms/${xmlFormId}/draft/publish`, {});
 
     return xmlFormId;
   }
