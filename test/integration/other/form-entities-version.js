@@ -422,7 +422,8 @@ describe('Update / migrate entities-version within form', () => {
         .expect(200);
 
       // check updatedAt on the draft form
-      await asAlice.get('/v1/projects/1/forms/updateEntity')
+      // REVIEW maybe this shouldn't change - maybe the base form endpoint should always provide basic info
+      await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
         .expect(200)
         .then(({ body }) => {
           should(body.updatedAt).be.null();
@@ -434,7 +435,8 @@ describe('Update / migrate entities-version within form', () => {
       // Run form upgrade
       await exhaust(container);
 
-      await asAlice.get('/v1/projects/1/forms/updateEntity')
+      // REVIEW maybe this shouldn't change - maybe the base form endpoint should always provide basic info
+      await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
         .expect(200)
         .then(({ body }) => {
           body.updatedAt.should.be.a.recentIsoDate();
