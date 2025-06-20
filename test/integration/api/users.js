@@ -1,4 +1,6 @@
+const appRoot = require('app-root-path');
 const should = require('should');
+const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
 
 describe('api: /users', () => {
@@ -127,7 +129,7 @@ describe('api: /users', () => {
                   .send({ email: 'david@getodk.org', password: '' })
                   .expect(400),
                 Users.getByEmail('david@getodk.org')
-                  .then((o) => o.get())
+                  .then(getOrNotFound)
                   .then(({ password }) => { should.not.exist(password); })
               ])))));
 
