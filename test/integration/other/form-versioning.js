@@ -11,11 +11,11 @@ describe('form forward versioning', () => {
   it('should create a new def and update the version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
-      Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired).then(force)
+      Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.PublishedVersion).then(force)
     ])
       // eslint-disable-next-line no-multi-spaces
       .then(([ partial, oldForm ]) =>  Forms.createVersion(partial, oldForm, true))
-      .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true)).then(force)
+      .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true, Form.PublishedVersion)).then(force)
       .then((newForm) => {
         newForm.currentDefId.should.equal(newForm.def.id);
         /version="two"/.test(newForm.xml).should.equal(true);
@@ -25,10 +25,10 @@ describe('form forward versioning', () => {
   it('should create a new draft def and not update the current version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
-      Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired).then(force)
+      Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.PublishedVersion).then(force)
     ])
       .then(([ partial, oldForm ]) => Forms.createVersion(partial, oldForm, false)
-        .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true)).then(force)
+        .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true, Form.PublishedVersion)).then(force)
         .then((newForm) => {
           newForm.currentDefId.should.equal(oldForm.def.id);
           /version="two"/.test(newForm.xml).should.equal(false);
@@ -54,7 +54,7 @@ describe('form forward versioning', () => {
           .expect(200))
         .then(() => Promise.all([
           Form.fromXml(newXml),
-          Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired).then(force)
+          Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.PublishedVersion).then(force)
         ])
           .then(([ partial, form ]) => Forms.createVersion(partial, form, true))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
