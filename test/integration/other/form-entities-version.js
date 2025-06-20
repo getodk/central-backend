@@ -71,6 +71,7 @@ describe('Update / migrate entities-version within form', () => {
       await exhaust(container);
 
       await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
+        .expect(200)
         .then(({ body }) => {
           body.length.should.equal(2);
           body[0].version.should.equal('1.0[upgrade]');
@@ -78,6 +79,7 @@ describe('Update / migrate entities-version within form', () => {
         });
 
       await asAlice.get('/v1/projects/1/forms/updateEntity.xml')
+        .expect(200)
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
@@ -100,17 +102,20 @@ describe('Update / migrate entities-version within form', () => {
 
       // The version on the draft does change even though it is updated in place
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
+        .expect(200)
         .then(({ body }) => {
           body.version.should.equal('1.0[upgrade]');
         });
 
       await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
+        .expect(200)
         .then(({ body }) => {
           body.length.should.equal(0);
         });
 
       // The XML is updated
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft.xml')
+        .expect(200)
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
@@ -125,7 +130,8 @@ describe('Update / migrate entities-version within form', () => {
         .expect(200);
 
       // Convert the published form to a draft
-      await asAlice.post('/v1/projects/1/forms/updateEntity/draft');
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
+        .expect(200);
 
       const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
@@ -135,11 +141,13 @@ describe('Update / migrate entities-version within form', () => {
 
       // The version on the draft does change even though it is updated in place
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
+        .expect(200)
         .then(({ body }) => {
           body.version.should.equal('1.0[upgrade]');
         });
 
       await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
+        .expect(200)
         .then(({ body }) => {
           body.length.should.equal(2);
           body[0].version.should.equal('1.0[upgrade]');
@@ -148,10 +156,12 @@ describe('Update / migrate entities-version within form', () => {
 
       // The published form XML is updated
       await asAlice.get('/v1/projects/1/forms/updateEntity.xml')
+        .expect(200)
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
 
       // The draft XML is updated
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft.xml')
+        .expect(200)
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
@@ -170,14 +180,16 @@ describe('Update / migrate entities-version within form', () => {
         .set('Content-Type', 'text/xml')
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+        .expect(200);
 
       await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
         .send(testData.forms.updateEntity2023.replace('orx:version="1.0"', ' orx:version="3.0"'))
         .set('Content-Type', 'text/xml')
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish');
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+        .expect(200);
 
       const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
@@ -186,6 +198,7 @@ describe('Update / migrate entities-version within form', () => {
       await exhaust(container);
 
       await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
+        .expect(200)
         .then(({ body }) => {
           body.map(f => f.version).should.eql([ '3.0[upgrade]', '3.0', '2.0', '1.0' ]);
         });
@@ -205,6 +218,7 @@ describe('Update / migrate entities-version within form', () => {
 
       // Before migrating, xls version of form can be accessed
       await asAlice.get('/v1/projects/1/forms/updateEntity.xls')
+        .expect(200)
         .then(({ headers }) => {
           headers.etag.should.equal('"30fdb0e9115ea7ca6702573f521814d1"');
         });
@@ -236,6 +250,7 @@ describe('Update / migrate entities-version within form', () => {
 
       // Before migrating, xls version of form can be accessed
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft.xls')
+        .expect(200)
         .then(({ headers }) => {
           headers.etag.should.equal('"30fdb0e9115ea7ca6702573f521814d1"');
         });
@@ -509,7 +524,8 @@ describe('Update / migrate entities-version within form', () => {
         .expect(200);
 
       // Convert the published form to a draft
-      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft');
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .expect(200);
 
       const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'simpleEntity').then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
@@ -519,11 +535,13 @@ describe('Update / migrate entities-version within form', () => {
 
       // The version on the draft does change even though it is updated in place
       await asAlice.get('/v1/projects/1/forms/simpleEntity/draft')
+        .expect(200)
         .then(({ body }) => {
           body.version.should.equal('1.0[upgrade]');
         });
 
       await asAlice.get('/v1/projects/1/forms/simpleEntity/versions')
+        .expect(200)
         .then(({ body }) => {
           body.length.should.equal(2);
           body[0].version.should.equal('1.0[upgrade]');
@@ -532,10 +550,12 @@ describe('Update / migrate entities-version within form', () => {
 
       // The published form XML is updated
       await asAlice.get('/v1/projects/1/forms/simpleEntity.xml')
+        .expect(200)
         .then(({ text }) => text.should.equal(upgradedSimpleEntity));
 
       // The draft XML is updated
       await asAlice.get('/v1/projects/1/forms/simpleEntity/draft.xml')
+        .expect(200)
         .then(({ text }) => text.should.equal(upgradedSimpleEntity));
     }));
   });
@@ -613,7 +633,8 @@ describe('Update / migrate entities-version within form', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/updateEntity/draft');
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
+        .expect(200);
 
       const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
@@ -672,7 +693,8 @@ describe('Update / migrate entities-version within form', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/updateEntity/draft');
+      await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
+        .expect(200);
 
       const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
@@ -682,14 +704,17 @@ describe('Update / migrate entities-version within form', () => {
 
       // The published form XML is the same
       await asAlice.get('/v1/projects/1/forms/updateEntity.xml')
+        .expect(200)
         .then(({ text }) => text.should.equal(invalidForm));
 
       // The draft XML is the same
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft.xml')
+        .expect(200)
         .then(({ text }) => text.should.equal(invalidForm));
 
       // Check form versions
       await asAlice.get('/v1/projects/1/forms/updateEntity/versions')
+        .expect(200)
         .then(({ body }) => {
           body.map(f => f.version).should.eql([ '1.0' ]);
         });
@@ -718,6 +743,7 @@ describe('Update / migrate entities-version within form', () => {
 
       // The published form XML is the same
       await asAlice.get('/v1/projects/1/forms/offlineEntity.xml')
+        .expect(200)
         .then(({ text }) => text.should.equal(testData.forms.offlineEntity));
     }));
   });
