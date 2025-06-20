@@ -262,7 +262,7 @@ describe('Update / migrate entities-version within form', () => {
         .replace('<model>', '<model entities:entities-version="2023.1.0">')
         .replace('</meta>', '<entity dataset="people" id="" update="" baseVersion=""><label/></entity></meta>');
 
-      // Upload a form and publish it
+      // Upload a form
       await asAlice.post('/v1/projects/1/forms?ignoreWarnings=true')
         .send(withAttachmentsEntities)
         .set('Content-Type', 'application/xml')
@@ -271,15 +271,18 @@ describe('Update / migrate entities-version within form', () => {
       // Upload an attachment
       await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
         .send('test,csv\n1,2')
-        .set('Content-Type', 'text/csv');
+        .set('Content-Type', 'text/csv')
+        .expect(200);
 
       // Publish the draft
-      await asAlice.post('/v1/projects/1/forms/withAttachments/draft/pubilsh');
+      await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+        .expect(200);
 
       // Create a draft
-      await asAlice.post('/v1/projects/1/forms/withAttachments/draft');
+      await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+        .expect(200);
 
-      await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+      await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
         .expect(200)
         .then(({ body }) => {
           // eslint-disable-next-line no-param-reassign
@@ -298,6 +301,7 @@ describe('Update / migrate entities-version within form', () => {
 
       // Check form xml (published)
       await asAlice.get('/v1/projects/1/forms/withAttachments.xml')
+        .expect(200)
         .then(({ text }) => {
           text.includes('entities:entities-version="2024.1.0"').should.equal(true);
           text.includes('version="[upgrade]"').should.equal(true);
@@ -306,6 +310,7 @@ describe('Update / migrate entities-version within form', () => {
 
       // Check form xml (draft)
       await asAlice.get('/v1/projects/1/forms/withAttachments/draft.xml')
+        .expect(200)
         .then(({ text }) => {
           text.includes('entities:entities-version="2024.1.0"').should.equal(true);
           text.includes('version="[upgrade]"').should.equal(true);
