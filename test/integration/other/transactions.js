@@ -40,8 +40,7 @@ describe('transaction integration', () => {
 const sometime = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
 describe('enketo worker transaction', () => {
-  // TO FIX
-  it.only('should not allow a write conflict @slow', testContainerFullTrx(async (container) => { // eslint-disable-line no-only-tests/no-only-tests
+  it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     let flush;
     let workerTicket;
     const { Audits, Forms, oneFirst } = container;
