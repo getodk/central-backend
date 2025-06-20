@@ -2947,7 +2947,7 @@ describe('datasets and entities', () => {
           })
           .expect(200);
 
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
           .expect(200)
           .then(r => r.text);
 
