@@ -339,6 +339,8 @@ describe('s3 support', () => {
       #
       # /attachments: ${JSON.stringify(await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`))}
       #
+      # expectedAttachments: ${JSON.stringify(expectedAttachments)}
+      #
       ###############################
     `);
 
