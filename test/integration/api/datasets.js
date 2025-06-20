@@ -2094,7 +2094,7 @@ describe('datasets and entities', () => {
         const etag = result.get('ETag');
 
         // Fetch the form manifest
-        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200)
           .then(({ text }) => text);
@@ -2105,7 +2105,7 @@ describe('datasets and entities', () => {
     <mediaFile type="entityList">
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv</downloadUrl>
       <integrityUrl>${domain}/v1/projects/1/datasets/goodone/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
