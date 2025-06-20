@@ -1,7 +1,6 @@
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { Form } = require('../../../../lib/model/frames');
-const { getOrNotFound } = require('../../../../lib/util/promise');
 
 describe('api: /projects/:id/forms (delete, restore)', () => {
 
@@ -113,9 +112,9 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
           .then(() => asAlice.post('/v1/projects/1/forms/1/restore')
             .expect(200))
           .then(() => Promise.all([
-            Users.getByEmail('alice@getodk.org').then(getOrNotFound),
-            Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired).then(getOrNotFound),
-            Audits.getLatestByAction('form.restore').then(getOrNotFound)
+            Users.getByEmail('alice@getodk.org').then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired).then((o) => o.get()),
+            Audits.getLatestByAction('form.restore').then((o) => o.get())
           ])
             .then(([ alice, form, log ]) => {
               log.actorId.should.equal(alice.actor.id);

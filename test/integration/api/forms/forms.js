@@ -9,7 +9,6 @@ const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { omit } = require(appRoot + '/lib/util/util');
-const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { Form } = require(appRoot + '/lib/model/frames');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
@@ -1629,7 +1628,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .then(() => Promise.all([
             Users.getByEmail('alice@getodk.org').then((o) => o.get()),
             Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', false, Form.NoDefRequired)).then(getOrNotFound),
+              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', false, Form.NoDefRequired)).then((o) => o.get()),
             Audits.getLatestByAction('form.update').then((o) => o.get())
           ])
             .then(([ alice, form, log ]) => {

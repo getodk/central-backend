@@ -3,7 +3,6 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
-const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { Form } = require(appRoot + '/lib/model/frames');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -623,7 +622,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body[0].details.newDraftDefId.should.be.a.Number();
 
                 return Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)
-                  .then(getOrNotFound)
+                  .then((o) => o.get())
                   .then((form) => {
                     form.draftDefId.should.equal(body[0].details.newDraftDefId);
                   });
@@ -1931,7 +1930,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body[0].details.newDefId.should.equal(body[1].details.newDraftDefId);
 
                 return Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)
-                  .then(getOrNotFound)
+                  .then((o) => o.get())
                   .then((form) => {
                     body[1].details.newDraftDefId.should.equal(form.currentDefId);
                   });
@@ -1945,7 +1944,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
           .set('Content-Type', 'text/xml')
           .expect(200);
 
-        const formT1 = await Forms.getByProjectAndXmlFormId(1, 'simple2', false, Form.PublishedVersion).then(getOrNotFound);
+        const formT1 = await Forms.getByProjectAndXmlFormId(1, 'simple2', false, Form.PublishedVersion).then((o) => o.get());
 
         await asAlice.post('/v1/projects/1/forms/simple2/draft')
           .set('Content-Type', 'application/xml')
@@ -1963,7 +1962,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
         await asAlice.post('/v1/projects/1/forms/simple2/draft/publish');
 
-        const formT4 = await Forms.getByProjectAndXmlFormId(1, 'simple2', false, Form.PublishedVersion).then(getOrNotFound);
+        const formT4 = await Forms.getByProjectAndXmlFormId(1, 'simple2', false, Form.PublishedVersion).then((o) => o.get());
 
         await asAlice.get('/v1/audits?action=nonverbose')
           .expect(200)
@@ -2180,12 +2179,12 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .expect(200)
                 .then(() => Promise.all([
                   Users.getByEmail('alice@getodk.org').then((o) => o.get()),
-                  Projects.getById(1).then(getOrNotFound)
-                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments', false, Form.NoDefRequired)).then(getOrNotFound)
+                  Projects.getById(1).then((o) => o.get())
+                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments', false, Form.NoDefRequired)).then((o) => o.get())
                     .then((form) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv')
-                      .then(getOrNotFound)
+                      .then((o) => o.get())
                       .then((attachment) => [ form, attachment ])),
-                  Audits.getLatestByAction('form.attachment.update').then(getOrNotFound)
+                  Audits.getLatestByAction('form.attachment.update').then((o) => o.get())
                 ])
                   .then(([ alice, [ form, attachment ], log ]) => {
                     log.actorId.should.equal(alice.actor.id);
@@ -2281,9 +2280,9 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   Users.getByEmail('alice@getodk.org').then((o) => o.get()),
                   Projects.getById(1).then((o) => o.get())
                     .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments', false, Form.NoDefRequired))
-                    .then(getOrNotFound)
+                    .then((o) => o.get())
                     .then((form) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv')
-                      .then(getOrNotFound)
+                      .then((o) => o.get())
                       .then((attachment) => [ form, attachment ]))
                 ]))
                 .then(([ alice, [ form, attachment ] ]) =>
