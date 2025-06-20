@@ -330,27 +330,17 @@ describe('s3 support', () => {
   }
 
   async function uploadFormWithAttachments(xmlFilePath, attDir) {
-    const { xmlFormId, ...rest } = await api.apiPostFile(`projects/${projectId}/forms?publish=true`, xmlFilePath);
-    // eslint-disable-next-line no-console
-    console.log(`
-      ###############################
-      #
-      # rest: ${JSON.stringify({ xmlFormId, rest })}
-      #
-      # /attachments: ${JSON.stringify(await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`))}
-      #
-      # expectedAttachments: ${JSON.stringify(expectedAttachments)}
-      #
-      ###############################
-    `);
+    const { xmlFormId } = await api.apiPostFile(`projects/${projectId}/forms`, xmlFilePath);
 
     await Promise.all(
       expectedAttachments
         .map(f => api.apiPostFile(
-          `projects/${projectId}/forms/${xmlFormId}/attachments/${f}`,
+          `projects/${projectId}/forms/${xmlFormId}/draft/attachments/${f}`,
           `${attDir}/${f}`,
         ))
     );
+
+    await apiPostJson(`projects/${projectId}/forms/${xmlFormId}/draft/publish`, {});
 
     return xmlFormId;
   }
