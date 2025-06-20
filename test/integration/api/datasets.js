@@ -2249,7 +2249,7 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
               .then(() =>
-                Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.PublishedVersion)
+                Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion)
                   .then(getOrNotFound)
                   .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people.csv')
                     .then(attachment => {
@@ -2321,7 +2321,7 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
               .then(() =>
-                Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.PublishedVersion)
+                Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion)
                   .then(getOrNotFound)
                   .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people')
                     .then(attachment => {
