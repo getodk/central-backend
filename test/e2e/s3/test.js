@@ -330,7 +330,15 @@ describe('s3 support', () => {
   }
 
   async function uploadFormWithAttachments(xmlFilePath, attDir) {
-    const { xmlFormId } = await api.apiPostFile(`projects/${projectId}/forms?publish=true`, xmlFilePath);
+    const { xmlFormId, ...rest } = await api.apiPostFile(`projects/${projectId}/forms?publish=true`, xmlFilePath);
+    // eslint-disable-next-line no-console
+    console.log(`
+      ###############################
+      #
+      # rest: ${JSON.stringify(rest)}
+      #
+      ###############################
+    `);
 
     await Promise.all(
       expectedAttachments
