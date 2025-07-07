@@ -199,7 +199,7 @@ describe('api: /forms/:id.svc', () => {
               body.value[0].__system.edits.should.equal(1);
             })))));
 
-    it.only('should return a single encrypted frame (no formdata)', testService((service) =>
+    it('should return a single encrypted frame (no formdata)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.encrypted)
