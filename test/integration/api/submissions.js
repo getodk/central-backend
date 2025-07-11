@@ -4452,12 +4452,42 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
           .send('testimage')
           .expect(404))));
 
-    it('should reject if the user cannot update a submission', testService((service) =>
-      service.login('chelsea', (asChelsea) =>
-        asChelsea.post('/v1/projects/1/forms/simple/submissions/one/attachments/file.jpg')
-          .set('Content-Type', 'image/jpeg')
-          .send('testimage')
-          .expect(403))));
+    it('should return notfound if the attachment does not exist in the submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/forms/simple/submissions/one/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot update a submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
 
     it('should reject if the attachment does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
