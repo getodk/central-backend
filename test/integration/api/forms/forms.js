@@ -9,6 +9,7 @@ const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { omit } = require(appRoot + '/lib/util/util');
+const { Form } = require(appRoot + '/lib/model/frames');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
 
@@ -265,7 +266,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .send(testData.forms.simple2)
           .set('Content-Type', 'application/xml')
           .expect(200)
-          .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft')
             .expect(200)
             .then(({ body }) => {
               should.not.exist(body.publishedAt);
@@ -397,7 +398,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         global.enketo.callCount.should.equal(1);
         await exhaust(container);
         global.enketo.callCount.should.equal(2);
-        const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
+        const { body } = await asAlice.get('/v1/projects/1/forms/simple2/draft')
           .expect(200);
         global.enketo.createData.should.eql({
           openRosaUrl: `${container.env.domain}/v1/test/${body.draftToken}/projects/1/forms/simple2/draft`,
@@ -724,7 +725,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             .expect(200)
             .then(() => service.login('chelsea', (asChelsea) =>
-              asChelsea.get('/v1/projects/1/forms/simple2.xlsx')
+              asChelsea.get('/v1/projects/1/forms/simple2/draft.xlsx')
                 .expect(403))))));
 
       it('should return xls notfound given xlsx file', testService((service) =>
@@ -733,7 +734,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
             .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xls')
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xls')
               .expect(404)))));
 
       it('should return the xlsx file originally provided', testService((service) => {
@@ -1224,7 +1225,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
               .then(() => service.login('chelsea', (asChelsea) =>
-                asChelsea.get('/v1/projects/1/forms/withAttachments/attachments')
+                asChelsea.get('/v1/projects/1/forms/withAttachments/draft/attachments')
                   .expect(403))))));
 
         it('should return an empty list if no attachments exist', testService((service) =>
@@ -1627,7 +1628,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .then(() => Promise.all([
             Users.getByEmail('alice@getodk.org').then((o) => o.get()),
             Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')).then((o) => o.get()),
+              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', false, Form.NoDefRequired)).then((o) => o.get()),
             Audits.getLatestByAction('form.update').then((o) => o.get())
           ])
             .then(([ alice, form, log ]) => {
