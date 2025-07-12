@@ -4471,6 +4471,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .expect(200)));
 
       service.login('chelsea', (asChelsea) =>
+        // this POST would be valid from Alice - see subsequent test "should attach the given file"
         asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
           .set('Content-Type', 'image/jpeg')
           .send('testimage')
