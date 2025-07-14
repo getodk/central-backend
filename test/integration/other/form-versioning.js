@@ -83,7 +83,7 @@ describe('form forward versioning', () => {
           // eslint-disable-next-line no-shadow
           .then((partial) => Forms.createVersion(partial, savedForm, true))
           // eslint-disable-next-line newline-per-chained-call
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.NoDefRequired)).then(force)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.WithoutDef)).then(force)
           .then((finalForm) => FormAttachments.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
               savedForm.currentDefId.should.not.equal(finalForm.currentDefId);
@@ -117,7 +117,7 @@ describe('form forward versioning', () => {
           .then(() => Form.fromXml(withAttachmentsNonmatching))
           .then((partial2) => Forms.createVersion(partial2, savedForm, true))
           // eslint-disable-next-line newline-per-chained-call
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.NoDefRequired)).then(force)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.WithoutDef)).then(force)
           .then((finalForm) => FormAttachments.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
               attachments.length.should.equal(2);

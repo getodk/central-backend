@@ -23,7 +23,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
     it('should log the action in the audit log', testService((service, { Projects, Forms, Users, Audits }) =>
       service.login('alice', (asAlice) =>
         Projects.getById(1).then((o) => o.get())
-          .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', false, Form.NoDefRequired)).then((o) => o.get())
+          .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', false, Form.WithoutDef)).then((o) => o.get())
           .then((form) => asAlice.delete('/v1/projects/1/forms/simple')
             .expect(200)
             .then(() => Promise.all([
@@ -113,7 +113,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
             .expect(200))
           .then(() => Promise.all([
             Users.getByEmail('alice@getodk.org').then((o) => o.get()),
-            Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired).then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.WithoutDef).then((o) => o.get()),
             Audits.getLatestByAction('form.restore').then((o) => o.get())
           ])
             .then(([ alice, form, log ]) => {

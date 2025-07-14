@@ -621,7 +621,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body[0].action.should.equal('form.update.draft.set');
                 body[0].details.newDraftDefId.should.be.a.Number();
 
-                return Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)
+                return Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.WithoutDef)
                   .then((o) => o.get())
                   .then((form) => {
                     form.draftDefId.should.equal(body[0].details.newDraftDefId);
@@ -1929,7 +1929,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
                 body[0].details.newDefId.should.equal(body[1].details.newDraftDefId);
 
-                return Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.NoDefRequired)
+                return Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.WithoutDef)
                   .then((o) => o.get())
                   .then((form) => {
                     body[1].details.newDraftDefId.should.equal(form.currentDefId);
@@ -2180,7 +2180,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .then(() => Promise.all([
                   Users.getByEmail('alice@getodk.org').then((o) => o.get()),
                   Projects.getById(1).then((o) => o.get())
-                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments', false, Form.NoDefRequired)).then((o) => o.get())
+                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments', false, Form.WithoutDef)).then((o) => o.get())
                     .then((form) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv')
                       .then((o) => o.get())
                       .then((attachment) => [ form, attachment ])),
@@ -2279,7 +2279,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .then(() => Promise.all([
                   Users.getByEmail('alice@getodk.org').then((o) => o.get()),
                   Projects.getById(1).then((o) => o.get())
-                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments', false, Form.NoDefRequired))
+                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments', false, Form.WithoutDef))
                     .then((o) => o.get())
                     .then((form) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv')
                       .then((o) => o.get())
