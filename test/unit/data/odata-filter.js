@@ -20,19 +20,30 @@ const odataOrderBy = (exp, stableOrderColumn = null) => _odataOrderBy(exp, odata
 
 describe('OData filter query transformer', () => {
   it('should transform binary expressions', () => {
-    odataFilter('3 eq 5').should.eql(sql`(${'3'} is not distinct from ${'5'})`);
-    odataFilter('3 ne 5').should.eql(sql`(${'3'} is distinct from ${'5'})`);
+    odataFilter('3 eq 5').should.eql(sql`(${'3'} IS NOT DISTINCT FROM ${'5'})`);
+    odataFilter('3 ne 5').should.eql(sql`(NOT (${'3'} IS NOT DISTINCT FROM ${'5'}))`);
     odataFilter('2 lt 3 and 5 gt 4').should.eql(sql`((${'2'} < ${'3'}) and (${'5'} > ${'4'}))`);
-    odataFilter('3 eq __system/submitterId').should.eql(sql`(${'3'} is not distinct from ${sql.identifier([ 'submissions', 'submitterId' ])})`);
-    odataFilter('2 eq $root/Submissions/__system/submitterId').should.eql(sql`(${'2'} is not distinct from ${sql.identifier([ 'submissions', 'submitterId' ])})`);
+    odataFilter('3 eq __system/submitterId').should.eql(sql`(${'3'} IS NOT DISTINCT FROM ${sql.identifier([ 'submissions', 'submitterId' ])})`);
+    odataFilter('2 eq $root/Submissions/__system/submitterId').should.eql(sql`(${'2'} IS NOT DISTINCT FROM ${sql.identifier([ 'submissions', 'submitterId' ])})`);
   });
 
   it('should transform not operators', () => {
-    odataFilter('not 4 eq 6').should.eql(sql`(not (${'4'} is not distinct from ${'6'}))`);
+    odataFilter('not 4 eq 6').should.eql(sql`(not (${'4'} IS NOT DISTINCT FROM ${'6'}))`);
   });
 
-  it('should transform null', () => {
-    odataFilter('1 eq null').should.eql(sql`(${'1'} is not distinct from ${null})`);
+  describe('null equalities', () => {
+    [
+      { expression: 'null eq null', expectedResult: sql`(TRUE)` },
+      { expression: '1 eq null', expectedResult: sql`(${'1'} IS NULL)` },
+      { expression: 'null eq 1', expectedResult: sql`(NULL IS ${'1'})` },
+      { expression: 'null ne null', expectedResult: sql`(NOT (TRUE))` },
+      { expression: '1 ne null', expectedResult: sql`(NOT (${'1'} IS NULL))` },
+      { expression: 'null ne 1', expectedResult: sql`(NOT (NULL IS ${'1'}))` },
+    ].forEach(t => {
+      it(`should transform '${t.expression}'`, () => {
+        odataFilter(t.expression).should.eql(t.expectedResult);
+      });
+    });
   });
 
   it('should allow parentheses around a boolean expression', () => {
@@ -41,12 +52,12 @@ describe('OData filter query transformer', () => {
   });
 
   it('should transform date extraction method calls', () => {
-    odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} is not distinct from extract("year" from ${'2020-01-01'}))`);
-    odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} is not distinct from extract("year" from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);
+    odataFilter('2020 eq year(2020-01-01)').should.eql(sql`(${'2020'} IS NOT DISTINCT FROM extract("year" from ${'2020-01-01'}))`);
+    odataFilter('2020 eq year(__system/submissionDate)').should.eql(sql`(${'2020'} IS NOT DISTINCT FROM extract("year" from ${sql.identifier([ 'submissions', 'createdAt' ])}))`);
   });
 
   it('should transform now method calls', () => {
-    odataFilter('2020 eq year(now())').should.eql(sql`(${'2020'} is not distinct from extract("year" from now()))`);
+    odataFilter('2020 eq year(now())').should.eql(sql`(${'2020'} IS NOT DISTINCT FROM extract("year" from now()))`);
   });
 
   it('should reject unparseable expressions', () => {

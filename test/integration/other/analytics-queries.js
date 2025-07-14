@@ -525,6 +525,34 @@ describe('analytics task queries', function () {
       const count = await container.Analytics.countResetFailedToPending();
       count.should.equal(1);
     }));
+
+    it('should count how many datasets are ownerOnly', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'households' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'patients' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/patients')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/households')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      // count datasets
+      const count = await container.Analytics.countOwnerOnlyDatasets();
+      count.should.equal(2);
+    }));
   });
 
   describe('user metrics', () => {
@@ -2231,6 +2259,11 @@ describe('analytics task queries', function () {
 
       await exhaust(container);
       await container.Entities.processBacklog(true);
+
+      // 2025.2 set dataset ownerOnly to true
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: true })
+        .expect(200);
 
       // After the interesting stuff above, encrypt and archive the project
 
