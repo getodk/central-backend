@@ -62,7 +62,7 @@ describe('enketo worker transaction', () => {
         .state.should.equal('open');
     } finally {
       // now finally resolve the locks.
-      flush();
+      flush?.();
       if (workerTicket) await workerTicket;
       await sometime(100); // TODO: oh NO why is this necessary now?
 
