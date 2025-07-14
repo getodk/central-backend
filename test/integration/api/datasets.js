@@ -9,11 +9,12 @@ const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
 const { createConflict } = require('../../util/scenarios');
-const { omit } = require('ramda');
+const { omit, last } = require('ramda');
 const xml2js = require('xml2js');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
+const { md5sum } = require(appRoot + '/lib/util/crypto');
 
 const testEntities = (test) => testService(async (service, container) => {
   const asAlice = await service.login('alice');
@@ -102,16 +103,18 @@ describe('datasets and entities', () => {
             body.name.should.equal('trees');
             body.properties.should.eql([]);
             body.approvalRequired.should.eql(false);
+            body.ownerOnly.should.eql(false);
           });
       }));
 
-      it('should allow approvalRequired to be set on new dataset', testService(async (service) => {
+      it('should allow properties to be set on new dataset', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/datasets')
           .send({
             name: 'trees',
             approvalRequired: true,
+            ownerOnly: true
           })
           .expect(200)
           .then(({ body }) => {
@@ -119,6 +122,7 @@ describe('datasets and entities', () => {
             body.name.should.equal('trees');
             body.properties.should.eql([]);
             body.approvalRequired.should.eql(true);
+            body.ownerOnly.should.eql(true);
           });
       }));
 
@@ -577,10 +581,9 @@ describe('datasets and entities', () => {
               asAlice.get('/v1/projects/1/datasets')
                 .expect(200)
                 .then(({ body }) => {
+                  body.length.should.equal(1);
                   body[0].should.be.a.Dataset();
-                  body.map(({ createdAt, ...d }) => d).should.eql([
-                    { name: 'people', projectId: 1, approvalRequired: false }
-                  ]);
+                  body[0].should.containEql({ name: 'people', projectId: 1 });
                 })))));
 
       it('should return the extended datasets of Default project', testService(async (service, container) => {
@@ -606,10 +609,9 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body.length.should.equal(1);
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, lastUpdate, ...d }) => d).should.eql([
-              { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
-            ]);
+            body[0].should.containEql({ name: 'people', projectId: 1, entities: 1, conflicts: 0 });
           });
       }));
 
@@ -628,10 +630,9 @@ describe('datasets and entities', () => {
                 asAlice.get('/v1/projects/1/datasets')
                   .expect(200)
                   .then(({ body }) => {
+                    body.length.should.equal(1);
                     body[0].should.be.a.Dataset();
-                    body.map(({ id, createdAt, ...d }) => d).should.eql([
-                      { name: 'student', projectId: 1, approvalRequired: false }
-                    ]);
+                    body[0].name.should.equal('student');
                   }))))));
     });
 
@@ -649,13 +650,14 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body.length.should.equal(1);
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, ...d }) => {
-              should(lastEntity).be.null();
-              return d;
-            }).should.eql([
-              { name: 'people', projectId: 1, entities: 0, approvalRequired: false, conflicts: 0 }
-            ]);
+            body[0].should.containEql({
+              name: 'people',
+              entities: 0,
+              lastEntity: null,
+              conflicts: 0,
+            });
           });
       }));
 
@@ -688,14 +690,10 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body.length.should.equal(1);
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, ...d }) => {
-              createdAt.should.not.be.null();
-              lastEntity.should.not.be.null();
-              return d;
-            }).should.eql([
-              { name: 'people', projectId: 1, entities: 1, approvalRequired: false, conflicts: 0 }
-            ]);
+            body[0].should.containEql({ name: 'people', projectId: 1, entities: 1, conflicts: 0 });
+            body[0].lastEntity.should.not.be.null();
           });
       }));
 
@@ -752,15 +750,10 @@ describe('datasets and entities', () => {
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
+            body.length.should.equal(1);
             body[0].should.be.an.ExtendedDataset();
-            body.map(({ createdAt, lastEntity, conflicts, ...d }) => {
-              lastEntity.should.not.startWith('1999');
-              return d;
-            }).should.eql([
-              { name: 'people', projectId: 1, entities: 2, approvalRequired: false }
-            ]);
-
-            body[0].conflicts.should.equal(1);
+            body[0].should.containEql({ name: 'people', entities: 2, conflicts: 1 });
+            body[0].lastEntity.should.not.startWith('1999');
           });
       }));
 
@@ -1369,7 +1362,8 @@ describe('datasets and entities', () => {
             ds.should.be.eql({
               name: 'people',
               projectId: 1,
-              approvalRequired: false
+              approvalRequired: false,
+              ownerOnly: false
             });
 
             createdAt.should.not.be.null();
@@ -1432,6 +1426,7 @@ describe('datasets and entities', () => {
               name: 'people',
               projectId: 1,
               approvalRequired: false,
+              ownerOnly: false,
               entities: 1,
               conflicts: 0,
               linkedForms: [],
@@ -2996,6 +2991,41 @@ describe('datasets and entities', () => {
             text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
     <mediaFile type="entityList">
+      <filename>people.csv</filename>
+      <hash>md5:${etag.replace(/"/g, '')}</hash>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/people/integrity</integrityUrl>
+    </mediaFile>
+  </manifest>`);
+          });
+
+      }));
+
+      it('should return approvalEntityList as the type attribute of mediaFile for datasets that require approval', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people', approvalRequired: true })
+          .expect(200);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+          .expect(200);
+
+        const etag = result.get('ETag');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => {
+            const domain = config.get('default.env.domain');
+            text.should.be.eql(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+    <mediaFile type="approvalEntityList">
       <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
@@ -5114,7 +5144,11 @@ describe('datasets and entities', () => {
 
   });
 
-  describe('configurable approval requirements', () => {
+  // These tests test most everything about approvalRequired. They also test the
+  // endpoint as a whole for updating dataset settings, including ownerOnly. We
+  // test the specific behavior of ownerOnly in a separate test suite below, but
+  // in this test suite, we test that ownerOnly can be updated.
+  describe('approvalRequired and updating dataset settings', () => {
     describe('PATCH /datasets/:name', () => {
 
       it('should return notfound if the dataset does not exist', testService(async (service) => {
@@ -5138,24 +5172,27 @@ describe('datasets and entities', () => {
           .expect(403);
       }));
 
-      it('should allow setting approval requirements', testService(async (service) => {
-
+      it('should allow updating settings', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
           .expect(200);
-
-        const dataset = await asAlice.patch('/v1/projects/1/datasets/people')
-          .send({ approvalRequired: true })
-          .expect(200);
-
-        dataset.body.approvalRequired.should.equal(true);
-
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.containEql({ approvalRequired: false, ownerOnly: false });
+          });
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true, ownerOnly: true })
+          .expect(200)
+          .then(({ body }) => {
+            body.should.containEql({ approvalRequired: true, ownerOnly: true });
+          });
       }));
 
-      it('should disallow writing/changing other dataset properties', testService(async (service) => {
+      it('should disallow writing/changing dataset name', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -5196,7 +5233,7 @@ describe('datasets and entities', () => {
 
       }));
 
-      it('should return warning if there are pending submissions', testService(async (service, container) => {
+      it('should return warning for approvalRequired if there are pending submissions', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -5231,6 +5268,39 @@ describe('datasets and entities', () => {
             body.code.should.be.eql(400.29);
             body.details.count.should.be.eql(1);
           });
+      }));
+
+      it('should not return a warning for ownerOnly by itself', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
+          .send({ reviewState: 'approved' })
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: true })
+          .expect(200);
       }));
 
       it('should update dataset when pending submissions are draft or deleted', testService(async (service, container) => {
@@ -5269,7 +5339,7 @@ describe('datasets and entities', () => {
           .expect(200);
       }));
 
-      it('should update the flag without automatic conversions', testService(async (service) => {
+      it('should update approvalRequired without automatic conversions', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -5296,6 +5366,16 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => body.should.be.eql([]));
 
+        // The audit log has `autoConvert: false`.
+        await asAlice.get('/v1/audits?action=dataset.update&limit=1')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].details.should.eql({
+              data: { approvalRequired: false },
+              autoConvert: false
+            });
+          });
       }));
 
       it('should automatically convert pending submissions', testService(async (service, container) => {
@@ -5339,6 +5419,17 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => body.length.should.be.eql(2));
 
+        // The audit log has `autoConvert: true`.
+        await asAlice.get('/v1/audits?action=dataset.update&limit=1')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].details.should.eql({
+              data: { approvalRequired: false },
+              autoConvert: true
+            });
+          });
+
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
           .expect(200)
           .then(({ body: logs }) => {
@@ -5351,9 +5442,54 @@ describe('datasets and entities', () => {
             logs[0].details.source.submission.currentVersion.instanceName.should.be.eql('one');
             logs[0].details.source.submission.currentVersion.submitter.displayName.should.be.eql('Alice');
           });
+      }));
 
+      it('should not convert pending submissions after only ownerOnly is updated', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
 
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ approvalRequired: true })
+          .expect(200);
 
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        // There are no entities.
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.be.equal(0);
+          });
+
+        // convert=true should be silently ignored if approvalRequired is not
+        // specified.
+        await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+          .send({ ownerOnly: true })
+          .expect(200);
+        await exhaust(container);
+
+        // Still no entities.
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.be.equal(0);
+          });
+        // The audit log does not mention autoConvert, which is not relevant.
+        await asAlice.get('/v1/audits?action=dataset.update&limit=1')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            body[0].details.should.eql({
+              data: { ownerOnly: true }
+            });
+          });
       }));
 
       it('should not convert deleted submissions', testService(async (service, container) => {
@@ -6016,6 +6152,509 @@ describe('datasets and entities', () => {
           .then(({ body: logs }) => {
             logs[0].action.should.equal('entity.update.version');
           });
+      }));
+    });
+  });
+
+  describe('ownerOnly', () => {
+    // Sets up the data for each test to follow.
+    const createData = async (asAlice) => {
+      // Create an entity list named people.
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people', ownerOnly: true })
+        .expect(200);
+
+      // Publish a form that uses the entity list, linking a form attachment to
+      // the entity list.
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments
+          .replace('goodone.csv', 'people.csv'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          const csv = body.find(attachment => attachment.name === 'people.csv');
+          should.exist(csv);
+          csv.datasetExists.should.be.true();
+        });
+
+      // Publish a form that updates the entity list. Actors who can only
+      // submission.create, not entity.create, will use this form to create
+      // entities.
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Have Alice create an entity.
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789aaa',
+          label: 'Made by Alice'
+        })
+        .expect(200);
+    };
+    const assignToProject = async (asAlice, asAssignee, role) => {
+      const assigneeId = await asAssignee.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body.id);
+      await asAlice.post(`/v1/projects/1/assignments/${role}/${assigneeId}`)
+        .expect(200);
+    };
+    // Parses an entities .csv file, returning the entity labels.
+    const parseLabels = (text) => {
+      const rows = text.split('\n');
+      rows.length.should.be.above(1);
+
+      // Discard column headers.
+      rows[0].should.match(/^(__id|name),label,/);
+      rows.shift();
+
+      // Discard the last row, which is empty.
+      last(rows).should.equal('');
+      rows.pop();
+
+      return rows.map(row => {
+        const match = row.match(/^[\w-]+,([^,]+),/);
+        should.exist(match);
+        return match[1];
+      });
+    };
+
+    it('ignores the flag for an admin', testService(async (service) => {
+      const [asAlice, asBob] = await service.login(['alice', 'bob']);
+      await createData(asAlice);
+
+      // Have Bob create an entity.
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Made by Bob'
+        })
+        .expect(200);
+
+      // All entities are returned to Alice.
+      await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eqlInAnyOrder(['Made by Alice', 'Made by Bob']);
+        });
+      await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eqlInAnyOrder(['Made by Alice', 'Made by Bob']);
+        });
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities')
+        .expect(200)
+        .then(({ body }) => {
+          const labels = body.value.map(entity => entity.label);
+          labels.should.eqlInAnyOrder(['Made by Alice', 'Made by Bob']);
+        });
+    }));
+
+    it('ignores the flag for a project manager', testService(async (service) => {
+      const [asAlice, asBob] = await service.login(['alice', 'bob']);
+      await createData(asAlice);
+
+      // All entities (i.e., the one created by Alice) are returned to Bob.
+      await asBob.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+      await asBob.get('/v1/projects/1/datasets/people/entities.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+      await asBob.get('/v1/projects/1/datasets/people.svc/Entities')
+        .expect(200)
+        .then(({ body }) => {
+          const labels = body.value.map(entity => entity.label);
+          labels.should.eql(['Made by Alice']);
+        });
+    }));
+
+    it('ignores the flag for a project viewer', testService(async (service) => {
+      const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+      await createData(asAlice);
+      await assignToProject(asAlice, asChelsea, 'viewer');
+
+      // All entities (i.e., the one created by Alice) are returned to Chelsea.
+      await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+      await asChelsea.get('/v1/projects/1/datasets/people/entities.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+      await asChelsea.get('/v1/projects/1/datasets/people.svc/Entities')
+        .expect(200)
+        .then(({ body }) => {
+          const labels = body.value.map(entity => entity.label);
+          labels.should.eqlInAnyOrder(['Made by Alice']);
+        });
+    }));
+
+    it('ignores the flag in /v1/test', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createData(asAlice);
+
+      // Create a form draft.
+      await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+        .expect(200);
+      const draftToken = await asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+        .expect(200)
+        .then(({ body }) => body.draftToken);
+
+      // All entities (i.e., the one created by Alice) are returned from /v1/test.
+      await service.get(`/v1/test/${draftToken}/projects/1/forms/withAttachments/draft/attachments/people.csv`)
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+    }));
+
+    it('limits entity access for a Data Collector', testService(async (service, container) => {
+      const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+      await createData(asAlice);
+      await assignToProject(asAlice, asChelsea, 'formfill');
+
+      // Have Chelsea create an entity.
+      await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      // Only the entity that Chelsea created is returned.
+      await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Alice (88)']);
+        });
+    }));
+
+    it('does not limit access if the flag is false', testService(async (service) => {
+      const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+      await createData(asAlice);
+      await assignToProject(asAlice, asChelsea, 'formfill');
+
+      // Change ownerOnly to false.
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: false })
+        .expect(200);
+
+      // All entities (i.e., the one created by Alice) are returned to Chelsea.
+      await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        .expect(200)
+        .then(({ text }) => {
+          parseLabels(text).should.eql(['Made by Alice']);
+        });
+    }));
+
+    // Most of these tests use testServiceFullTrx, because accurate timestamps
+    // are important for verification. In contrast, testService wraps everything
+    // in a transaction, which freezes some timestamps.
+    describe('OpenRosa hash', () => {
+      const getHash = async (asUser) => {
+        const hash = await asUser.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+          .expect(200)
+          .then(response => response.get('ETag').replaceAll('"', ''));
+
+        // Check that the hash from the REST API matches the OpenRosa manifest.
+        const { text: manifest } = await asUser.get('/v1/projects/1/forms/withAttachments/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200);
+        manifest.replace(/\s/g, '').should.containEql(`<filename>people.csv</filename><hash>md5:${hash}</hash>`);
+
+        return hash;
+      };
+
+      it('returns same hash as normal for users who can entity.list', testService(async (service, container) => {
+        const [asAlice, asBob, asChelsea] = await service.login(['alice', 'bob', 'chelsea']);
+        await createData(asAlice);
+        assignToProject(asAlice, asChelsea, 'viewer');
+
+        const originalHash = await getHash(asAlice);
+        (await getHash(asBob)).should.equal(originalHash);
+        (await getHash(asChelsea)).should.equal(originalHash);
+
+        // Change ownerOnly to false.
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: false })
+          .expect(200);
+        // Delete the latest audit log entry about toggling ownerOnly, which
+        // would affect the hash.
+        await container.run(sql`DELETE FROM audits WHERE id = (SELECT MAX(id) FROM audits)`);
+
+        (await getHash(asAlice)).should.equal(originalHash);
+        (await getHash(asBob)).should.equal(originalHash);
+        (await getHash(asChelsea)).should.equal(originalHash);
+      }));
+
+      it('returns different hash for a data collector', testService(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+        (await getHash(asChelsea)).should.not.equal(await getHash(asAlice));
+      }));
+
+      it('returns same hash as normal for a data collector if flag is false', testService(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Change ownerOnly to false.
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: false })
+          .expect(200);
+
+        (await getHash(asChelsea)).should.equal(await getHash(asAlice));
+      }));
+
+      it('does not change hash of a different dataset', testService(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Create a new dataset that's set up similarly to people, but for which
+        // ownerOnly is false.
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees', ownerOnly: false })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments
+            .replace('id="withAttachments"', 'id="withTrees"')
+            .replace('goodone.csv', 'trees.csv'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/trees/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'elm'
+          })
+          .expect(200);
+
+        // Alice and Chelsea get different hashes for people, but the same hash
+        // for trees. The fact that ownerOnly is set on people does not affect
+        // trees.
+        (await getHash(asChelsea)).should.not.equal(await getHash(asAlice));
+        const treeETagForAlice = await asAlice.get('/v1/projects/1/forms/withTrees/attachments/trees.csv')
+          .expect(200)
+          .then(response => {
+            response.text.split('\n').length.should.equal(3);
+            return response.get('ETag').replaceAll('"', '');
+          });
+        const treeETagForChelsea = await asChelsea.get('/v1/projects/1/forms/withTrees/attachments/trees.csv')
+          .expect(200)
+          .then(response => response.get('ETag').replaceAll('"', ''));
+        treeETagForAlice.should.equal(treeETagForChelsea);
+      }));
+
+      it('changes hash after a data collector creates an entity', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+        const originalHash = await getHash(asChelsea);
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
+      it('does not change hash after someone else creates an entity', testServiceFullTrx(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+        const originalHash = await getHash(asChelsea);
+
+        // Have Alice create a second entity.
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Made by Alice (2)'
+          })
+          .expect(200);
+
+        (await getHash(asChelsea)).should.equal(originalHash);
+      }));
+
+      it('changes hash after an entity is updated', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        const originalHash = await getHash(asChelsea);
+
+        // Update the entity.
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '120' } })
+          .expect(200);
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
+      it('changes hash after an entity is deleted', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        const originalHash = await getHash(asChelsea);
+
+        // Delete the entity.
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
+      it('does not change hash after an entity is purged', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        const hash1 = await getHash(asChelsea);
+
+        // Delete the entity.
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        const hash2 = await getHash(asChelsea);
+
+        // Purge the entity.
+        await container.Entities.purge(true);
+        const hash3 = await getHash(asChelsea);
+        hash3.should.equal(hash2);
+        hash3.should.not.equal(hash1);
+      }));
+
+      it('changes hash after an entity is restored', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        const hash1 = await getHash(asChelsea);
+
+        // Delete the entity.
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        const hash2 = await getHash(asChelsea);
+
+        // Restore the entity.
+        await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+          .expect(200);
+        const hash3 = await getHash(asChelsea);
+
+        [hash1, hash2, hash3].should.be.unique();
+      }));
+
+      it('changes hash after an entity is undeleted, then another entity is deleted', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Have Chelsea create 3 entities.
+        for (const name of ['one', 'three', 'four']) {
+          // eslint-disable-next-line no-await-in-loop
+          await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+            .send(testData.instances.simpleEntity[name])
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+          // eslint-disable-next-line no-await-in-loop
+          await exhaust(container);
+        }
+        const hash1 = await getHash(asChelsea);
+
+        // Delete `one`.
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+        const hash2 = await getHash(asChelsea);
+
+        // Restore `one`, then delete `three`.
+        await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+          .expect(200);
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789bbb')
+          .expect(200);
+        const hash3 = await getHash(asChelsea);
+
+        [hash1, hash2, hash3].should.be.unique();
+      }));
+
+      it('changes hash after a dataset property is added', testServiceFullTrx(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+        const originalHash = await getHash(asChelsea);
+
+        // Add an entity property.
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'foo' })
+          .expect(200);
+
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
+      it('computes hash based on timestamps and the entity count', testServiceFullTrx(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        const { loggedAt } = await asAlice.get('/v1/audits?action=dataset.update')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.equal(1);
+            return body[0];
+          });
+        (await getHash(asChelsea)).should.equal(md5sum(`0,${loggedAt}`));
+
+        // Have Chelsea create an entity.
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+        const { createdAt } = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => body);
+        (await getHash(asChelsea)).should.equal(md5sum(`1,${createdAt}`));
+
+        // Update the entity.
+        const { updatedAt } = await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+          .send({ data: { age: '120' } })
+          .expect(200)
+          .then(({ body }) => body);
+        (await getHash(asChelsea)).should.equal(md5sum(`1,${updatedAt}`));
       }));
     });
   });

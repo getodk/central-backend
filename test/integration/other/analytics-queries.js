@@ -525,6 +525,34 @@ describe('analytics task queries', function () {
       const count = await container.Analytics.countResetFailedToPending();
       count.should.equal(1);
     }));
+
+    it('should count how many datasets are ownerOnly', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'households' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'patients' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/patients')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/households')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      // count datasets
+      const count = await container.Analytics.countOwnerOnlyDatasets();
+      count.should.equal(2);
+    }));
   });
 
   describe('user metrics', () => {
@@ -765,6 +793,40 @@ describe('analytics task queries', function () {
 
       projects['1'].should.eql({ closed: { recent: 0, total: 1 }, open: { recent: 0, total: 1 } });
       projects[projId].should.eql({ closing: { recent: 1, total: 1 } });
+    }));
+
+    it('should calculate forms using webforms', testService(async (service, container) => {
+      const projId = await createTestProject(service, container, 'New Proj');
+      await createTestForm(service, container, testData.forms.simple, projId);
+
+      const asAlice = await service.login('alice');
+
+      await asAlice.patch('/v1/projects/1/forms/simple')
+        .send({ webformsEnabled: true })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/forms/withrepeat')
+        .send({ webformsEnabled: true })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/${projId}/forms/simple`)
+        .send({ webformsEnabled: true })
+        .expect(200);
+
+      const res = await container.Analytics.countFormsWebformsEnabled();
+
+      const projects = {};
+      for (const row of res) {
+        const id = row.projectId;
+        if (!(id in projects)) {
+          projects[id] = {};
+        }
+        // eslint-disable-next-line object-curly-spacing
+        projects[id] = { total: row.total };
+      }
+
+      projects['1'].should.eql({ total: 2 });
+      projects[projId].should.eql({ total: 1 });
     }));
 
     it('should calculate number of forms reusing ids of deleted forms', testService(async (service, container) => {
@@ -2198,6 +2260,11 @@ describe('analytics task queries', function () {
       await exhaust(container);
       await container.Entities.processBacklog(true);
 
+      // 2025.2 set dataset ownerOnly to true
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: true })
+        .expect(200);
+
       // After the interesting stuff above, encrypt and archive the project
 
       // encrypting a project
@@ -2293,9 +2360,10 @@ describe('analytics task queries', function () {
             .set('Content-Type', 'application/xml')));
 
       // make forms closed and closing to make count > 0
+      // and make one form webform enabled
       await service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ state: 'closed' })
+          .send({ state: 'closed', webformsEnabled: true })
           .expect(200)
           .then(() => asAlice.patch('/v1/projects/1/forms/simple-geo')
             .send({ state: 'closing' })

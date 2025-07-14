@@ -1,4 +1,4 @@
-Closes #
+Closes getodk/central#
 
 <!-- 
 Thank you for contributing to ODK Central!
