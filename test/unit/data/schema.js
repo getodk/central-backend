@@ -566,7 +566,7 @@ describe('form schema', () => {
         });
       });
 
-      it('should reject binds on fields in repeats', () => { // gh cb#670
+      it('should reject binds on fields in repeats if version is <2025.1', () => { // gh cb#670
         const xml = `
           <?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
@@ -615,7 +615,7 @@ describe('form schema', () => {
         return getFormFields(xml).should.be.rejected().then((p) => p.problemCode.should.equal(400.25));
       });
 
-      it('should reject binds on fields in nested repeats inside groups', () => { // gh cb#670
+      it('should reject binds on fields in nested repeats inside groups if version is <2025.1', () => { // gh cb#670
         const xml = `
         <?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -685,6 +685,77 @@ describe('form schema', () => {
         </h:html>`;
         return getFormFields(xml).should.be.rejected().then((p) => p.problemCode.should.equal(400.25));
       });
+    });
+
+    it('should allow binds on fields in repeats if version is >= 2025.1', () => { // gh cb#670
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+          <h:head>
+            <h:title>Repeat Children Entities</h:title>
+            <model entities:entities-version="2025.1.0" odk:xforms-version="1.0.0">
+              <instance>
+                <data id="repeat_entity" version="1">
+                  <num_children/>
+                  <children>
+                    <child jr:template="">
+                      <child_name/>
+                      <possessions>
+                        <toys jr:template="">
+                          <toy/>
+                        </toys>
+                      </possessions>
+                    </child>
+                  </children>
+                  <meta>
+                    <instanceID/>
+                    <instanceName/>
+                    <entity create="1" dataset="children" id="">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind nodeset="/data/num_children" type="int"/>
+              <bind nodeset="/data/children/child/child_name" type="string"/>
+              <bind entities:saveto="toy_name" nodeset="/data/children/child/possessions/toys/toy" type="string"/>
+              <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+              <bind calculate=" /data/num_children " nodeset="/data/meta/instanceName" type="string"/>
+              <bind calculate="1" nodeset="/data/meta/entity/@create" readonly="true()" type="string"/>
+              <bind nodeset="/data/meta/entity/@id" readonly="true()" type="string"/>
+              <setvalue event="odk-instance-first-load" readonly="true()" ref="/data/meta/entity/@id" type="string" value="uuid()"/>
+              <bind calculate="concat(&quot;Num children:&quot;,  /data/num_children )" nodeset="/data/meta/entity/label" readonly="true()" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input ref="/data/num_children">
+              <label>Num Children</label>
+            </input>
+            <group ref="/data/children">
+              <label>Children</label>
+              <group ref="/data/children/child">
+                <label>Child</label>
+                <repeat nodeset="/data/children/child">
+                  <input ref="/data/children/child/child_name">
+                    <label>Child Name</label>
+                  </input>
+                  <group ref="/data/children/child/possessions">
+                    <label>Posessions</label>
+                    <group ref="/data/children/child/possessions/toys">
+                      <label>Toys</label>
+                      <repeat nodeset="/data/children/child/possessions/toys">
+                        <input ref="/data/children/child/possessions/toys/toy">
+                          <label>Toy</label>
+                        </input>
+                      </repeat>
+                    </group>
+                  </group>
+                </repeat>
+              </group>
+            </group>
+          </h:body>
+        </h:html>`;
+      return getFormFields(xml).then((schema) => schema.length.should.equal(12));
     });
   });
 
