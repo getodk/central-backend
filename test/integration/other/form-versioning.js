@@ -15,7 +15,7 @@ describe('form forward versioning', () => {
     ])
       // eslint-disable-next-line no-multi-spaces
       .then(([ partial, oldForm ]) =>  Forms.createVersion(partial, oldForm, true))
-      .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true, Form.PublishedVersion)).then(force)
+      .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', Form.PublishedVersion, Form.IncludeXml)).then(force)
       .then((newForm) => {
         newForm.currentDefId.should.equal(newForm.def.id);
         /version="two"/.test(newForm.xml).should.equal(true);
@@ -28,7 +28,7 @@ describe('form forward versioning', () => {
       Forms.getByProjectAndXmlFormId(1, 'simple', Form.PublishedVersion).then(force)
     ])
       .then(([ partial, oldForm ]) => Forms.createVersion(partial, oldForm, false)
-        .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true, Form.PublishedVersion)).then(force)
+        .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', Form.PublishedVersion, Form.IncludeXml)).then(force)
         .then((newForm) => {
           newForm.currentDefId.should.equal(oldForm.def.id);
           /version="two"/.test(newForm.xml).should.equal(false);
