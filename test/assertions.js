@@ -143,10 +143,11 @@ should.Assertion.add('ExtendedSubmissionDef', function() {
 should.Assertion.add('Session', function() {
   this.params = { operator: 'to be a Session' };
 
-  Object.keys(this.obj).should.containDeep([ 'expiresAt', 'createdAt', 'token' ]);
+  Object.keys(this.obj).should.eqlInAnyOrder([ 'expiresAt', 'createdAt', 'token', 'csrf' ]);
   this.obj.expiresAt.should.be.an.isoDate();
   this.obj.createdAt.should.be.an.isoDate();
   this.obj.token.should.be.a.token();
+  this.obj.csrf.should.be.a.token();
 });
 
 should.Assertion.add('FieldKey', function() {
@@ -355,22 +356,42 @@ should.Assertion.add('subsetOf', function(array) {
   for (const x of this.obj) array.should.containEql(x);
 });
 
-should.Assertion.add('Dataset', function assertDataset() {
+should.Assertion.add('unique', function() {
+  this.params = { operator: 'to have unique values' };
+
+  const array = [...this.obj];
+  array.should.eql([...new Set(array)]);
+});
+
+should.Assertion.add('Dataset', function assertDataset(extraKeys = []) {
   this.params = { operator: 'to be a Dataset' };
 
-  Object.keys(this.obj).should.containDeep([ 'projectId', 'name', 'createdAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([
+    'projectId', 'name', 'approvalRequired', 'ownerOnly', 'createdAt',
+    // Optional metadata
+    'properties', 'linkedForms', 'sourceForms', 'lastUpdate',
+    ...extraKeys
+  ]);
   this.obj.projectId.should.be.a.Number();
   this.obj.name.should.be.a.String();
+  this.obj.approvalRequired.should.be.a.Boolean();
+  this.obj.ownerOnly.should.be.a.Boolean();
   this.obj.createdAt.should.be.an.isoDate();
+
+  // Optional metadata
+  if (this.obj.properties != null) this.obj.properties.should.be.an.Array();
+  if (this.obj.linkedForms != null) this.obj.linkedForms.should.be.an.Array();
+  if (this.obj.sourceForms != null) this.obj.sourceForms.should.be.an.Array();
+  if (this.obj.lastUpdate != null) this.obj.lastUpdate.should.be.an.isoDate();
 });
 
 should.Assertion.add('ExtendedDataset', function assertExtendedDataset() {
   this.params = { operator: 'to be an extended Dataset' };
 
-  this.obj.should.be.a.Dataset();
-  Object.keys(this.obj).should.containDeep([ 'entities', 'lastEntity', 'conflicts' ]);
+  this.obj.should.be.a.Dataset([ 'entities', 'lastEntity', 'conflicts' ]);
   this.obj.entities.should.be.a.Number();
   if (this.obj.lastEntity != null) this.obj.lastEntity.should.be.an.isoDate();
+  this.obj.conflicts.should.be.a.Number();
 });
 
 should.Assertion.add('Entity', function assertEntity() {
@@ -452,6 +473,12 @@ should.Assertion.add('EntitySourceSubmissionDetails', function SubmissionDetails
   this.obj.should.have.property('xmlFormId').which.is.a.String();
   this.obj.should.have.property('instanceId').which.is.a.String();
   this.obj.should.have.property('instanceName'); // can be null
+});
+
+should.Assertion.add('Symbol', function() {
+  this.params = { operator: 'to be a Symbol' };
+
+  (typeof this.obj).should.equal('symbol');
 });
 
 should.Assertion.add('skiptoken', function skiptoken(expected) {
