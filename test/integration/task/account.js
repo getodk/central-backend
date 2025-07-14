@@ -2,7 +2,6 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
 const { verifyPassword } = require(appRoot + '/lib/util/crypto');
-const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { createUser, promoteUser, setUserPassword } = require(appRoot + '/lib/task/account');
 const { User } = require(appRoot + '/lib/model/frames');
 
@@ -39,14 +38,14 @@ describe('task: accounts', () => {
     it('should set the password if given', testTask(({ Users }) =>
       createUser('testuser@getodk.org', 'aoeuidhtns')
         .then(() => Users.getByEmail('testuser@getodk.org'))
-        .then(getOrNotFound)
+        .then((o) => o.get())
         .then((user) => verifyPassword('aoeuidhtns', user.password))
         .then((verified) => verified.should.equal(true))));
 
     it('should not verify a null password', testTask(({ Users }) =>
       createUser('testuser@getodk.org', null)
         .then(() => Users.getByEmail('testuser@getodk.org'))
-        .then(getOrNotFound)
+        .then((o) => o.get())
         .then((user) => verifyPassword(null, user.password))
         .then((verified) => verified.should.equal(false))));
 
@@ -65,7 +64,7 @@ describe('task: accounts', () => {
           allowed.should.equal(false);
           return promoteUser('testuser@getodk.org')
             .then(() => Users.getByEmail('testuser@getodk.org')
-              .then(getOrNotFound)
+              .then((o) => o.get())
               .then((user) => Auth.can(user.actor, 'user.create', User.species))
               // eslint-disable-next-line no-shadow
               .then((allowed) => allowed.should.equal(true)));
@@ -90,7 +89,7 @@ describe('task: accounts', () => {
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
         .then(() => setUserPassword('testuser@getodk.org', 'aoeuidhtns'))
         .then(() => Users.getByEmail('testuser@getodk.org'))
-        .then(getOrNotFound)
+        .then((o) => o.get())
         .then((user) => verifyPassword('aoeuidhtns', user.password))
         .then((verified) => verified.should.equal(true))));
 
