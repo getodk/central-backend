@@ -43,7 +43,7 @@ info:
     ## ODK Central v2025.2
 
     **Added**:
-    - Datasets now have a boolean property named `ownerOnly`. This is a flag that has an effect on Actors who are either an App User or a Web User with a role of Data Collector. If `ownerOnly` is `true`, and the Actor is one of the above, then only Entities created by the Actor will be downloaded to the OpenRosa client.
+    - Datasets now have a boolean property named `ownerOnly`. This is a flag that has an effect on Actors who only have access to the Dataset CSV file via linked Form Attachments: App Users, Web Users with a role of Data Collector, and Public Access Links. If `ownerOnly` is `true`, and the Actor is one of the above, then only Entities created by the Actor will be downloaded to the OpenRosa client.
 
     **Changed**:
     - [Entities OData](/central-api-odata-endpoints/#id3) now supports `$search` query parameter.
@@ -214,7 +214,7 @@ info:
       * [DELETE .../draft/attachments/:name](/central-api-form-management/#clearing-a-draft-form-attachment) will unlink the Dataset if there's a Dataset link to the attachment.
       * [GET .../draft/attachments/:filename](/central-api-form-management/#downloading-a-form-attachment) will return the Dataset as a CSV file if the attachment is linked to a Dataset.
       * [GET .../draft/attachments](/central-api-form-management/#listing-expected-draft-form-attachments) returns two additional flags `blobExists` and `datasetExists`.
-      * In the [OpenRosa Form Manifest](/central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset then the value of `hash` is the MD5 of the last updated timestamp or the MD5 of `1970-01-01 00:00:00` if the Dataset is empty.
+      * In the [OpenRosa Form Manifest](/central-api-form-management/#openrosa-form-manifest-api), if a Form Attachment is linked to a Dataset, then the value of `hash` is an MD5 sum derived from the last updated timestamp of the Dataset. `hash` is not the MD5 sum for the content of the Dataset CSV file.
 
     ## ODK Central v1.5.3
 
@@ -902,7 +902,6 @@ tags:
     * `submission.backlog.hold` when an Entity Submission is first held in processing backlog.
     * `submission.backlog.reprocess` when an Entity Submission is reprocessed and removed from the backlog.
     * `submission.backlog.force` when an Entity Submission is force-processed after being in backlog.
-    * `upgrade.process.form.entities_version` when Central flags an Entity-related Form for a potential automatic upgrade.
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
@@ -914,6 +913,8 @@ tags:
     * `entity.restore` when a deleted Entity is restored.
     * `entity.purge` when a deleted Entity is purged (ppermanently deleted).
     * `config.set` when a system configuration is set.
+    * `upgrade.server` when Central is upgraded to a new version.
+    * `upgrade.process.form.entities_version` when Central flags an Entity-related Form for a potential automatic upgrade.
     * `analytics` when a Usage Report is attempted.
     * `blobs.s3.upload` when blobs are moved from the database to external storage.
     * `blobs.s3.failed-to-pending` when blobs that failed to upload are reset to the pending state to be retried.
@@ -8609,7 +8610,7 @@ paths:
                     required: false
                   ownerOnly:
                     type: boolean
-                    description: If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be downloaded.
+                    description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
                     required: false
                 example:
                   name: Trees
@@ -8720,7 +8721,7 @@ paths:
 
         The `approvalRequired` flag controls the Entity creation flow. If it is `true`, then the Submission must be approved before an Entity can be created from it. If it is `false`, then an Entity is created as soon as the Submission is received by ODK Central. By default, `approvalRequired` is `false` for Datasets created after v2023.3. Datasets created prior to that will have `approvalRequired` set to `true`.
 
-        The `ownerOnly` flag determines which Entities in the Dataset are downloaded for use in an OpenRosa client. More specifically, it determines which Entities are included in a Form Attachment that has been linked to the Dataset. If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, then only Entities created by the Actor will be included. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be included. By default, `ownerOnly` is `false`.
+        The `ownerOnly` flag determines which Entities in the Dataset are included for download to an OpenRosa client. More specifically, it determines which Entities are included in a Form Attachment that has been linked to the Dataset. If `ownerOnly` is `true`, and the Actor using the OpenRosa client only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be included. This is true of App Users, Web Users with a role of Data Collector, and Public Access Links. If `ownerOnly` is `false`, or if the Actor has direct access to the Dataset CSV file, then all Entities will be included. By default, `ownerOnly` is `false`.
       parameters:
         - name: projectId
           in: path
@@ -8748,7 +8749,7 @@ paths:
                   example: true
                 ownerOnly:
                   type: boolean
-                  description: If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be downloaded.
+                  description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
                   example: false
               example:
                 approvalRequired: true
@@ -9875,7 +9876,7 @@ paths:
 
         * The Manifest will only output information for files the server actually has in its possession. Any missing expected files will be omitted, as we cannot provide a `hash` or `downloadUrl` for them.
 
-        * For Attachments that are linked to a Dataset, the value of `hash` is calculated using the MD5 of the last updated timestamp of the Dataset, instead of the content of the Dataset.
+        * For Attachments that are linked to a Dataset, the value of `hash` is an MD5 sum derived from the last updated timestamp of the Dataset. It is not the MD5 sum for the content of the Dataset CSV file.
 
         [Offline Entities support](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052):
 
@@ -12796,7 +12797,7 @@ components:
           example: true
         ownerOnly:
           type: boolean
-          description: If `ownerOnly` is `true`, and the Actor is either an App User or a Web User with a role of Data Collector, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if the Actor is neither of the above, then all Entities will be downloaded.
+          description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
           example: false
     ExtendedDataset:
       allOf:
