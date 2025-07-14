@@ -14,6 +14,7 @@ describeMigration('20250113-01-disable-nullable-blob-content-types', ({ runMigra
 
   before(async () => {
     await rowsExistFor('blobs', blob1, blob2);
+    await assertTableContents('blobs', blob1, blob2); // should fail if old migration still exists
 
     await runMigrationBeingTested();
   });

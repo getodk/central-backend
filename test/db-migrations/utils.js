@@ -2,8 +2,8 @@ const assert = require('node:assert/strict');
 const _ = require('lodash');
 const migrator = require('./migrator');
 
-function _describeMigration(describeFn, migrationName, fn) {
-  assert.strictEqual(arguments.length, 3, 'Incorrect argument count.');
+function _describeMigration(migrator, describeFn, migrationName, fn) { // eslint-disable-line no-shadow
+  assert.strictEqual(arguments.length, 4, 'Incorrect argument count.');
 
   assert.strictEqual(typeof describeFn, 'function');
 
@@ -29,9 +29,14 @@ function _describeMigration(describeFn, migrationName, fn) {
     return fn({ runMigrationBeingTested });
   });
 }
-function describeMigration(...args) { return _describeMigration(describe, ...args); }
-describeMigration.only =  (...args) =>       _describeMigration(describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
-describeMigration.skip =  (...args) =>       _describeMigration(describe.skip, ...args); // eslint-disable-line no-multi-spaces
+
+function describeLegacyMigration(...args) { return _describeMigration(migrator.legacy,   describe, ...args); }    // eslint-disable-line no-multi-spaces
+describeLegacyMigration.only =  (...args) =>       _describeMigration(migrator.legacy,   describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
+describeLegacyMigration.skip =  (...args) =>       _describeMigration(migrator.legacy,   describe.skip, ...args); // eslint-disable-line no-multi-spaces
+
+function    describeMigration(...args) { return _describeMigration(migrator.modern, describe, ...args); }    // eslint-disable-line no-multi-spaces
+describeMigration.only =     (...args) =>       _describeMigration(migrator.modern, describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
+describeMigration.skip =     (...args) =>       _describeMigration(migrator.modern, describe.skip, ...args); // eslint-disable-line no-multi-spaces
 
 async function assertIndexExists(tableName, expected) {
   if (arguments.length !== 2) throw new Error('Incorrect arg count.');
@@ -180,6 +185,7 @@ module.exports = {
   assertTableDoesNotExist,
   assertTableSchema,
 
+  describeLegacyMigration,
   describeMigration,
 
   rowsExistFor,
