@@ -1628,7 +1628,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .then(() => Promise.all([
             Users.getByEmail('alice@getodk.org').then((o) => o.get()),
             Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', false, Form.WithoutDef)).then((o) => o.get()),
+              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', Form.WithoutDef)).then((o) => o.get()),
             Audits.getLatestByAction('form.update').then((o) => o.get())
           ])
             .then(([ alice, form, log ]) => {

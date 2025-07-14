@@ -454,7 +454,7 @@ describe('analytics task queries', function () {
       xmlOnlyFormDefs.should.equal(3);
 
       // upgrading the old version of the entity form creates more form defs
-      const { acteeId } = await container.Forms.getByProjectAndXmlFormId(1, 'updateEntity', false, Form.WithoutDef).then(o => o.get());
+      const { acteeId } = await container.Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await container.Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade

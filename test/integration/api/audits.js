@@ -103,7 +103,7 @@ describe('/audits', () => {
               asAlice.get('/v1/audits').set('X-Extended-Metadata', true)
                 .expect(200).then(({ body }) => body),
               Projects.getById(projectId).then((o) => o.get())
-                .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', false, Form.PublishedVersion)
+                .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', Form.PublishedVersion)
                   .then((o) => o.get())
                   .then((form) => [ project, form ])),
               Users.getByEmail('alice@getodk.org').then((o) => o.get()),

@@ -46,7 +46,7 @@ describe('enketo worker transaction', () => {
     const { Audits, Forms, oneFirst } = container;
 
     try {
-      const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.WithoutDef)).get();
+      const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)).get();
       await Audits.log(null, 'form.update.publish', simple);
 
       global.enketo.wait = (f) => { flush = f; };
@@ -58,7 +58,7 @@ describe('enketo worker transaction', () => {
 
       // now we wait to see if we have deadlocked, which we want.
       await sometime(400);
-      (await Forms.getByProjectAndXmlFormId(1, 'simple', false, Form.WithoutDef)).get()
+      (await Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)).get()
         .state.should.equal('open');
     } finally {
       // now finally resolve the locks.
