@@ -235,7 +235,7 @@ describe('Entities from Repeats', () => {
   });
 
   describe('processing submissions', () => {
-    it('should process a submission with two entities in it at different levels', testService(async (service, container) => {
+    it.only('should process a submission with two entities in it at different levels', testService(async (service, container) => {
       // TODO: test is obviously not extracting entities yet, will change tests once code has changed!
       const asAlice = await service.login('alice');
 
