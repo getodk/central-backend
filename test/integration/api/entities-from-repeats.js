@@ -235,7 +235,7 @@ describe('Entities from Repeats', () => {
   });
 
   describe('processing submissions', () => {
-    it.only('should process a submission with two entities in it at different levels', testService(async (service, container) => {
+    it('should process a submission with two entities in it at different levels', testService(async (service, container) => {
       // TODO: test is obviously not extracting entities yet, will change tests once code has changed!
       const asAlice = await service.login('alice');
 
@@ -262,6 +262,40 @@ describe('Entities from Repeats', () => {
           // Didn't make any farmer entities because parseSubmissionXml expects entity at root only
           body.length.should.equal(0);
         });
+    }));
+
+    it('should process a submission with entity repeats', testService(async (service, container) => {
+      // TODO: test is obviously not extracting entities yet, will change tests once code has changed!
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+    }));
+
+    it.only('should process a submission with entity and entity repeats', testService(async (service, container) => {
+      // TODO: test is obviously not extracting entities yet, will change tests once code has changed!
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityHousehold)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityHousehold/submissions')
+        .send(testData.instances.repeatEntityHousehold.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
     }));
   });
 });
