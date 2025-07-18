@@ -485,6 +485,196 @@ module.exports = {
   </h:head>
 </h:html>`,
 
+    repeatEntityTrees: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
+    <h:head>
+        <h:title>Repeat Trees</h:title>
+        <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+            <instance>
+                <data id="repeatEntityTrees" version="1">
+                    <plot_id/>
+                    <tree>
+                        <species/>
+                        <circumference/>
+                        <meta>
+                            <entity dataset="trees" create="" id="">
+                                <label/>
+                            </entity>
+                        </meta>
+                    </tree>
+                    <meta>
+                        <instanceID/>
+                    </meta>
+                </data>
+            </instance>
+            <bind nodeset="/data/plot_id" type="string"/>
+            <bind nodeset="/data/tree/species" type="string" entities:saveto="species"/>
+            <bind nodeset="/data/tree/circumference" type="int" entities:saveto="circumference"/>
+            <bind nodeset="/data/tree/meta/entity/@id" type="string"/>
+            <setvalue event="odk-instance-first-load odk-new-repeat" ref="/data/tree/meta/entity/@id" value="uuid()"/>
+            <bind nodeset="/data/tree/meta/entity/label" calculate="../../../species" type="string"/>
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+        </model>
+    </h:head>
+    <h:body>
+        <input ref="/data/plot_id">
+            <label>Enter the ID of the plot</label>
+        </input>
+        <group ref="/data/tree">
+            <label>Enter info about each tree</label>
+            <repeat nodeset="/data/tree">
+                <input ref="/data/tree/species">
+                    <label>Tree Species</label>
+                </input>
+                <input ref="/data/tree/circumference">
+                    <label>Tree Circumference</label>
+                </input>
+            </repeat>
+        </group>
+    </h:body>
+</h:html>`,
+
+    repeatEntityHousehold: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+    <h:head>
+        <h:title>Household and people</h:title>
+        <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+            <instance>
+                <data id="repeatEntityHousehold" version="2">
+                    <household_id/>
+                    <members>
+                        <num_people/>
+                        <person>
+                            <name/>
+                            <age/>
+                            <meta>
+                                <entity dataset="people" create="" id="">
+                                    <label/>
+                                </entity>
+                            </meta>
+                        </person>
+                    </members>
+                    <meta>
+                        <instanceID/>
+                        <entity dataset="households" id="" create="1">
+                            <label/>
+                        </entity>
+                    </meta>
+                </data>
+            </instance>
+            <bind nodeset="/data/household_id" type="string" entities:saveto="hh_id"/>
+            <bind nodeset="/data/members/num_people" type="int" entities:saveto="count"/>
+            <bind nodeset="/data/members/person/name" type="string" entities:saveto="full_name"/>
+            <bind nodeset="/data/members/person/age" type="int" entities:saveto="age"/>
+            
+            <bind nodeset="/data/members/person/meta/entity/@id" type="string"/>
+            <setvalue event="odk-instance-first-load odk-new-repeat" ref="/data/members/person/meta/entity/@id" value="uuid()"/>
+            <bind nodeset="/data/members/person/meta/entity/label" calculate="../../../name" type="string"/>
+
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+            <bind nodeset="/data/meta/entity/@id" type="string" readonly="true()"/>
+            <setvalue ref="/data/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
+            <bind nodeset="/data/meta/entity/label" calculate="concat(&quot;Household:&quot;,  /data/household_id )" type="string" readonly="true()"/>
+        </model>
+    </h:head>
+    <h:body>
+        <input ref="/data/household_id">
+            <label>Enter the household ID</label>
+        </input>
+        <group ref="/data/members">
+            <label>Household information</label>
+            <input ref="/data/members/num_people">
+                <label>Number of people in the household</label>
+            </input>
+            <group ref="/data/members/person">
+                <label>Enter information about each person of the household</label>
+                <repeat nodeset="/data/members/person">
+                    <input ref="/data/members/person/name">
+                        <label>First name</label>
+                    </input>
+                    <input ref="/data/members/person/age">
+                        <label>Age</label>
+                    </input>
+                </repeat>
+            </group>
+        </group>
+    </h:body>
+</h:html>`,
+
+    multiEntityFarm: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+    <h:head>
+        <h:title>Farms and Farmers - Multi Level Entities</h:title>
+        <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+            <instance>
+                <data id="multiEntityFarm" version="2">
+                    <farm>
+                        <farm_id/>
+                        <location/>
+                        <acres/>
+                        <farmer>
+                            <farmer_name/>
+                            <age/>
+                            <meta>
+                                <entity dataset="farmers" create="" id="">
+                                    <label/>
+                                </entity>
+                            </meta>
+                        </farmer>
+                        <meta>
+                            <entity dataset="farms" id="" create="1">
+                                <label/>
+                            </entity>
+                        </meta>
+                    </farm>
+                    <meta>
+                        <instanceID/>
+                        <instanceName/>
+                    </meta>
+                </data>
+            </instance>
+            <bind nodeset="/data/farm/farm_id" type="string" entities:saveto="farm_id"/>
+            <bind nodeset="/data/farm/location" type="geopoint" entities:saveto="geometry"/>
+            <bind nodeset="/data/farm/acres" type="int" entities:saveto="acres"/>
+            <bind nodeset="/data/farm/farmer/farmer_name" type="string" entities:saveto="full_name"/>
+            <bind nodeset="/data/farm/farmer/age" type="int" entities:saveto="age"/>
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+            <bind nodeset="/data/meta/instanceName" type="string" calculate="concat(&quot;Farm &quot;,  /data/farm/farm_id , &quot;-&quot;,  /data/farm/farmer/farmer_name )"/>
+
+            <bind nodeset="/data/farm/meta/entity/@id" type="string" readonly="true()"/>
+            <setvalue ref="/data/farm/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
+            <bind nodeset="/data/farm/meta/entity/label" calculate="concat(&quot;Farm &quot;,  /data/farm/farm_id )" type="string" readonly="true()"/>
+
+            <bind nodeset="/data/farm/farmer/meta/entity/@id" type="string" readonly="true()"/>
+            <setvalue ref="/data/farm/farmer/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
+            <bind nodeset="/data/farm/farmer/meta/entity/label" calculate="concat(&quot;Farmer &quot;,  /data/farm/farmer/farmer_name )" type="string" readonly="true()"/>
+        </model>
+    </h:head>
+    <h:body>
+        <group ref="/data/farm">
+            <label>Enter info about the farm</label>
+            <input ref="/data/farm/farm_id">
+                <label>Farm ID</label>
+            </input>
+            <input ref="/data/farm/location">
+                <label>Location</label>
+            </input>
+            <input ref="/data/farm/acres">
+                <label>Estimated number of acres</label>
+            </input>
+            <group ref="/data/farm/farmer">
+                <label>Enter info about the primary farmer</label>
+                <input ref="/data/farm/farmer/farmer_name">
+                    <label>Farmer name</label>
+                </input>
+                <input ref="/data/farm/farmer/age">
+                    <label>Farmer age</label>
+                </input>
+            </group>
+        </group>
+    </h:body>
+</h:html>`,
+
     groupRepeat: `<?xml version="1.0"?>
     <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
         <h:head>
@@ -799,6 +989,104 @@ module.exports = {
         <status>new</status>
         <age>20</age>
       </data>`,
+    },
+    repeatEntityTrees: {
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="repeatEntityTrees" version="1">
+      <plot_id>1</plot_id>
+      <tree>
+        <species>pine</species>
+        <circumference>12</circumference>
+        <meta>
+          <entity dataset="trees" create="" id="f73ea0a0-f51f-4d13-a7cb-c2123ba06f34">
+            <label>pine</label>
+          </entity>
+        </meta>
+      </tree>
+      <tree>
+        <species>oak</species>
+        <circumference>13</circumference>
+        <meta>
+          <entity dataset="trees" create="" id="090c56ff-25f4-4503-b760-f6bef8528152">
+            <label>oak</label>
+          </entity>
+        </meta>
+      </tree>
+      <meta>
+        <instanceID>one</instanceID>
+      </meta>
+    </data>`
+    },
+    repeatEntityHousehold: {
+      one: `<data
+        xmlns:jr="http://openrosa.org/javarosa"
+        xmlns:orx="http://openrosa.org/xforms" id="repeatEntityHousehold" version="2">
+      <household_id>1</household_id>
+      <members>
+        <num_people>3</num_people>
+        <person>
+          <name>parent1</name>
+          <age>35</age>
+          <meta>
+            <entity dataset="people" create="" id="04f22514-654d-46e6-9d94-41676a5c97e1">
+              <label>parent1</label>
+            </entity>
+          </meta>
+        </person>
+        <person>
+          <name>parent2</name>
+          <age>37</age>
+          <meta>
+            <entity dataset="people" id="3b082d6c-dcc8-4d42-9fe3-a4e4e5f1bb0a" create="1">
+              <label>parent2</label>
+            </entity>
+          </meta>
+        </person>
+        <person>
+          <name>child1</name>
+          <age>12</age>
+          <meta>
+            <entity dataset="people" id="33bc1b45-ab0e-4652-abcf-90926b6dc0a3"  create="1">
+              <label>child1</label>
+            </entity>
+          </meta>
+        </person>
+      </members>
+      <meta>
+        <instanceID>one</instanceID>
+        <entity dataset="households" id="bdee1a6e-060c-47b7-9436-19296b0ded04" create="1">
+          <label>Household:1</label>
+        </entity>
+      </meta>
+    </data>`
+    },
+    multiEntityFarm: {
+      one: `<data
+        xmlns:jr="http://openrosa.org/javarosa"
+        xmlns:orx="http://openrosa.org/xforms" id="multiEntityFarm" version="2">
+      <farm>
+        <farm_id>123</farm_id>
+        <location>36.999194 -121.333626 0 0</location>
+        <acres>30</acres>
+        <farmer>
+          <farmer_name>Barb</farmer_name>
+          <age>53</age>
+          <meta>
+            <entity dataset="farmers" id="fcdb2759-69ef-4b47-b7fd-75170d326c80" create="1">
+              <label>Farmer Barb</label>
+            </entity>
+          </meta>
+        </farmer>
+        <meta>
+          <entity dataset="farms" id="94ca23e4-6050-4699-97cc-2588ca6c1a0e" create="1">
+            <label>Farm 123</label>
+          </entity>
+        </meta>
+      </farm>
+      <meta>
+        <instanceID>uuid:fccb4433-27cc-487c-9d4c-98786a20c5b6</instanceID>
+        <instanceName>Farm 123-Barb</instanceName>
+      </meta>
+    </data>`
     },
     groupRepeat: {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="groupRepeat">
