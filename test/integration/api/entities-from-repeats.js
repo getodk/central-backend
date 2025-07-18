@@ -1,5 +1,8 @@
+const appRoot = require('app-root-path');
 const testData = require('../../data/xml');
 const { testService } = require('../setup');
+
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('Entities from Repeats', () => {
   describe('submitting forms and submissions', () => {
@@ -227,6 +230,37 @@ describe('Entities from Repeats', () => {
             { name: 'age', odataName: 'age', forms: [ { name: 'Farms and Farmers - Multi Level Entities', xmlFormId: 'multiEntityFarm' } ] },
           ]);
 
+        });
+    }));
+  });
+
+  describe('processing submissions', () => {
+    it('should process a submission with two entities in it at different levels', testService(async (service, container) => {
+      // TODO: test is obviously not extracting entities yet, will change tests once code has changed!
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.multiEntityFarm)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/multiEntityFarm/submissions')
+        .send(testData.instances.multiEntityFarm.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/farms/entities')
+        .then(({ body }) => {
+          // Didn't make any farm entities because parseSubmissionXml expects entity at root only
+          body.length.should.equal(0);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/farmers/entities')
+        .then(({ body }) => {
+          // Didn't make any farmer entities because parseSubmissionXml expects entity at root only
+          body.length.should.equal(0);
         });
     }));
   });
