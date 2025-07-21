@@ -527,6 +527,14 @@ describe('entities from repeats', () => {
         },
         fields: [
           {
+            name: 'tree',
+            order: 1,
+            path: '/tree',
+            propertyName: '__repeat',
+            type: 'repeat',
+            internal: true
+          },
+          {
             name: 'species',
             order: 2,
             path: '/tree/species',
@@ -573,6 +581,14 @@ describe('entities from repeats', () => {
           path: '/members/person'
         },
         fields: [
+          {
+            name: 'person',
+            order: 3,
+            path: '/members/person',
+            propertyName: '__repeat',
+            type: 'repeat',
+            internal: true
+          },
           {
             name: 'name',
             order: 4,
