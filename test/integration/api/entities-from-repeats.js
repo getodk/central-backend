@@ -296,6 +296,32 @@ describe('Entities from Repeats', () => {
         .expect(200);
 
       await exhaust(container);
+
+      // One top-level household entity
+      await asAlice.get('/v1/projects/1/datasets/households/entities/bdee1a6e-060c-47b7-9436-19296b0ded04')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ hh_id: '1', count: '3' });
+          body.currentVersion.label.should.eql('Household:1');
+        });
+
+      // Three people entities
+      await asAlice.get('/v1/projects/1/datasets/people/entities/04f22514-654d-46e6-9d94-41676a5c97e1')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ age: '35', full_name: 'parent1' });
+          body.currentVersion.label.should.eql('parent1');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/3b082d6c-dcc8-4d42-9fe3-a4e4e5f1bb0a')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ age: '37', full_name: 'parent2' });
+          body.currentVersion.label.should.eql('parent2');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/33bc1b45-ab0e-4652-abcf-90926b6dc0a3')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ age: '12', full_name: 'child1' });
+          body.currentVersion.label.should.eql('child1');
+        });
     }));
   });
 });

@@ -1027,7 +1027,7 @@ module.exports = {
           <name>parent1</name>
           <age>35</age>
           <meta>
-            <entity dataset="people" create="" id="04f22514-654d-46e6-9d94-41676a5c97e1">
+            <entity dataset="people" create="1" id="04f22514-654d-46e6-9d94-41676a5c97e1">
               <label>parent1</label>
             </entity>
           </meta>
