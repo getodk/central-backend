@@ -997,8 +997,8 @@ module.exports = {
         <species>pine</species>
         <circumference>12</circumference>
         <meta>
-          <entity dataset="trees" create="" id="f73ea0a0-f51f-4d13-a7cb-c2123ba06f34">
-            <label>pine</label>
+          <entity dataset="trees" create="1" id="f73ea0a0-f51f-4d13-a7cb-c2123ba06f34">
+            <label>Pine</label>
           </entity>
         </meta>
       </tree>
@@ -1006,8 +1006,8 @@ module.exports = {
         <species>oak</species>
         <circumference>13</circumference>
         <meta>
-          <entity dataset="trees" create="" id="090c56ff-25f4-4503-b760-f6bef8528152">
-            <label>oak</label>
+          <entity dataset="trees" create="1" id="090c56ff-25f4-4503-b760-f6bef8528152">
+            <label>Oak</label>
           </entity>
         </meta>
       </tree>

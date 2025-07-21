@@ -236,7 +236,6 @@ describe('Entities from Repeats', () => {
 
   describe('processing submissions', () => {
     it('should process a submission with two entities in it at different levels', testService(async (service, container) => {
-      // TODO: test is obviously not extracting entities yet, will change tests once code has changed!
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -253,19 +252,28 @@ describe('Entities from Repeats', () => {
 
       await asAlice.get('/v1/projects/1/datasets/farms/entities')
         .then(({ body }) => {
-          // Didn't make any farm entities because parseSubmissionXml expects entity at root only
-          body.length.should.equal(0);
+          body.length.should.equal(1);
         });
 
       await asAlice.get('/v1/projects/1/datasets/farmers/entities')
         .then(({ body }) => {
-          // Didn't make any farmer entities because parseSubmissionXml expects entity at root only
-          body.length.should.equal(0);
+          body.length.should.equal(1);
+        });
+
+      // Farm entity
+      await asAlice.get('/v1/projects/1/datasets/farms/entities/94ca23e4-6050-4699-97cc-2588ca6c1a0e')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ farm_id: '123', acres: '30', geometry: '36.999194 -121.333626 0 0' });
+          body.currentVersion.label.should.eql('Farm 123');
+        });
+      await asAlice.get('/v1/projects/1/datasets/farmers/entities/fcdb2759-69ef-4b47-b7fd-75170d326c80')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ full_name: 'Barb', age: '53' });
+          body.currentVersion.label.should.eql('Farmer Barb');
         });
     }));
 
     it('should process a submission with entity repeats', testService(async (service, container) => {
-      // TODO: test is obviously not extracting entities yet, will change tests once code has changed!
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -279,10 +287,21 @@ describe('Entities from Repeats', () => {
         .expect(200);
 
       await exhaust(container);
+
+      // Two trees
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/f73ea0a0-f51f-4d13-a7cb-c2123ba06f34')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ species: 'pine', circumference: '12' });
+          body.currentVersion.label.should.eql('Pine');
+        });
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/090c56ff-25f4-4503-b760-f6bef8528152')
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ species: 'oak', circumference: '13' });
+          body.currentVersion.label.should.eql('Oak');
+        });
     }));
 
-    it.only('should process a submission with entity and entity repeats', testService(async (service, container) => {
-      // TODO: test is obviously not extracting entities yet, will change tests once code has changed!
+    it('should process a submission with entity and entity repeats', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
