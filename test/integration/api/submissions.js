@@ -4535,6 +4535,30 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
         .expect(200);
     }));
 
+    it('Public link should not be able to upload attachment for others Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const publicLinkToken = await asAlice.post('/v1/projects/1/forms/binaryType/public-links')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body.token);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4?st=${publicLinkToken}`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
     it('App user should be able to upload attachment for the Submission', testService(async (service) => {
       const asAlice = await service.login('alice');
 
