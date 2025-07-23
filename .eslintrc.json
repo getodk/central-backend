@@ -1,6 +1,6 @@
 {
   "extends": "airbnb-base",
-  "env": { "node": true },
+  "env": { "node": true, "es2020": true },
   "parserOptions": { "ecmaVersion": 2022 },
   "plugins": [
     "no-only-tests"
