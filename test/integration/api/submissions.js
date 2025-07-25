@@ -21,13 +21,19 @@ const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryTyp
 describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
-      service.head('/v1/projects/1/submission')
-        .set('X-OpenRosa-Version', '1.0')
-        .expect(204)));
+      service.login('alice', (asAlice) =>
+        asAlice.head('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(204))));
 
     it('should fail if not given X-OpenRosa-Version header', testService((service) =>
       service.head('/v1/projects/1/submission')
         .expect(400)));
+
+    it('should fail if no auth is provided', testService((service) =>
+      service.head('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(401)));
 
     it('should fail on authentication given broken credentials', testService((service) =>
       service.head('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/submission')
