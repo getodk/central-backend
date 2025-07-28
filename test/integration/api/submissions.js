@@ -7,6 +7,8 @@ const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const { httpZipResponseToFiles } = require('../../util/zip');
 const { map } = require('ramda');
+const { hashPassword } = require('../../../lib/util/crypto');
+const { User, Actor } = require(appRoot + '/lib/model/frames');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -4459,6 +4461,204 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
           .send('testimage')
           .expect(403))));
 
+    it('Data collector should be able to attach the given file if Submission is created by the them and attachment is not previously uploaded', testService(async (service, { Users }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const password = await hashPassword('password4david');
+
+      await Users.create(new User({ email: 'david@getodk.org', password }, { actor: new Actor({ type: 'user', displayName: 'David' }) }));
+
+      const asChelsea = await service.login('chelsea');
+      const asDavid = await service.login('david');
+
+      const chelseaId = await asChelsea.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      const davidId = await asDavid.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${davidId}`)
+        .expect(200);
+
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // David can't upload attachment for the Submission created by Chelsea
+      await asDavid.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+
+      // Chelsea can't reupload attachment
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
+    it('Public link should be able to upload attachment for the Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const publicLinkToken = await asAlice.post('/v1/projects/1/forms/binaryType/public-links')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body.token);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions?st=${publicLinkToken}`)
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4?st=${publicLinkToken}`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+    }));
+
+    it('Public link should not be able to upload attachment for others Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const publicLinkToken = await asAlice.post('/v1/projects/1/forms/binaryType/public-links')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body.token);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4?st=${publicLinkToken}`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
+    it('App user should be able to upload attachment for the Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const appUser = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body);
+
+      await asAlice.post(`/v1/projects/1/forms/binaryType/assignments/app-user/${appUser.id}`)
+        .expect(200);
+
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/binaryType/submissions`)
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+    }));
+
+    it('should reject attachment upload when original submitter is no longer the submitter of current version', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const asChelsea = await service.login('chelsea');
+
+      const chelseaId = await asChelsea.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+        .expect(200);
+
+      // Chelsea creates a submission
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Alice edits the Submission
+      await asAlice.put('/v1/projects/1/forms/binaryType/submissions/both')
+        .send(withBinaryIds('both', 'both2'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Chelsea tries uploading her submission attachments
+      // She isn't able to, because she is no longer the submitter of the current version
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
+    it('should reject attachment upload when editor is demoted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const asBob = await service.login('bob');
+
+      const bobId = await asBob.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      // Alice creates a submission
+      await asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Bob (a project manager) edits an unrelated field in the submission
+      await asBob.put('/v1/projects/1/forms/binaryType/submissions/both')
+        .send(withBinaryIds('both', 'both2'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Bob is demoted to a data collector
+      await asAlice.delete(`/v1/projects/1/assignments/manager/${bobId}`)
+        .expect(200);
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${bobId}`)
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
     it('should reject if the attachment does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4700,6 +4900,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
                       newBlobId: newAttachment.blobId
                     });
                   }))))))));
+
   });
 
   // the draft version of this is already tested above with :name GET
