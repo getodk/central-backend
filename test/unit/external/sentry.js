@@ -34,6 +34,7 @@ describe('sentry', () => {
       'Console',
       'Context',
       'ContextLines',
+      'Dedupe',
       'Express',
       'Fastify',
       'FunctionToString',
