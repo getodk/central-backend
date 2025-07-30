@@ -1,5 +1,5 @@
 const appRoot = require('app-root-path');
-const { init } = require(appRoot + '/lib/external/sentry');
+const { _init } = require(appRoot + '/lib/external/sentry');
 
 describe('sentry', () => {
   it('should have expected integrations', () => {
@@ -20,7 +20,7 @@ describe('sentry', () => {
       orgSubdomain: 'example',
     };
 
-    const integrations = init(config)
+    const integrations = _init(config)
       .getClient()
       ._options
       .integrations
