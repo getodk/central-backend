@@ -201,26 +201,27 @@ describe('util/db', () => {
 
   describe('unjoiner', () => {
     const { unjoiner } = util;
-    // eslint-disable-next-line no-multi-spaces
-    const T = Frame.define(table('frames'), 'x',  'y');
+
+    const T = Frame.define(table('frames'), 'x', 'y');
     const U = Frame.define(into('extra'), 'z');
+
     it('should generate fields', () => {
       sql`${unjoiner(T, U).fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
     });
 
     it('should unjoin data', () => {
-      // eslint-disable-next-line func-call-spacing, no-spaced-func
-      unjoiner(T, U)
-      // eslint-disable-next-line no-unexpected-multiline
-      ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
+      unjoiner(T, U)({ 'frames!x': 3, 'frames!y': 4, z: 5 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: new U({ z: 5 }) }));
     });
 
     it('should optionally unjoin optional data', () => {
       const unjoin = unjoiner(T, Option.of(U));
+
       sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+
       unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: Option.of(new U({ z: 5 })) }));
+
       unjoin({ 'frames!x': 3, 'frames!y': 4 })
         .should.eql(new T({ x: 3, y: 4 }, { extra: Option.none() }));
     });
