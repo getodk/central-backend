@@ -1,6 +1,6 @@
 const should = require('should');
 const { sql } = require('slonik');
-const { testContainer } = require('../setup');
+const { testContainer, createPool } = require('../setup');
 
 describe('slonik', () => {
   describe('query()', () => {
@@ -31,5 +31,19 @@ describe('slonik', () => {
       should(caught).be.an.Error();
       caught.message.should.eql('Unexpected value expression.');
     }));
+  });
+
+  describe('connection initialization', () => {
+
+    it('should have configurable LC_MESSAGES locale', testContainer(async () => {
+      const testLocale = 'it_IT.UTF-8';
+      const pool = createPool(testLocale); // when not available, falls back to C.UTF-8, but the DB sessions setting should get this value nonetheless
+      try {
+        (await pool.oneFirst(sql`SELECT current_setting('lc_messages')`)).should.equal(testLocale);
+      } finally {
+        await pool.end();
+      }
+    }));
+
   });
 });

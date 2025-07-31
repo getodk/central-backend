@@ -16,7 +16,8 @@ const { knexConnect } = require(appRoot + '/lib/model/knex-migrator');
 
 // slonik connection pool
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
-const db = slonikPool(config.get('test.database'));
+const createPool = (lcMessages) => slonikPool(config.get('test.database'), lcMessages);
+const db = createPool();
 
 // set up our mailer.
 const env = config.get('default.env');
@@ -232,4 +233,4 @@ const withClosedForm = (f) => async (service) => {
   return f(service);
 };
 
-module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, testTaskFullTrx, withClosedForm };
+module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, testTaskFullTrx, withClosedForm, createPool };
