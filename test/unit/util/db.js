@@ -1,4 +1,5 @@
 const appRoot = require('app-root-path');
+const should = require('should');
 const { sql } = require('slonik');
 const { fieldTypes } = require('../../../lib/model/frame');
 const { Frame, table, into } = require(appRoot + '/lib/model/frame');
@@ -279,7 +280,7 @@ describe('util/db', () => {
       run.map = (f) => (x) => f(x);
       return extender(T)(U)(noop)(run, QueryOptions.extended)
         .then((result) => {
-          result.should.eql(new T({ x: 3, y: 4 }))
+          result.should.eql(new T({ x: 3, y: 4 }));
           result.aux.extra.should.eql(new U({ a: 5 }));
         });
     });
