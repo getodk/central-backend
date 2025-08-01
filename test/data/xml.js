@@ -585,7 +585,141 @@ module.exports = {
                 </group>
             </group>
         </h:body>
-    </h:html>`
+    </h:html>`,
+    geoTypes: `
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
+        <h:head>
+          <h:title>Geotest</h:title>
+          <model odk:xforms-version="1.0.0">
+            <itext>
+              <translation lang="English (en)" default="true()">
+                <text id="/data/singular:label">
+                  <value>In the Singular</value>
+                </text>
+                <text id="/data/singular/input_geopoint:label">
+                  <value>Test the geopoint input</value>
+                </text>
+                <text id="/data/singular/input_geotrace:label">
+                  <value>Test the geotrace input</value>
+                </text>
+                <text id="/data/singular/input_geoshape:label">
+                  <value>Test the geoshape input</value>
+                </text>
+                <text id="/data/plural:label">
+                  <value>In the Plural (repeatgroup)</value>
+                </text>
+                <text id="/data/plural/input_geopoint_repeat:label">
+                  <value>Test the geopoint input</value>
+                </text>
+                <text id="/data/plural/input_geotrace_repeat:label">
+                  <value>Test the geotrace input</value>
+                </text>
+                <text id="/data/plural/input_geoshape_repeat:label">
+                  <value>Test the geoshape input</value>
+                </text>
+                <text id="/data/plural/nested_repeat:label">
+                  <value>Nested repeatgroup</value>
+                </text>
+                <text id="/data/plural/nested_repeat/repeatnested_group:label">
+                  <value>Group in nested repeatgroup</value>
+                </text>
+                <text id="/data/plural/nested_repeat/repeatnested_group/input_geopoint_deeply_nested:label">
+                  <value>Test the geopoint input</value>
+                </text>
+              </translation>
+            </itext>
+            <instance>
+              <data id="geotest" version="10">
+                <survey_started_at/>
+                <singular>
+                  <input_geopoint>50 0 0 0</input_geopoint>
+                  <input_geotrace>51 1 0 0; 52 2 0 0</input_geotrace>
+                  <input_geoshape>53 3 0; 54 4 0 0; 55 5 0 0; 53 3 0 0</input_geoshape>
+                </singular>
+                <plural_count/>
+                <plural jr:template="">
+                  <input_geopoint_repeat>54 4 1 0</input_geopoint_repeat>
+                  <input_geotrace_repeat>55 5 1 0; 56 6 1 0</input_geotrace_repeat>
+                  <input_geoshape_repeat>57 7 1 0; 58 8 1 0; 59 9 1 0; 57 7 1 0</input_geoshape_repeat>
+                  <nested_repeat_count/>
+                  <nested_repeat jr:template="">
+                    <repeatnested_group>
+                      <input_geopoint_deeply_nested>11 11 11 0</input_geopoint_deeply_nested>
+                    </repeatnested_group>
+                  </nested_repeat>
+                </plural>
+                <plural>
+                  <input_geopoint_repeat>54 4 1 0</input_geopoint_repeat>
+                  <input_geotrace_repeat>55 5 1 0; 56 6 1 0</input_geotrace_repeat>
+                  <input_geoshape_repeat>57 7 1 0; 58 8 1 0; 59 9 1 0; 57 7 1 0</input_geoshape_repeat>
+                  <nested_repeat_count/>
+                  <nested_repeat>
+                    <repeatnested_group>
+                      <input_geopoint_deeply_nested>11 11 11 0</input_geopoint_deeply_nested>
+                    </repeatnested_group>
+                  </nested_repeat>
+                </plural>
+                <survey_ended_at/>
+                <meta>
+                  <instanceID/>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/survey_started_at" jr:preload="timestamp" type="dateTime" jr:preloadParams="start"/>
+            <bind nodeset="/data/singular/input_geopoint" type="geopoint"/>
+            <bind nodeset="/data/singular/input_geotrace" type="geotrace"/>
+            <bind nodeset="/data/singular/input_geoshape" type="geoshape"/>
+            <bind nodeset="/data/plural_count" type="string" readonly="true()" calculate="2"/>
+            <bind nodeset="/data/plural/input_geopoint_repeat" type="geopoint"/>
+            <bind nodeset="/data/plural/input_geotrace_repeat" type="geotrace"/>
+            <bind nodeset="/data/plural/input_geoshape_repeat" type="geoshape"/>
+            <bind nodeset="/data/plural/nested_repeat_count" type="string" readonly="true()" calculate="1"/>
+            <bind nodeset="/data/plural/nested_repeat/repeatnested_group/input_geopoint_deeply_nested" type="geopoint"/>
+            <bind nodeset="/data/survey_ended_at" jr:preload="timestamp" type="dateTime" jr:preloadParams="end"/>
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+          </model>
+        </h:head>
+        <h:body>
+          <group ref="/data/singular">
+            <label ref="jr:itext('/data/singular:label')"/>
+            <input ref="/data/singular/input_geopoint">
+              <label ref="jr:itext('/data/singular/input_geopoint:label')"/>
+            </input>
+            <input ref="/data/singular/input_geotrace">
+              <label ref="jr:itext('/data/singular/input_geotrace:label')"/>
+            </input>
+            <input ref="/data/singular/input_geoshape">
+              <label ref="jr:itext('/data/singular/input_geoshape:label')"/>
+            </input>
+          </group>
+          <group ref="/data/plural">
+            <label ref="jr:itext('/data/plural:label')"/>
+            <repeat nodeset="/data/plural" jr:count=" /data/plural_count ">
+              <input ref="/data/plural/input_geopoint_repeat">
+                <label ref="jr:itext('/data/plural/input_geopoint_repeat:label')"/>
+              </input>
+              <input ref="/data/plural/input_geotrace_repeat">
+                <label ref="jr:itext('/data/plural/input_geotrace_repeat:label')"/>
+              </input>
+              <input ref="/data/plural/input_geoshape_repeat">
+                <label ref="jr:itext('/data/plural/input_geoshape_repeat:label')"/>
+              </input>
+              <group ref="/data/plural/nested_repeat">
+                <label ref="jr:itext('/data/plural/nested_repeat:label')"/>
+                <repeat nodeset="/data/plural/nested_repeat" jr:count=" ../nested_repeat_count ">
+                  <group ref="/data/plural/nested_repeat/repeatnested_group">
+                    <label ref="jr:itext('/data/plural/nested_repeat/repeatnested_group:label')"/>
+                    <input ref="/data/plural/nested_repeat/repeatnested_group/input_geopoint_deeply_nested">
+                      <label ref="jr:itext('/data/plural/nested_repeat/repeatnested_group/input_geopoint_deeply_nested:label')"/>
+                    </input>
+                  </group>
+                </repeat>
+              </group>
+            </repeat>
+          </group>
+        </h:body>
+      </h:html>
+    `,
   },
   instances: {
     simple: {
