@@ -1,4 +1,5 @@
 const appRoot = require('app-root-path');
+const should = require('should');
 const { sql } = require('slonik');
 const { fieldTypes } = require('../../../lib/model/frame');
 const { Frame, table, into } = require(appRoot + '/lib/model/frame');
@@ -210,8 +211,9 @@ describe('util/db', () => {
     });
 
     it('should unjoin data', () => {
-      unjoiner(T, U)({ 'frames!x': 3, 'frames!y': 4, z: 5 })
-        .should.eql(new T({ x: 3, y: 4 }, { extra: new U({ z: 5 }) }));
+      const unjoined = unjoiner(T, U)({ 'frames!x': 3, 'frames!y': 4, z: 5 });
+      unjoined.should.eql(new T({ x: 3, y: 4 }));
+      unjoined.aux.extra.should.eql(new U({ z: 5 }));
     });
 
     it('should optionally unjoin optional data', () => {
@@ -219,11 +221,13 @@ describe('util/db', () => {
 
       sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
 
-      unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 })
-        .should.eql(new T({ x: 3, y: 4 }, { extra: Option.of(new U({ z: 5 })) }));
+      const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 });
+      unjoined1.should.eql(new T({ x: 3, y: 4 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
 
-      unjoin({ 'frames!x': 3, 'frames!y': 4 })
-        .should.eql(new T({ x: 3, y: 4 }, { extra: Option.none() }));
+      const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined2.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
     });
   });
 
@@ -275,7 +279,10 @@ describe('util/db', () => {
       function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4, a: 5 }); };
       run.map = (f) => (x) => f(x);
       return extender(T)(U)(noop)(run, QueryOptions.extended)
-        .then((result) => result.should.eql(new T({ x: 3, y: 4 }, { extra: new U({ a: 5 }) })));
+        .then((result) => {
+          result.should.eql(new T({ x: 3, y: 4 }));
+          result.aux.extra.should.eql(new U({ a: 5 }));
+        });
     });
   });
 
