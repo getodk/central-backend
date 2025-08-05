@@ -35,10 +35,10 @@ describe('OData filter query transformer', () => {
     [
       { expression: 'null eq null', expectedResult: sql`(TRUE)` },
       { expression: '1 eq null', expectedResult: sql`(${'1'} IS NULL)` },
-      { expression: 'null eq 1', expectedResult: sql`(NULL IS ${'1'})` },
+      { expression: 'null eq 1', expectedResult: sql`(${'1'} IS NULL)` },
       { expression: 'null ne null', expectedResult: sql`(NOT (TRUE))` },
       { expression: '1 ne null', expectedResult: sql`(NOT (${'1'} IS NULL))` },
-      { expression: 'null ne 1', expectedResult: sql`(NOT (NULL IS ${'1'}))` },
+      { expression: 'null ne 1', expectedResult: sql`(NOT (${'1'} IS NULL))` },
     ].forEach(t => {
       it(`should transform '${t.expression}'`, () => {
         odataFilter(t.expression).should.eql(t.expectedResult);
