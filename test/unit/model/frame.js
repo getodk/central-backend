@@ -120,21 +120,30 @@ describe('Frame', () => {
       const a = new Frame({ x: 2, y: 3 }, { a: new Frame({ m: 4, n: 5 }), b: new Frame({ b: 0 }) });
       const b = new Frame({ y: 6, z: 7 }, { a: new Frame({ n: 8, o: 9 }), c: new Frame({ p: 10 }) });
 
-      a.with(b).should.eql(new Frame({ x: 2, y: 6, z: 7 },
-        { a: new Frame({ m: 4, n: 8, o: 9 }), b: new Frame({ b: 0 }), c: new Frame({ p: 10 }) }));
+      const c = a.with(b);
+      c.should.eql(new Frame({ x: 2, y: 6, z: 7 }));
+      c.aux.a.should.eql({ m: 4, n: 8, o: 9 });
+      c.aux.b.should.eql(new Frame({ b: 0 }));
+      c.aux.c.should.eql({ p: 10 });
     });
 
     it('should include another aux frame with withAux', () => {
-      (new Frame()).withAux('x', new Frame({ a: 1 }))
-        .should.eql(new Frame({}, { x: new Frame({ a: 1 }) }));
+      const f1 = new Frame().withAux('x', new Frame({ a: 1 }));
+      f1.should.eql(new Frame({}));
+      f1.aux.x.should.eql(new Frame({ a: 1 }));
 
-      (new Frame({}, { w: 42, x: 42 })).withAux('x', new Frame({ a: 1 }))
-        .should.eql(new Frame({}, { w: 42, x: new Frame({ a: 1 }) }));
+      const f2 = new Frame({}, { w: 42, x: 42 }).withAux('x', new Frame({ a: 1 }));
+      f2.should.eql(new Frame({}));
+      f2.aux.w.should.eql(42);
+      f2.aux.x.should.eql(new Frame({ a: 1 }));
     });
 
     it('should merge another aux frame with auxWith', () => {
-      (new Frame({}, { w: 42, x: new Frame({ b: 0 }) })).auxWith('x', new Frame({ a: 1 }))
-        .should.eql(new Frame({}, { w: 42, x: new Frame({ a: 1, b: 0 }) }));
+      const f = new Frame({}, { w: 42, x: new Frame({ b: 0 }) }).auxWith('x', new Frame({ a: 1 }));
+
+      f.should.eql(new Frame({}));
+      f.aux.w.should.eql(42);
+      f.aux.x.should.eql(new Frame({ a: 1, b: 0 }));
     });
   });
 });
