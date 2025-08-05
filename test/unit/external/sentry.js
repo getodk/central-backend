@@ -28,7 +28,6 @@ describe('sentry', () => {
       .sort();
 
     integrations.should.eql([
-      'Amqplib',
       'ChildProcess',
       'Connect',
       'Console',
@@ -36,33 +35,21 @@ describe('sentry', () => {
       'ContextLines',
       'Dedupe',
       'Express',
-      'Fastify',
       'FunctionToString',
       'GenericPool',
-      'Graphql',
-      'Hapi',
       'Http',
       'InboundFilters',
-      'Kafka',
-      'Koa',
       'LinkedErrors',
       'LocalVariablesAsync',
       'LruMemoizer',
       'Modules',
-      'Mongo',
-      'Mongoose',
-      'Mysql',
-      'Mysql2',
       'NodeFetch',
       'OnUncaughtException',
       'OnUnhandledRejection',
       'Postgres',
-      'Prisma',
       'ProcessSession',
-      'Redis',
       'RequestData',
       'Tedious',
-      'VercelAI',
     ]);
   });
 });
