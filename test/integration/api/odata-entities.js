@@ -318,35 +318,42 @@ describe('api: /datasets/:name.svc', () => {
 
     }));
 
-    it('should return deleted entities ', testService(async (service, container) => {
-      const asAlice = await service.login('alice');
+    describe('filtering deleted entities', () => {
+      const filtering = (idxOffset, description, filter) => it(description, testService(async (service, container) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .set('Content-Type', 'application/xml')
-        .send(testData.forms.simpleEntity)
-        .expect(200);
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
 
-      await createSubmissions(asAlice, container, 5);
+        await createSubmissions(asAlice, container, 5);
 
-      const uuids = await asAlice.get('/v1/projects/1/datasets/people/entities')
-        .then(({ body }) => body.map(e => e.uuid));
+        const uuids = await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => body.map(e => e.uuid));
 
-      // let's delete entities
-      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
-        .expect(200);
-      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[2]}`)
-        .expect(200);
-      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[4]}`)
-        .expect(200);
+        // let's delete entities
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
+          .expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[2]}`)
+          .expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[4]}`)
+          .expect(200);
 
-      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=__system/deletedAt ne null')
-        .expect(200)
-        .then(({ body }) => {
-          for (const [index, value] of body.value.entries()) {
-            value.__id.should.be.eql(uuids[index*2]);
-          }
-        });
-    }));
+        await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=' + filter)
+          .expect(200)
+          .then(({ body }) => {
+            for (const [index, value] of body.value.entries()) {
+              value.__id.should.be.eql(uuids[index*2 + idxOffset]);
+            }
+          });
+      }));
+
+      filtering(1, 'should support equality with standard notation',   '__system/deletedAt eq null'); // eslint-disable-line no-multi-spaces
+      filtering(1, 'should support equality with yoda notation',       'null eq __system/deletedAt'); // eslint-disable-line no-multi-spaces
+      filtering(0, 'should support inequality with standard notation', '__system/deletedAt ne null');
+      filtering(0, 'should support inequality with yoda notation',     'null ne __system/deletedAt'); // eslint-disable-line no-multi-spaces
+    });
 
     it('should return filtered entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
