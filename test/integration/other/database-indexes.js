@@ -1,4 +1,3 @@
-const Path = require("node:path");
 const { sql } = require('slonik');
 const { curry, equals, slice } = require('ramda');
 
@@ -10,7 +9,7 @@ const idxNameFor = fk => `idx_fk_${fk.local_tbl_name}_${fk.local_col_names}`;
 const colsForIdx = fk => fk.local_col_names.map(col => `"${col}"`).join(', ');
 const createIdxStatement = fk => `CREATE INDEX ${idxNameFor(fk)} ON "${fk.local_tbl_name}" (${colsForIdx(fk)});`;
 
-describe.only('database indexes', () => {
+describe('database indexes', () => {
   it('should define indexes on both sides of foreign key relationships', testContainer(async ({ all }) => {
     const existingIndexes = await all(sql`
       SELECT tbl_class.relnamespace::regnamespace::text AS tbl_schema
@@ -22,7 +21,6 @@ describe.only('database indexes', () => {
         JOIN pg_class AS tbl_class ON tbl_class.oid=pg_index.indrelid
         WHERE tbl_class.relnamespace::regnamespace::text NOT LIKE 'pg_%'
     `);
-    //console.log('existingIndexes:', existingIndexes);
 
     const foreignKeys = await all(sql`
     SELECT   local_tbl_class.relnamespace::regnamespace::text AS   local_tbl_schema
@@ -37,23 +35,16 @@ describe.only('database indexes', () => {
       JOIN pg_class AS foreign_tbl_class ON foreign_tbl_class.oid=pg_constraint.confrelid
       WHERE pg_constraint.contype = 'f'
     `);
-    console.log('foreignKeys:', foreignKeys.map(fk => fk.foreign_tbl_name).sort());
 
     const missingIndexes = foreignKeys
       .filter(fk => {
         const colsMatch = startsWith(fk.local_col_indexes);
-        const match = existingIndexes.find(idx => {
+        return !existingIndexes.find(idx => { // eslint-disable-line arrow-body-style
           return idx.tbl_schema === fk.local_tbl_schema &&
-                 idx.tbl_name   === fk.local_tbl_name &&
+                 idx.tbl_name   === fk.local_tbl_name && // eslint-disable-line no-multi-spaces
                  colsMatch(idx.indexed_columns);
         });
-
-        console.log({ fk, match });
-
-        return !match;
       });
-
-    console.log('missingIndexes:', missingIndexes.length);
 
     await Promise.all(missingIndexes
       .map(async fk => {
@@ -64,6 +55,8 @@ describe.only('database indexes', () => {
             WHERE table_schema = ${fk.local_tbl_schema}
               AND table_name   = ${fk.local_tbl_name}
         `);
+
+        // eslint-disable-next-line no-param-reassign
         fk.local_col_names = fk.local_col_indexes.map(pos => cols.find(c => c.pos === pos).name);
       }),
     );
