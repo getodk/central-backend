@@ -44,6 +44,8 @@ info:
 
     **Added**:
     - New endpoint [GET /projects/:id/datasets/:name/entities/creators](/central-api-entity-management/#entities-creators) to retrieve a list of all Actors who have created Entities in a Dataset, sorted by display name.
+    - [Bulk delete Entities](/central-api-entity-management/#bulk-deleting-entities) endpoint for deleting multiple Entities at once.
+    - [Bulk restore Entities](/central-api-entity-management/#bulk-restoring-entities) endpoint for restoring multiple soft-deleted Entities at once.
 
     ## ODK Central v2025.2
 
@@ -9742,7 +9744,131 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error403'             
+                $ref: '#/components/schemas/Error403'
+  /projects/{projectId}/datasets/{name}/entities/bulk-delete:
+    post:
+      tags:
+      - Entity Management
+      summary: Bulk Deleting Entities
+      description: |-
+        Use this API to delete multiple Entities at once. This endpoint accepts an array of Entity UUIDs and performs soft-deletion on all of them.
+      operationId: Bulk Deleting Entities
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of Entity UUIDs to delete
+              required:
+                - ids
+            example:
+              ids: ["12345678-1234-4123-8234-123456789abc", "12345678-1234-4123-8234-123456789aaa"]
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+  /projects/{projectId}/datasets/{name}/entities/bulk-restore:
+    post:
+      tags:
+      - Entity Management
+      summary: Bulk Restoring Entities
+      description: |-
+        Use this API to restore multiple deleted Entities at once. This endpoint accepts an array of Entity UUIDs and restores all of them that were previously deleted.
+      operationId: Bulk Restoring Entities
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of Entity UUIDs to restore
+              required:
+                - ids
+            example:
+              ids: ["12345678-1234-4123-8234-123456789abc", "12345678-1234-4123-8234-123456789aaa"]
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
   /v1/projects/{projectId}/formList:
     get:
       tags:
