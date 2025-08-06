@@ -2,7 +2,6 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { testService } = require('../setup');
-const { describe } = require('mocha');
 
 describe('api: /users', () => {
   describe('GET', () => {

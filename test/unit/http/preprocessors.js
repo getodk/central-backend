@@ -171,6 +171,18 @@ describe('preprocessors', () => {
           )
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
+      it('should throw an error if the cookie is there without session', () =>
+        Promise.resolve(authHandler(
+          { Auth, Sessions: mockSessions('alohomora') },
+          new Context(
+            createRequest({ method: 'GET', headers: {
+              'X-Forwarded-Proto': 'https',
+              Cookie: 'device=abc'
+            }, cookies: { device: 'abc' } }),
+            { fieldKey: Option.none() }
+          )
+        )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
+
       it('should prioritise primary auth over Cookie auth', () =>
         Promise.resolve(authHandler(
           { Auth, Sessions: mockSessions('alohomora') },
