@@ -2,7 +2,7 @@ name: Actors race condition demo
 
 on:
   push:
-    branches: master
+  pull_request:
 
 jobs:
   actors-race-condition-demo:
