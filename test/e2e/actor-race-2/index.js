@@ -8,6 +8,7 @@
 // except according to the terms contained in the LICENSE file.
 
 const fs = require('node:fs');
+const _ = require('lodash');
 const { program } = require('commander');
 
 const SUITE_NAME = 'test/e2e/soak';
@@ -43,13 +44,6 @@ async function soakTest() {
 
   api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword, logPath });
 
-  const roles = await api.apiGet('roles');
-  console.log('roles:', roles);
-  const roleIds = roles
-      .filter(r => !['admin', 'pwreset', 'pub-link'].includes(r.system))
-      .map(r => r.id);
-  console.log('roleIds:', roleIds);
-
   const initialCount = await dbCount(`SELECT COUNT(*) FROM actors AS count`);
   log.info('initialCount:', initialCount);
 
@@ -58,13 +52,12 @@ async function soakTest() {
   // TODO create a load of Actors
   const actorCreations = [];
   for(let i=0; i<actorCount; ++i) {
-    const uniq = `condemned-actor-${execId}-${i}`;
+    const password = `condemned-actor-${execId}-${i}`;
+    const email = `${password}@example.test`;
+    const creds = { email, password };
     const creation = api
-        .apiPostJson('users', {
-          email: `condemned-actor-${execId}-${i}@example.test`,
-          password: uniq,
-        })
-        .then(res => res.id);
+        .apiPostJson('users', creds)
+        .then(({ id }) => ({ id, email, password }));
     actorCreations.push(creation);
   }
   const actors = await Promise.all(actorCreations);
@@ -77,22 +70,41 @@ async function soakTest() {
   if(createdCount !== actorCount) throw new Error(`Expected ${actorCount} actors, but got ${createdCount}`);
 
   // simultaneously:
-  // * assign all the roles to all the actors
+  // * create a session
   // * delete all the actors
-  await Promise.all(actors.flatMap(id => [
-    ...roleIds.map(roleId => withRandomDelay(async () => {
+  const responses = await Promise.all(actors.flatMap(({ id, ...creds }) => [
+    ..._.times(10, () => withRandomDelay(async () => {
       try {
-        return await api.apiPost(`assignments/${roleId}/${id}`);
+        const session = await api.apiPostJson(`sessions`, creds);
+        return { isSession:true, session };
       } catch(err) {
-        if(err.responseStatus !== 404) throw err;
+        if (err.responseStatus !== 401) throw err;
+        else return 401;
       }
     })),
     withRandomDelay(() => api.apiDelete(`users/${id}`)),
   ]));
+  console.log('responses:', responses);
 
-  // check for assignments to deleted actors
-  const count = await countAssignedButDeletedActors();
-  if(count !== 0) throw new Error(`There are ${count} assignments for deleted actors.`);
+  // check for active sessions for deleted actors
+  const sessions = responses
+      .filter(it => it.isSession)
+      .map(it => it.session);
+
+  const sessionsWithStatus = await Promise.all(sessions.map(async session => {
+    const { token } = session;
+    const sessionClient = await apiClient(SUITE_NAME, { serverUrl, token, logPath });
+    try {
+      const restore = await sessionClient.apiGet('sessions/restore');
+      return { session, restore, status:'live' };
+    } catch(err) {
+      if(err.responseStatus === 401) return { session, status:'invalid' };
+      else throw err;
+    }
+  }));
+
+  const liveSessions = sessionsWithStatus.filter(it => it.status === 'live');
+  if(liveSessions.length > 0) throw new Error(`Found ${liveSessions.length} live sessions for deleted actors`);
 
   log.info(`Check for extra logs at ${logPath}`);
 
@@ -113,7 +125,9 @@ async function dbQuery(sqlQuery) {
 
 async function withRandomDelay(fn) {
   await sleep(randInt(10));
-  return fn();
+  const res = await fn();
+  console.log('withRandomDelay()', 'res:', res);
+  return res;
 }
 
 async function dbCount(sqlQuery) {
