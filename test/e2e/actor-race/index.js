@@ -76,9 +76,9 @@ async function soakTest() {
   const createdCount = finalCount - initialCount;
   if(createdCount !== actorCount) throw new Error(`Expected ${actorCount} actors, but got ${createdCount}`);
 
-  // TODO simultaneously:
-  // * TODO assign all the roles to all the actors
-  // * TODO delete all the actors
+  // simultaneously:
+  // * assign all the roles to all the actors
+  // * delete all the actors
   await Promise.all(actors.flatMap(id => [
     ...roleIds.map(roleId => withRandomDelay(async () => {
       try {
@@ -90,7 +90,7 @@ async function soakTest() {
     withRandomDelay(() => api.apiDelete(`users/${id}`)),
   ]));
 
-  // TODO check for assignments to deleted actors
+  // check for assignments to deleted actors
   const count = await countAssignedButDeletedActors();
   if(count !== 0) throw new Error(`There are ${count} assignments for deleted actors.`);
 
