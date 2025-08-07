@@ -6,7 +6,7 @@ userEmail="x@example.com"
 userPassword="secret1234"
 
 log() {
-  echo "[test/e2e/soak] $*"
+  echo "[test/e2e/actor-race-1] $*"
 }
 
 fail_job() {
@@ -25,8 +25,8 @@ log 'Waiting for backend to start...'
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
 log 'Backend started!'
 
-cd test/e2e/soak
-node index.js -s "$serverUrl" -P "$userPassword" -L /tmp/soak-tester-logs
+cd test/e2e/actor-race-1
+node index.js -s "$serverUrl" -P "$userPassword" -L /tmp/actor-race-1-tester-logs
 
 if ! curl -s -o /dev/null "$serverUrl"; then
   log 'Backend died.'
