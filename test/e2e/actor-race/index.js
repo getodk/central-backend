@@ -49,7 +49,9 @@ async function soakTest() {
 
   const roles = await api.apiGet('roles');
   console.log('roles:', roles);
-  const roleIds = roles.map(r => r.id);
+  const roleIds = roles
+      .filter(r => !['admin', 'pwreset', 'pub-link'].includes(r.system))
+      .map(r => r.id);
   console.log('roleIds:', roleIds);
 
   const initialCount = await dbCount(`SELECT COUNT(*) FROM actors AS count`);
@@ -82,13 +84,19 @@ async function soakTest() {
   // * TODO assign all the roles to all the actors
   // * TODO delete all the actors
   await Promise.all(actors.flatMap(id => [
-    ...roleIds.map(roleId => withRandomDelay(() => api.apiPost(`assignments/${roleId}/${id}`))),
+    ...roleIds.map(roleId => withRandomDelay(async () => {
+      try {
+        return await api.apiPost(`assignments/${roleId}/${id}`);
+      } catch(err) {
+        if(err.responseStatus !== 404) throw err;
+      }
+    })),
     withRandomDelay(() => api.apiDelete(`users/${id}`)),
   ]));
 
   // TODO check for assignments to deleted actors
   const count = await countAssignedButDeletedActors();
-  if(count !== 0) throw new Error(`There are ${count} deleted actors with assignments.`);
+  if(count !== 0) throw new Error(`There are ${count} assignments for deleted actors.`);
 
   log.info(`Check for extra logs at ${logPath}`);
 

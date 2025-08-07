@@ -14,6 +14,7 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
   bearerToken = token;
 
   return {
+    apiDelete,
     apiGet,
     apiRawHead,
     apiRawGet,
@@ -24,6 +25,11 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
     apiPost,
     apiFetch,
   };
+
+  async function apiDelete(path, headers) {
+    const res = await apiFetch('DELETE', path, undefined, headers);
+    return res.json();
+  }
 
   async function apiGet(path, headers) {
     const res = await apiFetch('GET', path, undefined, headers);
