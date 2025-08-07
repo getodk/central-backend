@@ -135,15 +135,6 @@ async function dbCount(sqlQuery) {
   return +count;
 }
 
-function countAssignedButDeletedActors() {
-  return dbCount(`
-    SELECT COUNT(*) AS count
-      FROM assignments
-      JOIN actors AS actors ON actors.id=assignments."actorId"
-      WHERE actors."deletedAt" IS NOT NULL
-  `);
-}
-
 function randInt(max=9999) {
   return Math.floor(Math.random() * max);
 }
