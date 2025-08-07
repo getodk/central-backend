@@ -47,6 +47,11 @@ async function soakTest() {
 
   api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword, logPath });
 
+  const roles = await api.apiGet('roles');
+  console.log('roles:', roles);
+  const roleIds = roles.map(r => r.id);
+  console.log('roleIds:', roleIds);
+
   const initialCount = await dbCount(`SELECT COUNT(*) FROM actors AS count`);
   log.info('initialCount:', initialCount);
 
@@ -56,12 +61,16 @@ async function soakTest() {
   const actorCreations = [];
   for(let i=0; i<actorCount; ++i) {
     const uniq = `condemned-actor-${execId}-${i}`;
-    actorCreations.push(api.apiPostJson('users', {
-      email: `condemned-actor-${execId}-${i}@example.test`,
-      password: uniq,
-    }));
+    const creation = api
+        .apiPostJson('users', {
+          email: `condemned-actor-${execId}-${i}@example.test`,
+          password: uniq,
+        })
+        .then(res => res.id);
+    actorCreations.push(creation);
   }
   const actors = await Promise.all(actorCreations);
+  console.log('actors:', actors);
 
   const finalCount = await dbCount(`SELECT COUNT(*) FROM actors AS count`);
   log.info('finalCount:', finalCount);
@@ -72,10 +81,14 @@ async function soakTest() {
   // TODO simultaneously:
   // * TODO assign all the roles to all the actors
   // * TODO delete all the actors
+  await Promise.all(actors.flatMap(id => [
+    ...roleIds.map(roleId => withRandomDelay(() => api.apiPost(`assignments/${roleId}/${id}`))),
+    withRandomDelay(() => api.apiDelete(`users/${id}`)),
+  ]));
 
   // TODO check for assignments to deleted actors
   const count = await countAssignedButDeletedActors();
-  if(count !== 0) throw new Error(`There are ${count} (${typeof count}) deleted actors with assignments.`);
+  if(count !== 0) throw new Error(`There are ${count} deleted actors with assignments.`);
 
   log.info(`Check for extra logs at ${logPath}`);
 
@@ -92,6 +105,11 @@ async function dbQuery(sqlQuery) {
   const { rows } = await client.query(sqlQuery);
 
   return rows;
+}
+
+async function withRandomDelay(fn) {
+  await sleep(randInt(10));
+  return fn();
 }
 
 async function dbCount(sqlQuery) {
@@ -241,8 +259,8 @@ ${submissionTemplate
   return api.apiPostAndDump('randomSubmission', n, `projects/${projectId}/forms/${formId}/submissions`, body, headers);
 }
 
-function randInt() {
-  return Math.floor(Math.random() * 9999);
+function randInt(max=9999) {
+  return Math.floor(Math.random() * max);
 }
 
 function exportZipWithDataAndMedia(n, projectId, formId) {
@@ -256,4 +274,8 @@ function durationForHumans(ms) {
 
 function oneDp(n) {
   return Number(n.toFixed(1));
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
