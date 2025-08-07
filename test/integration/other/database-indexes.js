@@ -7,7 +7,7 @@ const startsWith = curry((prefix, arr) => equals(prefix, slice(0, prefix.length,
 
 const idxNameFor = fk => `idx_fk_${fk.local_tbl_name}_${fk.local_col_names}`;
 const colsForIdx = fk => fk.local_col_names.map(col => `"${col}"`).join(', ');
-const createIdxStatement = fk => `CREATE INDEX ${idxNameFor(fk)} ON "${fk.local_tbl_name}" (${colsForIdx(fk)});`;
+const createIdxStatement = fk => `CREATE UNIQUE? INDEX ${idxNameFor(fk)} ON "${fk.local_tbl_name}" (${colsForIdx(fk)});`;
 
 describe('database indexes', () => {
   it('should define indexes on both sides of foreign key relationships', testContainer(async ({ all }) => {
