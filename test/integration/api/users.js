@@ -117,6 +117,25 @@ describe('api: /users', () => {
               .then(() => service.login({ email: 'david@getodk.org', password: 'alongpassword' }, (asDavid) =>
                 asDavid.get('/v1/users/current').expect(200))))));
 
+        it.only('should allow re-creation of deleted users', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          const davidId = await asAlice.post('/v1/users')
+            .send({ email: 'david@getodk.org', password: 'alongpassword' })
+            .expect(200)
+            .then(() => service.login({ email: 'david@getodk.org', password: 'alongpassword' }, (asDavid) =>
+              asDavid.get('/v1/users/current')
+                .expect(200)
+                .then(({ body }) => body.id)));
+
+          await asAlice.delete('/v1/users/' + davidId)
+            .expect(200);
+
+          await asAlice.post('/v1/users')
+            .send({ email: 'david@getodk.org', password: 'anotherlongpassword' })
+            .expect(200)
+        }));
+
         it('should not accept and hash blank passwords', testService((service, { Users }) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/users')
