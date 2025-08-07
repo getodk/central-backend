@@ -29,7 +29,7 @@ describe('database indexes', () => {
          , foreign_tbl_class.relname                          AS foreign_tbl_name
          , pg_constraint.conname AS fk_name
          , pg_constraint. conkey AS   local_col_indexes
-         , pg_constraint.confkey AS foreign_columns
+         , pg_constraint.confkey AS foreign_col_indexes
       FROM pg_constraint
       JOIN pg_class AS   local_tbl_class ON   local_tbl_class.oid=pg_constraint. conrelid
       JOIN pg_class AS foreign_tbl_class ON foreign_tbl_class.oid=pg_constraint.confrelid
