@@ -4690,13 +4690,13 @@ describe('datasets and entities', () => {
         // there are expected to be
         // 2 defs of this form (published and new draft)
         // 6 form fields of original form (and new form): 3 entity related fields and 3 question fields
-        // ideally only 4 ds property fields, but 2 from deleted def are still there
+        // 12 ds property fields including system properties and those attached to deleted defs are still present
         await Promise.all([
           container.oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simpleEntity'`),
           container.oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simpleEntity'`),
           container.oneFirst(sql`select count(*) from ds_property_fields`),
         ])
-          .then((counts) => counts.should.eql([2, 6, 6]));
+          .then((counts) => counts.should.eql([2, 6, 12]));
 
       }));
     });
