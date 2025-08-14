@@ -8,11 +8,37 @@ describe('api: /sessions', () => {
 
     it('should return a new session if the information is valid', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
         })));
+
+    [
+      { desc: 'invalid session cookie', header: 'Cookie', value: 'session=invalid' },
+      { desc: 'invalid bearer token', header: 'Authorization', value: 'Bearer invalid' },
+      { desc: 'invalid basic auth', header: 'Authorization', value: 'Basic invalid' },
+    ].forEach(t => {
+      it(`should return a new session even if invalid auth is passed in the header - ${t.desc}`, testService((service) =>
+        service.post('/v1/sessions')
+          .set(t.header, t.value)
+          .set('x-forwarded-proto', 'https')
+          .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Session();
+          })));
+    });
+
+    it('should return a new session even if valid cookie is passed', testService((service) =>
+      service.post('/v1/sessions')
+        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+        .expect(200)
+        .then(({ body }) => service.post('/v1/sessions')
+          .set('x-forwarded-proto', 'https')
+          .set('Cookie', `session=${body.token}`)
+          .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+          .expect(200))));
 
     // These demonstrate a strange feature of bcrypt - a valid password can be
     // repeated multiple times and still validate successfully.  An alternative
@@ -20,9 +46,9 @@ describe('api: /sessions', () => {
     // and reject them before passing the values to bcrypt.
     describe('weird bcrypt implementation details', () => {
       [
-        [ 'repeated once',             'chelsea\0chelsea' ],          // eslint-disable-line no-multi-spaces
-        [ 'repeated twice',            'chelsea\0chelsea\0chelsea' ], // eslint-disable-line no-multi-spaces
-        [ 'repeated until truncation', 'chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0chelsea\0' ],
+        [ 'repeated once',             'password4chelsea\0password4chelsea' ],                   // eslint-disable-line no-multi-spaces
+        [ 'repeated twice',            'password4chelsea\0password4chelsea\0password4chelsea' ], // eslint-disable-line no-multi-spaces
+        [ 'repeated until truncation', 'password4chelsea\0password4chelsea\0password4chelsea\0password4chelsea\0password4' ],
       ].forEach(([ description, password ]) => {
         it(`should treat a password ${description} as the singular version of the same`, testService((service) =>
           service.post('/v1/sessions')
@@ -36,7 +62,7 @@ describe('api: /sessions', () => {
 
     it('should treat email addresses case insensitively', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'cHeLsEa@getodk.OrG', password: 'chelsea' })
+        .send({ email: 'cHeLsEa@getodk.OrG', password: 'password4chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
@@ -44,7 +70,7 @@ describe('api: /sessions', () => {
 
     it('should provide a csrf token when the session returns', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
         .expect(200)
         .then(({ body }) => {
           body.csrf.should.be.a.token();
@@ -52,7 +78,7 @@ describe('api: /sessions', () => {
 
     it('should set cookie information when the session returns', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
         .expect(200)
         .then(({ body, headers }) => {
           // i don't know how this becomes an array but i think superagent does it.
@@ -71,7 +97,7 @@ describe('api: /sessions', () => {
 
     it('should log the action in the audit log', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@getodk.org', password: 'alice' })
+        .send({ email: 'alice@getodk.org', password: 'password4alice' })
         .set('User-Agent', 'central/tests')
         .expect(200)
         .then(({ body }) => body.token)
@@ -87,11 +113,37 @@ describe('api: /sessions', () => {
             body[0].details.userAgent.should.equal('central/tests');
           }))));
 
-    it('should return a 401 if the password is wrong', testService((service) =>
-      service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'letmein' })
-        .expect(401)
-        .then(({ body }) => body.message.should.equal('Could not authenticate with the provided credentials.'))));
+    [
+      [ 'undefined',      undefined, 400, 'Required parameters missing. Expected (email, password), got (email: \'chelsea@getodk.org\', password: undefined).' ], // eslint-disable-line no-multi-spaces
+      [ 'null',           null,      400, 'Required parameters missing. Expected (email, password), got (email: \'chelsea@getodk.org\', password: null).' ], // eslint-disable-line no-multi-spaces
+      [ 'empty string',   '',        400, 'Required parameters missing. Expected (email, password), got (email: \'chelsea@getodk.org\', password: \'\').' ], // eslint-disable-line no-multi-spaces
+      [ 'wrong password', 'letmein', 401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+      [ 'number',         123,       401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+      [ 'array',          [],        401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+      [ 'object',         {},        401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+    ].forEach(([ description, password, expectedStatus, expectedError ]) => {
+      it(`should return a ${expectedStatus} for invalid password (${description})`, testService((service) =>
+        service.post('/v1/sessions')
+          .send({ email: 'chelsea@getodk.org', password })
+          .expect(expectedStatus)
+          .then(({ body }) => body.message.should.equal(expectedError))));
+    });
+
+    [
+      [ 'undefined',      undefined, 400, 'Required parameters missing. Expected (email, password), got (email: undefined, password: \'n/a\').' ], // eslint-disable-line no-multi-spaces
+      [ 'null',           null,      400, 'Required parameters missing. Expected (email, password), got (email: null, password: \'n/a\').' ], // eslint-disable-line no-multi-spaces
+      [ 'empty string',   '',        400, 'Required parameters missing. Expected (email, password), got (email: \'\', password: \'n/a\').' ], // eslint-disable-line no-multi-spaces
+      [ 'invalid email',  'letmein', 401, 'Could not authenticate with the provided credentials.' ], // eslint-disable-line no-multi-spaces
+      [ 'number',         123,       400, 'Invalid input data type: expected (email) to be (string)' ], // eslint-disable-line no-multi-spaces
+      [ 'array',          [],        400, 'Invalid input data type: expected (email) to be (string)' ], // eslint-disable-line no-multi-spaces
+      [ 'object',         {},        400, 'Invalid input data type: expected (email) to be (string)' ], // eslint-disable-line no-multi-spaces
+    ].forEach(([ description, email, expectedStatus, expectedError ]) => {
+      it(`should return a ${expectedStatus} for invalid email (${description})`, testService((service) =>
+        service.post('/v1/sessions')
+          .send({ email, password: 'n/a' })
+          .expect(expectedStatus)
+          .then(({ body }) => body.message.should.equal(expectedError))));
+    });
 
     it('should return a 401 if the email is wrong', testService((service) =>
       service.post('/v1/sessions')
@@ -109,8 +161,8 @@ describe('api: /sessions', () => {
     it('should fail if no valid session exists', testService((service) =>
       service.get('/v1/sessions/restore')
         .set('X-Forwarded-Proto', 'https')
-        .set('Cookie', 'session: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-        .expect(404)));
+        .set('Cookie', 'session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+        .expect(401)));
 
     it('should return the active session if it exists', testService((service) =>
       service.authenticateUser('alice')
@@ -119,15 +171,19 @@ describe('api: /sessions', () => {
           .set('Cookie', 'session=' + token)
           .expect(200)
           .then((restore) => {
-            restore.body.should.be.a.Session();
-            restore.body.token.should.equal(token);
+            Object.keys(restore.body).should.eqlInAnyOrder(['createdAt', 'expiresAt']);
+            restore.body.expiresAt.should.be.an.isoDate();
+            restore.body.createdAt.should.be.an.isoDate();
+            should(restore.body.token).be.undefined();
+            should(restore.body.csrf).be.undefined();
           }))));
   });
 
   describe('/:token DELETE', () => {
     it('should return a 403 if the token does not exist', testService((service) =>
-      service.delete('/v1/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
-        .expect(403)));
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/sessions/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa')
+          .expect(403))));
 
     it('should return a 403 if the user cannot delete the given token', testService((service) =>
       service.authenticateUser('alice')
@@ -262,9 +318,17 @@ describe('api: /sessions', () => {
   });
 
   describe('/current DELETE', () => {
-    it('should return a 404 if no token was specified', testService(service =>
+    it('should return a 401 if no token was specified', testService(service =>
       service.delete('/v1/sessions/current')
-        .expect(404)));
+        .expect(401)));
+
+    if (process.env.TEST_AUTH !== 'oidc') {
+      it('should return a 404 if basic auth provided', testService(service =>
+        service.delete('/v1/sessions/current')
+          .set('x-forwarded-proto', 'https')
+          .auth('alice@getodk.org', 'password4alice')
+          .expect(404)));
+    }
 
     it('should invalidate the token if successful', testService(async (service) => {
       const token = await service.authenticateUser('alice');
@@ -310,6 +374,15 @@ describe('api: /sessions', () => {
       service.authenticateUser('alice', 'includeCsrf')
         .then((body) => service.post('/v1/projects')
           .send({ name: 'my project', __csrf: body.csrf })
+          .set('X-Forwarded-Proto', 'https')
+          .set('Cookie', 'session=' + body.token)
+          .expect(200))));
+
+    it('should succeed if it is ajax/xhr request', testService((service) =>
+      service.authenticateUser('alice', 'includeCsrf')
+        .then((body) => service.post('/v1/projects')
+          .send({ name: 'my project' })
+          .set('X-Requested-With', 'XMLHttpRequest')
           .set('X-Forwarded-Proto', 'https')
           .set('Cookie', 'session=' + body.token)
           .expect(200))));

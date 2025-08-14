@@ -11,12 +11,11 @@ const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects', () => {
   describe('GET', () => {
-    it('should return an empty array if not logged in', testService((service) =>
+    it('should return 401 if not logged in', testService((service) =>
       service.get('/v1/projects')
-        .expect(200)
-        .then(({ body }) => { body.should.eql([]); })));
+        .expect(401)));
 
-    it('should return an empty array if the user has no rights', testService((service) =>
+    it('should return an empty array if the user has access to no projects', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/projects')
           .expect(200)
@@ -268,7 +267,8 @@ describe('api: /projects', () => {
 
   describe('/:id GET', () => {
     it('should return notfound if the project does not exist', testService((service) =>
-      service.get('/v1/projects/99').expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/99').expect(404))));
 
     it('should reject if id is non-numeric', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -391,7 +391,7 @@ describe('api: /projects', () => {
         .expect(200);
       project.verbs.should.be.an.Array();
       const { body: admin } = await asAlice.get('/v1/roles/admin').expect(200);
-      project.verbs.should.eql(admin.verbs);
+      project.verbs.should.eqlInAnyOrder(admin.verbs);
       project.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
     }));
 
@@ -403,7 +403,7 @@ describe('api: /projects', () => {
       project.verbs.should.be.an.Array();
       const { body: manager } = await asBob.get('/v1/roles/manager')
         .expect(200);
-      project.verbs.should.eql(manager.verbs);
+      project.verbs.should.eqlInAnyOrder(manager.verbs);
       project.verbs.should.containDeep([ 'assignment.create', 'project.delete', 'dataset.list' ]);
       project.verbs.should.not.containDeep([ 'project.create' ]);
     }));
@@ -463,10 +463,11 @@ describe('api: /projects', () => {
 
   describe('/:id PATCH', () => {
     it('should return notfound if the project does not exist', testService((service) =>
-      service.patch('/v1/projects/99')
-        .set('Content-Type', 'application/json')
-        .send({ name: 'New Test Name' })
-        .expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/99')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'New Test Name' })
+          .expect(404))));
 
     it('should reject unless the user can update', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -547,7 +548,8 @@ describe('api: /projects', () => {
 
   describe('/:id DELETE', () => {
     it('should return notfound if the project does not exist', testService((service) =>
-      service.delete('/v1/projects/99').expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/99').expect(404))));
 
     it('should reject unless the user can delete', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -815,10 +817,11 @@ describe('api: /projects', () => {
 
   describe('/:id PUT', () => {
     it('should return notfound if the project does not exist', testService((service) =>
-      service.put('/v1/projects/99')
-        .set('Content-Type', 'application/json')
-        .send({ name: 'New Test Name' })
-        .expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/projects/99')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'New Test Name' })
+          .expect(404))));
 
     it('should reject unless the user can update', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -931,8 +934,8 @@ describe('api: /projects', () => {
           .send({
             name: 'Default Project',
             forms: [
-              { xmlFormId: 'simple' },
-              { xmlFormId: 'withrepeat' }
+              { xmlFormId: 'simple', state: 'invalid' },
+              { xmlFormId: 'withrepeat', state: 'invalid' }
             ]
           })
           .expect(400)

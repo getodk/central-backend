@@ -3,9 +3,11 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { v4: uuid } = require('uuid');
+const xml2js = require('xml2js');
 
 const appPath = require('app-root-path');
 const Problem = require('../../../lib/util/problem');
+const { map } = require('ramda');
 const { exhaust } = require(appPath + '/lib/worker/worker');
 
 const createProject = (user) => user.post('/v1/projects')
@@ -180,13 +182,13 @@ describe('query module entities purge', () => {
     const PROVIDE_ALL = 'Must specify projectId and datasetName to purge a specify entity.';
     const PROVIDE_PROJECT_ID = 'Must specify projectId to purge all entities of a dataset/entity-list.';
     const cases = [
-      { description: ' when entityUuid specified without projectId and datasetName',
+      { description: 'when entityUuid specified without projectId and datasetName',
         projectId: false, datasetName: false, entityUuid: true, expectedError: PROVIDE_ALL },
-      { description: ' when entityUuid specified without projectId',
+      { description: 'when entityUuid specified without projectId',
         projectId: false, datasetName: true, entityUuid: true, expectedError: PROVIDE_ALL },
-      { description: ' when entityUuid specified without datasetName',
+      { description: 'when entityUuid specified without datasetName',
         projectId: true, datasetName: false, entityUuid: true, expectedError: PROVIDE_ALL },
-      { description: ' when datasetName specified without projectId',
+      { description: 'when datasetName specified without projectId',
         projectId: false, datasetName: true, entityUuid: false, expectedError: PROVIDE_PROJECT_ID },
     ];
     cases.forEach(c =>
@@ -468,8 +470,8 @@ describe('query module entities purge', () => {
     it('should log a purge event in the audit log when purging entities', testService(async (service, { Entities, oneFirst }) => {
       const asAlice = await service.login('alice');
 
-      const peopleUuids = await createDeletedEntities(asAlice, 2);
-      const treesUuids = await createDeletedEntities(asAlice, 2, { datasetName: 'trees' });
+      await createDeletedEntities(asAlice, 2);
+      await createDeletedEntities(asAlice, 2, { datasetName: 'trees' });
 
       const peopleActeeId = await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'people'`);
       const treesActeeId = await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'trees'`);
@@ -484,11 +486,9 @@ describe('query module entities purge', () => {
 
           const [ peoplePurgeAudit ] = purgeLogs.filter(a => a.acteeId === peopleActeeId);
           peoplePurgeAudit.details.entitiesDeleted.should.eql(2);
-          peoplePurgeAudit.details.entityUuids.should.containDeep(peopleUuids);
 
           const [ treesPurgeAudit ] = purgeLogs.filter(a => a.acteeId === treesActeeId);
           treesPurgeAudit.details.entitiesDeleted.should.eql(2);
-          treesPurgeAudit.details.entityUuids.should.containDeep(treesUuids);
         });
     }));
 
@@ -503,4 +503,62 @@ describe('query module entities purge', () => {
         });
     }));
   });
+
+  it('should persist the list of UUIDs of purged entities', testService(async (service, { Entities, oneFirst, all }) => {
+    const asAlice = await service.login('alice');
+
+    const peopleUuids = await createDeletedEntities(asAlice, 2);
+    const treesUuids = await createDeletedEntities(asAlice, 2, { datasetName: 'trees' });
+
+    await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'people'`);
+    await oneFirst(sql`SELECT "acteeId" FROM datasets WHERE name = 'trees'`);
+
+    // Purge entities
+    await Entities.purge(true);
+
+    const purgedEntities = await all(sql`SELECT "entityUuid" FROM purged_entities`).then(map(e => e.entityUuid));
+
+    purgedEntities.should.containDeep(peopleUuids.concat(treesUuids));
+  }));
+
+  it('should return purged entities through integrity url', testService(async (service, { Entities }) => {
+    const asAlice = await service.login('alice');
+
+    const entityIds = await createDeletedEntities(asAlice, 5, { datasetName: 'people', project: 1 });
+
+    // purging all deleted entities
+    const purgeCount = await Entities.purge(true);
+    purgeCount.should.equal(5);
+
+    // No entity IDs specified
+    await asAlice.get(`/v1/projects/1/datasets/people/integrity`)
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(200)
+      .then(async ({ text }) => {
+        const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+        const { entity } = result.data.entities;
+        entity.length.should.equal(5);
+      });
+
+    // A single entity ID specified
+    await asAlice.get(`/v1/projects/1/datasets/people/integrity?id=${entityIds[0]}`)
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(200)
+      .then(async ({ text }) => {
+        const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+        const { entity } = result.data.entities;
+        entity.$.id.should.be.eql(entityIds[0]);
+        entity.deleted.should.be.eql('true');
+      });
+
+    // A list of 3 entity IDs specified
+    await asAlice.get(`/v1/projects/1/datasets/people/integrity?id=${entityIds.slice(0, 3).join(',')}`)
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(200)
+      .then(async ({ text }) => {
+        const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+        const { entity } = result.data.entities;
+        entity.length.should.equal(3);
+      });
+  }));
 });

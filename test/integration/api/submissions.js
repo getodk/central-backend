@@ -7,6 +7,8 @@ const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const { httpZipResponseToFiles } = require('../../util/zip');
 const { map } = require('ramda');
+const { hashPassword } = require('../../../lib/util/crypto');
+const { User, Actor } = require(appRoot + '/lib/model/frames');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -19,13 +21,19 @@ const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryTyp
 describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
-      service.head('/v1/projects/1/submission')
-        .set('X-OpenRosa-Version', '1.0')
-        .expect(204)));
+      service.login('alice', (asAlice) =>
+        asAlice.head('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(204))));
 
     it('should fail if not given X-OpenRosa-Version header', testService((service) =>
       service.head('/v1/projects/1/submission')
         .expect(400)));
+
+    it('should fail if no auth is provided', testService((service) =>
+      service.head('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(401)));
 
     it('should fail on authentication given broken credentials', testService((service) =>
       service.head('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/submission')
@@ -52,6 +60,62 @@ describe('api: /submission', () => {
           .attach('xml_submission_file', Buffer.from('<test'), { filename: 'data.xml' })
           .expect(400)
           .then(({ text }) => { text.should.match(/form ID xml attribute/i); }))));
+
+    it('should reject if "Multipart: Boundary not found"', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Content-Type', 'multipart/form-data') // missing suffix: "; boundary=..."
+          .expect(400)
+          .then(({ body }) => {
+            body.should.eql({
+              code: 400.39,
+              message: 'Multipart form content failed to parse.',
+              details: 'Multipart: Boundary not found',
+            });
+          }))));
+
+    it('should reject if "Unexpected end of form"', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Content-Type', 'multipart/form-data; boundary=----geckoformboundary57597312afb59088b78af2a1fdc6038')
+          .send('') // should at minimum have a final boundary
+          .expect(400)
+          .then(({ body }) => {
+            body.should.eql({
+              code: 400.39,
+              message: 'Multipart form content failed to parse.',
+              details: 'Unexpected end of form',
+            });
+          }))));
+
+    it('should reject if "Malformed part header"', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .set('Content-Type', 'multipart/form-data; boundary=BOUNDARY')
+          .send(
+            '--BOUNDARY\r\n' +
+            'Content-Disposition: form-data; name="xml_submission_file"; filename="xml_submission_file"\r\n' +
+            'Content-Type: text/xml\r\n\r\n' +
+            '--BOUNDARY\r\n' +
+            'Content-Disposition: form-data; name="__csrf"\r\n\r\n' +
+            'content\r\n' +
+            '--BOUNDARY\r\n' +
+            'Content-Disposition: form-data; name="699-536x354-9_4_59.jpg"; filename="699-536x354-9_4_59.jpg"\r\n' +
+            'Content-Type: image/jpeg\r\n\r\n' +
+            // content should be here
+            '--BOUNDARY--\r\n\r\n'
+          )
+          .expect(400)
+          .then(({ body }) => {
+            body.should.eql({
+              code: 400.39,
+              message: 'Multipart form content failed to parse.',
+              details: 'Malformed part header',
+            });
+          }))));
 
     it('should return notfound if the form does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -1089,6 +1153,25 @@ describe('api: /forms/:id/submissions', () => {
             .then(({ body }) => {
               body[0].deviceId.should.equal('testtest');
               body[0].userAgent.should.equal('central/test');
+            })))));
+
+    const lengthyUserAgent = 'Enketo/7.5.1 Mozilla/5.0 (iPhone; CPU iPhone OS 18_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/22E252 [FBAN/FBIOS;FBAV/512.0.0.52.99;FBBV/731098301;FBDV/iPhone15,4;FBMD/iPhone;FBSN/iOS;FBSV/18.4.1;FBSS/3;FBID/phone;FBLC/en_US;FBOP/5;FBRV/733464354;IABMV/1]';
+    const lengthyDeviceId = 'Lorem Ipsum: In ea cillum aliqua voluptate est non aute aute dolor. Non amet sit deserunt amet quis qui voluptate ad dolor magna do adipisicing. Laboris mollit anim exercitation anim Lorem ullamco culpa nulla sit qui. Occaecat laboris minim ea ut laboris mollit quis. Proident pariatur Lorem adipisicing nisi enim minim.';
+    it('should not fail if longer userAgent and deviceId is provided', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post(`/v1/projects/1/forms/simple/submissions?deviceID=${lengthyDeviceId}`)
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'text/xml')
+          .set('User-Agent', lengthyUserAgent)
+          .expect(200)
+          .then(({ body }) => {
+            body.deviceId.should.startWith('Lorem Ipsum');
+          })
+          .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+            .expect(200)
+            .then(({ body }) => {
+              body[0].deviceId.should.startWith('Lorem Ipsum');
+              body[0].userAgent.should.startWith('Enketo/7.5.1');
             })))));
 
     it('should accept a submission for an old form version', testService((service, { Submissions, one }) =>
@@ -2207,15 +2290,15 @@ describe('api: /forms/:id/submissions', () => {
                 'audits - audit.csv'
               ]);
 
-              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
-one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
-two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb,,
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd,,
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff,,
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,,,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii,,
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb,,
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd,,
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
 `);
             }))
           .then(() => container.oneFirst(sql`select count(*) from client_audits`)
@@ -2244,15 +2327,15 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 'audits - audit.csv'
               ]);
 
-              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
-one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
-two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb,,
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd,,
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff,,
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,,,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii,,
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb,,
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd,,
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
 `);
             })))));
 
@@ -2285,15 +2368,15 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                 'audits - audit.csv'
               ]);
 
-              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
-one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
-two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb,,
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd,,
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff,,
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,,,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii,,
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb,,
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd,,
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
 `);
             }))
           .then(() => {
@@ -2326,6 +2409,49 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
             .catch(err => err.message.should.equal('aborted'))));
     }));
 
+    it('should return additional user and change-reason columns of client audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.clientAudits)
+        .expect(200);
+
+      // The client audit for this submission contains user and change-reason columns
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('audit.csv', createReadStream(appRoot + '/test/data/audit4.csv'), { filename: 'audit.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+        .expect(201);
+
+      // The client audit for this submission does not contain user and change-reason columns
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
+        .expect(201);
+
+      const expected = `instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,l,/data/l,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb,user,reason1
+one,m,/data/m,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd,user,
+one,n,/data/n,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,reason2
+two,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb,,
+two,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd,,
+two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
+`;
+
+      // Constructed ad-hoc
+      await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+        .then((res) => res.files.get('audits - audit.csv').should.equal(expected));
+
+      // Run worker to process client audits
+      await exhaust(container);
+
+      // Constructed from worker-processed client audit log
+      await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'))
+        .then((res) => res.files.get('audits - audit.csv').should.equal(expected));
+    }));
+
     it('should return consolidated client audit log filtered by user', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
@@ -2350,12 +2476,12 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   'audits - audit.csv'
                 ]);
 
-                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
-one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb,,
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd,,
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff,,
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,,,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii,,
 `);
 
               }))))));
@@ -2386,12 +2512,12 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
                 'audits - audit.csv'
               ]);
 
-              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,
-one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+              result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb,,
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd,,
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff,,
+one,d,/data/d,2000-01-01T00:10,,10,11,12,gg,,,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii,,
 `);
 
             })))));
@@ -2421,10 +2547,10 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
                   'audits - audit.csv'
                 ]);
 
-                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb,,
+one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd,,
+one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
 `);
 
               }))))));
@@ -2453,10 +2579,10 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   'audits - audit.csv'
                 ]);
 
-                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb,,
+one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd,,
+one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
 `);
 
               }))))));
@@ -2481,12 +2607,12 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   'audits - audit.csv'
                 ]);
 
-                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-one,d,/data/d,2000-01-01T00:10,,10,11,12,,
-one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb,,
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd,,
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff,,
+one,d,/data/d,2000-01-01T00:10,,10,11,12,,,,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii,,
 `);
               }))))));
 
@@ -2510,12 +2636,12 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
                   'audits - audit.csv'
                 ]);
 
-                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb
-one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd
-one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff
-one,d,/data/d,2000-01-01T00:10,,10,11,12,"g""g",
-one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
+                result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,a,/data/a,2000-01-01T00:01,2000-01-01T00:02,1,2,3,aa,bb,,
+one,b,/data/b,2000-01-01T00:02,2000-01-01T00:03,4,5,6,cc,dd,,
+one,c,/data/c,2000-01-01T00:03,2000-01-01T00:04,7,8,9,ee,ff,,
+one,d,/data/d,2000-01-01T00:10,,10,11,12,"g""g",,,
+one,e,/data/e,2000-01-01T00:11,,,,,hh,ii,,
 `);
               }))))));
 
@@ -2548,10 +2674,10 @@ one,e,/data/e,2000-01-01T00:11,,,,,hh,ii
                     'audits - audit.csv'
                   ]);
 
-                  result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value
-one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb
-one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd
-one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
+                  result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,f,/data/f,2000-01-01T00:04,2000-01-01T00:05,-1,-2,,aa,bb,,
+one,g,/data/g,2000-01-01T00:05,2000-01-01T00:06,-3,-4,,cc,dd,,
+one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
 `);
                 }))))));
     });
@@ -4341,6 +4467,204 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
           .send('testimage')
           .expect(403))));
 
+    it('Data collector should be able to attach the given file if Submission is created by the them and attachment is not previously uploaded', testService(async (service, { Users }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const password = await hashPassword('password4david');
+
+      await Users.create(new User({ email: 'david@getodk.org', password }, { actor: new Actor({ type: 'user', displayName: 'David' }) }));
+
+      const asChelsea = await service.login('chelsea');
+      const asDavid = await service.login('david');
+
+      const chelseaId = await asChelsea.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      const davidId = await asDavid.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${davidId}`)
+        .expect(200);
+
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // David can't upload attachment for the Submission created by Chelsea
+      await asDavid.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+
+      // Chelsea can't reupload attachment
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
+    it('Public link should be able to upload attachment for the Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const publicLinkToken = await asAlice.post('/v1/projects/1/forms/binaryType/public-links')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body.token);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions?st=${publicLinkToken}`)
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4?st=${publicLinkToken}`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+    }));
+
+    it('Public link should not be able to upload attachment for others Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const publicLinkToken = await asAlice.post('/v1/projects/1/forms/binaryType/public-links')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body.token);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4?st=${publicLinkToken}`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
+    it('App user should be able to upload attachment for the Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const appUser = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body);
+
+      await asAlice.post(`/v1/projects/1/forms/binaryType/assignments/app-user/${appUser.id}`)
+        .expect(200);
+
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/binaryType/submissions`)
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+    }));
+
+    it('should reject attachment upload when original submitter is no longer the submitter of current version', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const asChelsea = await service.login('chelsea');
+
+      const chelseaId = await asChelsea.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+        .expect(200);
+
+      // Chelsea creates a submission
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Alice edits the Submission
+      await asAlice.put('/v1/projects/1/forms/binaryType/submissions/both')
+        .send(withBinaryIds('both', 'both2'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Chelsea tries uploading her submission attachments
+      // She isn't able to, because she is no longer the submitter of the current version
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
+    it('should reject attachment upload when editor is demoted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const asBob = await service.login('bob');
+
+      const bobId = await asBob.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      // Alice creates a submission
+      await asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Bob (a project manager) edits an unrelated field in the submission
+      await asBob.put('/v1/projects/1/forms/binaryType/submissions/both')
+        .send(withBinaryIds('both', 'both2'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Bob is demoted to a data collector
+      await asAlice.delete(`/v1/projects/1/assignments/manager/${bobId}`)
+        .expect(200);
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${bobId}`)
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
     it('should reject if the attachment does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4582,6 +4906,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                       newBlobId: newAttachment.blobId
                     });
                   }))))))));
+
   });
 
   // the draft version of this is already tested above with :name GET
@@ -4834,6 +5159,92 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff
                   .expect(200)
                   .then(({ body }) => { should(body.instanceName).equal(null); })
               ])))))));
+  });
+
+  describe('[draft] /test POST', () => {
+    it('should reject notfound if there is no draft', testService(async (service) => {
+      await service.post('/v1/test/dummykey/projects/1/forms/simple/draft/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(404);
+    }));
+
+    it('should reject if the draft has been published', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      const token = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .then(({ body }) => body.draftToken);
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=two')
+        .expect(200);
+
+      await service.post(`/v1/test/${token}/projects/1/forms/simple/draft/submissions`)
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(404);
+    }));
+
+    it('should reject if the draft has been deleted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      const token = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .then(({ body }) => body.draftToken);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      await service.post(`/v1/test/${token}/projects/1/forms/simple/draft/submissions`)
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(404);
+    }));
+
+    it('should reject if the key is wrong', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      await service.post(`/v1/test/dummytoken/projects/1/forms/simple/draft/submissions`)
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(404);
+    }));
+
+    it('should reject if the draft has been deleted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      const token = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .then(({ body }) => body.draftToken);
+
+      await service.post(`/v1/test/${token}/projects/1/forms/simple/draft/submissions`)
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one')
+        .expect(200)
+        .then(({ body }) => {
+          body.createdAt.should.be.a.recentIsoDate();
+          should.not.exist(body.deviceId);
+        });
+
+      await asAlice.get('/v1/projects/1/forms/simple/draft/submissions/one.xml')
+        .expect(200)
+        .then(({ text }) => { text.should.equal(testData.instances.simple.one); });
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one')
+        .expect(404);
+    }));
   });
 });
 

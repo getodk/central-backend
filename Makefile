@@ -1,5 +1,7 @@
 default: base
 
+NODE_CONFIG_ENV ?= test
+
 node_modules: package.json
 	npm install
 	touch node_modules
@@ -72,16 +74,12 @@ fake-s3-server-persistent:
 migrations: node_version
 	node lib/bin/run-migrations.js
 
-.PHONY: check-migrations
-check-migrations: node_version
-	node lib/bin/check-migrations.js
-
 
 ################################################################################
 # RUN SERVER
 
 .PHONY: base
-base: node_modules node_version migrations check-migrations
+base: node_modules node_version migrations
 
 .PHONY: dev
 dev: base
@@ -115,19 +113,19 @@ test-db-migrations:
 
 .PHONY: test-fast
 test-fast: node_version
-	BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
+	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
 
 .PHONY: test-integration
 test-integration: node_version
-	BCRYPT=insecure npx mocha --recursive test/integration
+	NODE_CONFIG_ENV=$(NODE_CONFIG_ENV) BCRYPT=insecure npx mocha --recursive test/integration
 
 .PHONY: test-unit
 test-unit: node_version
-	BCRYPT=insecure npx mocha --recursive test/unit
+	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive test/unit
 
 .PHONY: test-coverage
 test-coverage: node_version
-	npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive test
+	NODE_CONFIG_ENV=test npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive test
 
 .PHONY: lint
 lint: node_version

@@ -611,7 +611,7 @@ describe.skip('database migrations from 20230406: altering entities and entity_d
 describe.skip('database migrations from 20230512: adding entity_def_sources table', function () {
   this.timeout(20000);
 
-  it('should backfill entityId and entityDefId in audit log', testServiceFullTrx(async (service, container) => {
+  it.skip('should backfill entityId and entityDefId in audit log', testServiceFullTrx(async (service, container) => {
     await upToMigration('20230512-02-backfill-entity-id.js', false); // actually this is the previous migration
     await populateUsers(container);
     await populateForms(container);
@@ -843,7 +843,7 @@ describe.skip('database migrations from 20230512: adding entity_def_sources tabl
 describe.skip('database migrations from 20230802: delete orphan submissions', function test() {
   this.timeout(20000);
 
-  it('should delete orphan draft Submissions', testServiceFullTrx(async (service, container) => {
+  it.skip('should delete orphan draft Submissions', testServiceFullTrx(async (service, container) => {
     await upToMigration('20230518-01-add-entity-index-to-audits.js');
     await populateUsers(container);
 
@@ -923,9 +923,12 @@ describe.skip('database migration: 20231002-01-add-conflict-details.js', functio
 });
 
 testMigration('20240215-01-entity-delete-verb.js', () => {
-  it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service) => {
+  it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service, container) => {
+    await populateUsers(container);
+
     const verbsByRole = async () => {
-      const { body: roles } = await service.get('/v1/roles').expect(200);
+      const asAlice = await service.login('alice');
+      const { body: roles } = await asAlice.get('/v1/roles').expect(200);
       const bySystem = {};
       for (const role of roles) bySystem[role.system] = role.verbs;
       return bySystem;
@@ -952,9 +955,12 @@ testMigration('20240215-01-entity-delete-verb.js', () => {
 });
 
 testMigration('20240215-02-dedupe-verbs.js', () => {
-  it('should remove duplicate submission.update verb', testServiceFullTrx(async (service) => {
+  it('should remove duplicate submission.update verb', testServiceFullTrx(async (service, container) => {
+    await populateUsers(container);
+
     const verbsByRole = async () => {
-      const { body: roles } = await service.get('/v1/roles').expect(200);
+      const asAlice = await service.login('alice');
+      const { body: roles } = await asAlice.get('/v1/roles').expect(200);
       const bySystem = {};
       for (const role of roles) bySystem[role.system] = role.verbs;
       return bySystem;
@@ -977,15 +983,17 @@ testMigration('20240215-02-dedupe-verbs.js', () => {
     after.viewer.length.should.equal(9);
   }));
 
-  it('should result in unique verbs for all roles', testServiceFullTrx(async (service) => {
+  it('should result in unique verbs for all roles', testServiceFullTrx(async (service, container) => {
     await up();
-    const { body: roles } = await service.get('/v1/roles').expect(200);
+    await populateUsers(container);
+    const asAlice = await service.login('alice');
+    const { body: roles } = await asAlice.get('/v1/roles').expect(200);
     for (const { verbs } of roles) verbs.should.eql([...new Set(verbs)]);
   }));
 });
 
-testMigration.skip('20240914-02-remove-orphaned-client-audits.js', () => {
-  it('should remove orphaned client audits', testServiceFullTrx(async (service, container) => {
+testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
+  it.skip('should remove orphaned client audits', testServiceFullTrx(async (service, container) => {
     await populateUsers(container);
     await populateForms(container);
 
@@ -1056,7 +1064,7 @@ testMigration.skip('20240914-02-remove-orphaned-client-audits.js', () => {
   }));
 
   testMigration('20241010-01-schedule-entity-form-upgrade.js', () => {
-    it('should schedule entity forms with spec version 2023.1.0 for upgrade to 2024.1.0', testServiceFullTrx(async (service, container) => {
+    it.skip('should schedule entity forms with spec version 2023.1.0 for upgrade to 2024.1.0', testServiceFullTrx(async (service, container) => {
       await populateUsers(container);
       await populateForms(container);
 
@@ -1238,8 +1246,8 @@ testMigration.skip('20240914-02-remove-orphaned-client-audits.js', () => {
   });
 });
 
-testMigration.skip('20241227-01-backfill-audit-entity-uuid.js', () => {
-  it('should update the format of detail for entity.delete audits', testServiceFullTrx(async (service, container) => {
+testMigration('20241227-01-backfill-audit-entity-uuid.js', () => {
+  it.skip('should update the format of detail for entity.delete audits', testServiceFullTrx(async (service, container) => {
     await populateUsers(container);
     await populateForms(container);
 
