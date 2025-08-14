@@ -1652,7 +1652,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .then(({ body }) => body.enketoId);
 
       await service.get(`/v1/form-links/${enketoId}/form`)
-        .expect(403);
+        .expect(401);
     }));
 
     it('should reject without session token', testService(async (service) => {
@@ -1662,7 +1662,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .then(({ body }) => body.enketoId);
 
       await service.get(`/v1/form-links/${enketoId}/form`)
-        .expect(404);
+        .expect(401);
     }));
 
     it('should return the Form with session token queryparam', testService(async (service) => {
