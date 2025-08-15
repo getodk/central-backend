@@ -2037,7 +2037,7 @@ describe('datasets and entities', () => {
           .send(testData.forms.simpleEntity.replace(/people/, 'goodone'));
 
         // Attach a normal csv to the form attachment
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+        await asAlice.post('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
           .send('test,csv\n1,2')
           .set('Content-Type', 'text/csv')
           .expect(200);
@@ -2093,7 +2093,7 @@ describe('datasets and entities', () => {
         const etag = result.get('ETag');
 
         // Fetch the form manifest
-        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/manifest')
+        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200)
           .then(({ text }) => text);
