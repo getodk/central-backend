@@ -437,7 +437,7 @@ describe('Update / migrate entities-version within form', () => {
         .expect(200);
 
       // check updatedAt on the draft form
-      await asAlice.get('/v1/projects/1/forms/updateEntity')
+      await asAlice.get('/v1/projects/1/forms/updateEntity/draft')
         .expect(200)
         .then(({ body }) => {
           should(body.updatedAt).be.null();
