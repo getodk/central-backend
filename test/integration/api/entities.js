@@ -2980,7 +2980,7 @@ describe('Entities API', () => {
         })
         .expect(200)
         .then(({ body }) => {
-          body.success.should.be.true();
+          body.count.should.be.eql(0);
         });
     }));
 
@@ -2993,7 +2993,7 @@ describe('Entities API', () => {
         })
         .expect(200)
         .then(({ body }) => {
-          body.success.should.be.true();
+          body.count.should.be.eql(2);
         });
 
       await container.Audits.getLatestByAction('entity.bulk.delete')
@@ -3016,6 +3016,28 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should return count 0 if entities are already deleted', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(2);
+        });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
+        });
+    }));
+
     it('should log entity.delete when only one uuid is provided', testEntities(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -3025,7 +3047,7 @@ describe('Entities API', () => {
         })
         .expect(200)
         .then(({ body }) => {
-          body.success.should.be.true();
+          body.count.should.be.eql(1);
         });
 
       await container.Audits.getLatestByAction('entity.delete')
@@ -3069,7 +3091,7 @@ describe('Entities API', () => {
         })
         .expect(200)
         .then(({ body }) => {
-          body.success.should.be.true();
+          body.count.should.be.eql(0);
         });
     }));
 
@@ -3088,7 +3110,20 @@ describe('Entities API', () => {
         })
         .expect(200)
         .then(({ body }) => {
-          body.success.should.be.true();
+          body.count.should.be.eql(2);
+        });
+    }));
+
+    it('should return count 0 if entities are not deleted', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
         });
     }));
 
@@ -3109,7 +3144,7 @@ describe('Entities API', () => {
         })
         .expect(200)
         .then(({ body }) => {
-          body.success.should.be.true();
+          body.count.should.be.eql(1);
         });
 
       await container.Audits.getLatestByAction('entity.restore')
@@ -3137,7 +3172,7 @@ describe('Entities API', () => {
         })
         .expect(200)
         .then(({ body }) => {
-          body.success.should.be.true();
+          body.count.should.be.eql(1);
         });
     }));
 
@@ -3158,7 +3193,7 @@ describe('Entities API', () => {
         })
         .expect(200)
         .then(({ body }) => {
-          body.success.should.be.true();
+          body.count.should.be.eql(2);
         });
 
       await container.Audits.getLatestByAction('entity.bulk.restore')

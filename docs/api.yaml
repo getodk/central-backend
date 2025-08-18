@@ -919,6 +919,8 @@ tags:
     * `entity.delete` when an Entity is deleted.
     * `entity.restore` when a deleted Entity is restored.
     * `entity.purge` when a deleted Entity is purged (ppermanently deleted).
+    * `entity.bulk.delete` when Entities are deleted in bulk.
+    * `entity.bulk.restore` when Entities are restored in bulk.
     * `config.set` when a system configuration is set.
     * `upgrade.server` when Central is upgraded to a new version.
     * `upgrade.process.form.entities_version` when Central flags an Entity-related Form for a potential automatic upgrade.
