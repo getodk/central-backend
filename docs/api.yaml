@@ -1541,10 +1541,8 @@ paths:
             schema:
               required:
               - propertyValue
-              type: any
               properties:
                 propertyValue:
-                  type: any
                   description: The preference to be stored. It may be of any json-serializable type.
               example:
                 propertyValue: true
@@ -1625,10 +1623,8 @@ paths:
             schema:
               required:
               - propertyValue
-              type: any
               properties:
                 propertyValue:
-                  type: any
                   description: The preference to be stored. It may be of any json-serializable type.
               example:
                 propertyValue: true
@@ -8607,11 +8603,9 @@ paths:
                   approvalRequired:
                     type: boolean
                     description: Control whether a Submission should be approved before an Entity is created from it.
-                    required: false
                   ownerOnly:
                     type: boolean
                     description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
-                    required: false
                 example:
                   name: Trees
                   approvalRequired: false
