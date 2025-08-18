@@ -8,7 +8,6 @@ const { getById, createVersion } = require('../../../lib/model/query/entities');
 const { log } = require('../../../lib/model/query/audits');
 const Option = require('../../../lib/util/option');
 const { Entity } = require('../../../lib/model/frames');
-const { getOrNotFound } = require('../../../lib/util/promise');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -2009,7 +2008,7 @@ describe('Entities API', () => {
 
       await exhaust(container);
 
-      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+      const dataset = await container.Datasets.get(1, 'people', true).then((o) => o.get());
       const actorId = await container.oneFirst(sql`SELECT id FROM actors WHERE "displayName" = 'Alice'`);
 
       let secondTxWaiting = false;
@@ -2021,7 +2020,7 @@ describe('Entities API', () => {
 
         const logger = (action, actee, details) => log(containerTx1.context.auth.actor, action, actee, details);
 
-        const entity = await getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx1).then(getOrNotFound);
+        const entity = await getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx1).then((o) => o.get());
 
         entityLocked = true;
         console.log('Tx1: entity fetched');
@@ -2068,7 +2067,7 @@ describe('Entities API', () => {
 
         console.log('Tx2: looks like 1st tx has locked the row');
 
-        const promise = getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx2).then(getOrNotFound)
+        const promise = getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx2).then((o) => o.get())
           .then(async (entity) => {
             console.log('Tx2: entity fetched');
 

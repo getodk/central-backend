@@ -1,6 +1,5 @@
 const appRoot = require('app-root-path');
 const { testTask } = require('../setup');
-const { getOrNotFound } = require(appRoot + '/lib/util/promise');
 const { getConfiguration, setConfiguration } = require(appRoot + '/lib/task/config');
 
 describe('task: config', () => {
@@ -22,7 +21,7 @@ describe('task: config', () => {
     it('should save configuration by key', testTask(({ Configs }) =>
       setConfiguration('testConfig', { set: 'data' })
         .then(() => Configs.get('testConfig'))
-        .then(getOrNotFound)
+        .then((o) => o.get())
         .then((config) => config.value.should.eql({ set: 'data' }))));
   });
 });
