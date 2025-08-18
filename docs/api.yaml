@@ -1672,7 +1672,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-          404:
+        404:
           description: The specified preference does not exist
           content:
             application/json:
