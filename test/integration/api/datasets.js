@@ -1448,6 +1448,50 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should return the repeat group data of source forms', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.repeatEntityHousehold)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            const { createdAt, properties, lastEntity, lastUpdate, ...ds } = body;
+
+            properties.map(({ publishedAt, ...p }) => {
+              publishedAt.should.be.isoDate();
+              return p;
+            }).should.be.eql([
+              { name: 'full_name', odataName: 'full_name', forms: [{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }] },
+              { name: 'age', odataName: 'age', forms: [{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }] }
+            ]);
+
+            ds.sourceForms.should.eql([{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold', repeatGroup: 'person' }]);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/households')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            const { createdAt, properties, lastEntity, lastUpdate, ...ds } = body;
+
+            properties.map(({ publishedAt, ...p }) => {
+              publishedAt.should.be.isoDate();
+              return p;
+            }).should.be.eql([
+              { name: 'hh_id', odataName: 'hh_id', forms: [{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }] },
+              { name: 'count', odataName: 'count', forms: [{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }] }
+            ]);
+
+            ds.sourceForms.should.eql([{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }]);
+          });
+
+      }));
+
       it('should reject if dataset is not published', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
