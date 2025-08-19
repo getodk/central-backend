@@ -9957,7 +9957,7 @@ paths:
         This is the fully standards-compliant implementation of the Entities Integrity API as described in [OpenRosa spec proposal: support offline Entities](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052).
 
         This returns the `deleted` flag of the Entities requested through `id` query parameter. If no `id` is provided then all Entities are return.
-      operationId: OpenRosa Form Manifest API
+      operationId: OpenRosa Dataset Integrity API
       parameters:
       - name: projectId
         in: path
