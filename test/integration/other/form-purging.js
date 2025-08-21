@@ -5,7 +5,7 @@ const assert = require('assert');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { exhaust } = require(appPath + '/lib/worker/worker');
-const { Form } = require(appPath + '/lib/model/frames');
+
 
 describe('query module form purge', () => {
   it('should purge a form deleted over 30 days ago', testService((service, container) =>
@@ -62,7 +62,7 @@ describe('query module form purge', () => {
 
   it('should log the purge action in the audit log', testService((service, container) =>
     service.login('alice', (asAlice) =>
-      container.Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef).then((o) => o.get()) // get the form before we delete it
+      container.Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()) // get the form before we delete it
         .then((form) => asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
           .then(() => container.Forms.purge(true)) // force all deleted forms to be purged
@@ -75,8 +75,8 @@ describe('query module form purge', () => {
   it('should log purge action in the audit log for each form', testService(async (service, container) => {
     const asAlice = await service.login('alice');
 
-    const simpleForm = await container.Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef).then((o) => o.get());
-    const repeatForm = await container.Forms.getByProjectAndXmlFormId(1, 'withrepeat', Form.WithoutDef).then((o) => o.get());
+    const simpleForm = await container.Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get());
+    const repeatForm = await container.Forms.getByProjectAndXmlFormId(1, 'withrepeat').then((o) => o.get());
 
     await asAlice.delete('/v1/projects/1/forms/simple')
       .expect(200);
@@ -94,7 +94,7 @@ describe('query module form purge', () => {
 
   it('should update the actee table with purgedAt details', testService((service, container) =>
     service.login('alice', (asAlice) =>
-      container.Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef).then((o) => o.get()) // get the form before we delete it
+      container.Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()) // get the form before we delete it
         .then((form) => asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)
           .then(() => container.Forms.purge(true)) // force all deleted forms to be purged
@@ -140,7 +140,7 @@ describe('query module form purge', () => {
           .expect(200))
         .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
           .expect(200))
-        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef).then((o) => o.get()))
+        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
         .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/withAttachments')
           .expect(200)
           .then(() => container.Forms.purge(true))
@@ -165,7 +165,7 @@ describe('query module form purge', () => {
           .expect(200))
         .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
           .expect(200))
-        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef).then((o) => o.get()))
+        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
         .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/withAttachments')
           .expect(200)
           .then(() => container.Forms.purge(true))
@@ -194,7 +194,7 @@ describe('query module form purge', () => {
           .expect(200))
         .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
           .expect(200))
-        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef).then((o) => o.get()))
+        .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
         .then((ghostForm) => asAlice.delete('/v1/projects/1/forms/withAttachments')
           .expect(200)
           .then(() => container.Blobs.s3UploadPending())
@@ -255,7 +255,7 @@ describe('query module form purge', () => {
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200))
-          .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef).then((o) => o.get()))
+          .then(() => container.Forms.getByProjectAndXmlFormId(1, 'withAttachments').then((o) => o.get()))
           .then((ghostForm) => asAlice.delete('/v1/projects/1/withAttachments')
             .then(() => container.Forms.purge(true, 1)) // force delete a single form
             .then(() => Promise.all([

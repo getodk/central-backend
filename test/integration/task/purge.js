@@ -7,7 +7,6 @@ const { testTask } = require('../setup');
 const { purgeTask } = require(appRoot + '/lib/task/purge');
 const { Blob } = require(appRoot + '/lib/model/frames');
 const Problem = require(appRoot + '/lib/util/problem');
-const { Form } = require(appRoot + '/lib/model/frames');
 
 // The basics of this task are tested here, including returning the message
 // of purged forms, but the full functionality is more thoroughly tested in
@@ -51,7 +50,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
   describe('forms', () => {
     describe('force flag', () => {
       it('should not purge recently deleted forms by default', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get())
             .then(() => confirm.form.softDeleted(1, 'simple')))
           .then(() => purgeTask({ mode: 'forms' }))
@@ -61,7 +60,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
           .then(() => confirm.form.softDeleted(1, 'simple'))));
 
       it('should purge recently deleted form if forced', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get())
             .then(() => confirm.form.softDeleted(1, 'simple')))
           .then(() => purgeTask({ mode: 'forms', force: true }))
@@ -71,9 +70,9 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
           .then(() => confirm.form.hardDeleted(1, 'simple'))));
 
       it('should return message for multiple forms purged', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get()))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat', Form.WithoutDef)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
             .then((form) => Forms.del(form.get())))
           .then(() => purgeTask({ mode: 'forms', force: true })
             .then((message) => {
@@ -85,7 +84,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
 
     describe('form specified by formId', () => {
       it('should not purge specific recently deleted form', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get())
             .then(() => purgeTask({ mode: 'forms', force: false, formId: 1 }))
             .then((message) => {
@@ -94,7 +93,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
             .then(() => confirm.form.softDeleted(1, 'simple')))));
 
       it('should purge specific recently deleted form if forced', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get())
             .then(() => purgeTask({ mode: 'forms', force: true, formId: 1 }))
             .then((message) => {
@@ -103,9 +102,9 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
             .then(() => confirm.form.hardDeleted(1, 'simple')))));
 
       it('should force purge only specific form', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get()))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat', Form.WithoutDef)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
             .then((form) => Forms.del(form.get())
               .then(() => purgeTask({ mode: 'forms', force: true, formId: 1 }))
               .then((message) => {
@@ -117,7 +116,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
 
     describe('form specified with projectId', () => {
       it('should not purge recently deleted forms even if projectId is matched (when not forced', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get())
             .then(() => purgeTask({ mode: 'forms', projectId: 1 }))
             .then((message) => {
@@ -126,7 +125,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
             .then(() => confirm.form.softDeleted(1, 'simple')))));
 
       it('should not purge recently deleted forms even if projectId AND formId is matched (when not forced)', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get())
             .then(() => purgeTask({ mode: 'forms', projectId: 1, formId: 1 }))
             .then((message) => {
@@ -135,9 +134,9 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
             .then(() => confirm.form.softDeleted(1, 'simple')))));
 
       it('should purge specific form', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get()))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat', Form.WithoutDef)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
             .then((form) => Forms.del(form.get())
               .then(() => purgeTask({ mode: 'forms', force: true, projectId: 1, formId: 1 }))
               .then((message) => {
@@ -147,9 +146,9 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
               .then(() => confirm.form.softDeleted(1, 'withrepeat'))))));
 
       it('should not purge specific form if tied to a different project', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get()))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat', Form.WithoutDef)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
             .then((form) => Forms.del(form.get())
               .then(() => purgeTask({ mode: 'forms', force: true, projectId: 2, formId: 1 }))
               .then((message) => {
@@ -158,9 +157,9 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
               .then(() => confirm.form.softDeleted(1, 'simple'))))));
 
       it('should purge all forms in project if no form ID supplied', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get()))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat', Form.WithoutDef)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
             .then((form) => Forms.del(form.get())
               .then(() => purgeTask({ mode: 'forms', force: true, projectId: 1 }))
               .then((message) => {
@@ -170,9 +169,9 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
               .then(() => confirm.form.hardDeleted(1, 'withrepeat'))))));
 
       it('should not purge multiple forms if tied to a different project', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get()))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat', Form.WithoutDef)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withrepeat')
             .then((form) => Forms.del(form.get())
               .then(() => purgeTask({ mode: 'forms', force: true, projectId: 2 }))
               .then((message) => {
@@ -185,7 +184,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
 
     describe('with xmlFormId', () => {
       it('should throw error if xmlFormId specified without projectId', testPurgeTask(async ({ confirm, Forms }) => {
-        const form = await Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef);
+        const form = await Forms.getByProjectAndXmlFormId(1, 'simple');
         await Forms.del(form.get());
         await purgeTask({ mode: 'forms', force: true, xmlFormId: 'simple' }).should.be.rejectedWith(Problem, {
           problemDetails: {
@@ -196,7 +195,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
       }));
 
       it('should force purge form by project and xmlFormId', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get())
             .then(() => purgeTask({ mode: 'forms', force: true, projectId: 1, xmlFormId: 'simple' }))
             .then((message) => {
@@ -205,7 +204,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
             .then(() => confirm.form.hardDeleted(1, 'simple')))));
 
       it('should not purge form by project and xmlFormId if form deleted recently and not forced', testPurgeTask(({ confirm, Forms }) =>
-        Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+        Forms.getByProjectAndXmlFormId(1, 'simple')
           .then((form) => Forms.del(form.get())
             .then(() => purgeTask({ mode: 'forms', force: false, projectId: 1, xmlFormId: 'simple' }))
             .then((message) => {
@@ -308,7 +307,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
 
   describe('all', () => {
     it('should purge both forms and submissions when neither mode is specified (not forced)', testTask(({ Forms }) =>
-      Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+      Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask())
           .then((message) => {
@@ -316,7 +315,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
           }))));
 
     it('should purge both forms and submissions when neither mode is specified (forced)', testTask(({ Forms }) =>
-      Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+      Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask({ force: true }))
           .then((message) => {
@@ -324,7 +323,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
           }))));
 
     it('should accept other mode and treat as "all"', testTask(({ Forms }) =>
-      Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
+      Forms.getByProjectAndXmlFormId(1, 'simple')
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask({ force: true, mode: 'something_else' }))
           .then((message) => {

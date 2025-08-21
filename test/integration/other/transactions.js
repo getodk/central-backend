@@ -6,7 +6,6 @@ const { Frame } = require(appRoot + '/lib/model/frame');
 const { injector } = require(appRoot + '/lib/model/container');
 const { endpointBase } = require(appRoot + '/lib/http/endpoint');
 const { noop } = require(appRoot + '/lib/util/util');
-const { Form } = require(appRoot + '/lib/model/frames');
 
 describe('transaction integration', () => {
   it('should run all operations within the correct transaction context', () => {
@@ -43,10 +42,11 @@ describe('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     let flush;
     let workerTicket;
+
     const { Audits, Forms, oneFirst } = container;
 
     try {
-      const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)).get();
+      const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple')).get();
       await Audits.log(null, 'form.update.publish', simple);
 
       global.enketo.wait = (f) => { flush = f; };
@@ -58,7 +58,7 @@ describe('enketo worker transaction', () => {
 
       // now we wait to see if we have deadlocked, which we want.
       await sometime(400);
-      (await Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)).get()
+      (await Forms.getByProjectAndXmlFormId(1, 'simple')).get()
         .state.should.equal('open');
     } finally {
       // now finally resolve the locks.

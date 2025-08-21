@@ -190,22 +190,14 @@ should.Assertion.add('ExtendedPublicLink', function() {
   if (this.obj.token != null) this.obj.token.should.be.a.token();
 });
 
-should.Assertion.add('FormWithoutDef', function() {
+should.Assertion.add('Form', function() {
   this.params = { operator: 'to be a Form' };
 
-  Object.keys(this.obj).should.containDeep([ 'projectId', 'xmlFormId', 'createdAt', 'updatedAt' ]);
+  Object.keys(this.obj).should.containDeep([ 'projectId', 'xmlFormId', 'createdAt', 'updatedAt', 'name', 'version', 'hash' ]);
   this.obj.projectId.should.be.a.Number();
   this.obj.xmlFormId.should.be.a.String();
   this.obj.createdAt.should.be.an.isoDate();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
-});
-
-should.Assertion.add('Form', function() {
-  this.params = { operator: 'to be a Form with def' };
-
-  this.obj.should.be.a.FormWithoutDef();
-
-  Object.keys(this.obj).should.containDeep([ 'name', 'version', 'hash' ]);
   if (this.obj.name != null) this.obj.name.should.be.a.String();
   if (this.obj.version != null) this.obj.version.should.be.a.String();
   this.obj.hash.should.be.an.md5Sum();

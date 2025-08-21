@@ -3263,7 +3263,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Forms.getByProjectAndXmlFormId(1, 'encrypted', Form.DraftVersion).then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
@@ -3296,7 +3296,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Forms.getByProjectAndXmlFormId(1, 'encrypted', Form.DraftVersion).then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
@@ -4838,7 +4838,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
@@ -4877,7 +4877,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
@@ -4975,7 +4975,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())

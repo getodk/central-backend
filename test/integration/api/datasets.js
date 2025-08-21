@@ -2056,7 +2056,7 @@ describe('datasets and entities', () => {
 
         // For bookkeeping later
         // Get blob id of original CSV file
-        const form = await Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef).then((o) => o.get());
+        const form = await Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then((o) => o.get());
         const attachment = await FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then((o) => o.get());
 
         // Update attachment to link to dataset instead of csv file
@@ -2093,7 +2093,7 @@ describe('datasets and entities', () => {
         const etag = result.get('ETag');
 
         // Fetch the form manifest
-        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/manifest')
+        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200)
           .then(({ text }) => text);
@@ -2104,7 +2104,7 @@ describe('datasets and entities', () => {
     <mediaFile type="entityList">
       <filename>goodone.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
       <integrityUrl>${domain}/v1/projects/1/datasets/goodone/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
@@ -2248,9 +2248,8 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
               .then(() =>
-                Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion)
-                  .then((o) => o.get())
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people.csv')
+                Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                     .then(attachment => {
                       attachment.get().datasetId.should.not.be.null();
                     })))))));
@@ -2274,9 +2273,8 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200))
             .then(() =>
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion)
-                .then((o) => o.get())
-                .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people.csv')
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
                     should(attachment.get().datasetId).be.null();
                     should(attachment.get().blobId).not.be.null();
@@ -2300,9 +2298,8 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200))
             .then(() =>
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion)
-                .then((o) => o.get())
-                .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people.csv')
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
                     should(attachment.get().datasetId).not.be.null();
                     should(attachment.get().blobId).be.null();
@@ -2320,9 +2317,8 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'application/xml')
               .expect(200)
               .then(() =>
-                Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion)
-                  .then((o) => o.get())
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.def.id, 'people')
+                Forms.getByProjectAndXmlFormId(1, 'withAttachments')
+                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people')
                     .then(attachment => {
                       should(attachment.get().datasetId).be.null();
                     })))))));
@@ -2717,7 +2713,7 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'text/csv')
               .expect(200))
             .then(() => Promise.all([
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef).then((o) => o.get()),
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then((o) => o.get()),
               Datasets.get(1, 'goodone').then((o) => o.get())
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then((o) => o.get())
@@ -2735,7 +2731,7 @@ describe('datasets and entities', () => {
             .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
               .send(testData.forms.simpleEntity))
             .then(() => Promise.all([
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef).then((o) => o.get()),
+              Forms.getByProjectAndXmlFormId(1, 'withAttachments', false, Form.DraftVersion).then((o) => o.get()),
               Datasets.get(1, 'people').then((o) => o.get())
             ]))
             .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodtwo.mp3').then((o) => o.get())
@@ -2918,7 +2914,7 @@ describe('datasets and entities', () => {
 
         await asAlice.delete('/v1/projects/1/datasets/goodone/entities/12345678-1234-4123-8234-111111111bbb');
 
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
           .expect(200)
           .then(r => r.text);
 
@@ -2946,7 +2942,7 @@ describe('datasets and entities', () => {
           })
           .expect(200);
 
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
           .expect(200)
           .then(r => r.text);
 
