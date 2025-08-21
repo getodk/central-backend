@@ -31,6 +31,6 @@ jobs:
         node-version: 22.16.0
         cache: 'npm'
     - run: npm ci
-    - run: npx --no swagger-cli validate docs/api.yaml
+    - run: make api-docs-lint
     - run: node lib/bin/create-docker-databases.js
     - run: make test
