@@ -1541,10 +1541,8 @@ paths:
             schema:
               required:
               - propertyValue
-              type: any
               properties:
                 propertyValue:
-                  type: any
                   description: The preference to be stored. It may be of any json-serializable type.
               example:
                 propertyValue: true
@@ -1625,10 +1623,8 @@ paths:
             schema:
               required:
               - propertyValue
-              type: any
               properties:
                 propertyValue:
-                  type: any
                   description: The preference to be stored. It may be of any json-serializable type.
               example:
                 propertyValue: true
@@ -1672,7 +1668,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-          404:
+        404:
           description: The specified preference does not exist
           content:
             application/json:
@@ -8607,11 +8603,9 @@ paths:
                   approvalRequired:
                     type: boolean
                     description: Control whether a Submission should be approved before an Entity is created from it.
-                    required: false
                   ownerOnly:
                     type: boolean
                     description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
-                    required: false
                 example:
                   name: Trees
                   approvalRequired: false
@@ -9957,7 +9951,7 @@ paths:
         This is the fully standards-compliant implementation of the Entities Integrity API as described in [OpenRosa spec proposal: support offline Entities](https://forum.getodk.org/t/openrosa-spec-proposal-support-offline-entities/48052).
 
         This returns the `deleted` flag of the Entities requested through `id` query parameter. If no `id` is provided then all Entities are return.
-      operationId: OpenRosa Form Manifest API
+      operationId: OpenRosa Dataset Integrity API
       parameters:
       - name: projectId
         in: path
