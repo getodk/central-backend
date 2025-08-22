@@ -1944,7 +1944,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
           .set('Content-Type', 'text/xml')
           .expect(200);
 
-        const formT1 = await Forms.getByProjectAndXmlFormId(1, 'simple2', Form.WithoutDef).then((o) => o.get());
+        const formT1 = await Forms.getByProjectAndXmlFormId(1, 'simple2', Form.AnyVersion).then((o) => o.get());
 
         await asAlice.post('/v1/projects/1/forms/simple2/draft')
           .set('Content-Type', 'application/xml')
@@ -1958,7 +1958,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
           .send(testData.forms.simple2.replace('version="2.1"', 'version="2.3"'))
           .expect(200);
 
-        const formT3 = await Forms.getByProjectAndXmlFormId(1, 'simple2', Form.AnyVersion).then((o) => o.get());
+        const formT3 = await Forms.getByProjectAndXmlFormId(1, 'simple2', Form.DraftVersion).then((o) => o.get());
 
         await asAlice.post('/v1/projects/1/forms/simple2/draft/publish');
 
