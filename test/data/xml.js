@@ -244,7 +244,7 @@ module.exports = {
       <label>Give me an image.</label>
     </upload>
     <upload ref="/data/file2" mediatype="video/*">
-      <label>Give me a video./label>
+      <label>Give me a video.</label>
     </upload>
   </h:body>
 </h:html>`,
@@ -370,7 +370,7 @@ module.exports = {
 
     // Copy of the above form with the original entities-version
     simpleEntity2022: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2022.1.0">
       <instance>
@@ -393,7 +393,7 @@ module.exports = {
 </h:html>`,
 
     multiPropertyEntity: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -418,7 +418,7 @@ module.exports = {
 </h:html>`,
 
     updateEntity: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -441,7 +441,7 @@ module.exports = {
 
     // Copy of the above form with the original entities-version spec
     updateEntity2023: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2023.1.0">
       <instance>
@@ -463,7 +463,7 @@ module.exports = {
 </h:html>`,
 
     offlineEntity: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
