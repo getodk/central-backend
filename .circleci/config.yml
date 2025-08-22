@@ -3,7 +3,7 @@ jobs:
   build:
     docker:
       - image: cimg/node:22.16.0
-      - image: cimg/postgres:14.10
+      - image: postgis/postgis:14-3.5
         environment:
           POSTGRES_PASSWORD: odktest
 
