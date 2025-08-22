@@ -4,11 +4,12 @@ const config = require('config');
 const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const palatableXML = require('../../data/test-xml');
 const { Form } = require(appRoot + '/lib/model/frames');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
-const upgradedUpdateEntity = `<?xml version="1.0"?>
+const upgradedUpdateEntity = palatableXML(`<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
@@ -28,9 +29,9 @@ const upgradedUpdateEntity = `<?xml version="1.0"?>
       <bind nodeset="/data/age" type="int" entities:saveto="age"/>
     </model>
   </h:head>
-</h:html>`;
+</h:html>`);
 
-const upgradedSimpleEntity = `<?xml version="1.0"?>
+const upgradedSimpleEntity = palatableXML(`<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
@@ -51,7 +52,7 @@ const upgradedSimpleEntity = `<?xml version="1.0"?>
       <bind nodeset="/data/hometown" type="string"/>
     </model>
   </h:head>
-</h:html>`;
+</h:html>`);
 
 describe('Update / migrate entities-version within form', () => {
   describe('upgrading a 2023.1.0 update form', () => {
