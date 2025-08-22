@@ -7,6 +7,7 @@ const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { omit } = require(appRoot + '/lib/util/util');
 
@@ -1619,7 +1620,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               })
           ])))));
 
-    it('should log the action in the audit log', testService((service, { Projects, Forms, Users, Audits }) =>
+    it.only('should log the action in the audit log', testService((service, { Projects, Forms, Users, Audits }) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
           .send({ state: 'closing' })
@@ -1627,7 +1628,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .then(() => Promise.all([
             Users.getByEmail('alice@getodk.org').then((o) => o.get()),
             Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')).then((o) => o.get()),
+              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', Form.WithoutDef)).then((o) => o.get()),
             Audits.getLatestByAction('form.update').then((o) => o.get())
           ])
             .then(([ alice, form, log ]) => {

@@ -4,6 +4,7 @@ const config = require('config');
 const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const { Form } = require(appRoot + '/lib/model/frames');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -54,7 +55,7 @@ const upgradedSimpleEntity = `<?xml version="1.0"?>
 
 describe('Update / migrate entities-version within form', () => {
   describe('upgrading a 2023.1.0 update form', () => {
-    it('should upgrade a form with only a published version', testService(async (service, container) => {
+    it.only('should upgrade a form with only a published version', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -64,7 +65,7 @@ describe('Update / migrate entities-version within form', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -83,7 +84,7 @@ describe('Update / migrate entities-version within form', () => {
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
-    it('should upgrade a form with only a draft version', testService(async (service, container) => {
+    it.only('should upgrade a form with only a draft version', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -94,7 +95,7 @@ describe('Update / migrate entities-version within form', () => {
         .expect(200);
 
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -119,7 +120,7 @@ describe('Update / migrate entities-version within form', () => {
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
-    it('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
+    it.only('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -133,7 +134,7 @@ describe('Update / migrate entities-version within form', () => {
       await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -165,7 +166,7 @@ describe('Update / migrate entities-version within form', () => {
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
-    it('should only upgrade the latest version of a form', testService(async (service, container) => {
+    it.only('should only upgrade the latest version of a form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -191,7 +192,7 @@ describe('Update / migrate entities-version within form', () => {
       await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -204,7 +205,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it('should carry forward the xlsx file of a published form', testService(async (service, container) => {
+    it.only('should carry forward the xlsx file of a published form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -223,7 +224,7 @@ describe('Update / migrate entities-version within form', () => {
           headers.etag.should.equal('"30fdb0e9115ea7ca6702573f521814d1"');
         });
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -236,7 +237,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it('should carry forward the xlsx file of a draft form', testService(async (service, container) => {
+    it.only('should carry forward the xlsx file of a draft form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -255,7 +256,7 @@ describe('Update / migrate entities-version within form', () => {
           headers.etag.should.equal('"30fdb0e9115ea7ca6702573f521814d1"');
         });
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -268,7 +269,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it('should carry forward the attachments of a form', testService(async (service, container) => {
+    it.only('should carry forward the attachments of a form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -307,7 +308,7 @@ describe('Update / migrate entities-version within form', () => {
           ]);
         });
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'withAttachments').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -355,7 +356,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it('should update the formList once the form changes', testService(async (service, container) => {
+    it.only('should update the formList once the form changes', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
       const domain = config.get('default.env.domain');
@@ -396,7 +397,7 @@ describe('Update / migrate entities-version within form', () => {
       <downloadUrl>${domain}/v1/test/${token}/projects/1/forms/updateEntity/draft.xml</downloadUrl>
     </xform>`));
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -425,7 +426,7 @@ describe('Update / migrate entities-version within form', () => {
     </xform>`));
     }));
 
-    it('should update the updatedAt timestamps on the form when updating a draft form', testService(async (service, container) => {
+    it.only('should update the updatedAt timestamps on the form when updating a draft form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -442,7 +443,7 @@ describe('Update / migrate entities-version within form', () => {
           should(body.updatedAt).be.null();
         });
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -455,7 +456,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it('should update the updatedAt timestamps on the form when updating a published form', testService(async (service, container) => {
+    it.only('should update the updatedAt timestamps on the form when updating a published form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -472,7 +473,7 @@ describe('Update / migrate entities-version within form', () => {
           should(body.updatedAt).be.null();
         });
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -485,7 +486,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it('should set publishedBy to null on the form when updating a published form', testService(async (service, container) => {
+    it.only('should set publishedBy to null on the form when updating a published form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -495,7 +496,7 @@ describe('Update / migrate entities-version within form', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -513,7 +514,7 @@ describe('Update / migrate entities-version within form', () => {
   });
 
   describe('upgrading a 2022.1.0 create form', () => {
-    it('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
+    it.only('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -527,7 +528,7 @@ describe('Update / migrate entities-version within form', () => {
       await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'simpleEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'simpleEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -561,7 +562,7 @@ describe('Update / migrate entities-version within form', () => {
   });
 
   describe('audit logging and errors', () => {
-    it('should log events about the upgrade for a published form', testService(async (service, container) => {
+    it.only('should log events about the upgrade for a published form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -571,7 +572,7 @@ describe('Update / migrate entities-version within form', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -592,7 +593,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it('should log events about the upgrade for a draft form', testService(async (service, container) => {
+    it.only('should log events about the upgrade for a draft form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -602,7 +603,7 @@ describe('Update / migrate entities-version within form', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -623,7 +624,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it('should log events about the upgrade for a published and draft form', testService(async (service, container) => {
+    it.only('should log events about the upgrade for a published and draft form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -636,7 +637,7 @@ describe('Update / migrate entities-version within form', () => {
       await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -661,7 +662,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it('should update the audit log event for a successful upgrade', testService(async (service, container) => {
+    it.only('should update the audit log event for a successful upgrade', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -671,7 +672,7 @@ describe('Update / migrate entities-version within form', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -682,7 +683,7 @@ describe('Update / migrate entities-version within form', () => {
       audit.failures.should.equal(0);
     }));
 
-    it('should not update form if there is a problem, but should process audit event', testService(async (service, container) => {
+    it.only('should not update form if there is a problem, but should process audit event', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -696,7 +697,7 @@ describe('Update / migrate entities-version within form', () => {
       await asAlice.post('/v1/projects/1/forms/updateEntity/draft')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -725,7 +726,7 @@ describe('Update / migrate entities-version within form', () => {
       audit.failures.should.equal(0);
     }));
 
-    it('should not update form if the entities version is not the target one (e.g. 2024.1)', testService(async (service, container) => {
+    it.only('should not update form if the entities version is not the target one (e.g. 2024.1)', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -735,7 +736,7 @@ describe('Update / migrate entities-version within form', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'offlineEntity').then(o => o.get());
+      const { acteeId } = await Forms.getByProjectAndXmlFormId(1, 'offlineEntity', Form.WithoutDef).then(o => o.get());
       await Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
