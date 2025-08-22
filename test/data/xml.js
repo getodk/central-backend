@@ -346,7 +346,7 @@ module.exports = {
 </h:html>`,
 
     simpleEntity: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -370,7 +370,7 @@ module.exports = {
 
     // Copy of the above form with the original entities-version
     simpleEntity2022: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2022.1.0">
       <instance>
@@ -393,7 +393,7 @@ module.exports = {
 </h:html>`,
 
     multiPropertyEntity: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -418,7 +418,7 @@ module.exports = {
 </h:html>`,
 
     updateEntity: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -441,7 +441,7 @@ module.exports = {
 
     // Copy of the above form with the original entities-version spec
     updateEntity2023: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2023.1.0">
       <instance>
@@ -463,7 +463,7 @@ module.exports = {
 </h:html>`,
 
     offlineEntity: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -1122,7 +1122,7 @@ module.exports = {
       three: instance('selectMultiple', 'three', '<q1> b c</q1>')
     },
     simpleEntity: {
-      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="simpleEntity" version="1.0">
               <meta>
                 <instanceID>one</instanceID>
                 <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789abc" create="1">
@@ -1134,7 +1134,7 @@ module.exports = {
               <age>88</age>
               <hometown>Chicago</hometown>
             </data>`,
-      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
+      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="simpleEntity" version="1.0">
               <meta>
                 <instanceID>two</instanceID>
                 <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789aaa" create="1">
@@ -1146,7 +1146,7 @@ module.exports = {
               <age>30</age>
               <hometown>Boston</hometown>
             </data>`,
-      three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
+      three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="simpleEntity" version="1.0">
           <meta>
             <instanceID>three</instanceID>
             <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789bbb" create="1">
@@ -1158,7 +1158,7 @@ module.exports = {
           <age>40</age>
           <hometown>Toronto</hometown>
         </data>`,
-      four: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
+      four: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="simpleEntity" version="1.0">
           <meta>
             <instanceID>four</instanceID>
             <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789ccc" create="1">
@@ -1172,7 +1172,7 @@ module.exports = {
         </data>`
     },
     multiPropertyEntity: {
-      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="multiPropertyEntity" version="1.0">
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="multiPropertyEntity" version="1.0">
         <meta>
           <instanceID>one</instanceID>
           <entities:entity dataset="foo" id="uuid:12345678-1234-4123-8234-123456789aaa" create="1">
@@ -1184,7 +1184,7 @@ module.exports = {
         <q3>y</q3>
         <q4>z</q4>
       </data>`,
-      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="multiPropertyEntity" version="1.0">
+      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="multiPropertyEntity" version="1.0">
         <meta>
           <instanceID>two</instanceID>
           <entities:entity dataset="foo" id="uuid:12345678-1234-4123-8234-123456789bbb" create="1">
@@ -1198,7 +1198,7 @@ module.exports = {
       </data>`,
     },
     updateEntity: {
-      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="updateEntity" version="1.0">
         <meta>
           <instanceID>one</instanceID>
           <orx:instanceName>one</orx:instanceName>
@@ -1209,7 +1209,7 @@ module.exports = {
         <name>Alicia</name>
         <age>85</age>
       </data>`,
-      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
+      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="updateEntity" version="1.0">
         <meta>
           <instanceID>two</instanceID>
           <orx:instanceName>two</orx:instanceName>
@@ -1218,7 +1218,7 @@ module.exports = {
           </entity>
         </meta>
       </data>`,
-      three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="updateEntity" version="1.0">
+      three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="updateEntity" version="1.0">
         <meta>
           <instanceID>three</instanceID>
           <orx:instanceName>three</orx:instanceName>
@@ -1229,7 +1229,7 @@ module.exports = {
       </data>`
     },
     offlineEntity: {
-      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="offlineEntity" version="1.0">
+      one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="offlineEntity" version="1.0">
         <meta>
           <instanceID>one</instanceID>
           <orx:instanceName>one</orx:instanceName>
@@ -1240,7 +1240,7 @@ module.exports = {
         </meta>
         <status>arrived</status>
       </data>`,
-      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="offlineEntity" version="1.0">
+      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" id="offlineEntity" version="1.0">
         <meta>
           <instanceID>two</instanceID>
           <orx:instanceName>two</orx:instanceName>
