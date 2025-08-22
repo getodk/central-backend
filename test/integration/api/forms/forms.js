@@ -1172,22 +1172,22 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         <instance>
           <data id="sanitize">
             <meta>
-              <instanceID>
+              <instanceID/>
             </meta>
             <q1.8>
-              <17/>
+              <🌩/>
             </q1.8>
-            <4.2/>
+            <🤟/>
           </data>
         </instance>
         <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
-        <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
-        <bind nodeset="/data/4.2" type="number"/>
+        <bind nodeset="/data/q1.8/🌩" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+        <bind nodeset="/data/🤟" type="number"/>
       </model>
 
     </h:head>
     <h:body>
-      <input ref="/data/4.2">
+      <input ref="/data/🤟">
         <label>What is your age?</label>
       </input>
     </h:body>
@@ -1206,8 +1206,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMultiple: null },
                   { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMultiple: null },
                   { name: 'q1_8', path: '/q1_8', type: 'structure', binary: null, selectMultiple: null },
-                  { name: '_17', path: '/q1_8/_17', type: 'string', binary: null, selectMultiple: null },
-                  { name: '_4_2', path: '/_4_2', type: 'number', binary: null, selectMultiple: null }
+                  { name: '__', path: '/q1_8/__', type: 'string', binary: null, selectMultiple: null },
+                  { name: '__', path: '/__', type: 'number', binary: null, selectMultiple: null }
                 ]);
               })))));
     });
