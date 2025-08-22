@@ -30,6 +30,12 @@ function isPalatableXML(allegedXML) {
   if (xmlDoc.validationErrors.length) {
     throw new Error(`Validation errors:\n${xmlDoc.validationErrors.join('\n')}`);
   }
+  return true;
+}
+
+function palatableXML(allegedXML) {
+  isPalatableXML(allegedXML);
+  return allegedXML;
 }
 
 describe('Validity of form testdata XML', () => {
@@ -45,3 +51,5 @@ describe('Validity of form testdata XML', () => {
     });
   });
 });
+
+module.exports = palatableXML;
