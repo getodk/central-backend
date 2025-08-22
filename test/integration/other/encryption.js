@@ -668,7 +668,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
               }))))));
 
     // we have to sort of cheat at this to get two different managed keys in effect.
-    it.only('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Forms, Projects, Auth }) =>
+    it('should handle mixed[managedA/managedB] formdata (decrypting)', testService((service, { Forms, Projects, Auth }) =>
       service.login('alice', (asAlice) =>
         // first enable managed encryption and submit submission one.
         asAlice.post('/v1/projects/1/key')

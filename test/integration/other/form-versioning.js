@@ -8,7 +8,7 @@ describe('form forward versioning', () => {
   const force = (x) => x.get();
   const newXml = testData.forms.simple.replace('id="simple"', 'id="simple" version="two"');
 
-  it.only('should create a new def and update the version', testService((_, { Forms }) =>
+  it('should create a new def and update the version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
       Forms.getByProjectAndXmlFormId(1, 'simple', Form.AnyVersion).then(force)
@@ -22,7 +22,7 @@ describe('form forward versioning', () => {
         newForm.def.sha.should.equal('5a31610cb649ccd2482709664e2a6268df66112f');
       })));
 
-  it.only('should create a new draft def and not update the current version', testService((_, { Forms }) =>
+  it('should create a new draft def and not update the current version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
       Forms.getByProjectAndXmlFormId(1, 'simple', Form.AnyVersion).then(force)
@@ -38,7 +38,7 @@ describe('form forward versioning', () => {
           newForm.draftDefId.should.not.equal(newForm.def.id);
         }))));
 
-  it.only('should preserve submissions', testService((service, { Forms }) =>
+  it('should preserve submissions', testService((service, { Forms }) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms/simple/submissions')
         .send(testData.instances.simple.one)
@@ -66,7 +66,7 @@ describe('form forward versioning', () => {
 
   const withAttachmentsMatching = testData.forms.withAttachments
     .replace('id="withAttachments"', 'id="withAttachments" version="two"');
-  it.only('should copy forward matching attachments', testService((_, { Blobs, Forms, FormAttachments, Projects }) =>
+  it('should copy forward matching attachments', testService((_, { Blobs, Forms, FormAttachments, Projects }) =>
     Promise.all([
       Projects.getById(1).then(force),
       Form.fromXml(testData.forms.withAttachments),
@@ -101,7 +101,7 @@ describe('form forward versioning', () => {
   const withAttachmentsNonmatching = withAttachmentsMatching
     .replace('goodone.csv', 'reallygoodone.csv') // name change
     .replace('form="audio"', 'form="video"'); // type change
-  it.only('should not copy forward nonmatching attachments', testService((_, { Blobs, Forms, FormAttachments, Projects }) =>
+  it('should not copy forward nonmatching attachments', testService((_, { Blobs, Forms, FormAttachments, Projects }) =>
     Promise.all([
       Projects.getById(1).then(force),
       Form.fromXml(testData.forms.withAttachments),

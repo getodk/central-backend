@@ -55,7 +55,7 @@ const upgradedSimpleEntity = `<?xml version="1.0"?>
 
 describe('Update / migrate entities-version within form', () => {
   describe('upgrading a 2023.1.0 update form', () => {
-    it.only('should upgrade a form with only a published version', testService(async (service, container) => {
+    it('should upgrade a form with only a published version', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -84,7 +84,7 @@ describe('Update / migrate entities-version within form', () => {
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
-    it.only('should upgrade a form with only a draft version', testService(async (service, container) => {
+    it('should upgrade a form with only a draft version', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -120,7 +120,7 @@ describe('Update / migrate entities-version within form', () => {
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
-    it.only('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
+    it('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -166,7 +166,7 @@ describe('Update / migrate entities-version within form', () => {
         .then(({ text }) => text.should.equal(upgradedUpdateEntity));
     }));
 
-    it.only('should only upgrade the latest version of a form', testService(async (service, container) => {
+    it('should only upgrade the latest version of a form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -205,7 +205,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it.only('should carry forward the xlsx file of a published form', testService(async (service, container) => {
+    it('should carry forward the xlsx file of a published form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -237,7 +237,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it.only('should carry forward the xlsx file of a draft form', testService(async (service, container) => {
+    it('should carry forward the xlsx file of a draft form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -269,7 +269,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it.only('should carry forward the attachments of a form', testService(async (service, container) => {
+    it('should carry forward the attachments of a form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -356,7 +356,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it.only('should update the formList once the form changes', testService(async (service, container) => {
+    it('should update the formList once the form changes', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
       const domain = config.get('default.env.domain');
@@ -426,7 +426,7 @@ describe('Update / migrate entities-version within form', () => {
     </xform>`));
     }));
 
-    it.only('should update the updatedAt timestamps on the form when updating a draft form', testService(async (service, container) => {
+    it('should update the updatedAt timestamps on the form when updating a draft form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -456,7 +456,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it.only('should update the updatedAt timestamps on the form when updating a published form', testService(async (service, container) => {
+    it('should update the updatedAt timestamps on the form when updating a published form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -486,7 +486,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it.only('should set publishedBy to null on the form when updating a published form', testService(async (service, container) => {
+    it('should set publishedBy to null on the form when updating a published form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -514,7 +514,7 @@ describe('Update / migrate entities-version within form', () => {
   });
 
   describe('upgrading a 2022.1.0 create form', () => {
-    it.only('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
+    it('should upgrade a form with a draft version and a published version', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -562,7 +562,7 @@ describe('Update / migrate entities-version within form', () => {
   });
 
   describe('audit logging and errors', () => {
-    it.only('should log events about the upgrade for a published form', testService(async (service, container) => {
+    it('should log events about the upgrade for a published form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -593,7 +593,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it.only('should log events about the upgrade for a draft form', testService(async (service, container) => {
+    it('should log events about the upgrade for a draft form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -624,7 +624,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it.only('should log events about the upgrade for a published and draft form', testService(async (service, container) => {
+    it('should log events about the upgrade for a published and draft form', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -662,7 +662,7 @@ describe('Update / migrate entities-version within form', () => {
         });
     }));
 
-    it.only('should update the audit log event for a successful upgrade', testService(async (service, container) => {
+    it('should update the audit log event for a successful upgrade', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -683,7 +683,7 @@ describe('Update / migrate entities-version within form', () => {
       audit.failures.should.equal(0);
     }));
 
-    it.only('should not update form if there is a problem, but should process audit event', testService(async (service, container) => {
+    it('should not update form if there is a problem, but should process audit event', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 
@@ -726,7 +726,7 @@ describe('Update / migrate entities-version within form', () => {
       audit.failures.should.equal(0);
     }));
 
-    it.only('should not update form if the entities version is not the target one (e.g. 2024.1)', testService(async (service, container) => {
+    it('should not update form if the entities version is not the target one (e.g. 2024.1)', testService(async (service, container) => {
       const { Forms, Audits } = container;
       const asAlice = await service.login('alice');
 

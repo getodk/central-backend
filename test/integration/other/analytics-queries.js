@@ -433,7 +433,7 @@ describe('analytics task queries', function () {
         });
     }));
 
-    it.only('should count form definitions that are XML-only and are not associated with an XLSForm', testService(async (service, container) => {
+    it('should count form definitions that are XML-only and are not associated with an XLSForm', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       // two existing forms from fixtures

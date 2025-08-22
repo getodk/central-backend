@@ -1620,7 +1620,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               })
           ])))));
 
-    it.only('should log the action in the audit log', testService((service, { Projects, Forms, Users, Audits }) =>
+    it('should log the action in the audit log', testService((service, { Projects, Forms, Users, Audits }) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
           .send({ state: 'closing' })

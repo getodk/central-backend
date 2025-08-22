@@ -61,7 +61,7 @@ describe('query module form purge', () => {
             counts.should.eql([ 0, 0 ]);
           })))));
 
-  it.only('should log the purge action in the audit log', testService((service, container) =>
+  it('should log the purge action in the audit log', testService((service, container) =>
     service.login('alice', (asAlice) =>
       container.Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef).then((o) => o.get()) // get the form before we delete it
         .then((form) => asAlice.delete('/v1/projects/1/forms/simple')
@@ -73,7 +73,7 @@ describe('query module form purge', () => {
             audit.get().acteeId.should.equal(form.acteeId);
           })))));
 
-  it.only('should log purge action in the audit log for each form', testService(async (service, container) => {
+  it('should log purge action in the audit log for each form', testService(async (service, container) => {
     const asAlice = await service.login('alice');
 
     const simpleForm = await container.Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef).then((o) => o.get());
@@ -93,7 +93,7 @@ describe('query module form purge', () => {
       });
   }));
 
-  it.only('should update the actee table with purgedAt details', testService((service, container) =>
+  it('should update the actee table with purgedAt details', testService((service, container) =>
     service.login('alice', (asAlice) =>
       container.Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef).then((o) => o.get()) // get the form before we delete it
         .then((form) => asAlice.delete('/v1/projects/1/forms/simple')
@@ -130,7 +130,7 @@ describe('query module form purge', () => {
         ]))
         .then((counts) => counts.should.eql([ 0, 0 ])))));
 
-  it.only('should purge attachments (and blobs) of a form', testService((service, container) =>
+  it('should purge attachments (and blobs) of a form', testService((service, container) =>
     service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms')
         .send(testData.forms.withAttachments)
@@ -154,7 +154,7 @@ describe('query module form purge', () => {
           ]))
           .then((counts) => counts.should.eql([ 0, 0, 0, 0 ]))))));
 
-  it.only('should purge attachments and blobs of a form, s3-enabled, blobs not uploaded', testService((service, container) => {
+  it('should purge attachments and blobs of a form, s3-enabled, blobs not uploaded', testService((service, container) => {
     global.s3.enableMock();
     return service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms')
@@ -183,7 +183,7 @@ describe('query module form purge', () => {
           .then(() => global.s3.uploads.deleted.should.equal(0))));
   }));
 
-  it.only('should purge attachments and blobs of a form, s3-enabled, blobs uploaded', testService((service, container) => {
+  it('should purge attachments and blobs of a form, s3-enabled, blobs uploaded', testService((service, container) => {
     global.s3.enableMock();
     return service.login('alice', (asAlice) =>
       asAlice.post('/v1/projects/1/forms')
@@ -248,7 +248,7 @@ describe('query module form purge', () => {
         .then((count) => count.should.eql(0)))));
 
   describe('purging specific forms via specific arguments', () => {
-    it.only('should purge a deleted form by ID', testService((service, container) =>
+    it('should purge a deleted form by ID', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)

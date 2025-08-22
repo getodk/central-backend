@@ -20,7 +20,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(404)))));
 
-    it.only('should log the action in the audit log', testService((service, { Projects, Forms, Users, Audits }) =>
+    it('should log the action in the audit log', testService((service, { Projects, Forms, Users, Audits }) =>
       service.login('alice', (asAlice) =>
         Projects.getById(1).then((o) => o.get())
           .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', Form.WithoutDef)).then((o) => o.get())
@@ -105,7 +105,7 @@ describe('api: /projects/:id/forms (delete, restore)', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)))));
 
-    it.only('should log form.restore in audit log', testService((service, { Audits, Forms, Users }) =>
+    it('should log form.restore in audit log', testService((service, { Audits, Forms, Users }) =>
       service.login('alice', (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/simple')
           .expect(200)

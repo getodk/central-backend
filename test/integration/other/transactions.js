@@ -39,7 +39,7 @@ describe('transaction integration', () => {
 const sometime = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
 describe('enketo worker transaction', () => {
-  it.only('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
+  it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     let flush;
     let workerTicket;
 

@@ -609,7 +609,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 ]);
               })))));
 
-      it.only('should log the action in the audit log', testService((service, { Forms }) =>
+      it('should log the action in the audit log', testService((service, { Forms }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
@@ -1895,7 +1895,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
         global.enketo.callCount.should.equal(2);
       }));
 
-      it.only('should log the action in the audit log', testService((service, { Forms }) =>
+      it('should log the action in the audit log', testService((service, { Forms }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
             .expect(200)
@@ -1936,7 +1936,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   });
               })))));
 
-      it.only('should log the correct def ids in the form audit log', testService(async (service, { Forms }) => {
+      it('should log the correct def ids in the form audit log', testService(async (service, { Forms }) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2167,7 +2167,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .set('Content-Type', 'text/csv')
                   .expect(200))))));
 
-        it.only('should log the action in the audit log', testService((service, { Projects, Forms, FormAttachments, Users, Audits }) =>
+        it('should log the action in the audit log', testService((service, { Projects, Forms, FormAttachments, Users, Audits }) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/projects/1/forms')
               .send(testData.forms.withAttachments)
@@ -2266,7 +2266,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
                     .expect(404)))))));
 
-        it.only('should log the action in the audit log', testService((service, { Projects, Forms, FormAttachments, Users, Audits }) =>
+        it('should log the action in the audit log', testService((service, { Projects, Forms, FormAttachments, Users, Audits }) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/projects/1/forms')
               .send(testData.forms.withAttachments)

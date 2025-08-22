@@ -2254,7 +2254,7 @@ describe('datasets and entities', () => {
                       attachment.get().datasetId.should.not.be.null();
                     })))))));
 
-      it.only('should not link dataset if previous version has blob', testService((service, { Forms, FormAttachments }) =>
+      it('should not link dataset if previous version has blob', testService((service, { Forms, FormAttachments }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simpleEntity)
@@ -2280,7 +2280,7 @@ describe('datasets and entities', () => {
                     should(attachment.get().blobId).not.be.null();
                   }))))));
 
-      it.only('should link dataset if previous version does not have blob or dataset linked', testService((service, { Forms, FormAttachments }) =>
+      it('should link dataset if previous version does not have blob or dataset linked', testService((service, { Forms, FormAttachments }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simpleEntity)
@@ -2306,7 +2306,7 @@ describe('datasets and entities', () => {
                   }))))));
 
       // Verifying autolinking happens only for attachment with "file" type
-      it.only('should not set datasetId of non-file type attachment', testService((service, { Forms, FormAttachments }) =>
+      it('should not set datasetId of non-file type attachment', testService((service, { Forms, FormAttachments }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.simpleEntity)
@@ -2700,7 +2700,7 @@ describe('datasets and entities', () => {
 
     // these scenario will never happen by just using APIs, adding following tests for safety
     describe('check datasetId constraints', () => {
-      it.only('should throw problem if blobId and datasetId are being set', testService((service, { Forms, FormAttachments, Datasets }) =>
+      it('should throw problem if blobId and datasetId are being set', testService((service, { Forms, FormAttachments, Datasets }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)
@@ -2722,7 +2722,7 @@ describe('datasets and entities', () => {
                   error.constraint.should.be.equal('check_blobId_or_datasetId_is_null');
                 }))))));
 
-      it.only('should throw problem if datasetId is being set for non-data type', testService((service, { Forms, FormAttachments, Datasets }) =>
+      it('should throw problem if datasetId is being set for non-data type', testService((service, { Forms, FormAttachments, Datasets }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.withAttachments)

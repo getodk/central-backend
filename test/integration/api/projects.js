@@ -975,7 +975,7 @@ describe('api: /projects', () => {
           })
           .expect(501)))); // 501 not implemented
 
-    it.only('should log the action in the audit log', testService((service, { Audits, Forms, Projects, Auth }) =>
+    it('should log the action in the audit log', testService((service, { Audits, Forms, Projects, Auth }) =>
       service.login('bob', (asBob) =>
         asBob.put('/v1/projects/1')
           .set('Content-Type', 'application/json')
@@ -1165,7 +1165,7 @@ describe('api: /projects', () => {
                 .then(({ body }) => { body.should.eql([{ roleId: managerRoleId, actorId: fk.id }]); })
             ]))))));
 
-    it.only('should log the creation action in the audit log', testService((service, { Actors, Audits, Forms }) =>
+    it('should log the creation action in the audit log', testService((service, { Actors, Audits, Forms }) =>
       service.login('bob', (asBob) =>
         Promise.all([
           asBob.post('/v1/projects/1/app-users')
@@ -1236,7 +1236,7 @@ describe('api: /projects', () => {
                 .then(({ body }) => { body.should.eql([]); })
             ])))))));
 
-    it.only('should not delete enketo formviewer assignments', testService((service, container) =>
+    it('should not delete enketo formviewer assignments', testService((service, container) =>
       service.login('bob', (asBob) => asBob.post('/v1/projects/1/app-users')
         .send({ displayName: 'test app user' })
         .expect(200)
@@ -1311,7 +1311,7 @@ describe('api: /projects', () => {
               .then(({ body }) => { body.should.eql([]); })
           ]))))));
 
-    it.only('should log the deletion action in the audit log', testService((service, { Actors, Audits, Forms, Projects }) =>
+    it('should log the deletion action in the audit log', testService((service, { Actors, Audits, Forms, Projects }) =>
       service.login('bob', (asBob) => asBob.post('/v1/projects/1/app-users')
         .send({ displayName: 'test app user' })
         .expect(200)
