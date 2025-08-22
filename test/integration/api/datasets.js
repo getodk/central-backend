@@ -1448,6 +1448,50 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should return the repeat group data of source forms', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.repeatEntityHousehold)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            const { createdAt, properties, lastEntity, lastUpdate, ...ds } = body;
+
+            properties.map(({ publishedAt, ...p }) => {
+              publishedAt.should.be.isoDate();
+              return p;
+            }).should.be.eql([
+              { name: 'full_name', odataName: 'full_name', forms: [{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }] },
+              { name: 'age', odataName: 'age', forms: [{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }] }
+            ]);
+
+            ds.sourceForms.should.eql([{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold', repeatGroup: 'person' }]);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/households')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            const { createdAt, properties, lastEntity, lastUpdate, ...ds } = body;
+
+            properties.map(({ publishedAt, ...p }) => {
+              publishedAt.should.be.isoDate();
+              return p;
+            }).should.be.eql([
+              { name: 'hh_id', odataName: 'hh_id', forms: [{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }] },
+              { name: 'count', odataName: 'count', forms: [{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }] }
+            ]);
+
+            ds.sourceForms.should.eql([{ name: 'Household and people', xmlFormId: 'repeatEntityHousehold' }]);
+          });
+
+      }));
+
       it('should reject if dataset is not published', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
@@ -4690,13 +4734,13 @@ describe('datasets and entities', () => {
         // there are expected to be
         // 2 defs of this form (published and new draft)
         // 6 form fields of original form (and new form): 3 entity related fields and 3 question fields
-        // ideally only 4 ds property fields, but 2 from deleted def are still there
+        // 12 ds property fields including system properties and those attached to deleted defs are still present
         await Promise.all([
           container.oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simpleEntity'`),
           container.oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simpleEntity'`),
           container.oneFirst(sql`select count(*) from ds_property_fields`),
         ])
-          .then((counts) => counts.should.eql([2, 6, 6]));
+          .then((counts) => counts.should.eql([2, 6, 12]));
 
       }));
     });
