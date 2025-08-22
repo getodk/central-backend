@@ -6,6 +6,7 @@ const uuid = require('uuid').v4;
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
+const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
 
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -453,7 +454,7 @@ describe('analytics task queries', function () {
       xmlOnlyFormDefs.should.equal(3);
 
       // upgrading the old version of the entity form creates more form defs
-      const { acteeId } = await container.Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await container.Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await container.Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
