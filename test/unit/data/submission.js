@@ -2,7 +2,7 @@ const should = require('should');
 const appRoot = require('app-root-path');
 const { filter } = require('ramda');
 const { toObjects } = require('streamtest').v2;
-const { submissionXmlToFieldStream, getSelectMultipleResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
+const { submissionXmlToFieldData, submissionXmlToFieldStream, getSelectMultipleResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -234,6 +234,65 @@ describe('submission field streamer', () => {
           { field: new MockField({ order: 2, name: 'hometown', path: '/location/hometown', type: 'string', propertyName: 'hometown' }), text: '' },
         ]);
       }));
+    });
+
+    it('should parse submission xml by fields without stream', async () => {
+      const fields = await fieldsFor(testData.forms.simpleEntity);
+      const data = await submissionXmlToFieldData(fields, testData.instances.simpleEntity.one);
+      data.should.eql([
+        {
+          field: new MockField({
+            order: 4,
+            name: 'entity',
+            path: '/meta/entity',
+            type: 'structure',
+            attrs: {
+              create: '1',
+              dataset: 'people',
+              id: 'uuid:12345678-1234-4123-8234-123456789abc'
+            }
+          }),
+          text: null
+        },
+        {
+          field: new MockField({
+            order: 5,
+            name: 'label',
+            path: '/meta/entity/label',
+            type: 'unknown'
+          }),
+          text: 'Alice (88)'
+        },
+        {
+          field: new MockField({
+            order: 0,
+            name: 'name',
+            path: '/name',
+            type: 'string',
+            propertyName: 'first_name'
+          }),
+          text: 'Alice'
+        },
+        {
+          field: new MockField({
+            order: 1,
+            name: 'age',
+            path: '/age',
+            type: 'int',
+            propertyName: 'age'
+          }),
+          text: '88'
+        },
+        {
+          field: new MockField({
+            order: 2,
+            name: 'hometown',
+            path: '/hometown',
+            type: 'string'
+          }),
+          text: 'Chicago'
+        }
+      ]);
     });
   });
 });
