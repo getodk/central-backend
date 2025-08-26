@@ -165,6 +165,37 @@ async function assertTableContents(tableName, ...expected) {
   }
 }
 
+async function assertQueryContents(query, ...expected) {
+  const { rows: actual } = await db.query(query);
+
+  assert.equal(
+    actual.length,
+    expected.length,
+    `Unexpected number of rows in custom query.  ` +
+        `Expected ${expected.length} but got ${actual.length}.  ` +
+        `DB returned: ${JSON.stringify(actual, null, 2)}`,
+  );
+
+  const remainingRows = [ ...actual ];
+  for (let i=0; i<expected.length; ++i) { // eslint-disable-line no-plusplus
+    const x = expected[i];
+    let found = false;
+    for (let j=0; j<remainingRows.length; ++j) { // eslint-disable-line no-plusplus
+      const rr = remainingRows[j];
+      try {
+        assertIncludes(rr, x);
+        remainingRows.splice(j, 1);
+        found = true;
+        break;
+      } catch (err) { /* keep searching */ }
+    }
+    if (!found) {
+      const filteredRemainingRows = remainingRows.map(r => _.pick(r, Object.keys(x)));
+      assert.fail(`Expected row ${i} not found in custom query':\n        json=${JSON.stringify({ remainingRows, filteredRemainingRows, expectedRow: x })}`);
+    }
+  }
+}
+
 function assertAllHaveSameProps(list) {
   if (list.length < 2) return;
   const [ first, ...rest ] = list.map(Object.keys);
@@ -179,6 +210,7 @@ module.exports = {
   assertTableContents,
   assertTableDoesNotExist,
   assertTableSchema,
+  assertQueryContents,
 
   describeMigration,
 
