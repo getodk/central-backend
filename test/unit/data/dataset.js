@@ -1,5 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+const { prepareFieldsForDataset } = require('../../../lib/data/dataset');
 const { getFormFields } = require(appRoot + '/lib/data/schema');
 const { getDatasets, validateDatasetName, validatePropertyName } = require(appRoot + '/lib/data/dataset');
 const testData = require(appRoot + '/test/data/xml');
@@ -480,5 +481,41 @@ describe('property name validation', () => {
 
   it('should reject name with unicode', () => {
     validatePropertyName('unicode÷divide').should.equal(false);
+  });
+});
+
+describe('prepare fields for dataset', () => {
+  it('should add __entity and __label properties to certain fields', async () => {
+    const fields = await getFormFields(testData.forms.simpleEntity);
+    prepareFieldsForDataset(fields).should.eql([
+      {
+        name: 'name',
+        order: 0,
+        path: '/name',
+        propertyName: 'first_name',
+        type: 'string'
+      },
+      {
+        name: 'age',
+        order: 1,
+        path: '/age',
+        propertyName: 'age',
+        type: 'int'
+      },
+      {
+        name: 'entity',
+        order: 4,
+        path: '/meta/entity',
+        propertyName: '__entity',
+        type: 'structure'
+      },
+      {
+        name: 'label',
+        order: 5,
+        path: '/meta/entity/label',
+        propertyName: '__label',
+        type: 'unknown'
+      }
+    ]);
   });
 });
