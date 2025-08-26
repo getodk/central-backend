@@ -163,3 +163,7 @@ check-file-headers:
 api-docs:
 	(test "$(docker images -q odk-docs)" || docker build --file odk-docs.dockerfile -t odk-docs .) && \
 	docker run --rm -it -v ./docs:/docs/docs/_static/central-spec -p 8000:8000 odk-docs
+
+.PHONY: api-docs-lint
+api-docs-lint:
+	npx --no @redocly/cli lint --extends=minimal docs/api.yaml
