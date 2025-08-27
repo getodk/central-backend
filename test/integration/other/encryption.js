@@ -686,7 +686,7 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
           .then((project) => Promise.all([
             Projects.update(project, { keyId: null }),
             Promise.all([
-              Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
+              Forms.getByProjectAndXmlFormId(1, 'simple', Form.AnyVersion).then((o) => o.get()),
               Form.fromXml(testData.forms.simple.replace('id="simple"', 'id="simple" version="two"'))
             ])
               .then(([ form, partial ]) => Forms.createVersion(partial, form, true))
