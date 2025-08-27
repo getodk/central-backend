@@ -47,7 +47,7 @@ describe('enketo worker transaction', () => {
     const { Audits, Forms, oneFirst } = container;
 
     try {
-      const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', Form.AnyVersion)).get();
+      const simple = (await Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)).get();
       await Audits.log(null, 'form.update.publish', simple);
 
       global.enketo.wait = (f) => { flush = f; };
