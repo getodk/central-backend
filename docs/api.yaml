@@ -40,6 +40,11 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2025.3
+
+    **Added**:
+    - New endpoint [GET /projects/:id/datasets/:name/entities/creators](/central-api-entity-management/#entities-creators) to retrieve a list of all Actors who have created Entities in a Dataset, sorted by display name.
+
     ## ODK Central v2025.2
 
     **Added**:
@@ -8994,6 +8999,58 @@ paths:
                     type: user
                     updatedAt: '2018-04-18T23:42:11.406Z'
                     deletedAt: '2018-04-18T23:42:11.406Z'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+  /projects/{projectId}/datasets/{name}/entities/creators:
+    get:
+      tags:
+      - Entity Management
+      summary: Entities Creators
+      description: |-
+        This endpoint returns a list of all Actors who have created Entities in the Dataset, sorted by display name.
+      operationId: Entities Creators
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      responses:        
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of Actors who created Entities
+                items:
+                  $ref: '#/components/schemas/Actor'
+              example:
+              - id: 115
+                type: user
+                displayName: Alice Johnson
+                createdAt: '2018-04-18T23:19:14.802Z'
+                updatedAt: '2018-04-18T23:42:11.406Z'
+                deletedAt: null
+              - id: 23
+                type: user
+                displayName: Bob Smith
+                createdAt: '2018-03-15T15:30:22.150Z'
+                updatedAt: '2018-03-15T15:30:22.150Z'
+                deletedAt: null
         403:
           description: Forbidden
           content:
