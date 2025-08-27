@@ -4,7 +4,7 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
-const { Actor } = require('../../../lib/model/frames');
+const { Actor, Form } = require('../../../lib/model/frames');
 const { createConflict } = require('../../util/scenarios');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
@@ -994,7 +994,7 @@ describe('api: /projects', () => {
           .then(async ([ bob, audits ]) => {
             const actor = new Actor(bob);
             const forms = await Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectId(Auth.by(actor), project.id));
+              .then((project) => Forms.getByProjectId(Auth.by(actor), project.id, Form.AnyVersion));
 
             audits.length.should.equal(2);
 
@@ -1194,7 +1194,7 @@ describe('api: /projects', () => {
             .then(() => Promise.all([
               asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
               Actors.getById(fk.id).then((o) => o.get()),
-              Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
+              Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef).then((o) => o.get()),
               Audits.getLatestByAction('field_key.assignment.create').then((o) => o.get())
             ]))
             .then(([ bob, fullfk, form, audit ]) => {
@@ -1272,7 +1272,7 @@ describe('api: /projects', () => {
               asBob.get('/v1/projects/1/forms/simple/assignments')
                 .expect(200)
                 .then(({ body }) => { body.should.eql([]); }),
-              container.Forms.getByProjectAndXmlFormId(1, 'simple2')
+              container.Forms.getByProjectAndXmlFormId(1, 'simple2', Form.WithoutDef)
                 .then((o) => o.get())
                 .then(({ acteeId }) => container.Assignments.getByActeeId(acteeId))
                 .then((result) => {
@@ -1336,7 +1336,7 @@ describe('api: /projects', () => {
               Actors.getById(fk.id).then((o) => o.get()),
               Projects.getById(1).then((o) => o.get())
                 // eslint-disable-next-line no-multi-spaces
-                .then((project) => Forms.getByProjectAndXmlFormId(project.id,  'simple')).then((o) => o.get()),
+                .then((project) => Forms.getByProjectAndXmlFormId(project.id,  'simple', Form.WithoutDef)).then((o) => o.get()),
               Audits.getLatestByAction('field_key.assignment.delete').then((o) => o.get())
             ]))
             .then(([ bob, appUserRoleId, fullfk, form, audit ]) => {

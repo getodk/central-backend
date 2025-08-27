@@ -621,7 +621,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body[0].action.should.equal('form.update.draft.set');
                 body[0].details.newDraftDefId.should.be.a.Number();
 
-                return Forms.getByProjectAndXmlFormId(1, 'simple')
+                return Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
                   .then((o) => o.get())
                   .then((form) => {
                     form.draftDefId.should.equal(body[0].details.newDraftDefId);
@@ -1929,7 +1929,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
                 body[0].details.newDefId.should.equal(body[1].details.newDraftDefId);
 
-                return Forms.getByProjectAndXmlFormId(1, 'simple')
+                return Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
                   .then((o) => o.get())
                   .then((form) => {
                     body[1].details.newDraftDefId.should.equal(form.currentDefId);
@@ -1944,25 +1944,25 @@ describe('api: /projects/:id/forms (drafts)', () => {
           .set('Content-Type', 'text/xml')
           .expect(200);
 
-        const formT1 = await Forms.getByProjectAndXmlFormId(1, 'simple2').then((o) => o.get());
+        const formT1 = await Forms.getByProjectAndXmlFormId(1, 'simple2', Form.AnyVersion).then((o) => o.get());
 
         await asAlice.post('/v1/projects/1/forms/simple2/draft')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2.replace('version="2.1"', 'version="2.2"'))
           .expect(200);
 
-        const formT2 = await Forms.getByProjectAndXmlFormId(1, 'simple2', false, Form.DraftVersion).then((o) => o.get());
+        const formT2 = await Forms.getByProjectAndXmlFormId(1, 'simple2', Form.DraftVersion).then((o) => o.get());
 
         await asAlice.post('/v1/projects/1/forms/simple2/draft')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2.replace('version="2.1"', 'version="2.3"'))
           .expect(200);
 
-        const formT3 = await Forms.getByProjectAndXmlFormId(1, 'simple2', false, Form.DraftVersion).then((o) => o.get());
+        const formT3 = await Forms.getByProjectAndXmlFormId(1, 'simple2', Form.DraftVersion).then((o) => o.get());
 
         await asAlice.post('/v1/projects/1/forms/simple2/draft/publish');
 
-        const formT4 = await Forms.getByProjectAndXmlFormId(1, 'simple2').then((o) => o.get());
+        const formT4 = await Forms.getByProjectAndXmlFormId(1, 'simple2', Form.AnyVersion).then((o) => o.get());
 
         await asAlice.get('/v1/audits?action=nonverbose')
           .expect(200)
@@ -2180,7 +2180,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .then(() => Promise.all([
                   Users.getByEmail('alice@getodk.org').then((o) => o.get()),
                   Projects.getById(1).then((o) => o.get())
-                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments')).then((o) => o.get())
+                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments', Form.WithoutDef)).then((o) => o.get())
                     .then((form) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv')
                       .then((o) => o.get())
                       .then((attachment) => [ form, attachment ])),
@@ -2279,7 +2279,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .then(() => Promise.all([
                   Users.getByEmail('alice@getodk.org').then((o) => o.get()),
                   Projects.getById(1).then((o) => o.get())
-                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments'))
+                    .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'withAttachments', Form.WithoutDef))
                     .then((o) => o.get())
                     .then((form) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv')
                       .then((o) => o.get())
