@@ -437,6 +437,24 @@ describe('api: /users', () => {
           .expect(200)
           .then(({ body }) => body.email.should.equal('chelsea@getodk.org')))));
 
+    it('should not return session details if not extended', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => { should.not.exist(body.session); }))));
+
+    it('should return session details if extended', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.session.should.be.an.Object();
+            body.session.should.only.have.keys('createdAt', 'expiresAt');
+            body.session.createdAt.should.be.an.isoDate();
+            body.session.expiresAt.should.be.an.isoDate();
+          }))));
+
     it('should not return sidewide verbs if not extended', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
