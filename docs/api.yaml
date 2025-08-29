@@ -1785,6 +1785,16 @@ paths:
                         type: object
                       projects:
                         type: object
+                  session:
+                    description: The current session
+                    type: object
+                    properties:
+                      createdAt:
+                        type: string
+                        description: ISO date format
+                      expiresAt:
+                        type: string
+                        description: ISO date format
               example:
                 createdAt: 2018-04-18T23:19:14.802Z
                 displayName: My Display Name
@@ -1802,6 +1812,9 @@ paths:
                   projects:
                     "1":
                       formTrashCollapsed: false
+                session:
+                  createdAt: 2018-05-18T23:42:11.406Z
+                  expiresAt: 2018-06-18T23:42:11.406Z
         403:
           description: Forbidden
           content:
