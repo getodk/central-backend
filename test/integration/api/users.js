@@ -437,13 +437,13 @@ describe('api: /users', () => {
           .expect(200)
           .then(({ body }) => body.email.should.equal('chelsea@getodk.org')))));
 
-    it('should not return sidewide verbs if not extended', testService((service) =>
+    it('should not return site-wide verbs if not extended', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
           .expect(200)
           .then(({ body }) => { should.not.exist(body.verbs); }))));
 
-    it('should return sidewide verbs if logged in (alice)', testService((service) =>
+    it('should return site-wide verbs if logged in (alice)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
           .set('X-Extended-Metadata', 'true')
@@ -456,7 +456,7 @@ describe('api: /users', () => {
             body.verbs.should.containDeep([ 'user.password.invalidate', 'assignment.create', 'role.update' ]);
           }))));
 
-    it('should return sidewide verbs if logged in (chelsea)', testService((service) =>
+    it('should return site-wide verbs if logged in (chelsea)', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/users/current')
           .set('X-Extended-Metadata', 'true')
