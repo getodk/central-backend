@@ -1,1 +1,2 @@
 DROP TABLE submission_field_extract_geo_cache;
+DROP INDEX entity_defs_has_geometry;
