@@ -213,3 +213,74 @@ describe('api: submission-geodata', () => {
 
   }));
 });
+
+describe('api: entities-geodata', () => {
+
+  it('should serve valid geodata for entities', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/datasets')
+      .send({
+        name: 'geofun'
+      })
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/datasets/geofun/properties')
+      .send({
+        name: 'geometry'
+      })
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+      .send({
+        uuid: '12345678-1234-4123-8234-123456789aaa',
+        label: 'a',
+        data: { geometry: '1 2 3 0' } // a point
+      })
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+      .send({
+        uuid: '12345678-1234-4123-8234-123456789aab',
+        label: 'b',
+        data: { geometry: '1 2; 1 2 3; 1 2 3 4' } // a linestring
+      })
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+      .send({
+        uuid: '12345678-1234-4123-8234-123456789aac',
+        label: 'c',
+        data: { geometry: '1 2; 3 4; 5 6; 1 2' } // a polygon
+      })
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+      .send({
+        uuid: '12345678-1234-4123-8234-123456789aad',
+        label: 'd',
+        data: { geometry: '1 2 not-an-altitude' } // invalid
+      })
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+      .send({
+        uuid: '12345678-1234-4123-8234-123456789aae',
+        label: 'e',
+        data: { geometry: '100 200' } // invalid
+      })
+      .expect(200);
+
+    const expectedGeoJSON = JSON.parse('{"type":"FeatureCollection","features":[{"type":"Feature","id":"12345678-1234-4123-8234-123456789aaa","properties":null,"geometry":{"type":"Point","coordinates":[2,1,3]}},{"type":"Feature","id":"12345678-1234-4123-8234-123456789aab","properties":null,"geometry":{"type":"LineString","coordinates":[[2,1],[2,1,3],[2,1,3]]}},{"type":"Feature","id":"12345678-1234-4123-8234-123456789aac","properties":null,"geometry":{"type":"Polygon","coordinates":[[2,1],[4,3],[6,5],[2,1]]}}]}');
+    expectedGeoJSON.features.sort((a, b) => (a.type < b.type ? -1 : (a.type > b.type ? 1 : 0)));
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.sort((a, b) => (a.type < b.type ? -1 : (a.type > b.type ? 1 : 0)));
+        body.should.deepEqual(expectedGeoJSON);
+      });
+
+  }));
+
+});
