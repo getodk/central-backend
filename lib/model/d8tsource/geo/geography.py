@@ -1,6 +1,6 @@
 from dbsamizdat import SamizdatFunction
 
-from .odk2geojson import odk2geojson_point, odk2geojson_linestring, odk2geojson_polygon, odk2geojson_multipoint, odk2geojson_multilinestring, odk2geojson_multipolygon
+from .odk2geojson import odk2geojson_point, odk2geojson_linestring, odk2geojson_polygon, odk2geojson_ducktyped, odk2geojson_multipoint, odk2geojson_multilinestring, odk2geojson_multipolygon
 from ..formfields import form_field_geo
 from ..util import safe_to_xml
 

@@ -29,6 +29,9 @@ DROP FUNCTION IF EXISTS "public"."odk2geojson_multipoint"(odkgeo text[]) CASCADE
 --- nuke: odk2geojson_point(odkgeopoint text) ---
 DROP FUNCTION IF EXISTS "public"."odk2geojson_point"(odkgeopoint text) CASCADE;
 
+--- nuke: odk2geojson_ducktyped(odkgeosomething text) ---
+DROP FUNCTION IF EXISTS "public"."odk2geojson_ducktyped"(odkgeosomething text) CASCADE;
+
 --- nuke: odk2geojson_helper_polygon(odkgeoshape text) ---
 DROP FUNCTION IF EXISTS "public"."odk2geojson_helper_polygon"(odkgeoshape text) CASCADE;
 
