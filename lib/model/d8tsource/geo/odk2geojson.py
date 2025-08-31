@@ -106,6 +106,44 @@ class odk2geojson_polygon(SamizdatFunction):
     """
 
 
+class odk2geojson_ducktyped(SamizdatFunction):
+    deps_on = {odk2geojson_helper_linestring}
+    function_arguments_signature = "odkgeosomething text"
+    sql_template = f"""
+        ${{preamble}}
+        RETURNS json
+        AS
+            $BODY$
+                WITH lineated AS (
+                    SELECT {odk2geojson_helper_linestring.name}(odkgeosomething, 1) as theline
+                )
+                SELECT
+                    CASE
+                        WHEN
+                            theline IS NULL
+                        THEN
+                            NULL
+                        WHEN
+                            json_array_length(theline) = 1
+                        THEN
+                            json_build_object('type', 'Point', 'coordinates', theline -> 0)
+                        WHEN
+                            json_array_length(theline) > 3 AND ((theline::jsonb) -> 0 = (theline::jsonb) -> -1)
+                        THEN
+                            json_build_object('type', 'Polygon', 'coordinates', theline)
+                        ELSE
+                            json_build_object('type', 'LineString', 'coordinates', theline)
+                    END
+                FROM lineated
+            $BODY$
+        LANGUAGE sql
+        IMMUTABLE
+        STRICT
+        PARALLEL SAFE
+        ${{postamble}}
+    """
+
+
 class odk2geojson_multipoint(SamizdatFunction, metaclass=MultigeoMeta):
     geofn = odk2geojson_helper_point
     geojsontype = 'MultiPoint'
