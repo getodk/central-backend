@@ -1,0 +1,1 @@
+DROP TABLE submission_field_extract_geo_cache;
