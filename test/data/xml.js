@@ -1118,8 +1118,8 @@ module.exports = {
       two: '<data id="audits"><meta><instanceID>two</instanceID><audit>log.csv</audit></meta><name>Bob</name><age>34</age></data>'
     },
     selectMultiple: {
-      one: instance('selectMultiple', 'one', '<q1>a b</q1><g1/><q2>x y z</q2>'),
-      two: instance('selectMultiple', 'two', '<q1>b</q1><g1/><q2>m x</q2>'),
+      one: instance('selectMultiple', 'one', '<q1>a b</q1><g1><q2>x y z</q2></g1>'),
+      two: instance('selectMultiple', 'two', '<q1>b</q1><g1><q2>m x</q2></g1>'),
       three: instance('selectMultiple', 'three', '<q1> b c</q1>')
     },
     simpleEntity: {
