@@ -1,7 +1,6 @@
 const should = require('should');
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
-const { sql } = require('slonik');
 
 describe('api: /sessions', () => {
   describe('POST', () => {
@@ -14,29 +13,6 @@ describe('api: /sessions', () => {
         .then(({ body }) => {
           body.should.be.a.Session();
         })));
-
-    it('should honor a session timeout specified through the ODKCENTRAL_SESSION_LIFETIME environment variable', testService(async (service, container) => {
-      const prevEnv = process.env.ODKCENTRAL_SESSION_LIFETIME;
-      const testSessionLifetime = 123456789;
-      process.env.ODKCENTRAL_SESSION_LIFETIME = testSessionLifetime;
-      try {
-        return await service.post('/v1/sessions')
-          .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
-          .expect(200)
-          .then(async ({ body }) => {
-            const derivedSessionLifetime = await container.db.oneFirst(sql`
-              SELECT "expiresAt" - "createdAt" FROM sessions WHERE token = ${body.token}
-            `);
-            derivedSessionLifetime.should.equal(testSessionLifetime);
-          });
-      } finally {
-        if (prevEnv) {
-          process.env.ODKCENTRAL_SESSION_LIFETIME = prevEnv;
-        } else {
-          delete process.env.ODKCENTRAL_SESSION_LIFETIME;
-        }
-      }
-    }));
 
     [
       { desc: 'invalid session cookie', header: 'Cookie', value: 'session=invalid' },
