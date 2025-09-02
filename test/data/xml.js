@@ -1,11 +1,12 @@
+const { palatableXML } = require('../palatable-xml');
 
 // takes care of instance envelope boilerplate.
 const instance = (formId, instanceId, data) =>
-  `<data id="${formId}"><meta><instanceID>${instanceId}</instanceID></meta>${data}</data>`;
+  palatableXML(`<data id="${formId}"><meta><instanceID>${instanceId}</instanceID></meta>${data}</data>`);
 
 // provides orx: namespace on meta/instanceId and a form version.
 const fullInstance = (formId, version, instanceId, data) =>
-  `<data id="${formId}" version="${version}"><orx:meta><orx:instanceID>${instanceId}</orx:instanceID></orx:meta>${data}</data>`;
+  palatableXML(`<data id="${formId}" version="${version}"><orx:meta xmlns:orx="http://openrosa.org/xforms"><orx:instanceID>${instanceId}</orx:instanceID></orx:meta>${data}</data>`);
 
 module.exports = {
   forms: {
@@ -1117,8 +1118,8 @@ module.exports = {
       two: '<data id="audits"><meta><instanceID>two</instanceID><audit>log.csv</audit></meta><name>Bob</name><age>34</age></data>'
     },
     selectMultiple: {
-      one: instance('selectMultiple', 'one', '<q1>a b</q1><g1><q2>x y z</q2>'),
-      two: instance('selectMultiple', 'two', '<q1>b</q1><g1><q2>m x</q2>'),
+      one: instance('selectMultiple', 'one', '<q1>a b</q1><g1/><q2>x y z</q2>'),
+      two: instance('selectMultiple', 'two', '<q1>b</q1><g1/><q2>m x</q2>'),
       three: instance('selectMultiple', 'three', '<q1> b c</q1>')
     },
     simpleEntity: {

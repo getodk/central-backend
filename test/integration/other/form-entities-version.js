@@ -4,7 +4,7 @@ const config = require('config');
 const appRoot = require('app-root-path');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-const palatableXML = require('../../data/test-xml');
+const { palatableXML } = require('../../palatable-xml');
 const { Form } = require(appRoot + '/lib/model/frames');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
