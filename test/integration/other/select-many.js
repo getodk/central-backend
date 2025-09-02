@@ -2,6 +2,7 @@ const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
+const { palatableXML } = require('../../palatable-xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('select many value processing', () => {
@@ -87,7 +88,7 @@ describe('select many value processing', () => {
     const asAlice = await service.login('alice');
 
     // the select1 version of forms.selectMultple
-    const selectOne = `<?xml version="1.0"?>
+    const selectOne = palatableXML(`<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
         <h:head>
           <model>
@@ -110,7 +111,7 @@ describe('select many value processing', () => {
             <select1 ref="/data/g1/q2"><label>two</label></select1>
           </group>
         </h:body>
-      </h:html>`;
+      </h:html>`);
 
     await asAlice.post('/v1/projects/1/forms?publish=true')
       .send(selectOne)
