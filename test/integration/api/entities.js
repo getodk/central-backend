@@ -4067,16 +4067,10 @@ describe('Entities API', () => {
 
           // Should be sorted by displayName
           body[0].displayName.should.equal('Alice');
-          body[0].type.should.equal('user');
-          body[0].should.have.property('id');
-          body[0].should.have.property('createdAt');
-          body[0].should.have.property('updatedAt');
+          body[0].should.be.an.Actor();
 
           body[1].displayName.should.equal('Bob');
-          body[1].type.should.equal('user');
-          body[1].should.have.property('id');
-          body[1].should.have.property('createdAt');
-          body[1].should.have.property('updatedAt');
+          body[1].should.be.an.Actor();
         });
     }));
 
