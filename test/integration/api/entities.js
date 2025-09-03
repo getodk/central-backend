@@ -4008,4 +4008,142 @@ describe('Entities API', () => {
         });
     }));
   });
+
+  describe('GET /datasets/:name/entities/creators', () => {
+
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/creators')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(403);
+    }));
+
+    it('should return empty array if no entities exist', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([]);
+        });
+    }));
+
+    it('should return creators sorted by display name', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create entities as different users
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice Entity',
+        })
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Bob Entity',
+        })
+        .expect(200);
+
+      // Get creators
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Array();
+          body.length.should.equal(2);
+
+          // Should be sorted by displayName
+          body[0].displayName.should.equal('Alice');
+          body[0].should.be.an.Actor();
+
+          body[1].displayName.should.equal('Bob');
+          body[1].should.be.an.Actor();
+        });
+    }));
+
+    it('should not include duplicate creators', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create form and dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create multiple entities as the same user
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice Entity 1',
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Alice Entity 2',
+        })
+        .expect(200);
+
+      // Get creators
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Array();
+          body.length.should.equal(1);
+          body[0].displayName.should.equal('Alice');
+        });
+    }));
+
+    it('should only include creators of non-deleted entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      // Create form and dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create entities as different users
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice Entity',
+        })
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Bob Entity',
+        })
+        .expect(200);
+
+      // Delete Bob's entity
+      await asBob.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789def')
+        .expect(200);
+
+      // Get creators - should only include Alice now
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Array();
+          body.length.should.equal(1);
+          body[0].displayName.should.equal('Alice');
+        });
+    }));
+
+  });
 });
