@@ -4,6 +4,20 @@ const { sql } = require('slonik');
 // eslint-disable-next-line no-unused-vars
 const should = require('should');
 
+
+function sortGeoJson(theGeoJSON) {
+  theGeoJSON.features.sort((a, b) => (a.id < b.id ? -1 : (a.id > b.id ? 1: 0)));
+  theGeoJSON.features.forEach(feat => {
+    feat.geometry.geometries.sort((a, b) => {
+      const aa = [a.type, a.coordinates];
+      const bb = [b.type, b.coordinates];
+      return (aa < bb ? -1: (aa > bb ? 1 : 0));
+    });
+  });
+  return theGeoJSON; // sorts in-place, but for chaining it's handy to return the input
+}
+
+
 function makeSubmission (
   // eslint-disable-next-line object-curly-newline
   {
@@ -193,22 +207,12 @@ describe('api: submission-geodata', () => {
 
     const fieldPaths = expectedGeoFieldDescriptors(0).map(el => el.path).sort();
 
-    const expectedGeoJSON = JSON.parse('{"type":"FeatureCollection","features":[{"type":"Feature","id":"1","geometry":{"type":"GeometryCollection","geometries":[{"type":"MultiPoint","coordinates":[[0,60,0],[0,70,0]]},{"type":"MultiPolygon","coordinates":[[[3,63,3],[4,64,4],[5,65,5],[3,63,3]],[[3,73,3],[4,74,4],[5,75,5],[3,73,3]]]},{"type":"MultiLinestring","coordinates":[[[1,61,1],[2,62,2]],[[1,71,1],[2,72,2]]]},{"type":"MultiPoint","coordinates":[[1,11,1],[2,22,2]]},{"type":"Point","coordinates":[0,50,0]},{"type":"Polygon","coordinates":[[3,53,3],[4,54,4],[5,55,5],[3,53,3]]},{"type":"LineString","coordinates":[[1,51,1],[2,52,2]]}]},"properties":null}]}');
-    expectedGeoJSON.features[0].geometry.geometries.sort((a, b) => {
-      const aa = [a.type, a.coordinates];
-      const bb = [b.type, b.coordinates];
-      return (aa < bb ? -1: (aa > bb ? 1 : 0));
-    });
+    const expectedGeoJSON = sortGeoJson(JSON.parse('{"type":"FeatureCollection","features":[{"type":"Feature","id":"1","geometry":{"type":"GeometryCollection","geometries":[{"type":"MultiPoint","coordinates":[[0,60,0],[0,70,0]]},{"type":"MultiPolygon","coordinates":[[[3,63,3],[4,64,4],[5,65,5],[3,63,3]],[[3,73,3],[4,74,4],[5,75,5],[3,73,3]]]},{"type":"MultiLinestring","coordinates":[[[1,61,1],[2,62,2]],[[1,71,1],[2,72,2]]]},{"type":"MultiPoint","coordinates":[[1,11,1],[2,22,2]]},{"type":"Point","coordinates":[0,50,0]},{"type":"Polygon","coordinates":[[3,53,3],[4,54,4],[5,55,5],[3,53,3]]},{"type":"LineString","coordinates":[[1,51,1],[2,52,2]]}]},"properties":null}]}'));
 
     await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?fieldpath=${fieldPaths.join('&fieldpath=')}`)
       .expect(200)
       .then(({ body }) => {
-        body.features[0].geometry.geometries.sort((a, b) => {
-          const aa = [a.type, a.coordinates];
-          const bb = [b.type, b.coordinates];
-          return (aa < bb ? -1: (aa > bb ? 1 : 0));
-        });
-        body.should.deepEqual(expectedGeoJSON);
+        sortGeoJson(body).should.deepEqual(expectedGeoJSON);
       });
 
   }));
