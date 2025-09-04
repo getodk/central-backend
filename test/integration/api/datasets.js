@@ -5831,15 +5831,17 @@ describe('datasets and entities', () => {
             logs[0].details.source.event.action.should.equal('submission.create');
           });
 
-        // only one entity def should have a source with a non-null parent id
-        // the submission that only created an entity
-        const defSourceParentIds = await container.all(sql`
-        select eds.details->'submission'->'instanceId' as "submissionInstanceId"
+        // the parent event of the entity def created from submission 'two'
+        // should be the event that triggered converting all pending submissions
+        const parentEventId = await container.oneFirst(sql`
+        select eds.details->'parentEventId' as "parentEventId"
         from entity_defs as ed
         join entity_def_sources as eds on ed."sourceId" = eds.id
-        where eds.details->'parentEventId' is not null`);
-        defSourceParentIds.length.should.equal(1);
-        defSourceParentIds[0].submissionInstanceId.should.equal('two');
+        where eds.details->'parentEventId' is not null
+        and eds.details->'submission'->'instanceId' = to_jsonb('two'::text)`);
+
+        const parentEvent = await container.one(sql`select * from audits where id = ${parentEventId}`);
+        parentEvent.action.should.equal('dataset.update');
       }));
     });
 
