@@ -4354,7 +4354,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             })))));
   });
 
-  describe('[version] /:rootId/versions/instanceId/attachments GET', () => {
+  describe('[version] /:rootId/versions/instanceId/attachments/:attachment GET', () => {
     it('should return notfound if the attachment does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
