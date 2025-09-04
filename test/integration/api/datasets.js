@@ -4690,13 +4690,13 @@ describe('datasets and entities', () => {
         // there are expected to be
         // 2 defs of this form (published and new draft)
         // 6 form fields of original form (and new form): 3 entity related fields and 3 question fields
-        // ideally only 4 ds property fields, but 2 from deleted def are still there
+        // 12 ds property fields including system properties and those attached to deleted defs are still present
         await Promise.all([
           container.oneFirst(sql`select count(*) from form_defs as fd join forms as f on fd."formId" = f.id where f."xmlFormId"='simpleEntity'`),
           container.oneFirst(sql`select count(*) from form_fields as fs join forms as f on fs."formId" = f.id where f."xmlFormId"='simpleEntity'`),
           container.oneFirst(sql`select count(*) from ds_property_fields`),
         ])
-          .then((counts) => counts.should.eql([2, 6, 6]));
+          .then((counts) => counts.should.eql([2, 6, 12]));
 
       }));
     });
@@ -5831,15 +5831,17 @@ describe('datasets and entities', () => {
             logs[0].details.source.event.action.should.equal('submission.create');
           });
 
-        // only one entity def should have a source with a non-null parent id
-        // the submission that only created an entity
-        const defSourceParentIds = await container.all(sql`
-        select eds.details->'submission'->'instanceId' as "submissionInstanceId"
+        // the parent event of the entity def created from submission 'two'
+        // should be the event that triggered converting all pending submissions
+        const parentEventId = await container.oneFirst(sql`
+        select eds.details->'parentEventId' as "parentEventId"
         from entity_defs as ed
         join entity_def_sources as eds on ed."sourceId" = eds.id
-        where eds.details->'parentEventId' is not null`);
-        defSourceParentIds.length.should.equal(1);
-        defSourceParentIds[0].submissionInstanceId.should.equal('two');
+        where eds.details->'parentEventId' is not null
+        and eds.details->'submission'->'instanceId' = to_jsonb('two'::text)`);
+
+        const parentEvent = await container.one(sql`select * from audits where id = ${parentEventId}`);
+        parentEvent.action.should.equal('dataset.update');
       }));
     });
 
