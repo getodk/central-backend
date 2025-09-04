@@ -1,3 +1,4 @@
+const { palatableXML } = require('../../palatable-xml');
 const { testService } = require('../setup');
 
 // In response to central issues #551, #552, #553, we changed the entity form xml parsing
@@ -6,9 +7,9 @@ const { testService } = require('../setup');
 // This set of tests is intended to check that there are no unintended consequences of having
 // an empty structural field like entity.
 
-const emptyEntityForm = `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
-  <h:head>
+const emptyEntityForm = palatableXML(`<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
+<h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
         <data id="emptyEntity" orx:version="1.0">
@@ -26,7 +27,7 @@ const emptyEntityForm = `<?xml version="1.0"?>
       <bind nodeset="/data/location/hometown" type="string" entities:saveto="hometown"/>
     </model>
   </h:head>
-</h:html>`;
+</h:html>`);
 
 const emptyEntitySub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="emptyEntity" version="1.0">
 <meta>
