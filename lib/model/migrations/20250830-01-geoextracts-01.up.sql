@@ -17,3 +17,4 @@ CREATE INDEX entity_defs_has_geometry ON entity_defs (id)
 
 
 CREATE INDEX "submissions_reviewState_idx" ON submissions ("reviewState");
+CREATE INDEX entities_conflict_idx ON entities ("conflict");
