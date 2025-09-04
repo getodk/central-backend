@@ -7,6 +7,7 @@ const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { omit } = require(appRoot + '/lib/util/util');
 
@@ -1627,7 +1628,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .then(() => Promise.all([
             Users.getByEmail('alice@getodk.org').then((o) => o.get()),
             Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')).then((o) => o.get()),
+              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', Form.WithoutDef)).then((o) => o.get()),
             Audits.getLatestByAction('form.update').then((o) => o.get())
           ])
             .then(([ alice, form, log ]) => {
@@ -1652,7 +1653,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .then(({ body }) => body.enketoId);
 
       await service.get(`/v1/form-links/${enketoId}/form`)
-        .expect(403);
+        .expect(401);
     }));
 
     it('should reject without session token', testService(async (service) => {
@@ -1662,7 +1663,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .then(({ body }) => body.enketoId);
 
       await service.get(`/v1/form-links/${enketoId}/form`)
-        .expect(404);
+        .expect(401);
     }));
 
     it('should return the Form with session token queryparam', testService(async (service) => {

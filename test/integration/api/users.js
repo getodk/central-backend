@@ -4,7 +4,7 @@ const { testService } = require('../setup');
 describe('api: /users', () => {
   describe('GET', () => {
     it('should reject for anonymous users', testService((service) =>
-      service.get('/v1/users').expect(403)));
+      service.get('/v1/users').expect(401)));
 
     it('should return nothing for authed users who cannot user.list', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -63,7 +63,7 @@ describe('api: /users', () => {
           }))));
 
     it('should reject unauthed users even if they exactly match an email', testService((service) =>
-      service.get('/v1/users/?q=alice@getodk.org').expect(403)));
+      service.get('/v1/users/?q=alice@getodk.org').expect(401)));
 
     it('should return an exact email match to any authed user', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -338,10 +338,16 @@ describe('api: /users', () => {
                 body[0].details.data.should.eql({ password: true });
               }))));
 
-        it('should fail the request if invalidation is requested but not allowed', testService((service) =>
+        it('should fail the request if invalidation is requested and no auth provided', testService((service) =>
           service.post('/v1/users/reset/initiate?invalidate=true')
             .send({ email: 'alice@getodk.org' })
-            .expect(403)));
+            .expect(401)));
+
+        it('should fail the request if invalidation is requested but user is not authorized', testService((service) =>
+          service.login('chelsea', (asChelsea) =>
+            asChelsea.post('/v1/users/reset/initiate?invalidate=true')
+              .send({ email: 'alice@getodk.org' })
+              .expect(403))));
 
         it('should invalidate the existing password if requested', testService((service) =>
           service.login('alice', (asAlice) =>
@@ -422,8 +428,8 @@ describe('api: /users', () => {
   });
 
   describe('/users/current GET', () => {
-    it('should return not found if nobody is logged in', testService((service) =>
-      service.get('/v1/users/current').expect(404)));
+    it('should return unauthenticated if nobody is logged in', testService((service) =>
+      service.get('/v1/users/current').expect(401)));
 
     it('should give the authed user if logged in', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -431,13 +437,13 @@ describe('api: /users', () => {
           .expect(200)
           .then(({ body }) => body.email.should.equal('chelsea@getodk.org')))));
 
-    it('should not return sidewide verbs if not extended', testService((service) =>
+    it('should not return site-wide verbs if not extended', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
           .expect(200)
           .then(({ body }) => { should.not.exist(body.verbs); }))));
 
-    it('should return sidewide verbs if logged in (alice)', testService((service) =>
+    it('should return site-wide verbs if logged in (alice)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
           .set('X-Extended-Metadata', 'true')
@@ -450,7 +456,7 @@ describe('api: /users', () => {
             body.verbs.should.containDeep([ 'user.password.invalidate', 'assignment.create', 'role.update' ]);
           }))));
 
-    it('should return sidewide verbs if logged in (chelsea)', testService((service) =>
+    it('should return site-wide verbs if logged in (chelsea)', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/users/current')
           .set('X-Extended-Metadata', 'true')
@@ -459,6 +465,24 @@ describe('api: /users', () => {
             body.verbs.should.be.an.Array();
             body.verbs.length.should.equal(0);
           }))));
+
+    it('should return 404 for app user', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((fk) => service.get(`/v1/key/${fk.token}/users/current`)
+            .expect(404)))));
+
+    it('should return 404 for public link', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link1' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((link) => service.get(`/v1/users/current?st=${link.token}`)
+            .expect(404)))));
   });
 
   describe('/users/:id GET', () => {

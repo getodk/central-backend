@@ -21,13 +21,19 @@ const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryTyp
 describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
-      service.head('/v1/projects/1/submission')
-        .set('X-OpenRosa-Version', '1.0')
-        .expect(204)));
+      service.login('alice', (asAlice) =>
+        asAlice.head('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(204))));
 
     it('should fail if not given X-OpenRosa-Version header', testService((service) =>
       service.head('/v1/projects/1/submission')
         .expect(400)));
+
+    it('should fail if no auth is provided', testService((service) =>
+      service.head('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(401)));
 
     it('should fail on authentication given broken credentials', testService((service) =>
       service.head('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/submission')
@@ -3257,7 +3263,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'encrypted', Form.PublishedVersion).then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
@@ -3290,7 +3296,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'encrypted', Form.PublishedVersion).then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
@@ -4832,7 +4838,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
@@ -4871,7 +4877,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
@@ -4969,7 +4975,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
