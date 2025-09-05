@@ -518,6 +518,58 @@ describe('prepare fields for dataset', () => {
       }
     ]);
   });
+
+  it('should add __entity and __label properties to certain fields in a form with a dataset in a repeat', async () => {
+    const fields = await getFormFields(testData.forms.repeatEntityTrees).then(f => prepareFieldsForDataset(f));
+    fields[2].should.eql({
+      name: 'entity',
+      path: '/tree/meta/entity',
+      order: 5,
+      type: 'structure',
+      propertyName: '__entity'
+    });
+    fields[3].should.eql({
+      name: 'label',
+      path: '/tree/meta/entity/label',
+      order: 6,
+      type: 'string',
+      propertyName: '__label'
+    });
+  });
+
+  it('should add __entity and __label properties to certain fields in a form with multiple datasets', async () => {
+    const fields = await getFormFields(testData.forms.repeatEntityHousehold).then(f => prepareFieldsForDataset(f));
+    // entity in repeat
+    fields[4].should.eql({
+      name: 'entity',
+      path: '/members/person/meta/entity',
+      order: 7,
+      type: 'structure',
+      propertyName: '__entity'
+    });
+    fields[5].should.eql({
+      name: 'label',
+      path: '/members/person/meta/entity/label',
+      order: 8,
+      type: 'string',
+      propertyName: '__label'
+    });
+    // top level household entity
+    fields[6].should.eql({
+      name: 'entity',
+      path: '/meta/entity',
+      order: 11,
+      type: 'structure',
+      propertyName: '__entity'
+    });
+    fields[7].should.eql({
+      name: 'label',
+      path: '/meta/entity/label',
+      order: 12,
+      type: 'string',
+      propertyName: '__label'
+    });
+  });
 });
 
 describe('entities from repeats', () => {
