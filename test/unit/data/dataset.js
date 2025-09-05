@@ -519,3 +519,33 @@ describe('prepare fields for dataset', () => {
     ]);
   });
 });
+
+describe('entities from repeats', () => {
+  describe('parsing multiple entities/datasetes from a form def', () => {
+    it('should retrieve the names of a dataset in a repeat group', async () => {
+      const ds = await getDatasets(testData.forms.repeatEntityTrees).then(o => o.get());
+      should.not.exist(ds.warnings);
+      ds.datasets.should.eql([
+        { name: 'trees', actions: [ 'create' ], path: '/tree' }
+      ]);
+    });
+
+    it('should retrieve the names of datasets at root and in repeat group', async () => {
+      const ds = await getDatasets(testData.forms.repeatEntityHousehold).then(o => o.get());
+      should.not.exist(ds.warnings);
+      ds.datasets.should.eql([
+        { name: 'people', actions: [ 'create' ], path: '/members/person' },
+        { name: 'households', actions: [ 'create' ], path: '/' }
+      ]);
+    });
+
+    it('should retrieve the names of datasets at different levels', async () => {
+      const ds = await getDatasets(testData.forms.multiEntityFarm).then(o => o.get());
+      should.not.exist(ds.warnings);
+      ds.datasets.should.eql([
+        { name: 'farmers', actions: [ 'create' ], path: '/farm/farmer' },
+        { name: 'farms', actions: [ 'create' ], path: '/farm' }
+      ]);
+    });
+  });
+});
