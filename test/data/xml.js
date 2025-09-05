@@ -570,7 +570,6 @@ module.exports = {
             <bind nodeset="/data/members/person/meta/entity/@id" type="string"/>
             <setvalue event="odk-instance-first-load odk-new-repeat" ref="/data/members/person/meta/entity/@id" value="uuid()"/>
             <bind nodeset="/data/members/person/meta/entity/label" calculate="../../../name" type="string"/>
-
             <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
             <bind nodeset="/data/meta/entity/@id" type="string" readonly="true()"/>
             <setvalue ref="/data/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
@@ -640,11 +639,9 @@ module.exports = {
             <bind nodeset="/data/farm/farmer/age" type="int" entities:saveto="age"/>
             <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
             <bind nodeset="/data/meta/instanceName" type="string" calculate="concat(&quot;Farm &quot;,  /data/farm/farm_id , &quot;-&quot;,  /data/farm/farmer/farmer_name )"/>
-
             <bind nodeset="/data/farm/meta/entity/@id" type="string" readonly="true()"/>
             <setvalue ref="/data/farm/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
             <bind nodeset="/data/farm/meta/entity/label" calculate="concat(&quot;Farm &quot;,  /data/farm/farm_id )" type="string" readonly="true()"/>
-
             <bind nodeset="/data/farm/farmer/meta/entity/@id" type="string" readonly="true()"/>
             <setvalue ref="/data/farm/farmer/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
             <bind nodeset="/data/farm/farmer/meta/entity/label" calculate="concat(&quot;Farmer &quot;,  /data/farm/farmer/farmer_name )" type="string" readonly="true()"/>
@@ -997,8 +994,8 @@ module.exports = {
         <species>pine</species>
         <circumference>12</circumference>
         <meta>
-          <entity dataset="trees" create="" id="f73ea0a0-f51f-4d13-a7cb-c2123ba06f34">
-            <label>pine</label>
+          <entity dataset="trees" create="1" id="f73ea0a0-f51f-4d13-a7cb-c2123ba06f34">
+            <label>Pine</label>
           </entity>
         </meta>
       </tree>
@@ -1006,8 +1003,8 @@ module.exports = {
         <species>oak</species>
         <circumference>13</circumference>
         <meta>
-          <entity dataset="trees" create="" id="090c56ff-25f4-4503-b760-f6bef8528152">
-            <label>oak</label>
+          <entity dataset="trees" create="1" id="090c56ff-25f4-4503-b760-f6bef8528152">
+            <label>Oak</label>
           </entity>
         </meta>
       </tree>
@@ -1027,7 +1024,7 @@ module.exports = {
           <name>parent1</name>
           <age>35</age>
           <meta>
-            <entity dataset="people" create="" id="04f22514-654d-46e6-9d94-41676a5c97e1">
+            <entity dataset="people" create="1" id="04f22514-654d-46e6-9d94-41676a5c97e1">
               <label>parent1</label>
             </entity>
           </meta>
