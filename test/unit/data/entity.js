@@ -1,8 +1,11 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
-const { ConflictType } = require('../../../lib/data/entity');
+const { ConflictType, submissionXmlToEntityData } = require('../../../lib/data/entity');
+const { getDatasets, matchFieldsWithDatasets } = require(appRoot + '/lib/data/dataset');
 const { Entity } = require('../../../lib/model/frames');
+const { getFormFields } = require(appRoot + '/lib/data/schema');
+const { MockField } = require(appRoot + '/test/util/schema');
 const { normalizeUuid,
   extractLabelFromSubmission,
   extractBaseVersionFromSubmission,
@@ -323,6 +326,44 @@ describe('extracting and validating entities', () => {
               trunkVersion: undefined
             });
           }));
+    });
+  });
+
+  describe('extract multiple entities from submission with repeats', () => {
+    // Used to compare entity structure when Object.create(null) used.
+    beforeEach(() => {
+      should.config.checkProtoEql = false;
+    });
+    afterEach(() => {
+      should.config.checkProtoEql = true;
+    });
+
+    describe('new entities in repeats', () => {
+      it('should return multiple entities parsed from a repeat in a submission', async () => {
+        // Prepare form for multi entity extraction by getting datasets, form fields
+        // structural form fields, fields split up by dataset
+        const ds = await getDatasets(testData.forms.repeatEntityHousehold);
+        const ff = await getFormFields(testData.forms.repeatEntityHousehold);
+        const structural = ff.filter(f => f.type === 'repeat' || f.type === 'structure');
+        const fieldsByDataset = matchFieldsWithDatasets(ds.get().datasets, ff);
+
+        // Split fields by dataset
+        const personFields = fieldsByDataset[0].fields.map(f => new MockField(f));
+        const householdFields = fieldsByDataset[1].fields.map(f => new MockField(f));
+
+        // wait i wanted to parse this all in one go
+        const people = await submissionXmlToEntityData(structural, personFields,
+          testData.instances.repeatEntityHousehold.one);
+        people.length.should.eql(3);
+        people[0].system.dataset.should.eql('people');
+        people.map(p => p.system.label).should.eql(['parent1', 'parent2', 'child1']);
+
+        const household = await submissionXmlToEntityData(structural, householdFields,
+          testData.instances.repeatEntityHousehold.one);
+        household.length.should.eql(1);
+        household[0].system.dataset.should.eql('households');
+        household[0].system.label.should.eql('Household:1');
+      });
     });
   });
 
