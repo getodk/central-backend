@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { prepareFieldsForDataset } = require('../../../lib/data/dataset');
 const { getFormFields } = require(appRoot + '/lib/data/schema');
-const { getDatasets, validateDatasetName, validatePropertyName } = require(appRoot + '/lib/data/dataset');
+const { getDatasets, matchFieldsWithDatasets, validateDatasetName, validatePropertyName } = require(appRoot + '/lib/data/dataset');
 const testData = require(appRoot + '/test/data/xml');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
@@ -598,6 +598,266 @@ describe('entities from repeats', () => {
         { name: 'farmers', actions: [ 'create' ], path: '/farm/farmer' },
         { name: 'farms', actions: [ 'create' ], path: '/farm' }
       ]);
+    });
+  });
+
+  describe('matching form fields with datasets', () => {
+    it('should match fields with dataset inside a repeat', async () => {
+      const ds = await getDatasets(testData.forms.repeatEntityTrees);
+      const ff = await getFormFields(testData.forms.repeatEntityTrees);
+      const res = matchFieldsWithDatasets(ds.get().datasets, ff);
+      res.length.should.equal(1);
+      res[0].should.eql({
+        dataset: {
+          name: 'trees',
+          actions: ['create'],
+          path: '/tree'
+        },
+        fields: [
+          {
+            name: 'tree',
+            order: 1,
+            path: '/tree',
+            propertyName: '__repeat',
+            type: 'repeat',
+            internal: true
+          },
+          {
+            name: 'species',
+            order: 2,
+            path: '/tree/species',
+            propertyName: 'species',
+            type: 'string'
+          },
+          {
+            name: 'circumference',
+            order: 3,
+            path: '/tree/circumference',
+            propertyName: 'circumference',
+            type: 'int'
+          },
+          {
+            name: 'entity',
+            order: 5,
+            path: '/tree/meta/entity',
+            propertyName: '__entity',
+            type: 'structure',
+            internal: true
+          },
+          {
+            name: 'label',
+            order: 6,
+            path: '/tree/meta/entity/label',
+            propertyName: '__label',
+            type: 'string',
+            internal: true
+          }
+        ]
+      });
+    });
+
+    it('should match fields with datasets with one in a repeat', async () => {
+      const ds = await getDatasets(testData.forms.repeatEntityHousehold);
+      const ff = await getFormFields(testData.forms.repeatEntityHousehold);
+      const res = matchFieldsWithDatasets(ds.get().datasets, ff);
+      res.length.should.equal(2);
+
+      res[0].should.eql({
+        dataset: {
+          name: 'people',
+          actions: ['create'],
+          path: '/members/person'
+        },
+        fields: [
+          {
+            name: 'person',
+            order: 3,
+            path: '/members/person',
+            propertyName: '__repeat',
+            type: 'repeat',
+            internal: true
+          },
+          {
+            name: 'name',
+            order: 4,
+            path: '/members/person/name',
+            propertyName: 'full_name',
+            type: 'string'
+          },
+          {
+            name: 'age',
+            order: 5,
+            path: '/members/person/age',
+            propertyName: 'age',
+            type: 'int'
+          },
+          {
+            name: 'entity',
+            order: 7,
+            path: '/members/person/meta/entity',
+            propertyName: '__entity',
+            type: 'structure',
+            internal: true
+          },
+          {
+            name: 'label',
+            order: 8,
+            path: '/members/person/meta/entity/label',
+            propertyName: '__label',
+            type: 'string',
+            internal: true
+          }
+        ]
+      });
+
+      res[1].should.eql({
+        dataset: {
+          name: 'households',
+          actions: ['create'],
+          path: '/'
+        },
+        fields: [
+          {
+            name: 'household_id',
+            order: 0,
+            path: '/household_id',
+            propertyName: 'hh_id',
+            type: 'string'
+          },
+          {
+            name: 'num_people',
+            order: 2,
+            path: '/members/num_people',
+            propertyName: 'count',
+            type: 'int'
+          },
+          {
+            name: 'entity',
+            order: 11,
+            path: '/meta/entity',
+            propertyName: '__entity',
+            type: 'structure',
+            internal: true
+          },
+          {
+            name: 'label',
+            order: 12,
+            path: '/meta/entity/label',
+            propertyName: '__label',
+            type: 'string',
+            internal: true
+          }
+        ]
+      });
+    });
+
+    it('should match fields with datasets at different levels', async () => {
+      const ds = await getDatasets(testData.forms.multiEntityFarm);
+      const ff = await getFormFields(testData.forms.multiEntityFarm);
+      const res = matchFieldsWithDatasets(ds.get().datasets, ff);
+      res.length.should.equal(2);
+
+      res[0].should.eql({
+        dataset: {
+          name: 'farmers',
+          actions: ['create'],
+          path: '/farm/farmer'
+        },
+        fields: [
+          {
+            name: 'farmer_name',
+            order: 5,
+            path: '/farm/farmer/farmer_name',
+            propertyName: 'full_name',
+            type: 'string'
+          },
+          {
+            name: 'age',
+            order: 6,
+            path: '/farm/farmer/age',
+            propertyName: 'age',
+            type: 'int'
+          },
+          {
+            name: 'entity',
+            order: 8,
+            path: '/farm/farmer/meta/entity',
+            propertyName: '__entity',
+            type: 'structure',
+            internal: true
+          },
+          {
+            name: 'label',
+            order: 9,
+            path: '/farm/farmer/meta/entity/label',
+            propertyName: '__label',
+            type: 'string',
+            internal: true
+          }
+        ]
+      });
+
+      res[1].should.eql({
+        dataset: {
+          name: 'farms',
+          actions: ['create'],
+          path: '/farm'
+        },
+        fields: [
+          {
+            name: 'farm_id',
+            order: 1,
+            path: '/farm/farm_id',
+            propertyName: 'farm_id',
+            type: 'string'
+          },
+          {
+            name: 'location',
+            order: 2,
+            path: '/farm/location',
+            propertyName: 'geometry',
+            type: 'geopoint'
+          },
+          {
+            name: 'acres',
+            path: '/farm/acres',
+            order: 3,
+            type: 'int',
+            propertyName: 'acres'
+          },
+          {
+            name: 'entity',
+            order: 11,
+            path: '/farm/meta/entity',
+            propertyName: '__entity',
+            type: 'structure',
+            internal: true
+          },
+          {
+            name: 'label',
+            order: 12,
+            path: '/farm/meta/entity/label',
+            propertyName: '__label',
+            type: 'string',
+            internal: true
+          }
+        ]
+      });
+    });
+
+    it('should reject inside matchFieldsWithDatasets if property name is invalid', async () => {
+      const invalid = testData.forms.repeatEntityTrees
+        .replace('entities:saveto="species"', 'entities:saveto="1.badproperty"');
+      const ds = await getDatasets(invalid);
+      const ff = await getFormFields(invalid);
+      try {
+        await matchFieldsWithDatasets(ds.get().datasets, ff);
+        throw new Error('Expected matchFieldsWithDatasets to throw');
+      } catch (err) {
+        err.should.be.instanceOf(Problem);
+        err.problemCode.should.equal(400.25);
+        err.message.should.equal('The entity definition within the form is invalid. Invalid entity property name.');
+      }
     });
   });
 });
