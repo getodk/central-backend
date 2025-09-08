@@ -351,6 +351,10 @@ describe('extracting and validating entities', () => {
         const personFields = fieldsByDataset[0].fields.map(f => new MockField(f));
         const householdFields = fieldsByDataset[1].fields.map(f => new MockField(f));
 
+        // NOTE: fields for each dataset need to include the entity and label fields
+        // but they don't (they only have fields with properties) so the test doesn't work.
+        // In the application code, these other field are combined with the property fields.
+
         // wait i wanted to parse this all in one go
         const people = await submissionXmlToEntityData(structural, personFields,
           testData.instances.repeatEntityHousehold.one);

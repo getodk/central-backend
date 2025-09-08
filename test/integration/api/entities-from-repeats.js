@@ -49,7 +49,7 @@ describe('Entities from Repeats', () => {
     }));
   });
 
-  describe.skip('assigning properties to the individual datasets', () => {
+  describe('assigning properties to the individual datasets', () => {
     it('should assign properties to dataset trees in a repeat group', testService(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -76,7 +76,7 @@ describe('Entities from Repeats', () => {
           linkedForms.should.be.eql([]);
 
           sourceForms.should.be.eql([
-            { name: 'Repeat Trees', xmlFormId: 'repeatEntityTrees', repeatGroup: 'tree' },
+            { name: 'Repeat Trees', xmlFormId: 'repeatEntityTrees', repeatPath: '/tree' },
           ]);
 
           properties.map(({ publishedAt, ...p }) => {
@@ -147,7 +147,7 @@ describe('Entities from Repeats', () => {
           linkedForms.should.be.eql([]);
 
           sourceForms.should.be.eql([
-            { name: 'Household and people', xmlFormId: 'repeatEntityHousehold', repeatGroup: 'person' },
+            { name: 'Household and people', xmlFormId: 'repeatEntityHousehold', repeatPath: '/members/person' },
           ]);
 
           properties.map(({ publishedAt, ...p }) => {
@@ -231,22 +231,6 @@ describe('Entities from Repeats', () => {
           ]);
 
         });
-    }));
-
-    it.skip('[DEBUG TEST] look at the form fields as they come back from the database', testService(async (service, container) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.repeatEntityHousehold)
-        .set('Content-Type', 'application/xml')
-        .expect(200);
-
-      const { sql } = require('slonik');
-      const formDefId = await container.oneFirst(sql`select id from form_defs where "name" = 'Household and people' limit 1`);
-      const fields = await container.Datasets.getFieldsByFormDefId(formDefId);
-      fields.length.should.eql(9);
-      // See fields with __entity and __label propertyNames and datasetIds
-      //console.log(fields);
     }));
   });
 
