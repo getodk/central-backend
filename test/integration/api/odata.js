@@ -345,7 +345,7 @@ describe('api: /forms/:id.svc', () => {
           }))));
 
     // HACK: this test sort of relies on some trickery to make the backend
-    // thing the submission is encrypted even though it isn't (see the replace
+    // think the submission is encrypted even though it isn't (see the replace
     // call). there is some chance this methodology is fragile. (mark1)
     it('should gracefully degrade on encrypted subtables', testService((service) =>
       service.login('alice', (asAlice) =>
