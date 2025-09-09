@@ -244,14 +244,14 @@ describe('Entities API', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/123')
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/00000000-0000-0000-0000-000000000000')
         .expect(404);
     }));
 
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/123')
+      await asAlice.get('/v1/projects/1/datasets/people/entities/00000000-0000-0000-0000-000000000000')
         .expect(404);
     }));
 
@@ -496,7 +496,7 @@ describe('Entities API', () => {
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/123/versions')
+      await asAlice.get('/v1/projects/1/datasets/people/entities/00000000-0000-0000-0000-000000000000/versions')
         .expect(404);
     }));
 
@@ -815,7 +815,7 @@ describe('Entities API', () => {
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/123/diffs')
+      await asAlice.get('/v1/projects/1/datasets/people/entities/00000000-0000-0000-0000-000000000000/diffs')
         .expect(404);
     }));
 
@@ -872,7 +872,7 @@ describe('Entities API', () => {
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/123/audits')
+      await asAlice.get('/v1/projects/1/datasets/people/entities/00000000-0000-0000-0000-000000000000/audits')
         .expect(404);
     }));
 
@@ -1539,19 +1539,19 @@ describe('Entities API', () => {
   describe('PATCH /datasets/:name/entities/:uuid', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
-      await asAlice.patch('/v1/projects/1/datasets/nonexistent/entities/123')
+      await asAlice.patch('/v1/projects/1/datasets/nonexistent/entities/00000000-0000-0000-0000-000000000000')
         .expect(404);
     }));
 
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/123')
+      await asAlice.patch('/v1/projects/1/datasets/people/entities/00000000-0000-0000-0000-000000000000')
         .expect(404);
     }));
 
     it('should reject if the user cannot update', testEntities(async (service) => {
       const asChelsea = await service.login('chelsea');
-      await asChelsea.patch('/v1/projects/1/datasets/people/entities/123')
+      await asChelsea.patch('/v1/projects/1/datasets/people/entities/00000000-0000-0000-0000-000000000000')
         .expect(403);
     }));
 
@@ -2111,14 +2111,14 @@ describe('Entities API', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/datasets/nonexistent/entities/123')
+      await asAlice.delete('/v1/projects/1/datasets/nonexistent/entities/00000000-0000-0000-0000-000000000000')
         .expect(404);
     }));
 
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/datasets/people/entities/123')
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/00000000-0000-0000-0000-000000000000')
         .expect(404);
     }));
 
@@ -2175,7 +2175,7 @@ describe('Entities API', () => {
     it('should reject if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/datasets/people/entities/nonexistant/restore')
+      await asAlice.post('/v1/projects/1/datasets/people/entities/00000000-0000-0000-0000-000000000000/restore')
         .expect(404);
     }));
 
@@ -2976,7 +2976,7 @@ describe('Entities API', () => {
 
       await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
         .send({
-          ids: ['12345678-1234-4123-8234-nonexistent']
+          ids: ['12345678-1234-4123-8234-0123456789ab']
         })
         .expect(200)
         .then(({ body }) => {
@@ -3087,7 +3087,7 @@ describe('Entities API', () => {
 
       await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
         .send({
-          ids: ['12345678-1234-4123-8234-nonexistent']
+          ids: ['12345678-1234-4123-8234-0123456789ab']
         })
         .expect(200)
         .then(({ body }) => {
@@ -3168,7 +3168,7 @@ describe('Entities API', () => {
       // Try to restore both a valid deleted entity and a nonexistent one
       await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
         .send({
-          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-nonexistent']
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-0123456789ab']
         })
         .expect(200)
         .then(({ body }) => {
@@ -3283,7 +3283,7 @@ describe('Entities API', () => {
 
       await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
         .send(testData.instances.simpleEntity.one
-          .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id=""'))
+          .replace('id="12345678-1234-4123-8234-123456789abc"', 'id=""'))
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -3853,7 +3853,7 @@ describe('Entities API', () => {
           .set('Content-Type', 'text/xml')
           .send(testData.instances.simpleEntity.one
             .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:12345678-1234-4123-8234-123456789aaa"'))
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789aaa"'))
           .expect(200);
 
         await exhaust(container);
@@ -3901,7 +3901,7 @@ describe('Entities API', () => {
           .send(testData.instances.simpleEntity.one
             .replace('create="1"', 'update="1"')
             .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2')
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:12345678-1234-4123-8234-123456789aaa"'))
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789aaa"'))
           .expect(200);
 
         await exhaust(container);

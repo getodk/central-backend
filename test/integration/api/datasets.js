@@ -1016,7 +1016,7 @@ describe('datasets and entities', () => {
         await asAlice.post('/v1/projects/1/forms/multiPropertyEntity2/submissions')
           .send(testData.instances.multiPropertyEntity.one
             .replace('multiPropertyEntity', 'multiPropertyEntity2')
-            .replace('uuid:12345678-1234-4123-8234-123456789aaa', 'uuid:12345678-1234-4123-8234-123456789ccc')
+            .replace('12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789ccc')
             .replace('b_q1', 'f_q1')
             .replace('d_q2', 'e_q2'))
           .set('Content-Type', 'application/xml')
@@ -5706,7 +5706,7 @@ describe('datasets and entities', () => {
         // submission is edited to create different entity
         await asAlice.put('/v1/projects/1/forms/simpleEntity/submissions/one')
           .send(testData.instances.simpleEntity.one
-            .replace('id="uuid:12345678-1234-4123-8234-123456789abc"', 'id="uuid:12345678-1234-4123-8234-123456789bbb"')
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789bbb"')
             .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
           .set('Content-Type', 'application/xml')
           .expect(200);

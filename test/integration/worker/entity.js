@@ -300,7 +300,7 @@ describe('worker: entity', () => {
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-              .send(testData.instances.simpleEntity.one.replace('uuid:12345678-1234-4123-8234-123456789abc', 'bad_uuid'))
+              .send(testData.instances.simpleEntity.one.replace('12345678-1234-4123-8234-123456789abc', 'bad_uuid'))
               .set('Content-Type', 'application/xml')
               .expect(200))
             .then(() => asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/one')
