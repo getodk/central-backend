@@ -15,6 +15,3 @@ CREATE INDEX submission_field_extract_geo_cache_non_null_geovalue ON submission_
 CREATE INDEX entity_defs_has_geometry ON entity_defs (id)
     WHERE data ? 'geometry' AND data ->> 'geometry' ~ '\d';
 
-
-CREATE INDEX "submissions_reviewState_idx" ON submissions ("reviewState");
-CREATE INDEX entities_conflict_idx ON entities ("conflict");
