@@ -47,6 +47,9 @@ info:
     - [Bulk delete Entities](/central-api-entity-management/#bulk-deleting-entities) endpoint for deleting multiple Entities at once.
     - [Bulk restore Entities](/central-api-entity-management/#bulk-restoring-entities) endpoint for restoring multiple soft-deleted Entities at once.
 
+    **Changed**:
+    - [Download Dataset](/central-api-dataset-management/#download-dataset) API now supports $search query parameter.
+
     ## ODK Central v2025.2
 
     **Added**:
@@ -8855,6 +8858,8 @@ paths:
 
         The `$filter` querystring parameter can be used to filter on system-level properties, similar to how filtering in the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service) works.
 
+        The `$search` querystring parameter can be used to search entity data (user-defined properties) and the `label` field, using the same search behavior as the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service).
+
         This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in the ETag header. If you pass that value in the If-None-Match header of a subsequent request, then if the Dataset has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the new data.
       operationId: Download Dataset
       parameters:
@@ -8878,6 +8883,12 @@ paths:
         schema:
           type: string
         example: __system/conflict eq \'hard\'
+      - name: $search
+        in: query
+        description: If provided, will search entity data (user-defined properties) and the `label` field.
+        schema:
+          type: string
+        example: john
       responses:
         200:
           description: OK
