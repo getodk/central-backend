@@ -57,7 +57,7 @@ const createEntitiesViaSubmissions = async (user, container, count) => {
       .send(testData.instances.simpleEntity.one
         .replace(/one/g, `submission${i}`)
         .replace(/88/g, i + 1)
-        .replace('uuid:12345678-1234-4123-8234-123456789abc', _uuid))
+        .replace('12345678-1234-4123-8234-123456789abc', _uuid))
       .set('Content-Type', 'application/xml')
       .expect(200);
     uuids.push(_uuid);

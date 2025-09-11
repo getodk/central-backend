@@ -670,7 +670,7 @@ module.exports = {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
               <meta>
                 <instanceID>one</instanceID>
-                <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789abc" create="1">
+                <entities:entity dataset="people" id="12345678-1234-4123-8234-123456789abc" create="1">
                   <entities:label>Alice (88)</entities:label>
                 </entities:entity>
                 <orx:instanceName>one</orx:instanceName>
@@ -682,7 +682,7 @@ module.exports = {
       two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
               <meta>
                 <instanceID>two</instanceID>
-                <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789aaa" create="1">
+                <entities:entity dataset="people" id="12345678-1234-4123-8234-123456789aaa" create="1">
                   <entities:label>Jane (30)</entities:label>
                 </entities:entity>
                 <orx:instanceName>two</orx:instanceName>
@@ -694,7 +694,7 @@ module.exports = {
       three: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
           <meta>
             <instanceID>three</instanceID>
-            <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789bbb" create="1">
+            <entities:entity dataset="people" id="12345678-1234-4123-8234-123456789bbb" create="1">
               <entities:label>John (40)</entities:label>
             </entities:entity>
             <orx:instanceName>three</orx:instanceName>
@@ -706,7 +706,7 @@ module.exports = {
       four: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="simpleEntity" version="1.0">
           <meta>
             <instanceID>four</instanceID>
-            <entities:entity dataset="people" id="uuid:12345678-1234-4123-8234-123456789ccc" create="1">
+            <entities:entity dataset="people" id="12345678-1234-4123-8234-123456789ccc" create="1">
               <entities:label>Robert (18)</entities:label>
             </entities:entity>
             <orx:instanceName>four</orx:instanceName>
@@ -720,7 +720,7 @@ module.exports = {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="multiPropertyEntity" version="1.0">
         <meta>
           <instanceID>one</instanceID>
-          <entities:entity dataset="foo" id="uuid:12345678-1234-4123-8234-123456789aaa" create="1">
+          <entities:entity dataset="foo" id="12345678-1234-4123-8234-123456789aaa" create="1">
             <entities:label>one</entities:label>
           </entities:entity>
         </meta>
@@ -732,7 +732,7 @@ module.exports = {
       two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="multiPropertyEntity" version="1.0">
         <meta>
           <instanceID>two</instanceID>
-          <entities:entity dataset="foo" id="uuid:12345678-1234-4123-8234-123456789bbb" create="1">
+          <entities:entity dataset="foo" id="12345678-1234-4123-8234-123456789bbb" create="1">
             <entities:label>two</entities:label>
           </entities:entity>
         </meta>

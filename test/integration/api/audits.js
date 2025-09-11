@@ -372,7 +372,7 @@ describe('/audits', () => {
       // this second sub will make an error when processing
       await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
         .send(testData.instances.simpleEntity.two
-          .replace('uuid:12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789abc'))
+          .replace('12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789abc'))
         .set('Content-Type', 'application/xml')
         .expect(200);
       await asAlice.patch('/v1/projects/1/forms/simpleEntity/submissions/two')
