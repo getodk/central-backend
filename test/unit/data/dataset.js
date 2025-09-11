@@ -518,30 +518,28 @@ describe('entities from repeats', () => {
       const ff = await getFormFields(testData.forms.repeatEntityTrees);
       const res = matchFieldsWithDatasets(ds.get().datasets, ff);
       res.length.should.equal(1);
-      res[0].should.eql({
-        dataset: {
-          name: 'trees',
-          actions: ['create'],
-          path: '/tree',
-          isRepeat: true
-        },
-        fields: [
-          {
-            name: 'species',
-            order: 2,
-            path: '/tree/species',
-            propertyName: 'species',
-            type: 'string'
-          },
-          {
-            name: 'circumference',
-            order: 3,
-            path: '/tree/circumference',
-            propertyName: 'circumference',
-            type: 'int'
-          }
-        ]
+      res[0].dataset.should.eql({
+        name: 'trees',
+        actions: ['create'],
+        path: '/tree',
+        isRepeat: true
       });
+      res[0].fields.should.eql([
+        {
+          name: 'species',
+          order: 2,
+          path: '/tree/species',
+          propertyName: 'species',
+          type: 'string'
+        },
+        {
+          name: 'circumference',
+          order: 3,
+          path: '/tree/circumference',
+          propertyName: 'circumference',
+          type: 'int'
+        }
+      ]);
     });
 
     it('should match fields with datasets with one in a repeat', async () => {
@@ -550,54 +548,51 @@ describe('entities from repeats', () => {
       const res = matchFieldsWithDatasets(ds.get().datasets, ff);
       res.length.should.equal(2);
 
-      res[0].should.eql({
-        dataset: {
-          name: 'people',
-          actions: ['create'],
-          path: '/members/person',
-          isRepeat: true
-        },
-        fields: [
-          {
-            name: 'name',
-            order: 4,
-            path: '/members/person/name',
-            propertyName: 'full_name',
-            type: 'string'
-          },
-          {
-            name: 'age',
-            order: 5,
-            path: '/members/person/age',
-            propertyName: 'age',
-            type: 'int'
-          }
-        ]
+      res[0].dataset.should.eql({
+        name: 'people',
+        actions: ['create'],
+        path: '/members/person',
+        isRepeat: true
       });
 
-      res[1].should.eql({
-        dataset: {
-          name: 'households',
-          actions: ['create'],
-          path: ''
+      res[0].fields.should.eql([
+        {
+          name: 'name',
+          order: 4,
+          path: '/members/person/name',
+          propertyName: 'full_name',
+          type: 'string'
         },
-        fields: [
-          {
-            name: 'household_id',
-            order: 0,
-            path: '/household_id',
-            propertyName: 'hh_id',
-            type: 'string'
-          },
-          {
-            name: 'num_people',
-            order: 2,
-            path: '/members/num_people',
-            propertyName: 'count',
-            type: 'int'
-          }
-        ]
+        {
+          name: 'age',
+          order: 5,
+          path: '/members/person/age',
+          propertyName: 'age',
+          type: 'int'
+        }
+      ]);
+
+      res[1].dataset.should.eql({
+        name: 'households',
+        actions: ['create'],
+        path: ''
       });
+      res[1].fields.should.eql([
+        {
+          name: 'household_id',
+          order: 0,
+          path: '/household_id',
+          propertyName: 'hh_id',
+          type: 'string'
+        },
+        {
+          name: 'num_people',
+          order: 2,
+          path: '/members/num_people',
+          propertyName: 'count',
+          type: 'int'
+        }
+      ]);
     });
 
     it('should match fields with datasets at different levels', async () => {
@@ -606,60 +601,56 @@ describe('entities from repeats', () => {
       const res = matchFieldsWithDatasets(ds.get().datasets, ff);
       res.length.should.equal(2);
 
-      res[0].should.eql({
-        dataset: {
-          name: 'farmers',
-          actions: ['create'],
-          path: '/farm/farmer'
-        },
-        fields: [
-          {
-            name: 'farmer_name',
-            order: 5,
-            path: '/farm/farmer/farmer_name',
-            propertyName: 'full_name',
-            type: 'string'
-          },
-          {
-            name: 'age',
-            order: 6,
-            path: '/farm/farmer/age',
-            propertyName: 'age',
-            type: 'int'
-          }
-        ]
+      res[0].dataset.should.eql({
+        name: 'farmers',
+        actions: ['create'],
+        path: '/farm/farmer'
       });
+      res[0].fields.should.eql([
+        {
+          name: 'farmer_name',
+          order: 5,
+          path: '/farm/farmer/farmer_name',
+          propertyName: 'full_name',
+          type: 'string'
+        },
+        {
+          name: 'age',
+          order: 6,
+          path: '/farm/farmer/age',
+          propertyName: 'age',
+          type: 'int'
+        }
+      ]);
 
-      res[1].should.eql({
-        dataset: {
-          name: 'farms',
-          actions: ['create'],
-          path: '/farm'
-        },
-        fields: [
-          {
-            name: 'farm_id',
-            order: 1,
-            path: '/farm/farm_id',
-            propertyName: 'farm_id',
-            type: 'string'
-          },
-          {
-            name: 'location',
-            order: 2,
-            path: '/farm/location',
-            propertyName: 'geometry',
-            type: 'geopoint'
-          },
-          {
-            name: 'acres',
-            path: '/farm/acres',
-            order: 3,
-            type: 'int',
-            propertyName: 'acres'
-          }
-        ]
+      res[1].dataset.should.eql({
+        name: 'farms',
+        actions: ['create'],
+        path: '/farm'
       });
+      res[1].fields.should.eql([
+        {
+          name: 'farm_id',
+          order: 1,
+          path: '/farm/farm_id',
+          propertyName: 'farm_id',
+          type: 'string'
+        },
+        {
+          name: 'location',
+          order: 2,
+          path: '/farm/location',
+          propertyName: 'geometry',
+          type: 'geopoint'
+        },
+        {
+          name: 'acres',
+          path: '/farm/acres',
+          order: 3,
+          type: 'int',
+          propertyName: 'acres'
+        }
+      ]);
     });
   });
 });
