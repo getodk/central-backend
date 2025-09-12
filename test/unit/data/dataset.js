@@ -519,7 +519,7 @@ describe('entities from repeats', () => {
       const ds = await getDatasets(testData.forms.repeatEntityTrees).then(o => o.get());
       should.not.exist(ds.warnings);
       ds.datasets.should.eql([
-        { name: 'trees', actions: [ 'create' ], path: '/tree' }
+        { name: 'trees', actions: [ 'create' ], path: '/tree/' }
       ]);
     });
 
@@ -527,8 +527,8 @@ describe('entities from repeats', () => {
       const ds = await getDatasets(testData.forms.repeatEntityHousehold).then(o => o.get());
       should.not.exist(ds.warnings);
       ds.datasets.should.eql([
-        { name: 'people', actions: [ 'create' ], path: '/members/person' },
-        { name: 'households', actions: [ 'create' ], path: '' }
+        { name: 'people', actions: [ 'create' ], path: '/members/person/' },
+        { name: 'households', actions: [ 'create' ], path: '/' }
       ]);
     });
 
@@ -536,8 +536,8 @@ describe('entities from repeats', () => {
       const ds = await getDatasets(testData.forms.multiEntityFarm).then(o => o.get());
       should.not.exist(ds.warnings);
       ds.datasets.should.eql([
-        { name: 'farmers', actions: [ 'create' ], path: '/farm/farmer' },
-        { name: 'farms', actions: [ 'create' ], path: '/farm' }
+        { name: 'farmers', actions: [ 'create' ], path: '/farm/farmer/' },
+        { name: 'farms', actions: [ 'create' ], path: '/farm/' }
       ]);
     });
   });
@@ -551,7 +551,7 @@ describe('entities from repeats', () => {
       res[0].dataset.should.eql({
         name: 'trees',
         actions: ['create'],
-        path: '/tree',
+        path: '/tree/',
         isRepeat: true
       });
       res[0].fields.should.eql([
@@ -581,7 +581,7 @@ describe('entities from repeats', () => {
       res[0].dataset.should.eql({
         name: 'people',
         actions: ['create'],
-        path: '/members/person',
+        path: '/members/person/',
         isRepeat: true
       });
 
@@ -605,7 +605,7 @@ describe('entities from repeats', () => {
       res[1].dataset.should.eql({
         name: 'households',
         actions: ['create'],
-        path: ''
+        path: '/'
       });
       res[1].fields.should.eql([
         {
@@ -634,7 +634,7 @@ describe('entities from repeats', () => {
       res[0].dataset.should.eql({
         name: 'farmers',
         actions: ['create'],
-        path: '/farm/farmer'
+        path: '/farm/farmer/'
       });
       res[0].fields.should.eql([
         {
@@ -656,7 +656,7 @@ describe('entities from repeats', () => {
       res[1].dataset.should.eql({
         name: 'farms',
         actions: ['create'],
-        path: '/farm'
+        path: '/farm/'
       });
       res[1].fields.should.eql([
         {
@@ -683,7 +683,7 @@ describe('entities from repeats', () => {
       ]);
     });
 
-    it('should do something with binds that are outside the context of the entity', async() => {
+    it('should ignore binds / fields with properties that are outside the context of the entity', async() => {
       // Same as repeatEntityTrees but adding a bind to plot_id which is outside of the repeat group
       const form = `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
@@ -740,6 +740,68 @@ describe('entities from repeats', () => {
 
       // there should be no field named plot_id because it is outside the scope of the entity
       should.not.exist(res[0].fields.find(f => f.name === 'plot_id'));
+    });
+
+    it('should not mix up datasets when names are containment matches like farm and farmer', async() => {
+      const form = `
+      <?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+    <h:head>
+        <h:title>Farms and Farmers - Multi Level Entities</h:title>
+        <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+            <instance>
+                <data id="multiEntityFarm" version="2">
+                    <farm>
+                        <farm_id/>
+                        <location/>
+                        <acres/>
+                        <meta>
+                            <entity dataset="farm" id="" create="1">
+                                <label/>
+                            </entity>
+                        </meta>
+                    </farm>
+                    <farmer>
+                        <farmer_name/>
+                        <age/>
+                        <meta>
+                            <entity dataset="farmer" create="" id="">
+                                <label/>
+                            </entity>
+                        </meta>
+                    </farmer>
+                    <meta>
+                        <instanceID/>
+                        <instanceName/>
+                    </meta>
+                </data>
+            </instance>
+            <bind nodeset="/data/farm/farm_id" type="string" entities:saveto="farm_id"/>
+            <bind nodeset="/data/farm/location" type="geopoint" entities:saveto="geometry"/>
+            <bind nodeset="/data/farm/acres" type="int" entities:saveto="acres"/>
+            <bind nodeset="/data/farmer/farmer_name" type="string" entities:saveto="full_name"/>
+            <bind nodeset="/data/farmer/age" type="int" entities:saveto="age"/>
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+            <bind nodeset="/data/meta/instanceName" type="string" calculate="concat(&quot;Farm &quot;,  /data/farm/farm_id , &quot;-&quot;,  /data/farmer/farmer_name )"/>
+            <bind nodeset="/data/farm/meta/entity/@id" type="string" readonly="true()"/>
+            <setvalue ref="/data/farm/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
+            <bind nodeset="/data/farm/meta/entity/label" calculate="concat(&quot;Farm &quot;,  /data/farm/farm_id )" type="string" readonly="true()"/>
+            <bind nodeset="/data/farmer/meta/entity/@id" type="string" readonly="true()"/>
+            <setvalue ref="/data/farmer/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
+            <bind nodeset="/data/farmer/meta/entity/label" calculate="concat(&quot;Farmer &quot;,  /data/farmer/farmer_name )" type="string" readonly="true()"/>
+        </model>
+    </h:head>
+</h:html>`;
+
+      const ds = await getDatasets(form);
+      const ff = await getFormFields(form);
+      const res = matchFieldsWithDatasets(ds.get().datasets, ff);
+      res[0].dataset.name.should.equal('farm');
+      res[0].fields.length.should.eql(3);
+      res[0].testFields.length.should.eql(5);
+      res[1].dataset.name.should.equal('farmer');
+      res[1].fields.length.should.eql(2);
+      res[1].testFields.length.should.eql(4);
     });
   });
 });

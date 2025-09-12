@@ -76,7 +76,7 @@ describe('Entities from Repeats', () => {
           linkedForms.should.be.eql([]);
 
           sourceForms.should.be.eql([
-            { name: 'Repeat Trees', xmlFormId: 'repeatEntityTrees', repeatPath: '/tree' },
+            { name: 'Repeat Trees', xmlFormId: 'repeatEntityTrees', repeatPath: '/tree/' },
           ]);
 
           properties.map(({ publishedAt, ...p }) => {
@@ -147,7 +147,7 @@ describe('Entities from Repeats', () => {
           linkedForms.should.be.eql([]);
 
           sourceForms.should.be.eql([
-            { name: 'Household and people', xmlFormId: 'repeatEntityHousehold', repeatPath: '/members/person' },
+            { name: 'Household and people', xmlFormId: 'repeatEntityHousehold', repeatPath: '/members/person/' },
           ]);
 
           properties.map(({ publishedAt, ...p }) => {

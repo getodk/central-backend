@@ -354,8 +354,8 @@ describe('util/xml', () => {
       it('should return all matched results once the subtree exits', () => {
         findAllWithPath(always(true))(always(42))('open')('open')('close')('close')
           .should.eql([
-            { path: '', data: 42 }, // root element path
-            { path: '/', data: 42 } // child element path
+            { path: '/', data: 42 }, // root element path
+            { path: '//', data: 42 } // child element path
           ]);
       });
     });
