@@ -57,6 +57,7 @@ class odk2geojson_helper_point(SamizdatFunction):
 
 class odk2geojson_helper_linestring(SamizdatFunction):
     deps_on = {odk2geojson_helper_point}
+    re_multipoint_split = r'\s*;\s*'
     function_arguments = "odkgeotrace text, min_length int = 2"
     function_arguments_signature = "odkgeotrace text, min_length int"
     sql_template = f"""
@@ -70,7 +71,7 @@ class odk2geojson_helper_linestring(SamizdatFunction):
                             unnest(
                                 regexp_split_to_array(
                                     odkgeotrace,
-                                    '\s*;\s*'
+                                    '{re_multipoint_split}'
                                 )
                             )
                         ) as thepoint
