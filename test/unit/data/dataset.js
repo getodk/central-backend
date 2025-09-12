@@ -652,5 +652,64 @@ describe('entities from repeats', () => {
         }
       ]);
     });
+
+    it('should do something with binds that are outside the context of the entity', async() => {
+      // Same as repeatEntityTrees but adding a bind to plot_id which is outside of the repeat group
+      const form = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
+    <h:head>
+        <h:title>Repeat Trees</h:title>
+        <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+            <instance>
+                <data id="repeatEntityTrees" version="1">
+                    <plot_id/>
+                    <tree>
+                        <species/>
+                        <circumference/>
+                        <meta>
+                            <entity dataset="trees" create="" id="">
+                                <label/>
+                            </entity>
+                        </meta>
+                    </tree>
+                    <meta>
+                        <instanceID/>
+                    </meta>
+                </data>
+            </instance>
+            <bind nodeset="/data/plot_id" type="string" entities:saveto="plot_id"/>
+            <bind nodeset="/data/tree/species" type="string" entities:saveto="species"/>
+            <bind nodeset="/data/tree/circumference" type="int" entities:saveto="circumference"/>
+            <bind nodeset="/data/tree/meta/entity/@id" type="string"/>
+            <setvalue event="odk-instance-first-load odk-new-repeat" ref="/data/tree/meta/entity/@id" value="uuid()"/>
+            <bind nodeset="/data/tree/meta/entity/label" calculate="../../../species" type="string"/>
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+        </model>
+    </h:head>
+    <h:body>
+        <input ref="/data/plot_id">
+            <label>Enter the ID of the plot</label>
+        </input>
+        <group ref="/data/tree">
+            <label>Enter info about each tree</label>
+            <repeat nodeset="/data/tree">
+                <input ref="/data/tree/species">
+                    <label>Tree Species</label>
+                </input>
+                <input ref="/data/tree/circumference">
+                    <label>Tree Circumference</label>
+                </input>
+            </repeat>
+        </group>
+    </h:body>
+</h:html>`;
+
+      const ds = await getDatasets(form);
+      const ff = await getFormFields(form);
+      const res = matchFieldsWithDatasets(ds.get().datasets, ff);
+
+      // there should be no field named plot_id because it is outside the scope of the entity
+      should.not.exist(res[0].fields.find(f => f.name === 'plot_id'));
+    });
   });
 });
