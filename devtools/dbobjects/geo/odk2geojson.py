@@ -151,7 +151,7 @@ class odk2geojson_multipoint(SamizdatFunction, metaclass=MultigeoMeta):
 
 class odk2geojson_multilinestring(SamizdatFunction, metaclass=MultigeoMeta):
     geofn = odk2geojson_helper_linestring
-    geojsontype = 'MultiLinestring'
+    geojsontype = 'MultiLineString'
 
 
 class odk2geojson_multipolygon(SamizdatFunction, metaclass=MultigeoMeta):
