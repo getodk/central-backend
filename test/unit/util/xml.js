@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const streamTest = require('streamtest').v2;
 const { Readable } = require('stream');
 const { always } = require('ramda');
-const { traverseXml, Traversal, applyTraversal, findOne, findAll, and, root, node, hasAttr, getAll, attr, text, tree, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
+const { traverseXml, Traversal, applyTraversal, findOne, findAll, findAllWithPath, and, root, node, hasAttr, getAll, attr, text, tree, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
 const Option = require(appRoot + '/lib/util/option');
 
 const forever = () => forever;
@@ -349,6 +349,17 @@ describe('util/xml', () => {
         findAll(always(false))(always(42))('open')('open')('close')('close').should.eql([]);
       });
     });
+
+    describe('findAllWithPath', () => {
+      it('should return all matched results once the subtree exits', () => {
+        findAllWithPath(always(true))(always(42))('open')('open')('close')('close')
+          .should.eql([
+            { path: '', data: 42 }, // root element path
+            { path: '/', data: 42 } // child element path
+          ]);
+      });
+    });
+
 
     describe('find filters', () => {
       describe('and', () => {
