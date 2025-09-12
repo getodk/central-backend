@@ -413,7 +413,7 @@ AS
                 ELSE
                     json_build_object(
                         'type',
-                        'MultiLinestring',
+                        'MultiLineString',
                         'coordinates',
                         agg
                     )
@@ -428,7 +428,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_multilinestring(odkgeo text[]) ---
-COMMENT ON FUNCTION "public"."odk2geojson_multilinestring"(odkgeo text[]) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "d54e900f6fc8909fce5be6c2a6a636c3"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_multilinestring"(odkgeo text[]) IS '{"dbsamizdat": {"version": 1, "created": 1757674678, "definition_hash": "138c14f9abd4f61206ed1566fed7d64f"}}';
 
 --- create: form_field_geo ---
 CREATE VIEW "public"."form_field_geo" AS
