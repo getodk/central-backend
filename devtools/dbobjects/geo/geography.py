@@ -97,7 +97,7 @@ class cache_all_submission_geo(SamizdatFunction):
                     submission_defs sdef
                     INNER JOIN form_defs fdef ON
                         (fdef.id = sdef."formDefId")
-                    INNER JOIN form_field_geo ffgeo ON
+                    INNER JOIN {form_field_geo} ffgeo ON
                         (ffgeo.formschema_id = fdef."schemaId")
                     -- determine outstanding work by left-joining to the cache table
                     LEFT OUTER JOIN {cachetable} cache ON
