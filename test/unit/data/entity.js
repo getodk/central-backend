@@ -1,14 +1,14 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const assert = require('assert');
-const { ConflictType } = require('../../../lib/data/entity');
+const { ConflictType, submissionXmlToEntityData } = require('../../../lib/data/entity');
 const { Entity } = require('../../../lib/model/frames');
+const { entityRepeatFieldsFor } = require(appRoot + '/test/util/schema');
 const { normalizeUuid,
   extractLabelFromSubmission,
   extractBaseVersionFromSubmission,
   extractBranchIdFromSubmission,
   extractTrunkVersionFromSubmission,
-  parseSubmissionXml,
   extractEntity,
   extractBulkSource,
   extractSelectedProperties,
@@ -16,7 +16,6 @@ const { normalizeUuid,
   diffEntityData,
   getDiffProp,
   getWithConflictDetails } = require(appRoot + '/lib/data/entity');
-const { fieldsFor } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
 describe('extracting and validating entities', () => {
@@ -219,7 +218,7 @@ describe('extracting and validating entities', () => {
     });
   });
 
-  describe('extract entity from submission: parseSubmissionXml', () => {
+  describe('extract entity from submission: submissionXmlToEntityData', () => {
     // Used to compare entity structure when Object.create(null) used.
     beforeEach(() => {
       should.config.checkProtoEql = false;
@@ -229,100 +228,169 @@ describe('extracting and validating entities', () => {
     });
 
     describe('new entity', () => {
-      it('should return entity data parsed from submission based on form fields', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one))
-          .then((result) => {
-            should(result.data).eql({ first_name: 'Alice', age: '88' });
-          }));
+      it('should return entity data parsed from submission based on form fields', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.simpleEntity);
+        const result = await submissionXmlToEntityData(structuralFields, entityFields, testData.instances.simpleEntity.one);
+        should(result[0].data).eql({ first_name: 'Alice', age: '88' });
+      });
 
-      it('should return entity system data parsed from submission', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one))
-          .then((result) => {
-            should(result.system).eql({
-              create: '1',
-              id: 'uuid:12345678-1234-4123-8234-123456789abc',
-              label: 'Alice (88)',
-              dataset: 'people',
-              update: undefined,
-              baseVersion: undefined,
-              branchId: undefined,
-              trunkVersion: undefined
-            });
-          }));
+      it('should return entity system data parsed from submission', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.simpleEntity);
+        const result = await submissionXmlToEntityData(structuralFields, entityFields, testData.instances.simpleEntity.one);
+        should(result[0].system).eql({
+          create: '1',
+          id: 'uuid:12345678-1234-4123-8234-123456789abc',
+          label: 'Alice (88)',
+          dataset: 'people',
+          update: undefined,
+          baseVersion: undefined,
+          branchId: undefined,
+          trunkVersion: undefined
+        });
+      });
 
-      it('should get entity uuid without uuid: prefix', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('uuid:', '')))
-          .then((result) => {
-            should(result.system).eql({
-              create: '1',
-              id: '12345678-1234-4123-8234-123456789abc',
-              label: 'Alice (88)',
-              dataset: 'people',
-              update: undefined,
-              baseVersion: undefined,
-              branchId: undefined,
-              trunkVersion: undefined
-            });
-          }));
+      it('should get entity uuid without uuid: prefix', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.simpleEntity);
+        const result = await submissionXmlToEntityData(structuralFields, entityFields, testData.instances.simpleEntity.one.replace('uuid:', ''));
+        should(result[0].system).eql({
+          create: '1',
+          id: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice (88)',
+          dataset: 'people',
+          update: undefined,
+          baseVersion: undefined,
+          branchId: undefined,
+          trunkVersion: undefined
+        });
+      });
 
-      it('should get create property of entity if create is "true"', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="true"')))
-          .then((result) => {
-            result.system.create.should.equal('true');
-          }));
+      it('should get create property of entity if create is "true"', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.simpleEntity);
+        const result = await submissionXmlToEntityData(structuralFields, entityFields, testData.instances.simpleEntity.one.replace('create="1"', 'create="true"'));
+        result[0].system.create.should.equal('true');
+      });
 
-      it('should get any value of create', () =>
-        fieldsFor(testData.forms.simpleEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.simpleEntity.one.replace('create="1"', 'create="foo"')))
-          .then((result) => {
-            result.system.create.should.equal('foo');
-          }));
+      it('should get any value of create', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.simpleEntity);
+        const result = await submissionXmlToEntityData(structuralFields, entityFields, testData.instances.simpleEntity.one.replace('create="1"', 'create="foo"'));
+        result[0].system.create.should.equal('foo');
+      });
 
-      it('should get (but later ignore) baseVersion when it is provided with create instead of update', () =>
-        fieldsFor(testData.forms.updateEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.updateEntity.one.replace('update="1"', 'create="1"')))
-          .then((result) => {
-            should.not.exist(result.system.update);
-            result.system.create.should.equal('1');
-            result.system.baseVersion.should.equal('1');
-          }));
+      it('should get (but later ignore) baseVersion when it is provided with create instead of update', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.updateEntity);
+        const result = await submissionXmlToEntityData(structuralFields, entityFields, testData.instances.updateEntity.one.replace('update="1"', 'create="1"'));
+        should.not.exist(result[0].system.update);
+        result[0].system.create.should.equal('1');
+        result[0].system.baseVersion.should.equal('1');
+      });
     });
 
     describe('update entity', () => {
-      it('should return entity data parsed from submission based on form fields', () =>
-        fieldsFor(testData.forms.updateEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.updateEntity.one))
-          .then((result) => {
-            should(result.data).eql(Object.assign(Object.create(null), { first_name: 'Alicia', age: '85' }));
-          }));
+      it('should return entity data parsed from submission based on form fields', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.updateEntity);
+        const result = await submissionXmlToEntityData(structuralFields, entityFields, testData.instances.updateEntity.one);
+        should(result[0].data).eql(Object.assign(Object.create(null), { first_name: 'Alicia', age: '85' }));
+      });
 
-      it('should return entity system data parsed from submission', () =>
-        fieldsFor(testData.forms.updateEntity)
-          .then((fields) => fields.filter((field) => field.propertyName || field.path.indexOf('/meta/entity') === 0))
-          .then((fields) => parseSubmissionXml(fields, testData.instances.updateEntity.one))
-          .then((result) => {
-            should(result.system).eql({
-              create: undefined,
-              id: '12345678-1234-4123-8234-123456789abc',
-              label: 'Alicia (85)',
-              dataset: 'people',
-              update: '1',
-              baseVersion: '1',
+      it('should return entity system data parsed from submission', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.updateEntity);
+        const result = await submissionXmlToEntityData(structuralFields, entityFields, testData.instances.updateEntity.one);
+        should(result[0].system).eql({
+          create: undefined,
+          id: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alicia (85)',
+          dataset: 'people',
+          update: '1',
+          baseVersion: '1',
+          branchId: undefined,
+          trunkVersion: undefined
+        });
+      });
+    });
+  });
+
+  describe('extract multiple entities from submission with repeats', () => {
+    // Used to compare entity structure when Object.create(null) used.
+    beforeEach(() => {
+      should.config.checkProtoEql = false;
+    });
+    afterEach(() => {
+      should.config.checkProtoEql = true;
+    });
+
+    describe('new entities in repeats', () => {
+      it('should return multiple entities parsed from a repeat in a submission', async () => {
+        // Prepare form for multi entity extraction by getting entity form fields and
+        // structural form fields, all annotated by dataset.
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.repeatEntityHousehold);
+
+        const entities = await submissionXmlToEntityData(
+          structuralFields, entityFields,
+          testData.instances.repeatEntityHousehold.one);
+
+        entities.length.should.eql(4);
+        entities[0].should.eql(
+          {
+            system: {
+              dataset: 'households',
+              id: 'bdee1a6e-060c-47b7-9436-19296b0ded04',
+              create: '1',
+              update: undefined,
+              baseVersion: undefined,
+              trunkVersion: undefined,
               branchId: undefined,
-              trunkVersion: undefined
-            });
-          }));
+              label: 'Household:1'
+            },
+            data: { hh_id: '1', count: '3' }
+          },
+        );
+        entities[1].should.eql(
+          {
+            system: {
+              dataset: 'people',
+              id: '04f22514-654d-46e6-9d94-41676a5c97e1',
+              create: '1',
+              update: undefined,
+              baseVersion: undefined,
+              trunkVersion: undefined,
+              branchId: undefined,
+              label: 'parent1'
+            },
+            data: { full_name: 'parent1', age: '35' }
+          },
+        );
+        entities[2].should.eql(
+          {
+            system: {
+              dataset: 'people',
+              id: '3b082d6c-dcc8-4d42-9fe3-a4e4e5f1bb0a',
+              create: '1',
+              update: undefined,
+              baseVersion: undefined,
+              trunkVersion: undefined,
+              branchId: undefined,
+              label: 'parent2'
+            },
+            data: { full_name: 'parent2', age: '37' }
+          },
+        );
+        entities[3].should.eql(
+          {
+            system: {
+              dataset: 'people',
+              id: '33bc1b45-ab0e-4652-abcf-90926b6dc0a3',
+              create: '1',
+              update: undefined,
+              baseVersion: undefined,
+              trunkVersion: undefined,
+              branchId: undefined,
+              label: 'child1'
+            },
+            data: { full_name: 'child1', age: '12' }
+          },
+        );
+
+      });
     });
   });
 
