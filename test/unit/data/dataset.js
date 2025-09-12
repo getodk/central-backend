@@ -260,7 +260,7 @@ describe('parsing dataset from entity block', () => {
       should.not.exist(fields[2].propertyName);
     }));
 
-  it('should alawys parse entity field as type structure', async () => {
+  it('should always parse entity field as type structure', async () => {
     const form = (entityBlock) => `<?xml version="1.0"?>
       <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
         <h:head>
@@ -324,6 +324,36 @@ describe('parsing dataset from entity block', () => {
       fields[3].path.should.equal('/meta/entity/label');
       fields[3].type.should.equal('unknown'); // type unknown because no child node and no bind
     });
+  });
+
+  it('should always parse entity field as type structure even in group or repeat', async () => {
+    const form = `<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:head>
+          <model entities:entities-version="2025.1.0">
+            <instance>
+              <data id="brokenForm" orx:version="1.0">
+                <tree>
+                  <species/>
+                  <circumference/>
+                  <meta>
+                      <entity dataset="trees" create="" id=""/>
+                  </meta>
+                </tree>
+                <meta>
+                  <instanceID/>
+                </meta>
+              </data>
+            </instance>
+            <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+          </model>
+        </h:head>
+      </h:html>`;
+
+    const fields = await getFormFields(form);
+    fields[4].name.should.equal('entity');
+    fields[4].path.should.equal('/tree/meta/entity');
+    fields[4].type.should.equal('structure');
   });
 });
 
