@@ -135,7 +135,7 @@ class odk2geojson_helper_polygon(SamizdatFunction):
                         THEN
                             NULL  -- first point doesn't match last point; not a polygon
                         ELSE
-                            theline
+                            json_build_array(theline)  -- a polygon goes into an array, the first (and in the odk case, only) polygon is the outer one, the optional next one is the inner one
                     END
                 FROM lineated
             $BODY$

@@ -341,7 +341,7 @@ AS
                 THEN
                     NULL  -- first point doesn't match last point; not a polygon
                 ELSE
-                    theline
+                    json_build_array(theline)  -- a polygon goes into an array, the first (and in the odk case, only) polygon is the outer one, the optional next one is the inner one
             END
         FROM lineated
     $BODY$
@@ -352,7 +352,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_helper_polygon(odkgeoshape text) ---
-COMMENT ON FUNCTION "public"."odk2geojson_helper_polygon"(odkgeoshape text) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "8b499dc130d05b8aca5d6ad6ceb94a80"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_helper_polygon"(odkgeoshape text) IS '{"dbsamizdat": {"version": 1, "created": 1757675872, "definition_hash": "82d01fc92cd4c473f34b915173976efe"}}';
 
 --- create: odk2geojson_linestring(odkgeotrace text) ---
 CREATE FUNCTION "public"."odk2geojson_linestring"(odkgeotrace text)
