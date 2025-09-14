@@ -10,6 +10,7 @@ const { QueryOptions } = require('../../../lib/util/db');
 const { createConflict } = require('../../util/scenarios');
 const { omit, last } = require('ramda');
 const xml2js = require('xml2js');
+const { palatableXML } = require('../../palatable-xml');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
@@ -4860,8 +4861,8 @@ describe('datasets and entities', () => {
     it('should allow update where no label or no properties are updated and entity block is childless', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      const form = `<?xml version="1.0"?>
-      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+      const form = palatableXML(`<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -4875,7 +4876,7 @@ describe('datasets and entities', () => {
             <bind nodeset="/data/age" type="int" entities:saveto="age"/>
           </model>
         </h:head>
-      </h:html>`;
+      </h:html>`);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(form)
@@ -4925,8 +4926,8 @@ describe('datasets and entities', () => {
     it('should allow label to be added to entity block in new version of form', testService(async (service) => {
       const asAlice = await service.login('alice');
 
-      const form = `<?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      const form = palatableXML(`<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -4940,10 +4941,10 @@ describe('datasets and entities', () => {
             <bind nodeset="/data/age" type="int" entities:saveto="age"/>
           </model>
         </h:head>
-      </h:html>`;
+      </h:html>`);
 
-      const form2 = `<?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      const form2 = palatableXML(`<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -4959,7 +4960,7 @@ describe('datasets and entities', () => {
             <bind nodeset="/data/age" type="int" entities:saveto="age"/>
           </model>
         </h:head>
-      </h:html>`;
+      </h:html>`);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(form)
@@ -4977,8 +4978,8 @@ describe('datasets and entities', () => {
     it('should show same field type (structure) for meta/entity tag with and without children', testService(async (service) => {
       const asAlice = await service.login('alice');
 
-      const form = `<?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      const form = palatableXML(`<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -4992,7 +4993,7 @@ describe('datasets and entities', () => {
             <bind nodeset="/data/age" type="int" entities:saveto="age"/>
           </model>
         </h:head>
-      </h:html>`;
+      </h:html>`);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(form)
@@ -5000,8 +5001,8 @@ describe('datasets and entities', () => {
         .expect(200);
 
       // Form with label nested under entity
-      const form2 = `<?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      const form2 = palatableXML(`<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -5017,7 +5018,7 @@ describe('datasets and entities', () => {
             <bind nodeset="/data/age" type="int" entities:saveto="age"/>
           </model>
         </h:head>
-      </h:html>`;
+      </h:html>`);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(form2)
@@ -5046,8 +5047,8 @@ describe('datasets and entities', () => {
     it('should gracefully handle error if incoming entity tag in sub has no attributes', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      const form = `<?xml version="1.0"?>
-      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+      const form = palatableXML(`<?xml version="1.0"?>
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -5061,7 +5062,7 @@ describe('datasets and entities', () => {
             <bind nodeset="/data/age" type="int" entities:saveto="age"/>
           </model>
         </h:head>
-      </h:html>`;
+      </h:html>`);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(form)
