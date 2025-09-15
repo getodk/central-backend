@@ -50,6 +50,9 @@ info:
     **Changed**:
     - [Download Dataset](/central-api-dataset-management/#download-dataset) API now supports $search query parameter.
 
+    **Changed**:
+    - [GET /users](/central-api-accounts-and-users/#listing-users) and [GET /users/:actorId](/central-api-accounts-and-users/#getting-user-details) now include `lastLoginAt` field.
+
     ## ODK Central v2025.2
 
     **Added**:
@@ -12322,6 +12325,12 @@ components:
               type: string
               description: The email address of the user
               example:
+            lastLoginAt:
+              type: string
+              format: date-time
+              nullable: true
+              description: The timestamp of when the user last logged in. Will be null if the user has never logged in.
+              example: "2025-01-15T10:30:00.000Z"
     AppUser:
       allOf: 
         - $ref: '#/components/schemas/Actor'

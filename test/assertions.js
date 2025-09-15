@@ -97,7 +97,7 @@ should.Assertion.add('User', function() {
   this.params = { operator: 'to be a User' };
 
   this.obj.should.be.an.Actor();
-  Object.keys(this.obj).should.containDeep([ 'email' ]);
+  Object.keys(this.obj).should.containDeep([ 'email', 'lastLoginAt' ]);
   this.obj.email.should.be.a.String();
 });
 
