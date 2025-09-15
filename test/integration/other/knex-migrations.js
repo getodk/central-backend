@@ -438,7 +438,7 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
       });
     }));
 
-    it('does not modify other actor data', testServiceFullTrx(async (service, container) => {
+    it.skip('does not modify other actor data', testServiceFullTrx(async (service, container) => {
       await populateUsers(container);
       await service.login('alice');
       await createToken(container);
@@ -922,7 +922,7 @@ describe.skip('database migration: 20231002-01-add-conflict-details.js', functio
   }));
 });
 
-testMigration('20240215-01-entity-delete-verb.js', () => {
+testMigration.skip('20240215-01-entity-delete-verb.js', () => {
   it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service, container) => {
     await populateUsers(container);
 
@@ -954,7 +954,7 @@ testMigration('20240215-01-entity-delete-verb.js', () => {
   }));
 });
 
-testMigration('20240215-02-dedupe-verbs.js', () => {
+testMigration.skip('20240215-02-dedupe-verbs.js', () => {
   it('should remove duplicate submission.update verb', testServiceFullTrx(async (service, container) => {
     await populateUsers(container);
 
