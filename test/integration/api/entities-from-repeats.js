@@ -370,5 +370,42 @@ describe('Entities from Repeats', () => {
           body.map(e => e.currentVersion.label).should.eql([ 'Tree pink lady', 'Tree gala', 'Tree rainier', 'Tree bing' ]);
         });
     }));
+
+    it('should process a submission with repeat entities that update and create', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // create entities to update
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // update one entity and create another
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.two)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // entity that was modified by both submissions
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/f73ea0a0-f51f-4d13-a7cb-c2123ba06f34')
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.label.should.eql('Pine - Updated');
+        });
+
+      // new entity made in the same submission that updated the previous one
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/f50cdbaf-95af-499c-a3e5-d0aea64248d9')
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.label.should.eql('Chestnut');
+        });
+    }));
   });
 });

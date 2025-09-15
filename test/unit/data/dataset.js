@@ -519,7 +519,7 @@ describe('entities from repeats', () => {
       const ds = await getDatasets(testData.forms.repeatEntityTrees).then(o => o.get());
       should.not.exist(ds.warnings);
       ds.datasets.should.eql([
-        { name: 'trees', actions: [ 'create' ], path: '/tree/' }
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' }
       ]);
     });
 
@@ -550,7 +550,7 @@ describe('entities from repeats', () => {
       res.length.should.equal(1);
       res[0].dataset.should.eql({
         name: 'trees',
-        actions: ['create'],
+        actions: ['create', 'update'],
         path: '/tree/',
         isRepeat: true
       });

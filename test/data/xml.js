@@ -497,7 +497,7 @@ module.exports = {
                         <species/>
                         <circumference/>
                         <meta>
-                            <entity dataset="trees" create="" id="">
+                            <entity dataset="trees" create="" update="" id="">
                                 <label/>
                             </entity>
                         </meta>
@@ -1079,6 +1079,29 @@ module.exports = {
       </tree>
       <meta>
         <instanceID>one</instanceID>
+      </meta>
+    </data>`,
+      two: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="repeatEntityTrees" version="1">
+      <plot_id>1</plot_id>
+      <tree>
+        <circumference>13</circumference>
+        <meta>
+          <entity dataset="trees" update="1" id="f73ea0a0-f51f-4d13-a7cb-c2123ba06f34" baseVersion="1" trunkVersion="" branchId="">
+            <label>Pine - Updated</label>
+          </entity>
+        </meta>
+      </tree>
+      <tree>
+        <species>chestnut</species>
+        <circumference>22</circumference>
+        <meta>
+          <entity dataset="trees" create="1" id="f50cdbaf-95af-499c-a3e5-d0aea64248d9">
+            <label>Chestnut</label>
+          </entity>
+        </meta>
+      </tree>
+      <meta>
+        <instanceID>two</instanceID>
       </meta>
     </data>`
     },
