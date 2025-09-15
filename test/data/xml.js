@@ -672,6 +672,75 @@ module.exports = {
     </h:body>
 </h:html>`,
 
+    nestedRepeatEntity: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+    <h:head>
+        <h:title>nestedRepeatEntities</h:title>
+        <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+            <instance>
+                <data id="nestedRepeatEntity" version="20250915105318">
+                    <plot>
+                        <plot_id/>
+                        <crop/>
+                        <tree>
+                            <species/>
+                            <health_status/>
+                            <meta>
+                                <entity dataset="trees" id="" create="1">
+                                    <label/>
+                                </entity>
+                            </meta>
+                        </tree>
+                        <meta>
+                            <entity dataset="plots" id="" create="1">
+                                <label/>
+                            </entity>
+                        </meta>
+                    </plot>
+                    <meta>
+                        <instanceID/>
+                    </meta>
+                </data>
+            </instance>
+            <bind nodeset="/data/plot/plot_id" type="string" entities:saveto="plot_id"/>
+            <bind nodeset="/data/plot/crop" type="string" entities:saveto="crop"/>
+            <bind nodeset="/data/plot/tree/species" type="string" entities:saveto="species"/>
+            <bind nodeset="/data/plot/tree/health_status" type="string" entities:saveto="health_status"/>
+            <bind nodeset="/data/plot/tree/meta/entity/@id" type="string" readonly="true()"/>
+            <setvalue ref="/data/plot/tree/meta/entity/@id" event="odk-instance-first-load odk-new-repeat" type="string" readonly="true()" value="uuid()"/>
+            <bind nodeset="/data/plot/tree/meta/entity/label" calculate="concat(&quot;Tree &quot;,  ../../../species )" type="string" readonly="true()"/>
+            <bind nodeset="/data/plot/meta/entity/@id" type="string" readonly="true()"/>
+            <setvalue ref="/data/plot/meta/entity/@id" event="odk-instance-first-load odk-new-repeat" type="string" readonly="true()" value="uuid()"/>
+            <bind nodeset="/data/plot/meta/entity/label" calculate="concat(&quot;Plot &quot;,  ../../../plot_id , &quot;: &quot;,  ../../../crop )" type="string" readonly="true()"/>
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+        </model>
+    </h:head>
+    <h:body>
+        <group ref="/data/plot">
+            <label>Enter info about each plot</label>
+            <repeat nodeset="/data/plot">
+                <input ref="/data/plot/plot_id">
+                    <label>Enter the ID of the plot</label>
+                </input>
+                <input ref="/data/plot/crop">
+                    <label>Enter the name of the crop</label>
+                </input>
+                <group ref="/data/plot/tree">
+                    <label>Enter info about each tree</label>
+                    <repeat nodeset="/data/plot/tree">
+                        <input ref="/data/plot/tree/species">
+                            <label>Species</label>
+                        </input>
+                        <input ref="/data/plot/tree/health_status">
+                            <label>Health status</label>
+                        </input>
+                    </repeat>
+                </group>
+            </repeat>
+        </group>
+    </h:body>
+</h:html>`,
+
     groupRepeat: `<?xml version="1.0"?>
     <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
         <h:head>
@@ -1084,6 +1153,69 @@ module.exports = {
         <instanceName>Farm 123-Barb</instanceName>
       </meta>
     </data>`
+    },
+    nestedRepeatEntity: {
+      one: `<data
+    xmlns:jr="http://openrosa.org/javarosa"
+    xmlns:orx="http://openrosa.org/xforms" id="nestedRepeatEntity" version="20250915105318">
+    <plot>
+      <plot_id>123</plot_id>
+      <crop>cherries</crop>
+      <tree>
+        <species>bing</species>
+        <health_status>good</health_status>
+        <meta>
+          <entity dataset="trees" id="a09128f6-9a27-4f17-983e-9a44d4f906a4" create="1">
+            <label>Tree bing</label>
+          </entity>
+        </meta>
+      </tree>
+      <tree>
+        <species>rainier</species>
+        <health_status>ok</health_status>
+        <meta>
+          <entity dataset="trees" id="dff8c2ac-df7f-46f6-81b7-e6ec698e036a" create="1">
+            <label>Tree rainier</label>
+          </entity>
+        </meta>
+      </tree>
+      <meta>
+        <entity dataset="plots" id="4989736e-b971-4996-b255-38578b47d734" create="1">
+          <label>Plot 123: cherries</label>
+        </entity>
+      </meta>
+    </plot>
+    <plot>
+      <plot_id>333</plot_id>
+      <crop>apples</crop>
+      <tree>
+        <species>gala</species>
+        <health_status>ok</health_status>
+        <meta>
+          <entity dataset="trees" id="06b601a3-f7e0-402d-9892-ed01d066eec1" create="1">
+            <label>Tree gala</label>
+          </entity>
+        </meta>
+      </tree>
+      <tree>
+        <species>pink lady</species>
+        <health_status>good</health_status>
+        <meta>
+          <entity dataset="trees" id="d7dc7e20-5bf9-4e00-a2fa-cd3043eb546b" create="1">
+            <label>Tree pink lady</label>
+          </entity>
+        </meta>
+      </tree>
+      <meta>
+        <entity dataset="plots" id="22f5831e-5b1b-4faa-8a9d-02bafe3fde70" create="1">
+          <label>Plot 333: apples</label>
+        </entity>
+      </meta>
+    </plot>
+    <meta>
+      <instanceID>one</instanceID>
+    </meta>
+</data>`
     },
     groupRepeat: {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="groupRepeat">

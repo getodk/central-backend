@@ -342,5 +342,33 @@ describe('Entities from Repeats', () => {
           body.currentVersion.label.should.eql('child1');
         });
     }));
+
+    it('should process a submission with entities in two levels of repeat groups', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.nestedRepeatEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/nestedRepeatEntity/submissions')
+        .send(testData.instances.nestedRepeatEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/plots/entities')
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body.map(e => e.currentVersion.label).should.eql([ 'Plot 333: apples', 'Plot 123: cherries' ]);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .then(({ body }) => {
+          body.length.should.equal(4);
+          body.map(e => e.currentVersion.label).should.eql([ 'Tree pink lady', 'Tree gala', 'Tree rainier', 'Tree bing' ]);
+        });
+    }));
   });
 });
