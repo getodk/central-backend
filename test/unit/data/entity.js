@@ -391,6 +391,128 @@ describe('extracting and validating entities', () => {
         );
 
       });
+
+      // TODO: entity parsing needs to be fixed. it isn't following _any_ repeat to get to entity repeat
+      it.skip('should return multiple entities from repeat / group / repeat / group', async () => {
+        const form = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+  <h:head>
+    <h:title>Deeply Nested Entities in Repeats</h:title>
+    <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+      <instance>
+        <data id="deeply_nested_repeat_entities" version="20250916155723">
+          <outer_repeat>
+            <outer_group>
+              <inner_repeat>
+                <inner_group>
+                  <species/>
+                  <health_status/>
+                  <meta>
+                    <entity dataset="trees" id="" create="1">
+                      <label/>
+                    </entity>
+                  </meta>
+                </inner_group>
+              </inner_repeat>
+            </outer_group>
+          </outer_repeat>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/outer_repeat/outer_group/inner_repeat/inner_group/species" type="string" entities:saveto="species"/>
+      <bind nodeset="/data/outer_repeat/outer_group/inner_repeat/inner_group/health_status" type="string"/>
+      <bind nodeset="/data/outer_repeat/outer_group/inner_repeat/inner_group/meta/entity/@id" type="string" readonly="true()"/>
+      <setvalue ref="/data/outer_repeat/outer_group/inner_repeat/inner_group/meta/entity/@id" event="odk-instance-first-load odk-new-repeat" type="string" readonly="true()" value="uuid()"/>
+      <bind nodeset="/data/outer_repeat/outer_group/inner_repeat/inner_group/meta/entity/label" calculate="concat(&quot;Tree &quot;,  ../../../species )" type="string" readonly="true()"/>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/outer_repeat">
+      <label>Outer Repeat</label>
+      <repeat nodeset="/data/outer_repeat">
+        <group ref="/data/outer_repeat/outer_group">
+          <label>Outer Group</label>
+          <group ref="/data/outer_repeat/outer_group/inner_repeat">
+            <label>Inner Repeat</label>
+            <repeat nodeset="/data/outer_repeat/outer_group/inner_repeat">
+              <group ref="/data/outer_repeat/outer_group/inner_repeat/inner_group">
+                <label>Inner Group</label>
+                <input ref="/data/outer_repeat/outer_group/inner_repeat/inner_group/species">
+                  <label>Tree Species</label>
+                </input>
+                <input ref="/data/outer_repeat/outer_group/inner_repeat/inner_group/health_status">
+                  <label>Tree Health</label>
+                </input>
+              </group>
+            </repeat>
+          </group>
+        </group>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>`;
+
+        const sub = `<data
+    xmlns:jr="http://openrosa.org/javarosa"
+    xmlns:orx="http://openrosa.org/xforms" id="deeply_nested_repeat_entities" version="20250916155723">
+    <outer_repeat>
+      <outer_group>
+        <inner_repeat>
+          <inner_group>
+            <species>mango</species>
+            <health_status>good</health_status>
+            <meta>
+              <entity dataset="trees" id="3bbe1c39-445a-4b51-831f-305222c52c42" create="1">
+                <label>Tree mango</label>
+              </entity>
+            </meta>
+          </inner_group>
+        </inner_repeat>
+        <inner_repeat>
+          <inner_group>
+            <species>apple</species>
+            <health_status>ok</health_status>
+            <meta>
+              <entity dataset="trees" id="d50e5360-54d2-4219-a594-0efd884721f0" create="1">
+                <label>Tree apple</label>
+              </entity>
+            </meta>
+          </inner_group>
+        </inner_repeat>
+      </outer_group>
+    </outer_repeat>
+    <outer_repeat>
+      <outer_group>
+        <inner_repeat>
+          <inner_group>
+            <species>lime</species>
+            <health_status>good</health_status>
+            <meta>
+              <entity dataset="trees" id="88c9ddc5-e171-4435-ab84-1ae3c209d4b5" create="1">
+                <label>Tree lime</label>
+              </entity>
+            </meta>
+          </inner_group>
+        </inner_repeat>
+      </outer_group>
+    </outer_repeat>
+    <meta>
+      <instanceID>uuid:08487fb1-59ea-4df0-adb3-6c67e11484b3</instanceID>
+    </meta>
+  </data>`;
+
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(form);
+
+        const entities = await submissionXmlToEntityData(
+          structuralFields, entityFields,
+          sub);
+
+        entities.length.should.eql(3);
+
+      });
     });
   });
 

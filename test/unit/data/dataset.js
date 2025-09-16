@@ -803,5 +803,78 @@ describe('entities from repeats', () => {
       res[1].fields.length.should.eql(2);
       res[1].testFields.length.should.eql(4);
     });
+
+    it('should possibly allow entity scope to be a group within a repeat and not the repeat itself', async() => {
+      const form = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+  <h:head>
+    <h:title>Deeply Nested Entities in Repeats</h:title>
+    <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+      <instance>
+        <data id="deeply_nested_repeat_entities" version="20250916155723">
+          <outer_repeat>
+            <outer_group>
+              <inner_repeat>
+                <inner_group>
+                  <species/>
+                  <health_status/>
+                  <meta>
+                    <entity dataset="trees" id="" create="1">
+                      <label/>
+                    </entity>
+                  </meta>
+                </inner_group>
+              </inner_repeat>
+            </outer_group>
+          </outer_repeat>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/outer_repeat/outer_group/inner_repeat/inner_group/species" type="string" entities:saveto="species"/>
+      <bind nodeset="/data/outer_repeat/outer_group/inner_repeat/inner_group/health_status" type="string"/>
+      <bind nodeset="/data/outer_repeat/outer_group/inner_repeat/inner_group/meta/entity/@id" type="string" readonly="true()"/>
+      <setvalue ref="/data/outer_repeat/outer_group/inner_repeat/inner_group/meta/entity/@id" event="odk-instance-first-load odk-new-repeat" type="string" readonly="true()" value="uuid()"/>
+      <bind nodeset="/data/outer_repeat/outer_group/inner_repeat/inner_group/meta/entity/label" calculate="concat(&quot;Tree &quot;,  ../../../species )" type="string" readonly="true()"/>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/outer_repeat">
+      <label>Outer Repeat</label>
+      <repeat nodeset="/data/outer_repeat">
+        <group ref="/data/outer_repeat/outer_group">
+          <label>Outer Group</label>
+          <group ref="/data/outer_repeat/outer_group/inner_repeat">
+            <label>Inner Repeat</label>
+            <repeat nodeset="/data/outer_repeat/outer_group/inner_repeat">
+              <group ref="/data/outer_repeat/outer_group/inner_repeat/inner_group">
+                <label>Inner Group</label>
+                <input ref="/data/outer_repeat/outer_group/inner_repeat/inner_group/species">
+                  <label>Tree Species</label>
+                </input>
+                <input ref="/data/outer_repeat/outer_group/inner_repeat/inner_group/health_status">
+                  <label>Tree Health</label>
+                </input>
+              </group>
+            </repeat>
+          </group>
+        </group>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>`;
+
+      const ds = await getDatasets(form);
+      const ff = await getFormFields(form);
+      const res = matchFieldsWithDatasets(ds.get().datasets, ff);
+
+      res.length.should.equal(1);
+      res[0].dataset.name.should.equal('trees');
+      res[0].dataset.path.should.equal('/outer_repeat/outer_group/inner_repeat/inner_group/');
+      res[0].fields.length.should.eql(1);
+      res[0].testFields.length.should.eql(3);
+    });
   });
 });
