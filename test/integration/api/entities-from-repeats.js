@@ -371,6 +371,28 @@ describe('Entities from Repeats', () => {
         });
     }));
 
+    it('should process a submission with entity declared in a repeat / group', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.groupRepeatEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/groupRepeatEntity/submissions')
+        .send(testData.instances.groupRepeatEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .then(({ body }) => {
+          body.length.should.equal(2);
+          body.map(e => e.currentVersion.label).should.eql([ 'Tree kumquat', 'Tree fig' ]);
+        });
+    }));
+
     it('should process a submission with repeat entities that update and create', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 

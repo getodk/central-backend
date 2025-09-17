@@ -798,13 +798,13 @@ describe('entities from repeats', () => {
       const res = matchFieldsWithDatasets(ds.get().datasets, ff);
       res[0].dataset.name.should.equal('farm');
       res[0].fields.length.should.eql(3);
-      res[0].testFields.length.should.eql(5);
+      res[0].testFields.length.should.eql(6);
       res[1].dataset.name.should.equal('farmer');
       res[1].fields.length.should.eql(2);
-      res[1].testFields.length.should.eql(4);
+      res[1].testFields.length.should.eql(5);
     });
 
-    it('should possibly allow entity scope to be a group within a repeat and not the repeat itself', async() => {
+    it('should allow entity scope to be a group within a repeat and not the repeat itself', async() => {
       const form = `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
   <h:head>
@@ -874,7 +874,7 @@ describe('entities from repeats', () => {
       res[0].dataset.name.should.equal('trees');
       res[0].dataset.path.should.equal('/outer_repeat/outer_group/inner_repeat/inner_group/');
       res[0].fields.length.should.eql(1);
-      res[0].testFields.length.should.eql(3);
+      res[0].testFields.length.should.eql(4);
     });
   });
 });

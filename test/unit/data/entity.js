@@ -319,11 +319,54 @@ describe('extracting and validating entities', () => {
     });
 
     describe('new entities in repeats', () => {
-      it('should return multiple entities parsed from a repeat in a submission', async () => {
-        // Prepare form for multi entity extraction by getting entity form fields and
-        // structural form fields, all annotated by dataset.
+      // The following tests should cover the core form and entity parsing code for many different configurations
+      // of entities within repeats and groups.
+      // Each test prepares form for multi entity parsing by retrieving entity form fields and
+      // structural form fields, all annotated by dataset.
+
+      it('should return entities in repeat', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.repeatEntityTrees);
+
+        // Fields relevant to dataset
+        entityFields.filter(e => e.datasetId === 'trees').map(e => e.path).should.eql([
+          '/tree',
+          '/tree/species',
+          '/tree/circumference',
+          '/tree/meta/entity',
+          '/tree/meta/entity/label'
+        ]);
+
+        // Use fields to parse entity data from submission
+        const entities = await submissionXmlToEntityData(
+          structuralFields, entityFields,
+          testData.instances.repeatEntityTrees.one);
+
+        entities.length.should.equal(2);
+        entities.map(e => e.system.label).should.eql([ 'Pine', 'Oak' ]);
+        entities.map(e => e.system.dataset).should.eql([ 'trees', 'trees' ]);
+      });
+
+      it('should return root entity and child entities in repeat', async () => {
         const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.repeatEntityHousehold);
 
+        // Fields relevant to people dataset
+        entityFields.filter(e => e.datasetId === 'people').map(e => e.path).should.eql([
+          '/members/person',
+          '/members/person/name',
+          '/members/person/age',
+          '/members/person/meta/entity',
+          '/members/person/meta/entity/label'
+        ]);
+
+        // Fields relevant to households dataset
+        entityFields.filter(e => e.datasetId === 'households').map(e => e.path).should.eql([
+          '/household_id',
+          '/members/num_people',
+          '/meta/entity',
+          '/meta/entity/label'
+        ]);
+
+        // Use fields to parse entity data from submission
         const entities = await submissionXmlToEntityData(
           structuralFields, entityFields,
           testData.instances.repeatEntityHousehold.one);
@@ -389,11 +432,377 @@ describe('extracting and validating entities', () => {
             data: { full_name: 'child1', age: '12' }
           },
         );
-
       });
 
-      // TODO: entity parsing needs to be fixed. it isn't following _any_ repeat to get to entity repeat
-      it.skip('should return multiple entities from repeat / group / repeat / group', async () => {
+      it('should return entities in different levels but no repeats', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.multiEntityFarm);
+
+        // Fields relevant to dataset
+        entityFields.filter(e => e.datasetId === 'farms').map(e => e.path).should.eql([
+          '/farm',
+          '/farm/farm_id',
+          '/farm/location',
+          '/farm/acres',
+          '/farm/meta/entity',
+          '/farm/meta/entity/label'
+        ]);
+
+        entityFields.filter(e => e.datasetId === 'farmers').map(e => e.path).should.eql([
+          '/farm/farmer',
+          '/farm/farmer/farmer_name',
+          '/farm/farmer/age',
+          '/farm/farmer/meta/entity',
+          '/farm/farmer/meta/entity/label'
+        ]);
+
+        // Use fields to parse entity data from submission
+        const entities = await submissionXmlToEntityData(
+          structuralFields, entityFields,
+          testData.instances.multiEntityFarm.one);
+
+        entities.length.should.equal(2);
+        entities.map(e => e.system.label).should.eql([ 'Farm 123', 'Farmer Barb' ]);
+        entities.map(e => e.system.dataset).should.eql([ 'farms', 'farmers' ]);
+
+        // Spot check a few entities' data
+        entities[0].data.acres.should.equal('30');
+        entities[1].data.full_name.should.equal('Barb');
+      });
+
+      it('should return entities from two levels of repeats', async () => {
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.nestedRepeatEntity);
+
+        // Fields relevant to dataset
+        entityFields.filter(e => e.datasetId === 'plots').map(e => e.path).should.eql([
+          '/plot',
+          '/plot/plot_id',
+          '/plot/crop',
+          '/plot/meta/entity',
+          '/plot/meta/entity/label'
+        ]);
+
+        entityFields.filter(e => e.datasetId === 'trees').map(e => e.path).should.eql([
+          '/plot/tree',
+          '/plot/tree/species',
+          '/plot/tree/health_status',
+          '/plot/tree/meta/entity',
+          '/plot/tree/meta/entity/label'
+        ]);
+
+        // Use fields to parse entity data from submission
+        const entities = await submissionXmlToEntityData(
+          structuralFields, entityFields,
+          testData.instances.nestedRepeatEntity.one);
+
+        // Two plots + two trees per plot
+        entities.length.should.equal(6);
+        entities.map(e => e.system.label).should.eql([
+          'Plot 123: cherries',
+          'Plot 333: apples',
+          'Tree bing',
+          'Tree rainier',
+          'Tree gala',
+          'Tree pink lady'
+        ]);
+        entities.map(e => e.system.dataset).should.eql([ 'plots', 'plots', 'trees', 'trees', 'trees', 'trees' ]);
+
+        // Spot check a few entities' data
+        entities[0].data.crop.should.equal('cherries');
+        entities[3].data.species.should.equal('rainier');
+      });
+
+      it('should return entities from parallel repeats', async () => {
+        const form = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+  <h:head>
+    <h:title>Parallel Repeats</h:title>
+    <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+      <instance>
+        <data id="parallel_repeats" version="20250917094650">
+          <tree>
+            <tree_species/>
+            <tree_health_status/>
+            <meta>
+              <entity dataset="trees" id="" create="1">
+                <label/>
+              </entity>
+            </meta>
+          </tree>
+          <flower>
+            <flower_species/>
+            <flower_health_status/>
+            <meta>
+              <entity dataset="flowers" id="" create="1">
+                <label/>
+              </entity>
+            </meta>
+          </flower>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/tree/tree_species" type="string" entities:saveto="species"/>
+      <bind nodeset="/data/tree/tree_health_status" type="string" entities:saveto="health_status"/>
+      <bind nodeset="/data/tree/meta/entity/@id" type="string" readonly="true()"/>
+      <setvalue ref="/data/tree/meta/entity/@id" event="odk-instance-first-load odk-new-repeat" type="string" readonly="true()" value="uuid()"/>
+      <bind nodeset="/data/tree/meta/entity/label" calculate="concat(&quot;Tree: &quot;,  ../../../tree_species )" type="string" readonly="true()"/>
+      <bind nodeset="/data/flower/flower_species" type="string" entities:saveto="species"/>
+      <bind nodeset="/data/flower/flower_health_status" type="string" entities:saveto="health_status"/>
+      <bind nodeset="/data/flower/meta/entity/@id" type="string" readonly="true()"/>
+      <setvalue ref="/data/flower/meta/entity/@id" event="odk-instance-first-load odk-new-repeat" type="string" readonly="true()" value="uuid()"/>
+      <bind nodeset="/data/flower/meta/entity/label" calculate="concat(&quot;Flower: &quot;,  ../../../flower_species )" type="string" readonly="true()"/>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/tree">
+      <label>Tree info</label>
+      <repeat nodeset="/data/tree">
+        <input ref="/data/tree/tree_species">
+          <label>Tree Species</label>
+        </input>
+        <input ref="/data/tree/tree_health_status">
+          <label>Tree Health</label>
+        </input>
+      </repeat>
+    </group>
+    <group ref="/data/flower">
+      <label>Flower info</label>
+      <repeat nodeset="/data/flower">
+        <input ref="/data/flower/flower_species">
+          <label>Tree Species</label>
+        </input>
+        <input ref="/data/flower/flower_health_status">
+          <label>Tree Health</label>
+        </input>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>`;
+
+        const sub = `<data
+      xmlns:jr="http://openrosa.org/javarosa"
+      xmlns:orx="http://openrosa.org/xforms" id="parallel_repeats" version="20250917094650">
+      <tree>
+        <tree_species>oak</tree_species>
+        <tree_health_status>good</tree_health_status>
+        <meta>
+          <entity dataset="trees" id="d3edfdd2-d6cf-4d2f-9b0d-29b13d7ce2db" create="1">
+            <label>Tree: oak</label>
+          </entity>
+        </meta>
+      </tree>
+      <tree>
+        <tree_species>willow</tree_species>
+        <tree_health_status>bad</tree_health_status>
+        <meta>
+          <entity dataset="trees" id="eb05e114-6c4b-4351-b317-1523599fab73" create="1">
+            <label>Tree: willow</label>
+          </entity>
+        </meta>
+      </tree>
+      <flower>
+        <flower_species>tulip</flower_species>
+        <flower_health_status>good</flower_health_status>
+        <meta>
+          <entity dataset="flowers" id="337a9379-d294-413c-a424-f10ae3859e12" create="1">
+            <label>Flower: tulip</label>
+          </entity>
+        </meta>
+      </flower>
+      <flower>
+        <flower_species>daisy</flower_species>
+        <flower_health_status>good</flower_health_status>
+        <meta>
+          <entity dataset="flowers" id="4a9c4b62-4f41-498a-9a4d-212dad20d643" create="1">
+            <label>Flower: daisy</label>
+          </entity>
+        </meta>
+      </flower>
+      <meta>
+        <instanceID>uuid:85feea84-59a8-4252-b895-730cfb9153b2</instanceID>
+      </meta>
+    </data>`;
+
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(form);
+
+        // Fields relevant to dataset
+        entityFields.filter(e => e.datasetId === 'trees').map(e => e.path).should.eql([
+          '/tree',
+          '/tree/tree_species',
+          '/tree/tree_health_status',
+          '/tree/meta/entity',
+          '/tree/meta/entity/label'
+        ]);
+
+        entityFields.filter(e => e.datasetId === 'flowers').map(e => e.path).should.eql([
+          '/flower',
+          '/flower/flower_species',
+          '/flower/flower_health_status',
+          '/flower/meta/entity',
+          '/flower/meta/entity/label'
+        ]);
+
+        // Use fields to parse entity data from submission
+        const entities = await submissionXmlToEntityData(
+          structuralFields, entityFields,
+          sub);
+
+        // two trees + two flowers
+        entities.length.should.equal(4);
+        entities.map(e => e.system.label).should.eql([ 'Tree: oak', 'Tree: willow', 'Flower: tulip', 'Flower: daisy' ]);
+        entities.map(e => e.system.dataset).should.eql([ 'trees', 'trees', 'flowers', 'flowers' ]);
+        // both entity types have species field so these are mixed between tree species and flower species
+        entities.map(e => e.data.species).should.eql([ 'oak', 'willow', 'tulip', 'daisy' ]);
+      });
+
+      it('should return entities from a repeat / group', async () => {
+        // This is kind of a weird form design where the entity declaration is within a repeat
+        // but not associated with that repeat because it's in a group nested within the repeat.
+        // But all the entities in the submission still get picked up.
+
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.groupRepeatEntity);
+
+        entityFields.filter(e => e.datasetId === 'trees').map(e => e.path).should.eql([
+          '/tree/tree_details',
+          '/tree/tree_details/species',
+          '/tree/tree_details/health_status',
+          '/tree/tree_details/meta/entity',
+          '/tree/tree_details/meta/entity/label'
+        ]);
+
+        const entities = await submissionXmlToEntityData(
+          structuralFields, entityFields,
+          testData.instances.groupRepeatEntity.one);
+
+        entities.length.should.eql(2);
+        entities.map(e => e.system.dataset).should.eql([ 'trees', 'trees' ]);
+        entities.map(e => e.system.label).should.eql([ 'Tree fig', 'Tree kumquat' ]);
+        entities.map(e => e.data.species).should.eql([ 'fig', 'kumquat' ]);
+      });
+
+      it('should return entities from a doubly nested repeat with no outer entities', async () => {
+        const form = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+  <h:head>
+    <h:title>Entity in nested repeat</h:title>
+    <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+      <instance>
+        <data id="entity_nested_repeat" version="20250917093816">
+          <plot>
+            <tree>
+              <species/>
+              <health_status/>
+              <meta>
+                <entity dataset="trees" id="" create="1">
+                  <label/>
+                </entity>
+              </meta>
+            </tree>
+          </plot>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/plot/tree/species" type="string" entities:saveto="species"/>
+      <bind nodeset="/data/plot/tree/health_status" type="string"/>
+      <bind nodeset="/data/plot/tree/meta/entity/@id" type="string" readonly="true()"/>
+      <setvalue ref="/data/plot/tree/meta/entity/@id" event="odk-instance-first-load odk-new-repeat" type="string" readonly="true()" value="uuid()"/>
+      <bind nodeset="/data/plot/tree/meta/entity/label" calculate="&quot;Tree&quot;" type="string" readonly="true()"/>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/plot">
+      <label>Outer Repeat</label>
+      <repeat nodeset="/data/plot">
+        <group ref="/data/plot/tree">
+          <label>Inner Repeat</label>
+          <repeat nodeset="/data/plot/tree">
+            <input ref="/data/plot/tree/species">
+              <label>Tree Species</label>
+            </input>
+            <input ref="/data/plot/tree/health_status">
+              <label>Tree Health</label>
+            </input>
+          </repeat>
+        </group>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>`;
+
+        const sub = `<data
+    xmlns:jr="http://openrosa.org/javarosa"
+    xmlns:orx="http://openrosa.org/xforms" id="entity_nested_repeat" version="20250917093816">
+    <plot>
+      <tree>
+        <species>fir</species>
+        <health_status>ok</health_status>
+        <meta>
+          <entity dataset="trees" id="a45cc990-1b0f-43b2-a042-6d6c57da7f7b" create="1">
+            <label>Tree</label>
+          </entity>
+        </meta>
+      </tree>
+      <tree>
+        <species>pine</species>
+        <health_status>bad</health_status>
+        <meta>
+          <entity dataset="trees" id="ca2c5a04-1b80-4a82-b265-f12d125febc1" create="1">
+            <label>Tree</label>
+          </entity>
+        </meta>
+      </tree>
+    </plot>
+    <plot>
+      <tree>
+        <species>apple</species>
+        <health_status>good</health_status>
+        <meta>
+          <entity dataset="trees" id="80aa358d-6989-4c34-97f5-6087036d7c0b" create="1">
+            <label>Tree</label>
+          </entity>
+        </meta>
+      </tree>
+      <tree>
+        <species>pear</species>
+        <health_status>bad</health_status>
+        <meta>
+          <entity dataset="trees" id="a172bee9-002b-40d2-a216-a71d98ccc30d" create="1">
+            <label>Tree</label>
+          </entity>
+        </meta>
+      </tree>
+    </plot>
+    <meta>
+      <instanceID>uuid:f9d9b462-bc1e-4e7c-bb56-23d4232064e0</instanceID>
+    </meta>
+  </data>`;
+
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(form);
+
+        entityFields.filter(e => e.datasetId === 'trees').map(e => e.path).should.eql([
+          '/plot/tree',
+          '/plot/tree/species',
+          '/plot/tree/meta/entity',
+          '/plot/tree/meta/entity/label'
+        ]);
+
+        const entities = await submissionXmlToEntityData(
+          structuralFields, entityFields,
+          sub);
+
+        entities.length.should.eql(4);
+        entities.map(e => e.system.dataset).should.eql([ 'trees', 'trees', 'trees', 'trees' ]);
+        // Form didn't construct unique labels
+        entities.map(e => e.system.label).should.eql([ 'Tree', 'Tree', 'Tree', 'Tree' ]);
+        entities.map(e => e.data.species).should.eql([ 'fir', 'pine', 'apple', 'pear' ]);
+      });
+
+      it('should return multiple entities from repeat / group / repeat / group', async () => {
         const form = `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
   <h:head>
@@ -506,11 +915,21 @@ describe('extracting and validating entities', () => {
 
         const { entityFields, structuralFields } = await entityRepeatFieldsFor(form);
 
+        entityFields.filter(e => e.datasetId === 'trees').map(e => e.path).should.eql([
+          '/outer_repeat/outer_group/inner_repeat/inner_group',
+          '/outer_repeat/outer_group/inner_repeat/inner_group/species',
+          '/outer_repeat/outer_group/inner_repeat/inner_group/meta/entity',
+          '/outer_repeat/outer_group/inner_repeat/inner_group/meta/entity/label'
+        ]);
+
         const entities = await submissionXmlToEntityData(
           structuralFields, entityFields,
           sub);
 
         entities.length.should.eql(3);
+        entities.map(e => e.system.dataset).should.eql([ 'trees', 'trees', 'trees' ]);
+        entities.map(e => e.system.label).should.eql([ 'Tree mango', 'Tree apple', 'Tree lime' ]);
+        entities.map(e => e.data.species).should.eql([ 'mango', 'apple', 'lime' ]);
 
       });
     });

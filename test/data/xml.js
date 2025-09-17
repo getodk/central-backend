@@ -741,6 +741,61 @@ module.exports = {
     </h:body>
 </h:html>`,
 
+    groupRepeatEntity: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+  <h:head>
+    <h:title>Entity in group in repeat</h:title>
+    <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+      <instance>
+        <data id="groupRepeatEntity" version="20250917095610">
+          <tree>
+            <tree_id/>
+            <tree_details>
+              <species/>
+              <health_status/>
+              <meta>
+                <entity dataset="trees" id="" create="1">
+                  <label/>
+                </entity>
+              </meta>
+            </tree_details>
+          </tree>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/tree/tree_id" type="string"/>
+      <bind nodeset="/data/tree/tree_details/species" type="string" entities:saveto="species"/>
+      <bind nodeset="/data/tree/tree_details/health_status" type="string" entities:saveto="health_status"/>
+      <bind nodeset="/data/tree/tree_details/meta/entity/@id" type="string" readonly="true()"/>
+      <setvalue ref="/data/tree/tree_details/meta/entity/@id" event="odk-instance-first-load odk-new-repeat" type="string" readonly="true()" value="uuid()"/>
+      <bind nodeset="/data/tree/tree_details/meta/entity/label" calculate="concat(&quot;Tree &quot;,  ../../../species )" type="string" readonly="true()"/>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/tree">
+      <label>Fill out info about trees</label>
+      <repeat nodeset="/data/tree">
+        <input ref="/data/tree/tree_id">
+          <label>Tree ID</label>
+        </input>
+        <group ref="/data/tree/tree_details">
+          <label>Tree Details</label>
+          <input ref="/data/tree/tree_details/species">
+            <label>Tree Species</label>
+          </input>
+          <input ref="/data/tree/tree_details/health_status">
+            <label>Tree Health</label>
+          </input>
+        </group>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>
+`,
+
     groupRepeat: `<?xml version="1.0"?>
     <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
         <h:head>
@@ -1239,6 +1294,39 @@ module.exports = {
       <instanceID>one</instanceID>
     </meta>
 </data>`
+    },
+    groupRepeatEntity: {
+      one: `<data
+    xmlns:jr="http://openrosa.org/javarosa"
+    xmlns:orx="http://openrosa.org/xforms" id="groupRepeatEntity" version="20250917095610">
+    <tree>
+      <tree_id>222</tree_id>
+      <tree_details>
+        <species>fig</species>
+        <health_status>good</health_status>
+        <meta>
+          <entity dataset="trees" id="10e2ea24-0370-47df-85ee-b41010344cb8" create="1">
+            <label>Tree fig</label>
+          </entity>
+        </meta>
+      </tree_details>
+    </tree>
+    <tree>
+      <tree_id>444</tree_id>
+      <tree_details>
+        <species>kumquat</species>
+        <health_status>ok</health_status>
+        <meta>
+          <entity dataset="trees" id="8c4ada62-d76d-433b-80ce-a8c7f2a68d4b" create="1">
+            <label>Tree kumquat</label>
+          </entity>
+        </meta>
+      </tree_details>
+    </tree>
+    <meta>
+      <instanceID>uuid:ace07f85-a5d5-4660-88b5-98286d833772</instanceID>
+    </meta>
+  </data>`
     },
     groupRepeat: {
       one: `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="groupRepeat">
