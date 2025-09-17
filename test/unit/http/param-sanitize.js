@@ -211,6 +211,12 @@ describe('query parameter sanitization', () => {
       ).should.deepEqual([ '2000-01-02T03:04:05.666666666+07:08', 'Infinity', '[)' ]);
     });
 
+    it('should return a PostgreSQL tstzrange literal for a start__gt query parameter', () => {
+      Sanitize.getTSTZRangeFromQueryParams(
+        makeQuery('start__gt=2000-01-02T03:04:05.666666666%2B07:08')
+      ).should.deepEqual([ '2000-01-02T03:04:05.666666666+07:08', 'Infinity', '()' ]);
+    });
+
     it('should return a PostgreSQL tstzrange literal for an end__lte query parameter', () => {
       Sanitize.getTSTZRangeFromQueryParams(
         makeQuery('end__lte=2000-01-02T03:04:05.666666666%2B07:08')
@@ -239,6 +245,15 @@ describe('query parameter sanitization', () => {
       assert.throws(
         () => Sanitize.getTSTZRangeFromQueryParams(
           makeQuery('end__lt=2222-01-02T03:04:05.666666666%2B07:08&end__lte=2000-01-02T03:04:05.666666666%2B07:08')
+        ),
+        { problemCode: 400.41 },
+      );
+    });
+
+    it('should throw when both start__gt and start__gte query parameters are specified', () => {
+      assert.throws(
+        () => Sanitize.getTSTZRangeFromQueryParams(
+          makeQuery('start__gt=2222-01-02T03:04:05.666666666%2B07:08&start__gte=2000-01-02T03:04:05.666666666%2B07:08')
         ),
         { problemCode: 400.41 },
       );
