@@ -29,7 +29,7 @@ GROUP BY (
 ;
 
 --- sign: form_field_repeatmembership ---
-COMMENT ON VIEW "public"."form_field_repeatmembership" IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "ec5eddaa15a263de704fd258891c4c1b"}}';
+COMMENT ON VIEW "public"."form_field_repeatmembership" IS '{"dbsamizdat": {"version": 1, "definition_hash": "ec5eddaa15a263de704fd258891c4c1b"}}';
 
 --- create: hash_text(inputs text[]) ---
 CREATE FUNCTION "public"."hash_text"(variadic inputs text[])
@@ -55,7 +55,7 @@ PARALLEL SAFE
 ;
 
 --- sign: hash_text(inputs text[]) ---
-COMMENT ON FUNCTION "public"."hash_text"(inputs text[]) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "007e5c12e860dba768d44b73884cb6d7"}}';
+COMMENT ON FUNCTION "public"."hash_text"(inputs text[]) IS '{"dbsamizdat": {"version": 1, "definition_hash": "007e5c12e860dba768d44b73884cb6d7"}}';
 
 --- create: odk2geojson_helper_point(odkgeopoint text) ---
 CREATE FUNCTION "public"."odk2geojson_helper_point"(odkgeopoint text)
@@ -99,7 +99,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_helper_point(odkgeopoint text) ---
-COMMENT ON FUNCTION "public"."odk2geojson_helper_point"(odkgeopoint text) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "0664e48d6a1e56e24df5556276f5cb55"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_helper_point"(odkgeopoint text) IS '{"dbsamizdat": {"version": 1, "definition_hash": "0664e48d6a1e56e24df5556276f5cb55"}}';
 
 --- create: safe_to_xml(input text) ---
 CREATE FUNCTION "public"."safe_to_xml"(input text)
@@ -121,7 +121,7 @@ PARALLEL SAFE
 ;
 
 --- sign: safe_to_xml(input text) ---
-COMMENT ON FUNCTION "public"."safe_to_xml"(input text) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "a78eb90e2eeca40d1abc101185fb95c0"}}';
+COMMENT ON FUNCTION "public"."safe_to_xml"(input text) IS '{"dbsamizdat": {"version": 1, "definition_hash": "a78eb90e2eeca40d1abc101185fb95c0"}}';
 
 --- create: hash_text_to_bigint(inputs text[]) ---
 CREATE FUNCTION "public"."hash_text_to_bigint"(variadic inputs text[])
@@ -137,7 +137,7 @@ PARALLEL SAFE
 ;
 
 --- sign: hash_text_to_bigint(inputs text[]) ---
-COMMENT ON FUNCTION "public"."hash_text_to_bigint"(inputs text[]) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "d5d919010c84efbfc5218f7e85dca34e"}}';
+COMMENT ON FUNCTION "public"."hash_text_to_bigint"(inputs text[]) IS '{"dbsamizdat": {"version": 1, "definition_hash": "d5d919010c84efbfc5218f7e85dca34e"}}';
 
 --- create: odk2geojson_helper_linestring(odkgeotrace text, min_length int) ---
 CREATE FUNCTION "public"."odk2geojson_helper_linestring"(odkgeotrace text, min_length int = 2)
@@ -191,7 +191,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_helper_linestring(odkgeotrace text, min_length int) ---
-COMMENT ON FUNCTION "public"."odk2geojson_helper_linestring"(odkgeotrace text, min_length int) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "2bfe4f9ba41bfb0fef430d09761ac0a8"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_helper_linestring"(odkgeotrace text, min_length int) IS '{"dbsamizdat": {"version": 1, "definition_hash": "2bfe4f9ba41bfb0fef430d09761ac0a8"}}';
 
 --- create: odk2geojson_multipoint(odkgeo text[]) ---
 CREATE FUNCTION "public"."odk2geojson_multipoint"(odkgeo text[])
@@ -234,7 +234,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_multipoint(odkgeo text[]) ---
-COMMENT ON FUNCTION "public"."odk2geojson_multipoint"(odkgeo text[]) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "e0025adb6d892205c360e3af110a9f10"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_multipoint"(odkgeo text[]) IS '{"dbsamizdat": {"version": 1, "definition_hash": "e0025adb6d892205c360e3af110a9f10"}}';
 
 --- create: odk2geojson_point(odkgeopoint text) ---
 CREATE FUNCTION "public"."odk2geojson_point"(odkgeopoint text)
@@ -264,7 +264,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_point(odkgeopoint text) ---
-COMMENT ON FUNCTION "public"."odk2geojson_point"(odkgeopoint text) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "a294add1603d60f6ba6ad895ddb7a948"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_point"(odkgeopoint text) IS '{"dbsamizdat": {"version": 1, "definition_hash": "a294add1603d60f6ba6ad895ddb7a948"}}';
 
 --- create: form_field_meta ---
 CREATE VIEW "public"."form_field_meta" AS
@@ -284,7 +284,7 @@ FROM
 ;
 
 --- sign: form_field_meta ---
-COMMENT ON VIEW "public"."form_field_meta" IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "cd0367f94f1a74b8e537a90a1cd10383"}}';
+COMMENT ON VIEW "public"."form_field_meta" IS '{"dbsamizdat": {"version": 1, "definition_hash": "cd0367f94f1a74b8e537a90a1cd10383"}}';
 
 --- create: odk2geojson_ducktyped(odkgeosomething text) ---
 CREATE FUNCTION "public"."odk2geojson_ducktyped"(odkgeosomething text)
@@ -320,7 +320,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_ducktyped(odkgeosomething text) ---
-COMMENT ON FUNCTION "public"."odk2geojson_ducktyped"(odkgeosomething text) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "5b87cb19912dcb3baf967dffaa4ccf94"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_ducktyped"(odkgeosomething text) IS '{"dbsamizdat": {"version": 1, "definition_hash": "5b87cb19912dcb3baf967dffaa4ccf94"}}';
 
 --- create: odk2geojson_helper_polygon(odkgeoshape text) ---
 CREATE FUNCTION "public"."odk2geojson_helper_polygon"(odkgeoshape text)
@@ -352,7 +352,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_helper_polygon(odkgeoshape text) ---
-COMMENT ON FUNCTION "public"."odk2geojson_helper_polygon"(odkgeoshape text) IS '{"dbsamizdat": {"version": 1, "created": 1757675872, "definition_hash": "82d01fc92cd4c473f34b915173976efe"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_helper_polygon"(odkgeoshape text) IS '{"dbsamizdat": {"version": 1, "definition_hash": "82d01fc92cd4c473f34b915173976efe"}}';
 
 --- create: odk2geojson_linestring(odkgeotrace text) ---
 CREATE FUNCTION "public"."odk2geojson_linestring"(odkgeotrace text)
@@ -385,7 +385,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_linestring(odkgeotrace text) ---
-COMMENT ON FUNCTION "public"."odk2geojson_linestring"(odkgeotrace text) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "45bbba22d115bc6a0e3d93ce47ffa5b6"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_linestring"(odkgeotrace text) IS '{"dbsamizdat": {"version": 1, "definition_hash": "45bbba22d115bc6a0e3d93ce47ffa5b6"}}';
 
 --- create: odk2geojson_multilinestring(odkgeo text[]) ---
 CREATE FUNCTION "public"."odk2geojson_multilinestring"(odkgeo text[])
@@ -428,7 +428,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_multilinestring(odkgeo text[]) ---
-COMMENT ON FUNCTION "public"."odk2geojson_multilinestring"(odkgeo text[]) IS '{"dbsamizdat": {"version": 1, "created": 1757674678, "definition_hash": "138c14f9abd4f61206ed1566fed7d64f"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_multilinestring"(odkgeo text[]) IS '{"dbsamizdat": {"version": 1, "definition_hash": "138c14f9abd4f61206ed1566fed7d64f"}}';
 
 --- create: form_field_geo ---
 CREATE VIEW "public"."form_field_geo" AS
@@ -470,7 +470,7 @@ FROM
 ;
 
 --- sign: form_field_geo ---
-COMMENT ON VIEW "public"."form_field_geo" IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "d41db151c588548301cc0edd0952b433"}}';
+COMMENT ON VIEW "public"."form_field_geo" IS '{"dbsamizdat": {"version": 1, "definition_hash": "d41db151c588548301cc0edd0952b433"}}';
 
 --- create: odk2geojson_multipolygon(odkgeo text[]) ---
 CREATE FUNCTION "public"."odk2geojson_multipolygon"(odkgeo text[])
@@ -513,7 +513,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_multipolygon(odkgeo text[]) ---
-COMMENT ON FUNCTION "public"."odk2geojson_multipolygon"(odkgeo text[]) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "74bd019e8898ca644a6265eaac9bf114"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_multipolygon"(odkgeo text[]) IS '{"dbsamizdat": {"version": 1, "definition_hash": "74bd019e8898ca644a6265eaac9bf114"}}';
 
 --- create: odk2geojson_polygon(odkgeoshape text) ---
 CREATE FUNCTION "public"."odk2geojson_polygon"(odkgeoshape text)
@@ -546,7 +546,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_polygon(odkgeoshape text) ---
-COMMENT ON FUNCTION "public"."odk2geojson_polygon"(odkgeoshape text) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "4768ee052c2cc289f29d20d0950f33f7"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_polygon"(odkgeoshape text) IS '{"dbsamizdat": {"version": 1, "definition_hash": "4768ee052c2cc289f29d20d0950f33f7"}}';
 
 --- create: odk2geojson_dispatch(odktype text, isrepeatable boolean, fieldvalues text[]) ---
 CREATE FUNCTION "public"."odk2geojson_dispatch"(odktype text, isrepeatable boolean, fieldvalues text[])
@@ -579,7 +579,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_dispatch(odktype text, isrepeatable boolean, fieldvalues text[]) ---
-COMMENT ON FUNCTION "public"."odk2geojson_dispatch"(odktype text, isrepeatable boolean, fieldvalues text[]) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "9563da45e3ece655061e8348162f8b31"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_dispatch"(odktype text, isrepeatable boolean, fieldvalues text[]) IS '{"dbsamizdat": {"version": 1, "definition_hash": "9563da45e3ece655061e8348162f8b31"}}';
 
 --- create: extract_submission_geo(odktype text, isrepeatable boolean, fieldpath text, submission_body xml) ---
 CREATE FUNCTION "public"."extract_submission_geo"(odktype text, isrepeatable boolean, fieldpath text, submission_body xml)
@@ -608,7 +608,7 @@ PARALLEL SAFE
 ;
 
 --- sign: extract_submission_geo(odktype text, isrepeatable boolean, fieldpath text, submission_body xml) ---
-COMMENT ON FUNCTION "public"."extract_submission_geo"(odktype text, isrepeatable boolean, fieldpath text, submission_body xml) IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "1e047cc6db5af6f308d980c174f4cc58"}}';
+COMMENT ON FUNCTION "public"."extract_submission_geo"(odktype text, isrepeatable boolean, fieldpath text, submission_body xml) IS '{"dbsamizdat": {"version": 1, "definition_hash": "1e047cc6db5af6f308d980c174f4cc58"}}';
 
 --- create: cache_all_submission_geo ---
 CREATE FUNCTION "public"."cache_all_submission_geo"()
@@ -658,4 +658,4 @@ PARALLEL UNSAFE
 ;
 
 --- sign: cache_all_submission_geo ---
-COMMENT ON FUNCTION "public"."cache_all_submission_geo"() IS '{"dbsamizdat": {"version": 1, "created": 1756635481, "definition_hash": "78a71bd71a4db7a61b4a647da7882c7b"}}';
+COMMENT ON FUNCTION "public"."cache_all_submission_geo"() IS '{"dbsamizdat": {"version": 1, "definition_hash": "78a71bd71a4db7a61b4a647da7882c7b"}}';
