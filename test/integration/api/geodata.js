@@ -9,11 +9,13 @@ const should = require('should');
 function sortGeoJson(theGeoJSON) {
   theGeoJSON.features.sort((a, b) => (a.id < b.id ? -1 : (a.id > b.id ? 1: 0)));
   theGeoJSON.features.forEach(feat => {
-    feat.geometry.geometries.sort((a, b) => {
-      const aa = [a.type, a.coordinates];
-      const bb = [b.type, b.coordinates];
-      return (aa < bb ? -1: (aa > bb ? 1 : 0));
-    });
+    if (feat.geometry.geometries) {
+      feat.geometry.geometries.sort((a, b) => {
+        const aa = [a.type, a.coordinates];
+        const bb = [b.type, b.coordinates];
+        return (aa < bb ? -1: (aa > bb ? 1 : 0));
+      });
+    }
   });
   return theGeoJSON; // sorts in-place, but for chaining it's handy to return the input
 }
@@ -275,13 +277,12 @@ describe('api: entities-geodata', () => {
       })
       .expect(200);
 
-    const expectedGeoJSON = JSON.parse('{"type":"FeatureCollection","features":[{"type":"Feature","id":"12345678-1234-4123-8234-123456789aaa","properties":null,"geometry":{"type":"Point","coordinates":[2,1,3]}},{"type":"Feature","id":"12345678-1234-4123-8234-123456789aab","properties":null,"geometry":{"type":"LineString","coordinates":[[2,1],[2,1,3],[2,1,3]]}},{"type":"Feature","id":"12345678-1234-4123-8234-123456789aac","properties":null,"geometry":{"type":"Polygon","coordinates":[[2,1],[4,3],[6,5],[2,1]]}}]}');
-    expectedGeoJSON.features.sort((a, b) => (a.type < b.type ? -1 : (a.type > b.type ? 1 : 0)));
+    const expectedGeoJSON = sortGeoJson(palatableGeoJSON(JSON.parse('{"type":"FeatureCollection","features":[{"type":"Feature","id":"12345678-1234-4123-8234-123456789aaa","properties":null,"geometry":{"type":"Point","coordinates":[2,1,3]}},{"type":"Feature","id":"12345678-1234-4123-8234-123456789aab","properties":null,"geometry":{"type":"LineString","coordinates":[[2,1],[2,1,3],[2,1,3]]}},{"type":"Feature","id":"12345678-1234-4123-8234-123456789aac","properties":null,"geometry":{"type":"Polygon","coordinates":[[[2,1],[4,3],[6,5],[2,1]]]}}]}')));
 
     await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson`)
       .expect(200)
       .then(({ body }) => {
-        body.features.sort((a, b) => (a.type < b.type ? -1 : (a.type > b.type ? 1 : 0)));
+        sortGeoJson(body);
         body.should.deepEqual(expectedGeoJSON);
       });
 
