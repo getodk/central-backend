@@ -137,15 +137,40 @@ const expectedGeoFieldDescriptors = (formSchemaId) => [
   }
 ];
 
+const setupGeoSubmissions = async (service, db, bobSubmitsToo = false) => {
+  const asAlice = await service.login('alice');
+  const asBob = await service.login('bob');
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .set('Content-Type', 'application/xml')
+    .send(geoTypes)
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/forms/geotest/submissions')
+    .set('Content-Type', 'application/xml')
+    .send(makeSubmission({ instanceID: '1' }))
+    .expect(200);
+
+  if (bobSubmitsToo) {
+    // We rely on the two back-to-back submitted submissions to not be created
+    // in the same millisecond, so this little delay is just so we won't fail
+    // on very fast systems
+    await db.query(sql`select pg_sleep_for('10 ms')`);
+
+    await asBob.post('/v1/projects/1/forms/geotest/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(makeSubmission({ instanceID: '2' }))
+      .expect(200);
+  }
+
+  return { asAlice };
+};
+
 describe('api: submission-geodata', () => {
 
-  it('form upload creates geofield-descriptors', testService(async (service, { db }) => {
-    const asAlice = await service.login('alice');
 
-    await asAlice.post('/v1/projects/1/forms?publish=true')
-      .set('Content-Type', 'application/xml')
-      .send(geoTypes)
-      .expect(200);
+  it('form upload creates geofield-descriptors', testService(async (service, { db }) => {
+    await setupGeoSubmissions(service, db);
 
     const formSchemaId = await db.oneFirst(sql`select currval('form_schemas_id_seq'::regclass)`);
     // This depends on the policy. If we enable more/other fields than just the first non-repeatgroup field,
@@ -159,18 +184,9 @@ describe('api: submission-geodata', () => {
     geoFieldDescriptors.should.deepEqual(expectedGeoFieldDescriptors(formSchemaId));
   }));
 
-  it('geo-submission is accessible via GeoJSON API (default field)', testService(async (service) => {
-    const asAlice = await service.login('alice');
 
-    await asAlice.post('/v1/projects/1/forms?publish=true')
-      .set('Content-Type', 'application/xml')
-      .send(geoTypes)
-      .expect(200);
-
-    await asAlice.post('/v1/projects/1/forms/geotest/submissions')
-      .set('Content-Type', 'application/xml')
-      .send(makeSubmission({ instanceID: '1' }))
-      .expect(200);
+  it('geo-submission is accessible via GeoJSON API (default field)', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db);
 
     const expectedBody = palatableGeoJSON({
       type: 'FeatureCollection',
@@ -186,7 +202,6 @@ describe('api: submission-geodata', () => {
       ]
     });
 
-
     await asAlice.get('/v1/projects/1/forms/geotest/submissions.geojson')
       .expect(200)
       .then(({ body }) => {
@@ -194,18 +209,8 @@ describe('api: submission-geodata', () => {
       });
   }));
 
-  it('submission post creates geoextracts of all types ((multi)point, (multi)linestring, (multi)polygon))', testService(async (service) => {
-    const asAlice = await service.login('alice');
-
-    await asAlice.post('/v1/projects/1/forms?publish=true')
-      .set('Content-Type', 'application/xml')
-      .send(geoTypes)
-      .expect(200);
-
-    await asAlice.post('/v1/projects/1/forms/geotest/submissions')
-      .set('Content-Type', 'application/xml')
-      .send(makeSubmission({ instanceID: '1' }))
-      .expect(200);
+  it('submission post creates geoextracts of all types ((multi)point, (multi)linestring, (multi)polygon))', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db);
 
     const fieldPaths = expectedGeoFieldDescriptors(0).map(el => el.path).sort();
 
@@ -218,6 +223,141 @@ describe('api: submission-geodata', () => {
       });
 
   }));
+
+  it('submitterId filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db, true);
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submitterId=5&submitterId=6`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(2);
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submitterId=5`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('1');
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submitterId=6`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('2');
+      });
+
+  }));
+
+  it('reviewState filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db, true);
+
+    await asAlice.patch('/v1/projects/1/forms/geotest/submissions/1')
+      .send({ reviewState: 'approved' })
+      .expect(200);
+
+    await asAlice.patch('/v1/projects/1/forms/geotest/submissions/2')
+      .send({ reviewState: 'rejected' })
+      .expect(200);
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?reviewState=approved`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?reviewState=rejected`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?reviewState=approved&reviewState=rejected`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(2);
+      });
+
+  }));
+
+
+  it('deleted filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db, true);
+
+    await asAlice.delete('/v1/projects/1/forms/geotest/submissions/2')
+      .expect(200);
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?deleted=false`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('1');
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?deleted=true`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('2');
+      });
+
+  }));
+
+  it('resultset limiter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db, true);
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(2);
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?limit=1`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+      });
+
+  }));
+
+
+  it('timerange filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db, true);
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions`)
+      .expect(200)
+      .then(async ({ body }) => {
+        const [c1, c2] = body.map(el => el.createdAt).sort();
+
+        await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?end__lt=${c1}`)
+          .expect(200)
+          .then((resp) => {
+            // console.error(resp.body);
+            resp.body.features.length.should.equal(0);
+          });
+
+        await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?start__gt=${c2}`)
+          .expect(200)
+          .then((resp) => {
+            resp.body.features.length.should.equal(0);
+          });
+
+        await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?start__gte=${c1}&end__lte=${c2}`)
+          .expect(200)
+          .then((resp) => {
+            resp.body.features.length.should.equal(2);
+          });
+
+      });
+
+  }));
+
 });
 
 describe('api: entities-geodata', () => {
