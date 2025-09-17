@@ -307,7 +307,7 @@ AS
                 WHEN
                     json_array_length(theline) > 3 AND ((theline::jsonb) -> 0 = (theline::jsonb) -> -1)
                 THEN
-                    json_build_object('type', 'Polygon', 'coordinates', theline)
+                    json_build_object('type', 'Polygon', 'coordinates', json_build_array(theline))
                 ELSE
                     json_build_object('type', 'LineString', 'coordinates', theline)
             END
@@ -320,7 +320,7 @@ PARALLEL SAFE
 ;
 
 --- sign: odk2geojson_ducktyped(odkgeosomething text) ---
-COMMENT ON FUNCTION "public"."odk2geojson_ducktyped"(odkgeosomething text) IS '{"dbsamizdat": {"version": 1, "definition_hash": "5b87cb19912dcb3baf967dffaa4ccf94"}}';
+COMMENT ON FUNCTION "public"."odk2geojson_ducktyped"(odkgeosomething text) IS '{"dbsamizdat": {"version": 1, "definition_hash": "b39f6eed4f671d5be7f3bf37d13c10c5"}}';
 
 --- create: odk2geojson_helper_polygon(odkgeoshape text) ---
 CREATE FUNCTION "public"."odk2geojson_helper_polygon"(odkgeoshape text)
