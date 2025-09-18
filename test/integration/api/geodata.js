@@ -166,6 +166,69 @@ const setupGeoSubmissions = async (service, db, bobSubmitsToo = false) => {
   return { asAlice };
 };
 
+const setupGeoEntities = async (service, db) => {
+  const asAlice = await service.login('alice');
+  const asBob = await service.login('bob');
+
+  await asAlice.post('/v1/projects/1/datasets')
+    .send({
+      name: 'geofun'
+    })
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/datasets/geofun/properties')
+    .send({
+      name: 'geometry'
+    })
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+    .send({
+      uuid: '12345678-1234-4123-8234-123456789aaa',
+      label: 'a',
+      data: { geometry: '1 2 3 0' } // a point
+    })
+    .expect(200);
+
+  await db.query(sql`select pg_sleep_for('10 ms')`);
+
+  await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+    .send({
+      uuid: '12345678-1234-4123-8234-123456789aab',
+      label: 'b',
+      data: { geometry: '1 2; 1 2 3; 1 2 3 4' } // a linestring
+    })
+    .expect(200);
+
+  await db.query(sql`select pg_sleep_for('10 ms')`);
+
+  await asBob.post('/v1/projects/1/datasets/geofun/entities')
+    .send({
+      uuid: '12345678-1234-4123-8234-123456789aac',
+      label: 'c',
+      data: { geometry: '1 2; 3 4; 5 6; 1 2' } // a polygon
+    })
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+    .send({
+      uuid: '12345678-1234-4123-8234-123456789aad',
+      label: 'd',
+      data: { geometry: '1 2 not-an-altitude' } // invalid
+    })
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+    .send({
+      uuid: '12345678-1234-4123-8234-123456789aae',
+      label: 'e',
+      data: { geometry: '100 200' } // invalid
+    })
+    .expect(200);
+
+  return { asAlice, asBob };
+};
+
 describe('api: submission-geodata', () => {
 
 
@@ -360,62 +423,11 @@ describe('api: submission-geodata', () => {
 
 });
 
+
 describe('api: entities-geodata', () => {
 
-  it('should serve valid (and not invalid) geodata for entities', testService(async (service) => {
-    const asAlice = await service.login('alice');
-
-    await asAlice.post('/v1/projects/1/datasets')
-      .send({
-        name: 'geofun'
-      })
-      .expect(200);
-
-    await asAlice.post('/v1/projects/1/datasets/geofun/properties')
-      .send({
-        name: 'geometry'
-      })
-      .expect(200);
-
-    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
-      .send({
-        uuid: '12345678-1234-4123-8234-123456789aaa',
-        label: 'a',
-        data: { geometry: '1 2 3 0' } // a point
-      })
-      .expect(200);
-
-    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
-      .send({
-        uuid: '12345678-1234-4123-8234-123456789aab',
-        label: 'b',
-        data: { geometry: '1 2; 1 2 3; 1 2 3 4' } // a linestring
-      })
-      .expect(200);
-
-    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
-      .send({
-        uuid: '12345678-1234-4123-8234-123456789aac',
-        label: 'c',
-        data: { geometry: '1 2; 3 4; 5 6; 1 2' } // a polygon
-      })
-      .expect(200);
-
-    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
-      .send({
-        uuid: '12345678-1234-4123-8234-123456789aad',
-        label: 'd',
-        data: { geometry: '1 2 not-an-altitude' } // invalid
-      })
-      .expect(200);
-
-    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
-      .send({
-        uuid: '12345678-1234-4123-8234-123456789aae',
-        label: 'e',
-        data: { geometry: '100 200' } // invalid
-      })
-      .expect(200);
+  it('should serve valid (and not invalid) geodata for entities', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
 
     const expectedGeoJSON = sortGeoJson(palatableGeoJSON(JSON.parse('{"type":"FeatureCollection","features":[{"type":"Feature","id":"12345678-1234-4123-8234-123456789aaa","properties":null,"geometry":{"type":"Point","coordinates":[2,1,3]}},{"type":"Feature","id":"12345678-1234-4123-8234-123456789aab","properties":null,"geometry":{"type":"LineString","coordinates":[[2,1],[2,1,3],[2,1,3]]}},{"type":"Feature","id":"12345678-1234-4123-8234-123456789aac","properties":null,"geometry":{"type":"Polygon","coordinates":[[[2,1],[4,3],[6,5],[2,1]]]}}]}')));
 
@@ -425,7 +437,133 @@ describe('api: entities-geodata', () => {
         sortGeoJson(body);
         body.should.deepEqual(expectedGeoJSON);
       });
+  }));
+
+  it('creatorId filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?creatorId=5&creatorId=6`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(3);
+      });
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?creatorId=5`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(2);
+        body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789aab']);
+      });
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?creatorId=6`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aac']);
+      });
+  }));
+
+  it('timerange filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities`)
+      .expect(200)
+      .then(async ({ body }) => {
+        const [c1, , c5] = body.map(el => el.createdAt).sort();
+
+        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?end__lt=${c1}`)
+          .expect(200)
+          .then((resp) => {
+            resp.body.features.length.should.equal(0);
+          });
+
+        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?start__gt=${c5}`)
+          .expect(200)
+          .then((resp) => {
+            resp.body.features.length.should.equal(0);
+          });
+
+        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?start__gte=${c1}&end__lte=${c5}`)
+          .expect(200)
+          .then((resp) => {
+            resp.body.features.length.should.equal(3); // while there are 5 entities, 2 have invalid geodata.
+          });
+
+      });
 
   }));
+
+  it('deletion filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(3);
+      });
+
+    await asAlice.delete(`/v1/projects/1/datasets/geofun/entities/12345678-1234-4123-8234-123456789aaa`)
+      .expect(200);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(2);
+      });
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?deleted=true`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(1);
+      });
+
+  }));
+
+
+  it('resultset limiter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?limit=2`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(2);
+      });
+
+  }));
+
+
+  it('conflict status filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=soft`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(0);
+      });
+
+    await db.query(sql`update entities set conflict = 'soft'::"conflictType" where uuid = '12345678-1234-4123-8234-123456789aaa'`);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=soft`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(1);
+      });
+
+    await db.query(sql`update entities set conflict = 'hard'::"conflictType" where uuid = '12345678-1234-4123-8234-123456789aab'`);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=hard`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(1);
+      });
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=hard&conflict=soft`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(2);
+      });
+
+  }));
+
 
 });
