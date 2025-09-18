@@ -628,6 +628,8 @@ AS
         FROM
             submission_defs sdef
             INNER JOIN form_defs fdef ON
+                sdef.current
+                AND
                 (fdef.id = sdef."formDefId")
             INNER JOIN form_field_geo ffgeo ON
                 (ffgeo.formschema_id = fdef."schemaId")
@@ -658,4 +660,4 @@ PARALLEL UNSAFE
 ;
 
 --- sign: cache_all_submission_geo ---
-COMMENT ON FUNCTION "public"."cache_all_submission_geo"() IS '{"dbsamizdat": {"version": 1, "definition_hash": "78a71bd71a4db7a61b4a647da7882c7b"}}';
+COMMENT ON FUNCTION "public"."cache_all_submission_geo"() IS '{"dbsamizdat": {"version": 1, "definition_hash": "6611d525d4382703bf65591690defebd"}}';
