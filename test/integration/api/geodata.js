@@ -229,6 +229,105 @@ const setupGeoEntities = async (service, db) => {
   return { asAlice, asBob };
 };
 
+const runDBFuncTests = (db, fn, cases) =>
+  Promise.all(
+    cases.map(([input, expected, ...cast]) => {
+      const q = cast.length ?
+        db.oneFirst(sql`select CAST(${sql.identifier([fn])}(${input}) AS ${sql.identifier(cast)})`)
+        :
+        db.oneFirst(sql`select ${sql.identifier([fn])}(${input})`);
+      return q.then(res => should.deepEqual(expected, res));
+    })
+  );
+
+
+describe('db: geodata parsing functions', () => {
+
+  it('odk2geojson_helper_point()', testService(async (_, { db }) => {
+    const cases = [
+      ['', null],
+      [null, null],
+      ['nope', null],
+      ['170 80', null],
+      ['90 190', null],
+      ['90 180', [180, 90]],
+      // When it comes to the amount of whitespace between coordinate atoms, be liberal, since there is no ambiguity.
+      ['90\t \t180', [180, 90]],
+      ['-90 -180', [-180, -90]],
+      // test whether precision is preserved. To test this, inside PG we cast from json to text since the DB adapter molests the json numbers by reading them as a double, with loss of precision.
+      ['89.99999999999999999999999999999999999999999999999999 179.99999999999999999999999999999999999999999999999999', '[179.99999999999999999999999999999999999999999999999999, 89.99999999999999999999999999999999999999999999999999]', 'text'],
+      ['90.01 180', null],
+      ['-90 -180.01', null],
+      ['90.01 -180', null],
+      ['90 180.01', null],
+      ['90 180 notanaltitude', null],
+      ['1.23 4.56 7.89', [ 4.56, 1.23, 7.89 ]],
+      ['-1.23 -4.56 -7.89', [ -4.56, -1.23, -7.89 ]],
+      // while we don't output it, if a precision is specified, it'd better be *correctly* specified
+      ['-1.23 -4.56 -7.89 0.01', [ -4.56, -1.23, -7.89 ]],
+      ['-1.23 -4.56 -7.89 11', [ -4.56, -1.23, -7.89 ]],
+      ['-1.23 -4.56 -7.89 -11', null],
+      ['-1.23 -4.56 -7.89 notaprecision', null],
+    ];
+
+    return runDBFuncTests(db, 'odk2geojson_helper_point', cases);
+  }));
+
+
+  it('odk2geojson_helper_linestring', testService(async (_, { db }) => {
+    // This uses odk2geojson_helper_point, so we don't need to repeat every linestring-variant of its
+    // test cases. We want to test just the point splitting.
+    // Unless, of course, this function is changed to not use odk2geojson_helper_point anymore...
+    const cases = [
+      ['1 2', null],
+      ['1 2 3', null],
+      ['1 2 3 4', null],
+      ['1 2 3 4;', null],
+      // When it comes to the amount of whitespace between points, be liberal, since there is no ambiguity.
+      ['1 2 3 4;5 6 7 8', [[2, 1, 3], [6, 5, 7]]],
+      ['1 2 3 4;\t5 6 7 8', [[2, 1, 3], [6, 5, 7]]],
+      ['1 2 3 4\t; 5 6 7 8', [[2, 1, 3], [6, 5, 7]]],
+      ['1 2 3 4; 5 6 7 8  ;   11 12    \t  ;13 14', [[2, 1, 3], [6, 5, 7], [12, 11], [14, 13]]],
+      ['1 2 3 4; nope, 5 6 7 8', null],
+    ];
+
+    return runDBFuncTests(db, 'odk2geojson_helper_linestring', cases);
+  }));
+
+
+  it('odk2geojson_helper_polygon', testService(async (_, { db }) => {
+    // This uses odk2geojson_helper_linestring, so we don't need to repeat every polygon-variant of its
+    // test cases. We want to test just the polygon-specific part.
+    // Unless, of course, this function is changed to not use odk2geojson_helper_linestring anymore...
+    const cases = [
+      ['1 2; 3 4', null], // too short
+      ['1 2; 3 4; 5 6', null], // too short
+      ['1 2; 3 4; 5 6; 7 8', null], // long enough but doesn't end where it started
+      ['1 2; 3 4; 5 6; 1 2', [[[2, 1], [4, 3], [6, 5], [2, 1]]]], // note that polygons need to be wrapped in another array; the first element is the outer polygon, an optional second element would be the inner polygon (so one can make donuts)
+    ];
+
+    return runDBFuncTests(db, 'odk2geojson_helper_polygon', cases);
+  }));
+
+
+  it('odk2geojson_ducktyped', testService(async (_, { db }) => {
+    // This is used when we don't know the geotype up front (as with entities).
+    // It uses all the odk2geojson_helper_linestring* functions,
+    // so we will not repeat every one of their cases.
+    // We want to test just the ducktyping part.
+    // Unless, of course, this function is changed to not use those helpers anymore...
+    const cases = [
+      ['1 2', { type: 'Point', coordinates: [ 2, 1 ] }],
+      ['1 2; 3 4; 5 6', { type: 'LineString', coordinates: [[ 2, 1 ], [4, 3], [6, 5]] }],
+      ['1 2; 3 4; 5 6; 1 2', { type: 'Polygon', coordinates: [[[2, 1], [4, 3], [6, 5], [2, 1]]] }],
+    ];
+
+    return runDBFuncTests(db, 'odk2geojson_ducktyped', cases);
+  }));
+
+});
+
+
 describe('api: submission-geodata', () => {
 
 
