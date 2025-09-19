@@ -2,6 +2,9 @@ default: base
 
 NODE_CONFIG_ENV ?= test
 export PGAPPNAME ?= odkcentral
+export COMFYCONF_FILES ?= config/default.json
+
+-include Makefile.local
 
 node_modules: package.json
 	npm install

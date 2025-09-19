@@ -1,0 +1,2 @@
+# Copy this to Makefile.local.
+export COMFYCONF_FILES := ${COMFYCONF_FILES}; config/local.json
