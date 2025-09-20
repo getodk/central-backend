@@ -38,6 +38,8 @@ jobs:
 
     - name: E2E Test
       timeout-minutes: 10
+      env:
+        COMFYCONF_FILES : config/default.json
       run: ./test/e2e/standard/run-tests.sh
 
     - uses: ./.github/actions/install-postgres-client
@@ -48,6 +50,8 @@ jobs:
       run: psql -c 'ALTER ROLE jubilant SUPERUSER' postgresql://postgres:odktest@localhost/postgres
     - name: Backup/restore tests
       timeout-minutes: 10
+      env:
+        COMFYCONF_FILES : config/default.json
       run: ./test/e2e/standard/backup-restore.sh
 
     - name: Backend Logs
