@@ -52,8 +52,8 @@ EOF
   read -rp ''
 fi
 
-NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
-NODE_CONFIG_ENV=s3-dev make run &
+node lib/bin/s3-create-bucket.js
+make run &
 serverPid=$!
 
 log 'Waiting for backend to start...'
