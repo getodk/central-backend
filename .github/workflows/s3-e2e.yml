@@ -52,4 +52,6 @@ jobs:
     - run: node lib/bin/create-docker-databases.js
     - name: E2E Test
       timeout-minutes: 10
+      env:
+        COMFYCONF_FILES: "config/default.json; config/s3-dev.json"
       run: ./test/e2e/s3/run-tests.sh

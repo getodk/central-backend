@@ -2,6 +2,9 @@ default: base
 
 NODE_CONFIG_ENV ?= test
 export PGAPPNAME ?= odkcentral
+export COMFYCONF_FILES ?= config/default.json
+
+-include Makefile.local
 
 node_modules: package.json
 	npm install
@@ -108,7 +111,9 @@ test-ci: lint
 
 .PHONY: test-db-migrations
 test-db-migrations:
-	NODE_CONFIG_ENV=db-migration-test npx mocha --bail --sort --timeout=20000 \
+	NODE_CONFIG_ENV=db-migration-test \
+	COMFYCONF_FILES="config/default.json; config/db-migration-test.json" \
+	npx mocha --bail --sort --timeout=20000 \
 	    --require test/db-migrations/mocha-setup.js \
 	    ./test/db-migrations/**/*.spec.js
 
