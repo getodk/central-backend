@@ -497,7 +497,7 @@ module.exports = {
                         <species/>
                         <circumference/>
                         <meta>
-                            <entity dataset="trees" create="" update="" id="">
+                            <entity dataset="trees" create="1" update="" id="">
                                 <label/>
                             </entity>
                         </meta>
@@ -548,7 +548,7 @@ module.exports = {
                             <name/>
                             <age/>
                             <meta>
-                                <entity dataset="people" create="" id="">
+                                <entity dataset="people" create="1" id="">
                                     <label/>
                                 </entity>
                             </meta>
@@ -615,7 +615,7 @@ module.exports = {
                             <farmer_name/>
                             <age/>
                             <meta>
-                                <entity dataset="farmers" create="" id="">
+                                <entity dataset="farmers" create="1" id="">
                                     <label/>
                                 </entity>
                             </meta>
@@ -672,13 +672,13 @@ module.exports = {
     </h:body>
 </h:html>`,
 
-    nestedRepeatEntity: `<?xml version="1.0"?>
+    repeatEntityNested: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
     <h:head>
         <h:title>nestedRepeatEntities</h:title>
         <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
             <instance>
-                <data id="nestedRepeatEntity" version="20250915105318">
+                <data id="repeatEntityNested" version="20250915105318">
                     <plot>
                         <plot_id/>
                         <crop/>
@@ -741,13 +741,13 @@ module.exports = {
     </h:body>
 </h:html>`,
 
-    groupRepeatEntity: `<?xml version="1.0"?>
+    repeatEntityGroup: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
   <h:head>
     <h:title>Entity in group in repeat</h:title>
     <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
       <instance>
-        <data id="groupRepeatEntity" version="20250917095610">
+        <data id="repeatEntityGroup" version="20250917095610">
           <tree>
             <tree_id/>
             <tree_details>
@@ -1232,10 +1232,10 @@ module.exports = {
       </meta>
     </data>`
     },
-    nestedRepeatEntity: {
+    repeatEntityNested: {
       one: `<data
     xmlns:jr="http://openrosa.org/javarosa"
-    xmlns:orx="http://openrosa.org/xforms" id="nestedRepeatEntity" version="20250915105318">
+    xmlns:orx="http://openrosa.org/xforms" id="repeatEntityNested" version="20250915105318">
     <plot>
       <plot_id>123</plot_id>
       <crop>cherries</crop>
@@ -1295,10 +1295,10 @@ module.exports = {
     </meta>
 </data>`
     },
-    groupRepeatEntity: {
+    repeatEntityGroup: {
       one: `<data
     xmlns:jr="http://openrosa.org/javarosa"
-    xmlns:orx="http://openrosa.org/xforms" id="groupRepeatEntity" version="20250917095610">
+    xmlns:orx="http://openrosa.org/xforms" id="repeatEntityGroup" version="20250917095610">
     <tree>
       <tree_id>222</tree_id>
       <tree_details>

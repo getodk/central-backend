@@ -347,12 +347,12 @@ describe('Entities from Repeats', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.nestedRepeatEntity)
+        .send(testData.forms.repeatEntityNested)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/nestedRepeatEntity/submissions')
-        .send(testData.instances.nestedRepeatEntity.one)
+      await asAlice.post('/v1/projects/1/forms/repeatEntityNested/submissions')
+        .send(testData.instances.repeatEntityNested.one)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -375,12 +375,12 @@ describe('Entities from Repeats', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.groupRepeatEntity)
+        .send(testData.forms.repeatEntityGroup)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/groupRepeatEntity/submissions')
-        .send(testData.instances.groupRepeatEntity.one)
+      await asAlice.post('/v1/projects/1/forms/repeatEntityGroup/submissions')
+        .send(testData.instances.repeatEntityGroup.one)
         .set('Content-Type', 'application/xml')
         .expect(200);
 

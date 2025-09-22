@@ -470,7 +470,7 @@ describe('extracting and validating entities', () => {
       });
 
       it('should return entities from two levels of repeats', async () => {
-        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.nestedRepeatEntity);
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.repeatEntityNested);
 
         // Fields relevant to dataset
         entityFields.filter(e => e.datasetId === 'plots').map(e => e.path).should.eql([
@@ -492,7 +492,7 @@ describe('extracting and validating entities', () => {
         // Use fields to parse entity data from submission
         const entities = await submissionXmlToEntityData(
           structuralFields, entityFields,
-          testData.instances.nestedRepeatEntity.one);
+          testData.instances.repeatEntityNested.one);
 
         // Two plots + two trees per plot
         entities.length.should.equal(6);
@@ -662,7 +662,7 @@ describe('extracting and validating entities', () => {
         // but not associated with that repeat because it's in a group nested within the repeat.
         // But all the entities in the submission still get picked up.
 
-        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.groupRepeatEntity);
+        const { entityFields, structuralFields } = await entityRepeatFieldsFor(testData.forms.repeatEntityGroup);
 
         entityFields.filter(e => e.datasetId === 'trees').map(e => e.path).should.eql([
           '/tree/tree_details',
@@ -674,7 +674,7 @@ describe('extracting and validating entities', () => {
 
         const entities = await submissionXmlToEntityData(
           structuralFields, entityFields,
-          testData.instances.groupRepeatEntity.one);
+          testData.instances.repeatEntityGroup.one);
 
         entities.length.should.eql(2);
         entities.map(e => e.system.dataset).should.eql([ 'trees', 'trees' ]);
