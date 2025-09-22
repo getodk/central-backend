@@ -430,4 +430,179 @@ describe('Entities from Repeats', () => {
         });
     }));
   });
+
+  describe('entity sources and backlog', () => {
+    it('should assign the same entity source to multiple entities created by the same submission', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const source1 = await asAlice.get('/v1/projects/1/datasets/trees/entities/f73ea0a0-f51f-4d13-a7cb-c2123ba06f34/versions')
+        .then(({ body }) => body[0].source);
+
+      const source2 = await asAlice.get('/v1/projects/1/datasets/trees/entities/090c56ff-25f4-4503-b760-f6bef8528152/versions')
+        .then(({ body }) => body[0].source);
+
+      source1.submission.instanceId.should.equal(source2.submission.instanceId);
+    }));
+
+    it('should not make an entity_def_source record or make any entities if one has an error', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.one
+          .replace('id="090c56ff-25f4-4503-b760-f6bef8528152"', 'id="invaliduuid"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/repeatEntityTrees/submissions/one/audits')
+        .then(({ body }) => {
+          body[0].action.should.equal('entity.error');
+        });
+
+      const { sql } = require('slonik');
+      const rows = await container.all(sql`select * from entity_def_sources`);
+      rows.length.should.equal(0);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .then(({ body }) => { body.length.should.equal(0); });
+    }));
+
+    it('should note what happens when two entities hold submission into backlog', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="repeatEntityTrees" version="1">
+        <plot_id>1</plot_id>
+        <tree>
+          <circumference>13</circumference>
+          <meta>
+            <entity dataset="trees" update="1" id="f73ea0a0-f51f-4d13-a7cb-c2123ba06f34" baseVersion="1" trunkVersion="" branchId="b8dd7e1f-fbfc-4b60-8f0a-b05f3dc468dc">
+              <label>Pine - Updated</label>
+            </entity>
+          </meta>
+        </tree>
+        <tree>
+          <species>chestnut</species>
+          <circumference>22</circumference>
+          <meta>
+            <entity dataset="trees" update="1" id="f50cdbaf-95af-499c-a3e5-d0aea64248d9" baseVersion="1" trunkVersion="" branchId="6c5bdd48-568e-4735-810a-f881f45cf0fe">
+              <label>Chestnut - Updated</label>
+            </entity>
+          </meta>
+        </tree>
+        <meta>
+          <instanceID>three</instanceID>
+        </meta>
+      </data>`;
+
+      // Both entities in this submission are updates with no prior version so
+      // entire submission will be put in the backlog.
+      // Each entity has a separate branchId even though maybe in practice they would
+      // share a single offline branch.
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(sub)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/repeatEntityTrees/submissions/three/audits')
+        .then(({ body }) => {
+          body[0].action.should.equal('submission.backlog.hold');
+          body[1].action.should.equal('submission.backlog.hold');
+        });
+
+      // No entities should exist yet
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .then(({ body }) => { body.length.should.equal(0); });
+
+      // Even though no entities have been made, there is an (orphan)
+      // entity def source for this submission.
+      const { sql } = require('slonik');
+      let rows = await container.all(sql`select * from entity_def_sources`);
+      rows.length.should.equal(1);
+
+      await container.Entities.processBacklog(true);
+
+      // Both entities are now created
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .then(({ body }) => { body.length.should.equal(2); });
+
+      // The source object is now updated to be the main source for these entities
+      rows = await container.all(sql`select * from entity_def_sources`);
+      rows.length.should.equal(1);
+      rows[0].details.submission.instanceId.should.equal('three');
+      rows[0].forceProcessed.should.equal(true);
+    }));
+
+    it('should note behavior when one entity in a submission causes entire submission to be held in backlog', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // First entity in this submission is an update with no prior version so
+      // it will be put in the backlog
+      const uuid = require('uuid').v4;
+      const branchId = uuid();
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.two
+          .replace('trunkVersion="" branchId=""', `trunkVersion="" branchId="${branchId}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/repeatEntityTrees/submissions/two/audits')
+        .then(({ body }) => {
+          body[0].action.should.equal('entity.create');
+          body[1].action.should.equal('submission.backlog.hold');
+        });
+
+      // Submission made 1 entity but also was held in the backlog
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .then(({ body }) => { body.length.should.equal(1); });
+
+      await container.Entities.processBacklog(true);
+
+      await asAlice.get('/v1/projects/1/forms/repeatEntityTrees/submissions/two/audits')
+        .then(({ body }) => {
+          body[0].action.should.equal('submission.backlog.force');
+        });
+
+      // Still only ends up with 1 entity because the other one in the submission
+      // was skipped during the force processing because a submission had already
+      // been used to make a different entity.
+      // This isn't necessarily what we want, but this whole scenario is also
+      // hopefully an edge case.
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .then(({ body }) => { body.length.should.equal(1); });
+    }));
+  });
 });
