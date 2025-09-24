@@ -1,5 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
+const { sleep } = require('../../util/util');
 
 describe('api: /users', () => {
   describe('GET', () => {
@@ -100,6 +101,7 @@ describe('api: /users', () => {
       should(firstLogin.lastLoginAt).not.be.null();
       const firstLoginTime = new Date(firstLogin.lastLoginAt);
 
+      await sleep(1);
       await service.login('alice');
       const secondLogin = await asAlice.get('/v1/users/current')
         .expect(200)
