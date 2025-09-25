@@ -561,4 +561,25 @@ describe('query module entities purge', () => {
         entity.length.should.equal(3);
       });
   }));
+
+  it('should purge a deleted entity from repeat that shares a source with a non-deleted entity', testService(async (service, container) => {
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .send(testData.forms.repeatEntityTrees)
+      .set('Content-Type', 'application/xml')
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+      .send(testData.instances.repeatEntityTrees.one)
+      .set('Content-Type', 'application/xml');
+
+    await exhaust(container);
+
+    await asAlice.delete(`/v1/projects/1/datasets/trees/entities/090c56ff-25f4-4503-b760-f6bef8528152`)
+      .expect(200);
+
+    const purgeCount = await container.Entities.purge(true,);
+    purgeCount.should.equal(1);
+  }));
 });
