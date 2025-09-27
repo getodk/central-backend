@@ -327,6 +327,36 @@ describe('db: geodata parsing functions', () => {
 
 });
 
+describe('api: individual submission geodata', () => {
+
+  it('individual submission geodata is available (default field)', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db);
+
+    const expectedGeoJSON = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "1", "geometry" : {"type" : "Point", "coordinates" : [0, 50, 0]}, "properties" : {"fieldpath" : "/singular/input_geopoint"}}]}')));
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1.geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(JSON.parse(body)).should.deepEqual(expectedGeoJSON);
+      });
+  }));
+
+
+  it('individual submission geodata is available (all fields)', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db);
+
+    const expectedGeoJSON = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "1", "geometry" : {"type" : "GeometryCollection", "geometries" : [{"type" : "MultiPoint", "coordinates" : [[0, 60, 0], [0, 70, 0]]}, {"type" : "MultiPolygon", "coordinates" : [[[[3, 63, 3], [4, 64, 4], [5, 65, 5], [3, 63, 3]]], [[[3, 73, 3], [4, 74, 4], [5, 75, 5], [3, 73, 3]]]]}, {"type" : "MultiLineString", "coordinates" : [[[1, 61, 1], [2, 62, 2]], [[1, 71, 1], [2, 72, 2]]]}, {"type" : "MultiPoint", "coordinates" : [[1, 11, 1], [2, 22, 2]]}, {"type" : "Point", "coordinates" : [0, 50, 0]}, {"type" : "Polygon", "coordinates" : [[[3, 53, 3], [4, 54, 4], [5, 55, 5], [3, 53, 3]]]}, {"type" : "LineString", "coordinates" : [[1, 51, 1], [2, 52, 2]]}]}, "properties" : null}]}')));
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1.geojson?fieldpath=all`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(JSON.parse(body)).should.deepEqual(expectedGeoJSON);
+      });
+  }));
+
+
+});
+
 
 describe('api: submission-geodata', () => {
 
@@ -534,6 +564,23 @@ describe('api: submission-geodata', () => {
 
       });
 
+  }));
+
+});
+
+
+describe('api: individual entity geodata', () => {
+
+  it('individual entity geodata is available', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    const expectedGeoJSON = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "12345678-1234-4123-8234-123456789aaa", "properties" : null, "geometry" : {"type" : "Point", "coordinates" : [2, 1, 3]}}]}')));
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities/12345678-1234-4123-8234-123456789aaa/geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(JSON.parse(body)).should.deepEqual(expectedGeoJSON);
+      });
   }));
 
 });
