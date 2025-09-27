@@ -327,6 +327,36 @@ describe('db: geodata parsing functions', () => {
 
 });
 
+describe('api: individual submission geodata', () => {
+
+  it('individual submission geodata is available (default field)', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db);
+
+    const expectedGeoJSON = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "1", "geometry" : {"type" : "Point", "coordinates" : [0, 50, 0]}, "properties" : {"fieldpath" : "/singular/input_geopoint"}}]}')));
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1.geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(JSON.parse(body)).should.deepEqual(expectedGeoJSON);
+      });
+  }));
+
+
+  it('individual submission geodata is available (all fields)', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db);
+
+    const expectedGeoJSON = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "1", "geometry" : {"type" : "GeometryCollection", "geometries" : [{"type" : "MultiPoint", "coordinates" : [[0, 60, 0], [0, 70, 0]]}, {"type" : "MultiPolygon", "coordinates" : [[[[3, 63, 3], [4, 64, 4], [5, 65, 5], [3, 63, 3]]], [[[3, 73, 3], [4, 74, 4], [5, 75, 5], [3, 73, 3]]]]}, {"type" : "MultiLineString", "coordinates" : [[[1, 61, 1], [2, 62, 2]], [[1, 71, 1], [2, 72, 2]]]}, {"type" : "MultiPoint", "coordinates" : [[1, 11, 1], [2, 22, 2]]}, {"type" : "Point", "coordinates" : [0, 50, 0]}, {"type" : "Polygon", "coordinates" : [[[3, 53, 3], [4, 54, 4], [5, 55, 5], [3, 53, 3]]]}, {"type" : "LineString", "coordinates" : [[1, 51, 1], [2, 52, 2]]}]}, "properties" : null}]}')));
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1.geojson?fieldpath=all`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(JSON.parse(body)).should.deepEqual(expectedGeoJSON);
+      });
+  }));
+
+
+});
+
 
 describe('api: submission-geodata', () => {
 
@@ -371,7 +401,46 @@ describe('api: submission-geodata', () => {
       });
   }));
 
+
   it('submission post creates geoextracts of all types ((multi)point, (multi)linestring, (multi)polygon))', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db);
+
+    const expectedGeoJSON = palatableGeoJSON(sortGeoJson(JSON.parse('{"type":"FeatureCollection","features":[{"type":"Feature","id":"1","geometry":{"type":"GeometryCollection","geometries":[{"type":"MultiPoint","coordinates":[[0,60,0],[0,70,0]]},{"type":"MultiPolygon","coordinates":[[[[3,63,3],[4,64,4],[5,65,5],[3,63,3]]],[[[3,73,3],[4,74,4],[5,75,5],[3,73,3]]]]},{"type":"MultiLineString","coordinates":[[[1,61,1],[2,62,2]],[[1,71,1],[2,72,2]]]},{"type":"MultiPoint","coordinates":[[1,11,1],[2,22,2]]},{"type":"Point","coordinates":[0,50,0]},{"type":"Polygon","coordinates":[[[3,53,3],[4,54,4],[5,55,5],[3,53,3]]]},{"type":"LineString","coordinates":[[1,51,1],[2,52,2]]}]},"properties":null}]}')));
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?fieldpath=all`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(body).should.deepEqual(expectedGeoJSON);
+      });
+
+  }));
+
+  it('submissionID filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db, true);
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submissionID=1&submissionID=2`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(2);
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submissionID=1`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('1');
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submissionID=2`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('2');
+      });
+
+  }));
+
+  it('fieldPath filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoSubmissions(service, db);
 
     const fieldPaths = expectedGeoFieldDescriptors(0).map(el => el.path).sort();
@@ -523,6 +592,23 @@ describe('api: submission-geodata', () => {
 });
 
 
+describe('api: individual entity geodata', () => {
+
+  it('individual entity geodata is available', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    const expectedGeoJSON = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "12345678-1234-4123-8234-123456789aaa", "properties" : null, "geometry" : {"type" : "Point", "coordinates" : [2, 1, 3]}}]}')));
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities/12345678-1234-4123-8234-123456789aaa/geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(JSON.parse(body)).should.deepEqual(expectedGeoJSON);
+      });
+  }));
+
+});
+
+
 describe('api: entities-geodata', () => {
 
   it('should serve valid (and not invalid) geodata for entities', testService(async (service, { db }) => {
@@ -561,6 +647,32 @@ describe('api: entities-geodata', () => {
         body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aac']);
       });
   }));
+
+  it('entityUUID filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aaa&entityUUID=12345678-1234-4123-8234-123456789aab`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(2);
+        body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789aab']);
+      });
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aaa`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features.map(f => f.id).should.deepEqual(['12345678-1234-4123-8234-123456789aaa']);
+      });
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aab`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features.map(f => f.id).should.deepEqual(['12345678-1234-4123-8234-123456789aab']);
+      });
+  }));
+
 
   it('timerange filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
