@@ -415,7 +415,30 @@ describe('api: submission-geodata', () => {
 
   }));
 
+  it('submissionID filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db, true);
 
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submissionID=1&submissionID=2`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(2);
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submissionID=1`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('1');
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submissionID=2`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('2');
+      });
+
+  }));
 
   it('fieldPath filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoSubmissions(service, db);
@@ -624,6 +647,32 @@ describe('api: entities-geodata', () => {
         body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aac']);
       });
   }));
+
+  it('entityUUID filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aaa&entityUUID=12345678-1234-4123-8234-123456789aab`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(2);
+        body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789aab']);
+      });
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aaa`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features.map(f => f.id).should.deepEqual(['12345678-1234-4123-8234-123456789aaa']);
+      });
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aab`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features.map(f => f.id).should.deepEqual(['12345678-1234-4123-8234-123456789aab']);
+      });
+  }));
+
 
   it('timerange filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
