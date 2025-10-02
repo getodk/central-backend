@@ -664,5 +664,52 @@ describe('api: entities-geodata', () => {
 
   }));
 
+  it('should use root instance ID for edited submission', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .set('Content-Type', 'application/xml')
+      .send(geoTypes)
+      .expect(200);
+
+    const submission = makeSubmission({ instanceID: '1' });
+    const submissionEdited = submission
+      .replace('<instanceID>1', '<deprecatedID>1</deprecatedID><instanceID>2')
+      .replace('<input_geopoint>50 0 0 0</input_geopoint>', '<input_geopoint>10 0 0 0</input_geopoint>');
+
+    // Send original submission
+    await asAlice.post('/v1/projects/1/forms/geotest/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(submission)
+      .expect(200);
+
+    // Edit submission via OpenRosa endpoint with deprecated ID and different data
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('xml_submission_file', Buffer.from(submissionEdited),
+        { filename: 'data.xml' })
+      .expect(201);
+
+    const expectedBody = palatableGeoJSON({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          id: '1',
+          geometry: {
+            type: 'Point', coordinates: [ 0, 10, 0 ]
+          },
+          properties: { fieldpath: '/singular/input_geopoint' },
+        },
+      ]
+    });
+
+    await asAlice.get('/v1/projects/1/forms/geotest/submissions.geojson')
+      .expect(200)
+      .then(({ body }) => {
+        body.should.deepEqual(expectedBody);
+      });
+
+  }));
 
 });
