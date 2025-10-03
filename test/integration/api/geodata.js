@@ -664,5 +664,151 @@ describe('api: entities-geodata', () => {
 
   }));
 
+  it('should mix fields and geotypes for default field from form with different versions', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    // --- Form version 10 ---
+    // Upload initial version of form
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .set('Content-Type', 'application/xml')
+      .send(geoTypes)
+      .expect(200);
+
+    // Upload submission
+    await asAlice.post('/v1/projects/1/forms/geotest/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(makeSubmission({ instanceID: '1' }))
+      .expect(200);
+
+
+    // --- Form version 11 ---
+    // Update form to remove first geo field
+    // Need to ignore warning about having deleted a field
+    await asAlice.post('/v1/projects/1/forms/geotest/draft?ignoreWarnings=true')
+      .set('Content-Type', 'text/xml')
+      .send(geoTypes
+        .replace('version="10"', 'version="11"')
+        .replace('<input_geopoint>50 0 0 0</input_geopoint>', ''))
+      .expect(200);
+
+    // Publish new version
+    await asAlice.post('/v1/projects/1/forms/geotest/draft/publish');
+
+    // Upload submission for new version of form
+    await asAlice.post('/v1/projects/1/forms/geotest/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(makeSubmission({ instanceID: '2' })
+        .replace('version="10"', 'version="11"')
+        .replace('<input_geopoint>50 0 0 0</input_geopoint>', ''))
+      .expect(200);
+
+
+    // --- Form version 12 ---
+    // Add new geo field at the beginning of the form
+    // Add geopoint bind
+    await asAlice.post('/v1/projects/1/forms/geotest/draft')
+      .set('Content-Type', 'text/xml')
+      .send(geoTypes
+        .replace('version="10"', 'version="12"')
+        .replace('<singular>', '<singular><new_input_geopoint></new_input_geopoint>')
+        .replace('<bind nodeset="/data/singular/input_geopoint" type="geopoint"/>', '<bind nodeset="/data/singular/new_input_geopoint" type="geopoint"/><bind nodeset="/data/singular/input_geopoint" type="geopoint"/>'))
+      .expect(200);
+
+    // Publish new version
+    await asAlice.post('/v1/projects/1/forms/geotest/draft/publish');
+
+    // Upload submission for new version of form
+    await asAlice.post('/v1/projects/1/forms/geotest/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(makeSubmission({ instanceID: '3' })
+        .replace('version="10"', 'version="12"')
+        .replace('<singular>', '<singular><new_input_geopoint>20 0 0 0</new_input_geopoint>'))
+      .expect(200);
+
+    const expectedBody = sortGeoJson(palatableGeoJSON({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          id: '2',
+          geometry: {
+            type: 'LineString', coordinates: [[ 1, 51, 1 ], [ 2, 52, 2 ]]
+          },
+          properties: { fieldpath: '/singular/input_geotrace' },
+        },
+        {
+          type: 'Feature',
+          id: '3',
+          geometry: {
+            type: 'Point', coordinates: [ 0, 20, 0 ]
+          },
+          properties: { fieldpath: '/singular/new_input_geopoint' },
+        },
+        {
+          type: 'Feature',
+          id: '1',
+          geometry: {
+            type: 'Point', coordinates: [ 0, 50, 0 ]
+          },
+          properties: { fieldpath: '/singular/input_geopoint' },
+        },
+      ]
+    }));
+
+    await asAlice.get('/v1/projects/1/forms/geotest/submissions.geojson')
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(body).should.deepEqual(expectedBody);
+      });
+
+  }));
+
+  it('should use root instance ID for edited submission', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .set('Content-Type', 'application/xml')
+      .send(geoTypes)
+      .expect(200);
+
+    const submission = makeSubmission({ instanceID: '1' });
+    const submissionEdited = submission
+      .replace('<instanceID>1', '<deprecatedID>1</deprecatedID><instanceID>2')
+      .replace('<input_geopoint>50 0 0 0</input_geopoint>', '<input_geopoint>10 0 0 0</input_geopoint>');
+
+    // Send original submission
+    await asAlice.post('/v1/projects/1/forms/geotest/submissions')
+      .set('Content-Type', 'application/xml')
+      .send(submission)
+      .expect(200);
+
+    // Edit submission via OpenRosa endpoint with deprecated ID and different data
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('xml_submission_file', Buffer.from(submissionEdited),
+        { filename: 'data.xml' })
+      .expect(201);
+
+    const expectedBody = palatableGeoJSON({
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          id: '1',
+          geometry: {
+            type: 'Point', coordinates: [ 0, 10, 0 ]
+          },
+          properties: { fieldpath: '/singular/input_geopoint' },
+        },
+      ]
+    });
+
+    await asAlice.get('/v1/projects/1/forms/geotest/submissions.geojson')
+      .expect(200)
+      .then(({ body }) => {
+        body.should.deepEqual(expectedBody);
+      });
+
+  }));
 
 });
