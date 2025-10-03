@@ -725,8 +725,7 @@ describe('api: entities-geodata', () => {
         .replace('<singular>', '<singular><new_input_geopoint>20 0 0 0</new_input_geopoint>'))
       .expect(200);
 
-    // Not sure why ID order is 2, 3, 1
-    const expectedBody = palatableGeoJSON({
+    const expectedBody = sortGeoJson(palatableGeoJSON({
       type: 'FeatureCollection',
       features: [
         {
@@ -754,12 +753,12 @@ describe('api: entities-geodata', () => {
           properties: { fieldpath: '/singular/input_geopoint' },
         },
       ]
-    });
+    }));
 
     await asAlice.get('/v1/projects/1/forms/geotest/submissions.geojson')
       .expect(200)
       .then(({ body }) => {
-        body.should.deepEqual(expectedBody);
+        sortGeoJson(body).should.deepEqual(expectedBody);
       });
 
   }));
