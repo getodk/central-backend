@@ -3109,6 +3109,27 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
               body.map((submission) => submission.instanceId).should.eql([ 'two', 'one' ]);
             })))));
 
+    it('should return a list of deleted submissions', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const createSubmissionsPromises = ['one', 'two', 'three'].map(instanceId => asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple[instanceId])
+        .set('Content-Type', 'text/xml')
+        .expect(200));
+
+      await Promise.all(createSubmissionsPromises);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions?deleted=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.forEach((submission) => submission.should.be.a.Submission());
+          body.map((submission) => submission.instanceId).should.eql([ 'one' ]);
+        });
+    }));
+
     it('should list with extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')

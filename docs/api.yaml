@@ -49,6 +49,7 @@ info:
 
     **Changed**:
     - [Download Dataset](/central-api-dataset-management/#download-dataset) API now supports $search query parameter.
+    - Added `deleted` query parameter to [GET /projects/:id/forms/:xmlFormId/submissions](/central-api-submission-management/#listing-all-submissions-on-a-form) to retrieve deleted submissions.
 
     **Changed**:
     - [GET /users](/central-api-accounts-and-users/#listing-users) and [GET /users/:actorId](/central-api-accounts-and-users/#getting-user-details) now include `lastLoginAt` field.
@@ -5905,6 +5906,12 @@ paths:
         schema:
           type: string
         example: simple
+      - name: deleted
+        in: query
+        description: If set to `true`, returns only deleted submissions.
+        schema:
+          type: boolean
+        example: true
       responses:
         200:
           description: OK
