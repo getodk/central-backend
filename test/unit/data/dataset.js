@@ -540,6 +540,96 @@ describe('entities from repeats', () => {
         { name: 'farms', actions: [ 'create' ], path: '/farm/' }
       ]);
     });
+
+    it('should not be confused by datasets in jr:template blocks', async () => {
+      const form = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+  <h:head>
+    <h:title>Household member eligibility</h:title>
+    <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+      <instance>
+        <data id="household_member_eligibility" version="20250929164759">
+          <household_id/>
+          <num_members/>
+          <household_member jr:template="">
+            <name/>
+            <age/>
+            <member_hh_id/>
+            <meta>
+              <entity dataset="eligible_people" create="1" id="">
+                <label/>
+              </entity>
+            </meta>
+          </household_member>
+          <household_member>
+            <name/>
+            <age/>
+            <member_hh_id/>
+            <meta>
+              <entity dataset="eligible_people" create="1" id="">
+                <label/>
+              </entity>
+            </meta>
+          </household_member>
+          <meta>
+            <instanceID/>
+            <instanceName/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/household_id" type="string"/>
+      <bind nodeset="/data/num_members" type="int"/>
+      <bind nodeset="/data/household_member/name" type="string" entities:saveto="member_name"/>
+      <bind nodeset="/data/household_member/age" type="int" entities:saveto="age"/>
+      <bind nodeset="/data/household_member/member_hh_id" type="string" entities:saveto="household_id" calculate=" /data/household_id "/>
+      <bind nodeset="/data/household_member/meta/entity/@create" calculate=" ../../../age  &lt; 13" readonly="true()" type="string"/>
+      <bind nodeset="/data/household_member/meta/entity/@id" readonly="true()" type="string"/>
+      <setvalue ref="/data/household_member/meta/entity/@id" event="odk-instance-first-load" value="uuid()"/>
+      <bind nodeset="/data/household_member/meta/entity/label" calculate="concat(&quot;Household &quot;,  /data/household_id , &quot;: &quot;,  ../../../name , &quot; (age &quot;,  ../../../age , &quot;)&quot;)" readonly="true()" type="string"/>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+      <bind nodeset="/data/meta/instanceName" type="string" calculate="concat(&quot;Household &quot;,  /data/household_id )"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/household_id">
+      <label>Household ID</label>
+    </input>
+    <input ref="/data/num_members">
+      <label>Number of household members</label>
+    </input>
+    <group ref="/data/household_member">
+      <label>Household member details</label>
+      <repeat nodeset="/data/household_member" jr:count=" /data/num_members ">
+        <input ref="/data/household_member/name">
+          <label>Member name</label>
+        </input>
+        <input ref="/data/household_member/age">
+          <label>Age</label>
+        </input>
+        <setvalue ref="/data/household_member/meta/entity/@id" event="odk-new-repeat" value="uuid()"/>
+      </repeat>
+    </group>
+  </h:body>
+</h:html>`;
+
+      const ds = await getDatasets(form).then(o => o.get());
+      should.not.exist(ds.warnings);
+      // Includes dataset from jr:template block and regular block
+      ds.datasets.length.should.equal(2);
+      ds.datasets.should.eql([
+        { name: 'eligible_people', actions: [ 'create' ], path: '/household_member/' },
+        { name: 'eligible_people', actions: [ 'create' ], path: '/household_member/' }
+      ]);
+
+      const ff = await getFormFields(form);
+      const res = matchFieldsWithDatasets(ds.datasets, ff);
+
+      // After matchFieldsWithDataset, duplicate dataset is removed
+      res.length.should.equal(1);
+      res[0].dataset.should.eql(
+        { name: 'eligible_people', actions: [ 'create' ], path: '/household_member/', isRepeat: true }
+      );
+    });
   });
 
   describe('matching form fields with datasets', () => {
