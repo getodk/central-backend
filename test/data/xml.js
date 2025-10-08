@@ -486,52 +486,62 @@ module.exports = {
 </h:html>`,
 
     repeatEntityTrees: `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
-    <h:head>
-        <h:title>Repeat Trees</h:title>
-        <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
-            <instance>
-                <data id="repeatEntityTrees" version="1">
-                    <plot_id/>
-                    <tree>
-                        <species/>
-                        <circumference/>
-                        <meta>
-                            <entity dataset="trees" create="1" update="" id="">
-                                <label/>
-                            </entity>
-                        </meta>
-                    </tree>
-                    <meta>
-                        <instanceID/>
-                    </meta>
-                </data>
-            </instance>
-            <bind nodeset="/data/plot_id" type="string"/>
-            <bind nodeset="/data/tree/species" type="string" entities:saveto="species"/>
-            <bind nodeset="/data/tree/circumference" type="int" entities:saveto="circumference"/>
-            <bind nodeset="/data/tree/meta/entity/@id" type="string"/>
-            <setvalue event="odk-instance-first-load odk-new-repeat" ref="/data/tree/meta/entity/@id" value="uuid()"/>
-            <bind nodeset="/data/tree/meta/entity/label" calculate="../../../species" type="string"/>
-            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
-        </model>
-    </h:head>
-    <h:body>
-        <input ref="/data/plot_id">
-            <label>Enter the ID of the plot</label>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+  <h:head>
+    <h:title>Repeat Trees</h:title>
+    <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+      <instance>
+        <data id="repeatEntityTrees" version="1">
+          <acres/>
+          <tree jr:template="">
+            <species/>
+            <circumference/>
+            <meta>
+              <entity dataset="trees" create="1" update="" id="">
+                <label/>
+              </entity>
+            </meta>
+          </tree>
+          <tree>
+            <species/>
+            <circumference/>
+            <meta>
+              <entity dataset="trees" create="1" update="" id="">
+                <label/>
+              </entity>
+            </meta>
+          </tree>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/acres" type="int"/>
+      <bind nodeset="/data/tree/species" type="string" entities:saveto="species"/>
+      <bind nodeset="/data/tree/circumference" type="int" entities:saveto="circumference"/>
+      <bind nodeset="/data/tree/meta/entity/@id" readonly="true()" type="string"/>
+      <setvalue ref="/data/tree/meta/entity/@id" event="odk-instance-first-load" value="uuid()"/>
+      <bind nodeset="/data/tree/meta/entity/label" calculate=" ../../../species " readonly="true()" type="string"/>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/acres">
+      <label>Enter the ID of the plot</label>
+    </input>
+    <group ref="/data/tree">
+      <label>Enter info about each tree</label>
+      <repeat nodeset="/data/tree">
+        <input ref="/data/tree/species">
+          <label>Tree Species</label>
         </input>
-        <group ref="/data/tree">
-            <label>Enter info about each tree</label>
-            <repeat nodeset="/data/tree">
-                <input ref="/data/tree/species">
-                    <label>Tree Species</label>
-                </input>
-                <input ref="/data/tree/circumference">
-                    <label>Tree Circumference</label>
-                </input>
-            </repeat>
-        </group>
-    </h:body>
+        <input ref="/data/tree/circumference">
+          <label>Tree Circumference</label>
+        </input>
+        <setvalue ref="/data/tree/meta/entity/@id" event="odk-new-repeat" value="uuid()"/>
+      </repeat>
+    </group>
+  </h:body>
 </h:html>`,
 
     repeatEntityHousehold: `<?xml version="1.0"?>
