@@ -54,6 +54,21 @@ describe('parsing dataset from entity block', () => {
         .replace('entities-version="2022.1.0"', ''))
         .should.be.rejectedWith(Problem, { problemCode: 400.25,
           message: 'The entity definition within the form is invalid. Entities specification version is missing.' }));
+
+    it('should reject multiple datasets declared in <2025.1 version', () =>
+      getDatasets(testData.forms.repeatEntityHousehold
+        .replace('2025.1.0', '2024.1.0'))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version [2024.1.0] is not compatible with multiple entity lists.  Please use version 2025.1.0 or later.' }));
+
+    // This is a tricky test where there is actually just one dataset (trees) but the rejection
+    // is still happening because there is a duplicate dataset declaration in a jr:template block.
+    it('should reject entity repeat dataset declared in <2025.1 version', () =>
+      getDatasets(testData.forms.repeatEntityTrees
+        .replace('2025.1.0', '2024.1.0'))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version [2024.1.0] is not compatible with multiple entity lists.  Please use version 2025.1.0 or later.' }));
+
   });
 
   describe('extracting dataset name', () => {
@@ -514,15 +529,7 @@ describe('property name validation', () => {
 });
 
 describe('entities from repeats', () => {
-  describe('parsing multiple entities/datasetes from a form def', () => {
-    it('should retrieve the names of a dataset in a repeat group', async () => {
-      const ds = await getDatasets(testData.forms.repeatEntityTrees).then(o => o.get());
-      should.not.exist(ds.warnings);
-      ds.datasets.should.eql([
-        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' }
-      ]);
-    });
-
+  describe('parsing multiple entities/datasets from a form def', () => {
     it('should retrieve the names of datasets at root and in repeat group', async () => {
       const ds = await getDatasets(testData.forms.repeatEntityHousehold).then(o => o.get());
       should.not.exist(ds.warnings);
@@ -539,6 +546,26 @@ describe('entities from repeats', () => {
         { name: 'farmers', actions: [ 'create' ], path: '/farm/farmer/' },
         { name: 'farms', actions: [ 'create' ], path: '/farm/' }
       ]);
+    });
+
+    it('should retrieve the names of a dataset in a repeat group', async () => {
+      const ds = await getDatasets(testData.forms.repeatEntityTrees).then(o => o.get());
+      should.not.exist(ds.warnings);
+      // Includes dataset from jr:template block and regular block
+      ds.datasets.length.should.equal(2);
+      ds.datasets.should.eql([
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' },
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' }
+      ]);
+
+      const ff = await getFormFields(testData.forms.repeatEntityTrees);
+      const res = matchFieldsWithDatasets(ds.datasets, ff);
+
+      // After matchFieldsWithDataset, duplicate dataset is removed
+      res.length.should.equal(1);
+      res[0].dataset.should.eql(
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/', isRepeat: true }
+      );
     });
   });
 
