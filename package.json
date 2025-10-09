@@ -15,7 +15,7 @@
     "body-parser": "~1.20",
     "cloneable-readable": "^3.0.0",
     "commander": "^14.0.0",
-    "config": "^4.0.0",
+    "config": "file:more_node_modules/comfyconf",
     "cookie-parser": "^1.4.6",
     "csv-parse": "~4",
     "csv-stringify": "~5",
