@@ -8540,7 +8540,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets:
+  /v1/projects/{projectId}/datasets:
     get:
       tags:
       - Dataset Management
@@ -8671,7 +8671,7 @@ paths:
               example:
                 code: 409.3
                 message: A resource already exists with name,projectId value(s) of trees,1.
-  /projects/{projectId}/datasets/{name}:
+  /v1/projects/{projectId}/datasets/{name}:
     get:
       tags:
       - Dataset Management
@@ -8802,7 +8802,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/properties:
+  /v1/projects/{projectId}/datasets/{name}/properties:
     post:
       tags:
       - Dataset Management
@@ -8856,7 +8856,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities.csv:
+  /v1/projects/{projectId}/datasets/{name}/entities.csv:
     get:
       tags:
       - Dataset Management
@@ -8932,7 +8932,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities:
+  /v1/projects/{projectId}/datasets/{name}/entities:
     get:
       tags:
       - Entity Management
@@ -9030,7 +9030,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities/creators:
+  /v1/projects/{projectId}/datasets/{name}/entities/creators:
     get:
       tags:
       - Entity Management
@@ -9198,7 +9198,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities/{uuid}:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}:
     get:
       tags:
       - Entity Management
@@ -9485,7 +9485,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error403'
     
-  /projects/{projectId}/datasets/{name}/entities/{uuid}/restore:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/restore:
     post:
       tags:
       - Entity Management
@@ -9533,7 +9533,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error404'
-  /projects/{projectId}/datasets/{name}/entities/{uuid}/versions:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/versions:
     get:
       tags:
       - Entity Management
@@ -9654,7 +9654,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities/{uuid}/diffs:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/diffs:
     get:
       tags:
       - Entity Management
@@ -9718,7 +9718,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities/{uuid}/audits:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/audits:
     get:
       tags:
       - Entity Management
