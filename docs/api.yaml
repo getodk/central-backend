@@ -46,6 +46,14 @@ info:
     - New endpoint [GET /projects/:id/datasets/:name/entities/creators](/central-api-entity-management/#entities-creators) to retrieve a list of all Actors who have created Entities in a Dataset, sorted by display name.
     - [Bulk delete Entities](/central-api-entity-management/#bulk-deleting-entities) endpoint for deleting multiple Entities at once.
     - [Bulk restore Entities](/central-api-entity-management/#bulk-restoring-entities) endpoint for restoring multiple soft-deleted Entities at once.
+    - Endpoints for getting submissions' and entities' geodata in GeoJSON format.
+      Their current primary use case is to deliver data for the map in Central.
+      
+      ⚠️ This API will likely change in a future release.
+      
+      The endpoints are:
+      - [GET /projects/:id/datasets/:name/entities.geojson](/central-api-entity-management/#entities-geodata)
+      - [GET /projects/:id/forms/:xmlFormId/submissions.geojson](/central-api-submission-management/#submissions-geodata)
 
     **Changed**:
     - [Download Dataset](/central-api-dataset-management/#download-dataset) API now supports $search query parameter.
@@ -6074,6 +6082,50 @@ paths:
               example:
                 code: "409.1"
                 message: A resource already exists with id value(s) of 1.
+  /projects/{projectId}/datasets/{xmlFormId}/submissions.geojson:
+    get:
+      tags:
+      - Submissions
+      summary: Retrieving Submissions Geodata
+      description: |-
+        Submissions' geodata, one form field per submission, in [GeoJSON](https://geojson.org) format.
+        If no particular field path is supplied, the first non-repeat geopoint/geotrace/geoshape field is used.
+        No particular ordering is implied.
+        
+        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
+        Please don't use it just yet unless you're prepared to deal with breaking changes.
+        That said, if you have requirements for this API that you'd like to discuss, please post on [the forum](https://forum.getodk.org/).
+      operationId: Entities Geodata
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "10"
+      - name: xmlFormId
+        in: path
+        description: The `xmlFormId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: simple
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: Submission geodata, in [GeoJSON](https://geojson.org) format.
+                type: object
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}:
     get:
       tags:
@@ -9024,6 +9076,48 @@ paths:
                     type: user
                     updatedAt: '2018-04-18T23:42:11.406Z'
                     deletedAt: '2018-04-18T23:42:11.406Z'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+  /projects/{projectId}/datasets/{name}/entities.geojson:
+    get:
+      tags:
+      - Entity Management
+      summary: Entities Geodata
+      description: |-
+        This endpoint returns the entities' `geography` attribute, in [GeoJSON](https://geojson.org) format.
+        No particular ordering is implied.
+        
+        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
+        Please don't use it just yet unless you're prepared to deal with breaking changes.
+        That said, if you have requirements for this API that you'd like to discuss, please post on [the forum](https://forum.getodk.org/).
+      operationId: Entities Geodata
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "10"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: Entities' `geography` attribute, in GeoJSON format (https://geojson.org)
+                type: object
         403:
           description: Forbidden
           content:
