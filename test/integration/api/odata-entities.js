@@ -393,15 +393,15 @@ describe('api: /datasets/:name.svc', () => {
       const entityUuids = await container.allFirst(sql`SELECT uuid FROM entities`);
       entityUuids.length.should.eql(4);
 
-      for(const uuid of entityUuids) {
-        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq '${uuid}'`)
+      for (const id of entityUuids) {
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq '${id}'`) // eslint-disable-line no-await-in-loop
           .expect(200)
           .then(({ body }) => {
             body.value.length.should.eql(1);
 
             const [ val ] = body.value;
-            Object.keys(val).should.eqlInAnyOrder([ '__id', 'label', '__system', 'first_name', 'age'  ]);
-            val.__id.should.eql(uuid);
+            Object.keys(val).should.eqlInAnyOrder([ '__id', 'label', '__system', 'first_name', 'age' ]);
+            val.__id.should.eql(id);
             val.__system.createdAt.should.be.an.isoDate();
           });
       }
