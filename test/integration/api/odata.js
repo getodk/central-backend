@@ -1100,6 +1100,128 @@ describe('api: /forms/:id.svc', () => {
             body['@odata.nextLink'].should.have.skiptoken({ instanceId: 'rthree' });
           }))));
 
+    it('should return id-filtered toplevel rows if requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('bob', (asBob) =>
+          asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asBob.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.three)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__id eq 'rone'`)
+              .expect(200)
+              .then(({ body }) => {
+                for (const entry of body.value) {
+                  entry.__system.submissionDate.should.be.an.isoDate();
+                  // eslint-disable-next-line no-param-reassign
+                  delete entry.__system.submissionDate;
+                }
+
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                  value: [{
+                    __id: 'rone',
+                    __system: {
+                      // submissionDate is checked above,
+                      updatedAt: null,
+                      deletedAt: null,
+                      submitterId: '5',
+                      submitterName: 'Alice',
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null,
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0,
+                      formVersion: '1.0',
+                    },
+                    meta: { instanceID: 'rone' },
+                    name: 'Alice',
+                    age: 30,
+                    children: {},
+                  }],
+                });
+              }))
+            .then(() => asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__id eq 'rtwo'`)
+              .expect(200)
+              .then(({ body }) => {
+                for (const entry of body.value) {
+                  entry.__system.submissionDate.should.be.an.isoDate();
+                  // eslint-disable-next-line no-param-reassign
+                  delete entry.__system.submissionDate;
+                }
+
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                  value: [{
+                    __id: 'rtwo',
+                    __system: {
+                      // submissionDate is checked above,
+                      updatedAt: null,
+                      deletedAt: null,
+                      submitterId: '6',
+                      submitterName: 'Bob',
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null,
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0,
+                      formVersion: '1.0',
+                    },
+                    meta: { instanceID: 'rtwo' },
+                    name: 'Bob',
+                    age: 34,
+                    children: { 'child@odata.navigationLink': `Submissions('rtwo')/children/child` },
+                  }],
+                });
+              }))
+            .then(() => asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__id eq 'rthree'`)
+              .expect(200)
+              .then(({ body }) => {
+                for (const entry of body.value) {
+                  entry.__system.submissionDate.should.be.an.isoDate();
+                  // eslint-disable-next-line no-param-reassign
+                  delete entry.__system.submissionDate;
+                }
+
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                  value: [{
+                    __id: 'rthree',
+                    __system: {
+                      // submissionDate is checked above,
+                      updatedAt: null,
+                      deletedAt: null,
+                      submitterId: '5',
+                      submitterName: 'Alice',
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null,
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0,
+                      formVersion: '1.0',
+                    },
+                    meta: { instanceID: 'rthree' },
+                    name: 'Chelsea',
+                    age: 38,
+                    children: { 'child@odata.navigationLink': `Submissions('rthree')/children/child` },
+                  }],
+                });
+              }))))));
+
     it('should return submitter-filtered toplevel rows if requested', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
