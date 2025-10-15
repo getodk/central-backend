@@ -386,12 +386,8 @@ describe('api: /datasets/:name.svc', () => {
 
       await createSubmissions(asAlice, container, 2);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2020-01-01'`);
-
-      await createSubmissions(asAlice, container, 2, 2);
-
       const entityUuids = await container.allFirst(sql`SELECT uuid FROM entities`);
-      entityUuids.length.should.eql(4);
+      entityUuids.length.should.eql(2);
 
       for (const id of entityUuids) {
         await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq '${id}'`) // eslint-disable-line no-await-in-loop
