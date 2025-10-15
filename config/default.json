@@ -33,7 +33,8 @@
         "version": "v2025.2.0_1"
       },
       "s3blobStore": {}
-    }
+    },
+    "sessionLifetime": 86400
   },
   "test": {
     "database": {
