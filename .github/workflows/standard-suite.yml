@@ -31,5 +31,6 @@ jobs:
         node-version: 22.16.0
         cache: 'npm'
     - run: npm ci
+    - run: make api-docs-lint
     - run: node lib/bin/create-docker-databases.js
     - run: make test

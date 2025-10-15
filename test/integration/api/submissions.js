@@ -7,6 +7,8 @@ const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const { httpZipResponseToFiles } = require('../../util/zip');
 const { map } = require('ramda');
+const { hashPassword } = require('../../../lib/util/crypto');
+const { User, Actor } = require(appRoot + '/lib/model/frames');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -19,13 +21,19 @@ const withBinaryIds = (deprecatedId, instanceId) => testData.instances.binaryTyp
 describe('api: /submission', () => {
   describe('HEAD', () => {
     it('should return a 204 with no content', testService((service) =>
-      service.head('/v1/projects/1/submission')
-        .set('X-OpenRosa-Version', '1.0')
-        .expect(204)));
+      service.login('alice', (asAlice) =>
+        asAlice.head('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(204))));
 
     it('should fail if not given X-OpenRosa-Version header', testService((service) =>
       service.head('/v1/projects/1/submission')
         .expect(400)));
+
+    it('should fail if no auth is provided', testService((service) =>
+      service.head('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(401)));
 
     it('should fail on authentication given broken credentials', testService((service) =>
       service.head('/v1/key/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/projects/1/submission')
@@ -3101,6 +3109,27 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
               body.map((submission) => submission.instanceId).should.eql([ 'two', 'one' ]);
             })))));
 
+    it('should return a list of deleted submissions', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const createSubmissionsPromises = ['one', 'two', 'three'].map(instanceId => asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple[instanceId])
+        .set('Content-Type', 'text/xml')
+        .expect(200));
+
+      await Promise.all(createSubmissionsPromises);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions?deleted=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.forEach((submission) => submission.should.be.a.Submission());
+          body.map((submission) => submission.instanceId).should.eql([ 'one' ]);
+        });
+    }));
+
     it('should list with extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -3255,7 +3284,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'encrypted', Form.PublishedVersion).then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
@@ -3288,7 +3317,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'encrypted', Form.PublishedVersion).then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
@@ -4346,7 +4375,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             })))));
   });
 
-  describe('[version] /:rootId/versions/instanceId/attachments GET', () => {
+  describe('[version] /:rootId/versions/instanceId/attachments/:attachment GET', () => {
     it('should return notfound if the attachment does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4458,6 +4487,204 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
           .set('Content-Type', 'image/jpeg')
           .send('testimage')
           .expect(403))));
+
+    it('Data collector should be able to attach the given file if Submission is created by the them and attachment is not previously uploaded', testService(async (service, { Users }) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const password = await hashPassword('password4david');
+
+      await Users.create(new User({ email: 'david@getodk.org', password }, { actor: new Actor({ type: 'user', displayName: 'David' }) }));
+
+      const asChelsea = await service.login('chelsea');
+      const asDavid = await service.login('david');
+
+      const chelseaId = await asChelsea.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      const davidId = await asDavid.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${davidId}`)
+        .expect(200);
+
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // David can't upload attachment for the Submission created by Chelsea
+      await asDavid.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+
+      // Chelsea can't reupload attachment
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
+    it('Public link should be able to upload attachment for the Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const publicLinkToken = await asAlice.post('/v1/projects/1/forms/binaryType/public-links')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body.token);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions?st=${publicLinkToken}`)
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4?st=${publicLinkToken}`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+    }));
+
+    it('Public link should not be able to upload attachment for others Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const publicLinkToken = await asAlice.post('/v1/projects/1/forms/binaryType/public-links')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body.token);
+
+      await service.post(`/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4?st=${publicLinkToken}`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
+    it('App user should be able to upload attachment for the Submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const appUser = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'default' })
+        .expect(200)
+        .then(({ body }) => body);
+
+      await asAlice.post(`/v1/projects/1/forms/binaryType/assignments/app-user/${appUser.id}`)
+        .expect(200);
+
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/binaryType/submissions`)
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4`)
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+    }));
+
+    it('should reject attachment upload when original submitter is no longer the submitter of current version', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const asChelsea = await service.login('chelsea');
+
+      const chelseaId = await asChelsea.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+        .expect(200);
+
+      // Chelsea creates a submission
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Alice edits the Submission
+      await asAlice.put('/v1/projects/1/forms/binaryType/submissions/both')
+        .send(withBinaryIds('both', 'both2'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Chelsea tries uploading her submission attachments
+      // She isn't able to, because she is no longer the submitter of the current version
+      await asChelsea.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
+
+    it('should reject attachment upload when editor is demoted', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      const asBob = await service.login('bob');
+
+      const bobId = await asBob.get('/v1/users/current').expect(200)
+        .then(({ body }) => body.id);
+
+      // Alice creates a submission
+      await asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+        .send(testData.instances.binaryType.both)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Bob (a project manager) edits an unrelated field in the submission
+      await asBob.put('/v1/projects/1/forms/binaryType/submissions/both')
+        .send(withBinaryIds('both', 'both2'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      // Bob is demoted to a data collector
+      await asAlice.delete(`/v1/projects/1/assignments/manager/${bobId}`)
+        .expect(200);
+      await asAlice.post(`/v1/projects/1/assignments/formfill/${bobId}`)
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(403);
+    }));
 
     it('should reject if the attachment does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -4632,7 +4859,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
@@ -4671,7 +4898,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
@@ -4700,6 +4927,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
                       newBlobId: newAttachment.blobId
                     });
                   }))))))));
+
   });
 
   // the draft version of this is already tested above with :name GET
@@ -4768,7 +4996,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())

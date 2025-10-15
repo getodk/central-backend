@@ -5,9 +5,10 @@ const testData = require('../../data/xml');
 describe('api: /projects/:id/forms/:id/public-links', () => {
   describe('POST', () => {
     it('should return 403 unless the user is allowed to create', testService((service) =>
-      service.post('/v1/projects/1/forms/simple/public-links')
-        .send({ displayName: 'test1' })
-        .expect(403)));
+      service.login('chelsea', asChelsea =>
+        asChelsea.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'test1' })
+          .expect(403))));
 
     it('should return the created key', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -63,7 +64,8 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
 
   describe('GET', () => {
     it('should return 403 unless the user is allowed to list', testService((service) =>
-      service.get('/v1/projects/1/forms/simple/public-links').expect(403)));
+      service.login('chelsea', (asChelsea) =>
+        asChelsea.get('/v1/projects/1/forms/simple/public-links').expect(403))));
 
     it('should return a list of links in order with merged data', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -150,10 +152,10 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
 
   describe('/:id DELETE', () => {
     it('should return 403 unless the user can delete', testService((service) =>
-      service.login('alice', (asAlice) =>
+      service.login(['alice', 'chelsea'], (asAlice, asChelsea) =>
         asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'condemned' }).expect(200)
           .then(({ body }) =>
-            service.delete('/v1/projects/1/forms/simple/public-links/' + body.id).expect(403)))));
+            asChelsea.delete('/v1/projects/1/forms/simple/public-links/' + body.id).expect(403)))));
 
     it('should delete the token', testService((service) =>
       service.login('alice', (asAlice) =>

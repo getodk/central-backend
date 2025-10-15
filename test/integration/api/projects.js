@@ -4,19 +4,18 @@ const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { QueryOptions } = require('../../../lib/util/db');
-const { Actor } = require('../../../lib/model/frames');
+const { Actor, Form } = require('../../../lib/model/frames');
 const { createConflict } = require('../../util/scenarios');
 // eslint-disable-next-line import/no-dynamic-require
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects', () => {
   describe('GET', () => {
-    it('should return an empty array if not logged in', testService((service) =>
+    it('should return 401 if not logged in', testService((service) =>
       service.get('/v1/projects')
-        .expect(200)
-        .then(({ body }) => { body.should.eql([]); })));
+        .expect(401)));
 
-    it('should return an empty array if the user has no rights', testService((service) =>
+    it('should return an empty array if the user has access to no projects', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/projects')
           .expect(200)
@@ -268,7 +267,8 @@ describe('api: /projects', () => {
 
   describe('/:id GET', () => {
     it('should return notfound if the project does not exist', testService((service) =>
-      service.get('/v1/projects/99').expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/projects/99').expect(404))));
 
     it('should reject if id is non-numeric', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -463,10 +463,11 @@ describe('api: /projects', () => {
 
   describe('/:id PATCH', () => {
     it('should return notfound if the project does not exist', testService((service) =>
-      service.patch('/v1/projects/99')
-        .set('Content-Type', 'application/json')
-        .send({ name: 'New Test Name' })
-        .expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.patch('/v1/projects/99')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'New Test Name' })
+          .expect(404))));
 
     it('should reject unless the user can update', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -547,7 +548,8 @@ describe('api: /projects', () => {
 
   describe('/:id DELETE', () => {
     it('should return notfound if the project does not exist', testService((service) =>
-      service.delete('/v1/projects/99').expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.delete('/v1/projects/99').expect(404))));
 
     it('should reject unless the user can delete', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -815,10 +817,11 @@ describe('api: /projects', () => {
 
   describe('/:id PUT', () => {
     it('should return notfound if the project does not exist', testService((service) =>
-      service.put('/v1/projects/99')
-        .set('Content-Type', 'application/json')
-        .send({ name: 'New Test Name' })
-        .expect(404)));
+      service.login('alice', (asAlice) =>
+        asAlice.put('/v1/projects/99')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'New Test Name' })
+          .expect(404))));
 
     it('should reject unless the user can update', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -991,7 +994,7 @@ describe('api: /projects', () => {
           .then(async ([ bob, audits ]) => {
             const actor = new Actor(bob);
             const forms = await Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectId(Auth.by(actor), project.id));
+              .then((project) => Forms.getByProjectId(Auth.by(actor), project.id, Form.AnyVersion));
 
             audits.length.should.equal(2);
 
@@ -1191,7 +1194,7 @@ describe('api: /projects', () => {
             .then(() => Promise.all([
               asBob.get('/v1/users/current').expect(200).then(({ body }) => body),
               Actors.getById(fk.id).then((o) => o.get()),
-              Forms.getByProjectAndXmlFormId(1, 'simple').then((o) => o.get()),
+              Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef).then((o) => o.get()),
               Audits.getLatestByAction('field_key.assignment.create').then((o) => o.get())
             ]))
             .then(([ bob, fullfk, form, audit ]) => {
@@ -1269,7 +1272,7 @@ describe('api: /projects', () => {
               asBob.get('/v1/projects/1/forms/simple/assignments')
                 .expect(200)
                 .then(({ body }) => { body.should.eql([]); }),
-              container.Forms.getByProjectAndXmlFormId(1, 'simple2')
+              container.Forms.getByProjectAndXmlFormId(1, 'simple2', Form.WithoutDef)
                 .then((o) => o.get())
                 .then(({ acteeId }) => container.Assignments.getByActeeId(acteeId))
                 .then((result) => {
@@ -1333,7 +1336,7 @@ describe('api: /projects', () => {
               Actors.getById(fk.id).then((o) => o.get()),
               Projects.getById(1).then((o) => o.get())
                 // eslint-disable-next-line no-multi-spaces
-                .then((project) => Forms.getByProjectAndXmlFormId(project.id,  'simple')).then((o) => o.get()),
+                .then((project) => Forms.getByProjectAndXmlFormId(project.id,  'simple', Form.WithoutDef)).then((o) => o.get()),
               Audits.getLatestByAction('field_key.assignment.delete').then((o) => o.get())
             ]))
             .then(([ bob, appUserRoleId, fullfk, form, audit ]) => {

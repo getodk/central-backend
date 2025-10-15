@@ -63,7 +63,9 @@ Forms and Submissions are the core part of ODK Central. Above ER Diagram shows h
 - A Form can have Public Links (public_links) that allow anonymous users make Submissions against it.
 - A Form can receive Submissions.
 - A Submission has one or more Definitions (submission_defs) to support multiple versions. We keep submission XML in a single column of submission_defs table.
-- A Submission can have Field Values (form_field_values), which is a special extraction of certain kinds of values. We only store selected values of multi-select question type to support fast csv export. All other values of Form Fields are not extracted from the Submission XML.
+- A Submission can have Field Values (`form_field_values`). The values here are used to determine the shape of the normalized selectMultiple representation. They appear, for instance, when selecting the _Split “select multiple” choices into columns_ option for CSV exports — in the CSV, they will not appear as _values_, but as _column headers_ that a submission's multiple choice field values are then scored against (0/1).
+  In other words, these values are used to determine the choice options appearing as those column headers.
+  The alternative to extracting these values from submissions would be to use _all_ possible choice values (as extracted from eg the form's primary/secondary instances), but that could then amount to thousands of options, and a very wide CSV indeed…
 - A Submission can have Attachments (submission_attachments) like images, audio, video and data. Associated binary file is store in Blobs (blobs) table.
 - A Submission can hava a Client Audit (client_audits), which is a data file containing timestamped logs of user actions on client application (ODK Collect / Enketo). The data file is received as Submission Attachment, the file is stored in Blobs (blobs) table and each log entry is inserted into Client Audit (client_audits) table.
 - A Submission can have Comments

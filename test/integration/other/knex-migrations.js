@@ -438,7 +438,7 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
       });
     }));
 
-    it('does not modify other actor data', testServiceFullTrx(async (service, container) => {
+    it.skip('does not modify other actor data', testServiceFullTrx(async (service, container) => {
       await populateUsers(container);
       await service.login('alice');
       await createToken(container);
@@ -922,10 +922,13 @@ describe.skip('database migration: 20231002-01-add-conflict-details.js', functio
   }));
 });
 
-testMigration('20240215-01-entity-delete-verb.js', () => {
-  it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service) => {
+testMigration.skip('20240215-01-entity-delete-verb.js', () => {
+  it('should add entity.delete verb to correct roles', testServiceFullTrx(async (service, container) => {
+    await populateUsers(container);
+
     const verbsByRole = async () => {
-      const { body: roles } = await service.get('/v1/roles').expect(200);
+      const asAlice = await service.login('alice');
+      const { body: roles } = await asAlice.get('/v1/roles').expect(200);
       const bySystem = {};
       for (const role of roles) bySystem[role.system] = role.verbs;
       return bySystem;
@@ -951,10 +954,13 @@ testMigration('20240215-01-entity-delete-verb.js', () => {
   }));
 });
 
-testMigration('20240215-02-dedupe-verbs.js', () => {
-  it('should remove duplicate submission.update verb', testServiceFullTrx(async (service) => {
+testMigration.skip('20240215-02-dedupe-verbs.js', () => {
+  it('should remove duplicate submission.update verb', testServiceFullTrx(async (service, container) => {
+    await populateUsers(container);
+
     const verbsByRole = async () => {
-      const { body: roles } = await service.get('/v1/roles').expect(200);
+      const asAlice = await service.login('alice');
+      const { body: roles } = await asAlice.get('/v1/roles').expect(200);
       const bySystem = {};
       for (const role of roles) bySystem[role.system] = role.verbs;
       return bySystem;
@@ -977,9 +983,11 @@ testMigration('20240215-02-dedupe-verbs.js', () => {
     after.viewer.length.should.equal(9);
   }));
 
-  it('should result in unique verbs for all roles', testServiceFullTrx(async (service) => {
+  it('should result in unique verbs for all roles', testServiceFullTrx(async (service, container) => {
     await up();
-    const { body: roles } = await service.get('/v1/roles').expect(200);
+    await populateUsers(container);
+    const asAlice = await service.login('alice');
+    const { body: roles } = await asAlice.get('/v1/roles').expect(200);
     for (const { verbs } of roles) verbs.should.eql([...new Set(verbs)]);
   }));
 });

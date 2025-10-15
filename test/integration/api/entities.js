@@ -8,7 +8,6 @@ const { getById, createVersion } = require('../../../lib/model/query/entities');
 const { log } = require('../../../lib/model/query/audits');
 const Option = require('../../../lib/util/option');
 const { Entity } = require('../../../lib/model/frames');
-const { getOrNotFound } = require('../../../lib/util/promise');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -2009,7 +2008,7 @@ describe('Entities API', () => {
 
       await exhaust(container);
 
-      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+      const dataset = await container.Datasets.get(1, 'people', true).then((o) => o.get());
       const actorId = await container.oneFirst(sql`SELECT id FROM actors WHERE "displayName" = 'Alice'`);
 
       let secondTxWaiting = false;
@@ -2021,7 +2020,7 @@ describe('Entities API', () => {
 
         const logger = (action, actee, details) => log(containerTx1.context.auth.actor, action, actee, details);
 
-        const entity = await getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx1).then(getOrNotFound);
+        const entity = await getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx1).then((o) => o.get());
 
         entityLocked = true;
         console.log('Tx1: entity fetched');
@@ -2068,7 +2067,7 @@ describe('Entities API', () => {
 
         console.log('Tx2: looks like 1st tx has locked the row');
 
-        const promise = getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx2).then(getOrNotFound)
+        const promise = getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx2).then((o) => o.get())
           .then(async (entity) => {
             console.log('Tx2: entity fetched');
 
@@ -2947,6 +2946,290 @@ describe('Entities API', () => {
           });
       }));
     });
+  });
+
+  // Bulk Delete API
+  describe('POST /datasets/:name/entities/bulk-delete', () => {
+    it('should return not found if dataset is not there', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/nonexistent/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(404);
+    }));
+
+    it('should return unauthorized if user does not have rights to delete entities', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(403);
+    }));
+
+    // because the endpoint is there and we want to keep this endpoint idempotent
+    it('should return ok even if provided entities are not there', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-nonexistent']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
+        });
+    }));
+
+    it('should delete entities with the given UUIDs', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(2);
+        });
+
+      await container.Audits.getLatestByAction('entity.bulk.delete')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entityUuids.should.be.eql(['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.empty();
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?deleted=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.map(e => e.uuid).should.be.eql(['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789abc']);
+        });
+    }));
+
+    it('should return count 0 if entities are already deleted', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(2);
+        });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
+        });
+    }));
+
+    it('should log entity.delete when only one uuid is provided', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(1);
+        });
+
+      await container.Audits.getLatestByAction('entity.delete')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+        });
+    }));
+  });
+
+  // Bulk Restore API
+  describe('POST /datasets/:name/entities/bulk-restore', () => {
+    it('should return not found if dataset is not there', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/nonexistent/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(404);
+    }));
+
+    it('should return unauthorized if user does not have rights to restore entities', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(403);
+    }));
+
+    // because the endpoint is there and we want to keep this endpoint idempotent
+    it('should return ok even if provided entities are not there', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-nonexistent']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
+        });
+    }));
+
+    it('should restore entities with the given UUIDs', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(2);
+        });
+    }));
+
+    it('should return count 0 if entities are not deleted', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
+        });
+    }));
+
+    it('should log entity.restore when only one uuid is provided', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // First delete an entity
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(200);
+
+      // Then restore it
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(1);
+        });
+
+      await container.Audits.getLatestByAction('entity.restore')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+        });
+    }));
+
+    it('should handle mixed valid and invalid UUIDs in bulk restore', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // First delete an entity
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(200);
+
+      // Try to restore both a valid deleted entity and a nonexistent one
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-nonexistent']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(1);
+        });
+    }));
+
+    it('should handle bulk restore with audit logging for multiple entities', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // First delete multiple entities
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200);
+
+      // Then restore them
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(2);
+        });
+
+      await container.Audits.getLatestByAction('entity.bulk.restore')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entityUuids.should.be.eql(['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']);
+        });
+    }));
+
+    it('should return bulk restore event for individual entity audits', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // First delete entities
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200);
+
+      // Then restore them
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200);
+
+      // Check that bulk restore events appear in individual entity audits
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body }) => {
+          const bulkRestoreEvent = body.find(audit => audit.action === 'entity.bulk.restore');
+          bulkRestoreEvent.should.not.be.undefined();
+          bulkRestoreEvent.details.entityUuids.should.containEql('12345678-1234-4123-8234-123456789abc');
+        });
+    }));
   });
 
   // Special scenarios
@@ -4008,5 +4291,143 @@ describe('Entities API', () => {
           body.success.should.be.true();
         });
     }));
+  });
+
+  describe('GET /datasets/:name/entities/creators', () => {
+
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/creators')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(403);
+    }));
+
+    it('should return empty array if no entities exist', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([]);
+        });
+    }));
+
+    it('should return creators sorted by display name', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create entities as different users
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice Entity',
+        })
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Bob Entity',
+        })
+        .expect(200);
+
+      // Get creators
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Array();
+          body.length.should.equal(2);
+
+          // Should be sorted by displayName
+          body[0].displayName.should.equal('Alice');
+          body[0].should.be.an.Actor();
+
+          body[1].displayName.should.equal('Bob');
+          body[1].should.be.an.Actor();
+        });
+    }));
+
+    it('should not include duplicate creators', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create form and dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create multiple entities as the same user
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice Entity 1',
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Alice Entity 2',
+        })
+        .expect(200);
+
+      // Get creators
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Array();
+          body.length.should.equal(1);
+          body[0].displayName.should.equal('Alice');
+        });
+    }));
+
+    it('should only include creators of non-deleted entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      // Create form and dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create entities as different users
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice Entity',
+        })
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Bob Entity',
+        })
+        .expect(200);
+
+      // Delete Bob's entity
+      await asBob.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789def')
+        .expect(200);
+
+      // Get creators - should only include Alice now
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Array();
+          body.length.should.equal(1);
+          body[0].displayName.should.equal('Alice');
+        });
+    }));
+
   });
 });
