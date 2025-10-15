@@ -376,6 +376,37 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should allow filtering by UUID', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      await container.run(sql`UPDATE entities SET "createdAt" = '2020-01-01'`);
+
+      await createSubmissions(asAlice, container, 2, 2);
+
+      const entityUuids = await container.allFirst(sql`SELECT uuid FROM entities`);
+      entityUuids.length.should.eql(4);
+
+      for(const uuid of entityUuids) {
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq '${uuid}'`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+
+            const [ val ] = body.value;
+            Object.keys(val).should.eqlInAnyOrder([ '__id', 'label', '__system', 'first_name', 'age'  ]);
+            val.__id.should.eql(uuid);
+            val.__system.createdAt.should.be.an.isoDate();
+          });
+      }
+    }));
+
     it('should return only searched entities', testService(async (service) => {
       const asAlice = await service.login('alice');
 
