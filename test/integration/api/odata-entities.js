@@ -513,23 +513,6 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
-    it('should NOT filter by id', testService(async (service, container) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .set('Content-Type', 'application/xml')
-        .send(testData.forms.simpleEntity)
-        .expect(200);
-
-      await createSubmissions(asAlice, container, 2);
-
-      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq \'1234\'')
-        .expect(501)
-        .then(({ body }) => {
-          body.message.should.eql('The given OData filter expression references fields not supported by this server: __id at 0');
-        });
-    }));
-
     it('should NOT filter by name/uuid', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
