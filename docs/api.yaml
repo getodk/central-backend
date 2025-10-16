@@ -11337,6 +11337,7 @@ paths:
 
         | Entity Metadata         | OData Field Name     |
         | ------------------------| -------------------- |
+        | Entity UUID             | `__id`               |
         | Entity Creator Actor ID | `__system/creatorId` |
         | Entity Timestamp        | `__system/createdAt` |
         | Entity Update Timestamp | `__system/updatedAt` |
