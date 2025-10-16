@@ -1101,13 +1101,8 @@ describe('api: /forms/:id.svc', () => {
               .expect(200))
             .then(() => asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__id eq 'rone'`)
               .expect(200)
+              .then(validateAndFilterSubmissionDates)
               .then(({ body }) => {
-                for (const entry of body.value) {
-                  entry.__system.submissionDate.should.be.an.isoDate();
-                  // eslint-disable-next-line no-param-reassign
-                  delete entry.__system.submissionDate;
-                }
-
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                   value: [{
@@ -1135,13 +1130,8 @@ describe('api: /forms/:id.svc', () => {
               }))
             .then(() => asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__id eq 'rtwo'`)
               .expect(200)
+              .then(validateAndFilterSubmissionDates)
               .then(({ body }) => {
-                for (const entry of body.value) {
-                  entry.__system.submissionDate.should.be.an.isoDate();
-                  // eslint-disable-next-line no-param-reassign
-                  delete entry.__system.submissionDate;
-                }
-
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                   value: [{
@@ -1169,13 +1159,8 @@ describe('api: /forms/:id.svc', () => {
               }))
             .then(() => asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__id eq 'rthree'`)
               .expect(200)
+              .then(validateAndFilterSubmissionDates)
               .then(({ body }) => {
-                for (const entry of body.value) {
-                  entry.__system.submissionDate.should.be.an.isoDate();
-                  // eslint-disable-next-line no-param-reassign
-                  delete entry.__system.submissionDate;
-                }
-
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                   value: [{
