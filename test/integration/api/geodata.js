@@ -35,6 +35,7 @@ function makeSubmission (
     geoshapeRepeat2 = '73 3 3 0; 74 4 4 0; 75 5 5 0; 73 3 3 0',
     geoPointDeeplyNested1 = '11 1 1 0',
     geoPointDeeplyNested2 = '22 2 2 0',
+    deprecatedID = '',
     instanceID = '',
   // eslint-disable-next-line object-curly-newline
   }
@@ -71,6 +72,7 @@ function makeSubmission (
       <survey_ended_at>2025-07-19T10:10:58.720+05:30</survey_ended_at>
       <meta>
         <instanceID>${instanceID}</instanceID>
+        <deprecatedID>${deprecatedID}</deprecatedID>
       </meta>
     </data>
   `;
@@ -137,7 +139,7 @@ const expectedGeoFieldDescriptors = (formSchemaId) => [
   }
 ];
 
-const setupGeoSubmissions = async (service, db, bobSubmitsToo = false) => {
+const setupGeoSubmissions = async (service, db, bobSubmitsToo = false, withAnEdit = false) => {
   const asAlice = await service.login('alice');
   const asBob = await service.login('bob');
 
@@ -153,13 +155,25 @@ const setupGeoSubmissions = async (service, db, bobSubmitsToo = false) => {
 
   if (bobSubmitsToo) {
     // We rely on the two back-to-back submitted submissions to not be created
-    // in the same millisecond, so this little delay is just so we won't fail
-    // on very fast systems
+    // in the same millisecond (in order to use time-based filters in the test),
+    // so this little delay is just so we won't fail on very fast systems.
     await db.query(sql`select pg_sleep_for('10 ms')`);
 
     await asBob.post('/v1/projects/1/forms/geotest/submissions')
       .set('Content-Type', 'application/xml')
       .send(makeSubmission({ instanceID: '2' }))
+      .expect(200);
+  }
+
+  if (withAnEdit) {
+    await asAlice.put('/v1/projects/1/forms/geotest/submissions/1')
+      .set('Content-Type', 'application/xml')
+      .send(makeSubmission({ deprecatedID: '1', instanceID: '1.1', geopointSingle: '1.1 1.1 1.1 1.1' }))
+      .expect(200);
+
+    await asAlice.put('/v1/projects/1/forms/geotest/submissions/1')
+      .set('Content-Type', 'application/xml')
+      .send(makeSubmission({ deprecatedID: '1.1', instanceID: '1.2', geopointSingle: '1.2 1.2 1.2 1.2' }))
       .expect(200);
   }
 
@@ -337,7 +351,7 @@ describe('api: individual submission geodata', () => {
     await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1.geojson`)
       .expect(200)
       .then(({ body }) => {
-        sortGeoJson(JSON.parse(body)).should.deepEqual(expectedGeoJSON);
+        sortGeoJson(body).should.deepEqual(expectedGeoJSON);
       });
   }));
 
@@ -350,10 +364,56 @@ describe('api: individual submission geodata', () => {
     await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1.geojson?fieldpath=all`)
       .expect(200)
       .then(({ body }) => {
-        sortGeoJson(JSON.parse(body)).should.deepEqual(expectedGeoJSON);
+        sortGeoJson(body).should.deepEqual(expectedGeoJSON);
       });
   }));
 
+
+  it('when a submission is edited, the geodata of the edit appears under the editee instanceID', testService(async (service, { db }) => {
+    // This is congruent with the `.xml` sibling.
+    const { asAlice } = await setupGeoSubmissions(service, db, false, true);
+
+    const expectedGeoJSON = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "1.2", "geometry" : {"type" : "Point", "coordinates" : [1.2, 1.2, 1.2]}, "properties" : {"fieldpath" : "/singular/input_geopoint"}}]}')));
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1.geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(body).should.deepEqual(expectedGeoJSON);
+      });
+  }));
+
+
+  it('when a submission is edited, the geodata of the editee appears as a version of the submission', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db, false, true);
+
+    const expectedGeoJSON = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "1", "geometry" : {"type" : "Point", "coordinates" : [0, 50, 0]}, "properties" : {"fieldpath" : "/singular/input_geopoint"}}]}')));
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1/versions/1.geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(body).should.deepEqual(expectedGeoJSON);
+      });
+  }));
+
+
+  it('when a submission is edited, the geodata of the edits appears as a versions of the submission', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoSubmissions(service, db, false, true);
+
+    const expectedGeoJSONv1 = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "1.1", "geometry" : {"type" : "Point", "coordinates" : [1.1, 1.1, 1.1]}, "properties" : {"fieldpath" : "/singular/input_geopoint"}}]}')));
+    const expectedGeoJSONv2 = palatableGeoJSON(sortGeoJson(JSON.parse('{"type" : "FeatureCollection", "features" : [{"type" : "Feature", "id" : "1.2", "geometry" : {"type" : "Point", "coordinates" : [1.2, 1.2, 1.2]}, "properties" : {"fieldpath" : "/singular/input_geopoint"}}]}')));
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1/versions/1.1.geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(body).should.deepEqual(expectedGeoJSONv1);
+      });
+
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions/1/versions/1.2.geojson`)
+      .expect(200)
+      .then(({ body }) => {
+        sortGeoJson(body).should.deepEqual(expectedGeoJSONv2);
+      });
+  }));
 
 });
 
@@ -602,7 +662,7 @@ describe('api: individual entity geodata', () => {
     await asAlice.get(`/v1/projects/1/datasets/geofun/entities/12345678-1234-4123-8234-123456789aaa/geojson`)
       .expect(200)
       .then(({ body }) => {
-        sortGeoJson(JSON.parse(body)).should.deepEqual(expectedGeoJSON);
+        sortGeoJson(body).should.deepEqual(expectedGeoJSON);
       });
   }));
 
