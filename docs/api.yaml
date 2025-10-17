@@ -6082,7 +6082,7 @@ paths:
               example:
                 code: "409.1"
                 message: A resource already exists with id value(s) of 1.
-  /projects/{projectId}/datasets/{xmlFormId}/submissions.geojson:
+  /v1/projects/{projectId}/forms/{xmlFormId}/submissions.geojson:
     get:
       tags:
       - Submissions
