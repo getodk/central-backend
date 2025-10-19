@@ -6093,8 +6093,8 @@ paths:
         No particular ordering is implied.
         
         ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
-        Please don't use it just yet unless you're prepared to deal with breaking changes.
-        That said, if you have requirements for this API that you'd like to discuss, please post on [the forum](https://forum.getodk.org/).
+        Its current behaviour should not be depended upon.
+        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
       operationId: Submissions Geodata
       parameters:
       - name: projectId
@@ -9131,8 +9131,8 @@ paths:
         No particular ordering is implied.
         
         ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
-        Please don't use it just yet unless you're prepared to deal with breaking changes.
-        That said, if you have requirements for this API that you'd like to discuss, please post on [the forum](https://forum.getodk.org/).
+        Its current behaviour should not be depended upon.
+        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
       operationId: Entities Geodata
       parameters:
       - name: projectId
