@@ -6117,8 +6117,47 @@ paths:
           content:
             application/json:
               schema:
-                description: Submission geodata, in [GeoJSON](https://geojson.org) format.
+                description: |
+                  Submission geodata, in [GeoJSON](https://geojson.org) format.
+                  Geodata is grouped by submission. Submissions are represented as a GeoJSON "feature".
+                  
+                  When the provenance of the geodata (the form's field path) is not evident from the request, the origin field path of the geodata will be denoted in a `fieldpath` property in the feature's GeoJSON `properties` object. This is the case in when no field path is specified in the request, as in that situation the first geopoint-, geotrace-, or geoshape-field (not in any repeatgroup) of the form is used. And thus as forms get revised, what is the first geo-type field (not in any repeatgroup) may change; without the `fieldpath` extra information, the data provenance would be unclear. 
                 type: object
+              example: |
+                {
+                  "type": "FeatureCollection",
+                  "features": [
+                    {
+                      "type": "Feature",
+                      "id": "uuid:f7ec6523-05f5-450c-9153-934b640b7467",
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [170.511231, -52.123783, 654]
+                      },
+                      "properties": {
+                        "fieldpath": "/some_group/some_geopoint"
+                      }
+                    },
+                    {
+                      "type": "Feature",
+                      "id": "uuid:0de0e925-0f0e-467c-b809-31a7427f1518",
+                      "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [
+                          [
+                            [170,     10,      653],
+                            [171.123, 20.123, -30.30],
+                            [172,     30,      65.65],
+                            [170,     10,      653]
+                          ]
+                        ]
+                      },
+                      "properties": {
+                        "fieldpath": "/some_geoshape"
+                      }
+                    }
+                  ]
+                }
         403:
           description: Forbidden
           content:
@@ -9088,7 +9127,7 @@ paths:
       - Entity Management
       summary: Entities Geodata
       description: |-
-        This endpoint returns the entities' `geography` attribute, in [GeoJSON](https://geojson.org) format.
+        This endpoint returns the geometry-interpretable value of the `geometry` attribute of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
         No particular ordering is implied.
         
         ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
@@ -9116,8 +9155,42 @@ paths:
           content:
             application/json:
               schema:
-                description: Entities' `geography` attribute, in GeoJSON format (https://geojson.org)
+                description: |
+                  Value of the `geometry` attribute (if geometry-interpretable) of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
+
+                  Each entity is represented as a GeoJSON feature.
+
+                  A quirk occurs when a `geotrace` is 4 or more points long, and starts and ends at the exact same measured point. In that case, it is represented as a GeoJSON `Polygon` type, which is not the type one would expect when the entities' geodata has been recorded using an ODK `geotrace` field.
+                  
+                  The reason this happens is due to the fact that entities do not have full field-type typing; the entity's `geometry` attribute's type is therefore guessed from the shape of its data. And in the data, the only thing distinguishing a `geoshape` from a `geotrace` is that the former is "closed"; its first and last point are identical.
+                  
+                  Surprises due to this guessing are very unlikely to occur in real-world GPS usage scenarios as noise in the measurements far exceeds the logged point components' precision, therefore, in real-world scenarios, GPS-made geotraces are very unlikely to start and end on the exact same point.
                 type: object
+              example: |
+                {
+                  "type": "FeatureCollection",
+                  "features": [
+                    {
+                      "type": "Feature",
+                      "id": "06f1b19a-a14e-4916-b850-b5a5155ea4b7",
+                      "properties": null,
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [27.98833, 86.92528, 8848]
+                      }
+                    },
+                    {
+                      "type": "Feature",
+                      "id": "b4677e0a-8731-4b75-b8df-8e4337ff9b5e",
+                      "properties": null,
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [11.3733, 142.5917, -10984]
+                      }
+                    }
+                  ]
+                }
+
         403:
           description: Forbidden
           content:
