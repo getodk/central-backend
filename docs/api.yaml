@@ -6082,7 +6082,7 @@ paths:
               example:
                 code: "409.1"
                 message: A resource already exists with id value(s) of 1.
-  /projects/{projectId}/datasets/{xmlFormId}/submissions.geojson:
+  /v1/projects/{projectId}/forms/{xmlFormId}/submissions.geojson:
     get:
       tags:
       - Submissions
@@ -6095,7 +6095,7 @@ paths:
         ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
         Please don't use it just yet unless you're prepared to deal with breaking changes.
         That said, if you have requirements for this API that you'd like to discuss, please post on [the forum](https://forum.getodk.org/).
-      operationId: Entities Geodata
+      operationId: Submissions Geodata
       parameters:
       - name: projectId
         in: path
