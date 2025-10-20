@@ -167,4 +167,4 @@ api-docs:
 
 .PHONY: api-docs-lint
 api-docs-lint:
-	npx --no @redocly/cli lint --extends=minimal docs/api.yaml
+	(cd docs && npx --no @redocly/cli lint --extends=recommended api.yaml)

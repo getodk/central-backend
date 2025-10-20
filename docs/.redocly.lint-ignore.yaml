@@ -1,0 +1,766 @@
+# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
+# See https://redocly.com/docs/cli/ for more information.
+api.yaml:
+  info-license:
+    - '#/info'
+  tag-description:
+    - '#/tags/22/description'
+  no-ambiguous-paths:
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.svc~1{table}'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.svc'
+  operation-operationId-url-safe:
+    - '#/paths/~1v1~1sessions/post/operationId'
+    - '#/paths/~1v1~1example1/get/operationId'
+    - '#/paths/~1v1~1example2/get/operationId'
+    - '#/paths/~1v1~1key~1{appUser}~1example3/get/operationId'
+    - '#/paths/~1v1~1sessions~1{token}/delete/operationId'
+    - '#/paths/~1v1~1sessions~1current/delete/operationId'
+    - '#/paths/~1v1~1users/get/operationId'
+    - '#/paths/~1v1~1users/post/operationId'
+    - '#/paths/~1v1~1users~1{actorId}/get/operationId'
+    - '#/paths/~1v1~1users~1{actorId}/delete/operationId'
+    - '#/paths/~1v1~1users~1{actorId}/patch/operationId'
+    - '#/paths/~1v1~1users~1current/get/operationId'
+    - '#/paths/~1v1~1users~1{actorId}~1password/put/operationId'
+    - '#/paths/~1v1~1users~1reset~1initiate/post/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1app-users/get/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1app-users/post/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1app-users~1{id}/delete/operationId'
+    - '#/paths/~1v1~1roles/get/operationId'
+    - '#/paths/~1v1~1roles~1{id}/get/operationId'
+    - '#/paths/~1v1~1assignments/get/operationId'
+    - '#/paths/~1v1~1assignments~1{roleId}/get/operationId'
+    - '#/paths/~1v1~1assignments~1{roleId}~1{actorId}/post/operationId'
+    - '#/paths/~1v1~1assignments~1{roleId}~1{actorId}/delete/operationId'
+    - '#/paths/~1v1~1projects/get/operationId'
+    - '#/paths/~1v1~1projects/post/operationId'
+    - '#/paths/~1v1~1projects~1{id}/get/operationId'
+    - '#/paths/~1v1~1projects~1{id}/put/operationId'
+    - '#/paths/~1v1~1projects~1{id}/delete/operationId'
+    - '#/paths/~1v1~1projects~1{id}/patch/operationId'
+    - '#/paths/~1v1~1projects~1{id}~1key/post/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1assignments/get/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1assignments~1{roleId}/get/operationId'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1assignments~1{roleId}~1{actorId}/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1assignments~1{roleId}~1{actorId}/delete/operationId
+    - '#/paths/~1v1~1projects~1{projectId}~1assignments~1forms/get/operationId'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1assignments~1forms~1{roleId}/get/operationId
+    - '#/paths/~1v1~1projects~1{projectId}~1forms/get/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms/post/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}/get/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}/delete/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}/patch/operationId'
+    - '#/paths/~1v1~1form-links~1{formLinkId}~1form/get/operationId'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.xml/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.xlsx/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1attachments/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1attachments~1{filename}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1fields/get/operationId
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{id}~1restore/post/operationId'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft/delete/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.xml/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.xlsx/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/delete/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/patch/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1fields/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1publish/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}.xml/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}.xlsx/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}~1attachments/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}~1attachments~1{filename}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}~1fields/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1assignments/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1assignments~1{roleId}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1assignments~1{roleId}~1{actorId}/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1assignments~1{roleId}~1{actorId}/delete/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1public-links/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1public-links/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1public-links~1{linkId}/delete/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1dataset-diff/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1dataset-diff/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/put/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/delete/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/patch/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1restore/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}.xml/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1edit/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions.csv.zip/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions.csv.zip/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions.csv/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions.csv/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1audits/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1keys/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1submitters/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1comments/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1comments/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments~1{filename}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments~1{filename}/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments~1{filename}/delete/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions~1{versionId}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions~1{versionId}.xml/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions~1{versionId}~1attachments/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions~1{versionId}~1attachments~1{filename}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1diffs/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions.csv.zip/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions.csv.zip/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1keys/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}.xml/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}~1attachments/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}~1attachments~1{filename}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}~1attachments~1{filename}/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}~1attachments~1{filename}/delete/operationId
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets/get/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets/post/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}/get/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}/patch/operationId'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1properties/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities.csv/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/delete/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/patch/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1restore/post/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1diffs/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1audits/get/operationId
+    - >-
+      #/paths/~1projects~1{projectId}~1datasets~1{name}~1entities~1bulk-delete/post/operationId
+    - >-
+      #/paths/~1projects~1{projectId}~1datasets~1{name}~1entities~1bulk-restore/post/operationId
+    - '#/paths/~1v1~1projects~1{projectId}~1formList/get/operationId'
+    - '#/paths/~1v1~1projects~1{projectId}~1submission/post/operationId'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1manifest/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1integrity?id={UUIDs}/get/operationId
+    - >-
+      #/paths/~1v1~1test~1{token}~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1formList/get/operationId
+    - >-
+      #/paths/~1v1~1test~1{token}~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submission/post/operationId
+    - >-
+      #/paths/~1v1~1test~1{token}~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1manifest/get/operationId
+    - >-
+      #/paths/~1v1~1test~1{token}~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.svc/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.svc~1$metadata/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.svc~1{table}/get/operationId
+    - >-
+      #/paths/~1dl~1projects{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments~1{filename}/get/operationId
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc/get/operationId'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1$metadata/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.svc/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.svc~1$metadata/get/operationId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.svc~1{table}/get/operationId
+    - '#/paths/~1v1~1config~1analytics/get/operationId'
+    - '#/paths/~1v1~1config~1analytics/post/operationId'
+    - '#/paths/~1v1~1config~1analytics/delete/operationId'
+    - '#/paths/~1v1~1analytics~1preview/get/operationId'
+    - '#/paths/~1v1~1audits/get/operationId'
+    - '#/paths/~1v1~1backup/post/operationId'
+  operation-4xx-response:
+    - '#/paths/~1v1~1example1/get/responses'
+    - '#/paths/~1v1~1example2/get/responses'
+    - '#/paths/~1v1~1key~1{appUser}~1example3/get/responses'
+    - '#/paths/~1v1~1roles/get/responses'
+    - '#/paths/~1v1~1roles~1{id}/get/responses'
+    - '#/paths/~1v1~1projects/get/responses'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1public-links/get/responses
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1dataset-diff/get/responses
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1dataset-diff/get/responses
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}.xml/get/responses
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}.xml/get/responses
+    - '#/paths/~1v1~1projects~1{projectId}~1formList/get/responses'
+    - >-
+      #/paths/~1v1~1test~1{token}~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1formList/get/responses
+    - >-
+      #/paths/~1dl~1projects{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments~1{filename}/get/responses
+  operation-operationId:
+    - >-
+      #/paths/~1v1~1user-preferences~1project~1{projectId}~1{propertyName}/put/operationId
+    - >-
+      #/paths/~1v1~1user-preferences~1project~1{projectId}~1{propertyName}/delete/operationId
+    - '#/paths/~1v1~1user-preferences~1site~1{propertyName}/put/operationId'
+    - '#/paths/~1v1~1user-preferences~1site~1{propertyName}/delete/operationId'
+  no-invalid-media-type-examples:
+    - >-
+      #/paths/~1v1~1users~1current/get/responses/200/content/application~1json;
+      extended/example/verbs/0
+    - >-
+      #/paths/~1v1~1users~1current/get/responses/200/content/application~1json;
+      extended/example/verbs/1
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}/get/responses/200/content/application~1json/example
+    - >-
+      #/paths/~1v1~1form-links~1{formLinkId}~1form/get/responses/200/content/application~1json/example
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1attachments/get/responses/200/content/application~1json/example/0/hash
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1attachments~1{filename}/get/responses/200/content/{the
+      MIME type of the attachment file itself}/example
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments/get/responses/200/content/application~1json/example/0/hash
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}~1attachments/get/responses/200/content/application~1json/example/0/hash
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}~1attachments~1{filename}/get/responses/200/content/{the
+      MIME type of the attachment file itself}/example
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/get/responses/200/content/application~1json/example/0/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/get/responses/200/content/application~1json/example/0/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/get/responses/200/content/application~1json;
+      extended/example/0/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/get/responses/200/content/application~1json;
+      extended/example/0/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/post/responses/200/content/application~1json/example/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/post/responses/200/content/application~1json/example/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/get/responses/200/content/application~1json/example/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/get/responses/200/content/application~1json/example/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/get/responses/200/content/application~1json;
+      extended/example/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/get/responses/200/content/application~1json;
+      extended/example/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/put/responses/200/content/application~1json/example/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/put/responses/200/content/application~1json/example/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/patch/responses/200/content/application~1json/example/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/patch/responses/200/content/application~1json/example/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions/get/responses/200/content/application~1json/example/0/formVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions~1{versionId}/get/responses/200/content/application~1json/example/formVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1diffs/get/responses/200/content/application~1json/example
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions/get/responses/200/content/application~1json/example/0/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions/get/responses/200/content/application~1json;
+      extended/example/0/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions/post/responses/200/content/application~1json/example/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions/post/responses/200/content/application~1json/example/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}/get/responses/200/content/application~1json/example/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}/get/responses/200/content/application~1json/example/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}/get/responses/200/content/application~1json;
+      extended/example/reviewState
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}/get/responses/200/content/application~1json;
+      extended/example/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json/example/0/currentVersion/conflictingProperties
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json/example/0/currentVersion/baseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json/example/0/currentVersion/branchId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json/example/0/currentVersion/trunkVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json/example/0/currentVersion/branchBaseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json/example/0/currentVersion/createdAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json;
+      extended/example/0/conflict
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json;
+      extended/example/0/currentVersion/conflictingProperties
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json;
+      extended/example/0/currentVersion/baseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json;
+      extended/example/0/currentVersion/branchId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json;
+      extended/example/0/currentVersion/trunkVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json;
+      extended/example/0/currentVersion/branchBaseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json;
+      extended/example/0/currentVersion/createdAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get/responses/200/content/application~1json;
+      extended/example/0/currentVersion/creator
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/get/responses/200/content/application~1json/example/0/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/get/responses/200/content/application~1json/example/1/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/post/responses/200/content/application~1json/example/conflict
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/post/responses/200/content/application~1json/example/currentVersion/conflictingProperties
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/post/responses/200/content/application~1json/example/currentVersion/baseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/post/responses/200/content/application~1json/example/currentVersion/branchId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/post/responses/200/content/application~1json/example/currentVersion/trunkVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/post/responses/200/content/application~1json/example/currentVersion/branchBaseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/get/responses/200/content/application~1json/example
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/get/responses/200/content/application~1json;
+      extended/example
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/patch/responses/200/content/application~1json/example/conflict
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/patch/responses/200/content/application~1json/example/currentVersion/conflictingProperties
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/patch/responses/200/content/application~1json/example/currentVersion/baseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/patch/responses/200/content/application~1json/example/currentVersion/branchId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/patch/responses/200/content/application~1json/example/currentVersion/trunkVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/patch/responses/200/content/application~1json/example/currentVersion/branchBaseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json/example/0/conflictingProperties
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json/example/0/baseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json/example/0/branchId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json/example/0/trunkVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json/example/0/branchBaseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json/example/0/source
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json/example/0/conflict
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json;
+      extended/example/0/conflictingProperties
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json;
+      extended/example/0/baseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json;
+      extended/example/0/branchId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json;
+      extended/example/0/trunkVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json;
+      extended/example/0/branchBaseVersion
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json;
+      extended/example/0/source
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get/responses/200/content/application~1json;
+      extended/example/0/conflict
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/0/__system/creatorId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/0/__system/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/0/__system/version
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/0/__system/conflict
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/0/circumference_cm
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/1/__system/creatorId
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/1/__system/deletedAt
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/1/__system/version
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/1/__system/conflict
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get/responses/200/content/application~1json/example/value/1/circumference_cm
+    - >-
+      #/paths/~1v1~1audits/get/responses/200/content/application~1json/example/0/details/userAgent
+    - >-
+      #/paths/~1v1~1audits/get/responses/200/content/application~1json;
+      extended/example/0/details/userAgent
+    - >-
+      #/paths/~1v1~1audits/get/responses/400/content/application~1json/example/code
+  operation-2xx-response:
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1edit/get/responses
+  path-not-include-query:
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1integrity?id={UUIDs}
+  path-parameters-defined:
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1integrity?id={UUIDs}/get/parameters
+  no-unused-components:
+    - '#/components/schemas/Forms'
+    - '#/components/schemas/Property'
+    - '#/components/schemas/DraftProperty'
+    - '#/components/schemas/Error406'
+    - '#/components/schemas/Error409'
+    - '#/components/schemas/Error501'
+  security-defined:
+    - '#/paths/~1v1~1sessions/post'
+    - '#/paths/~1v1~1example1/get'
+    - '#/paths/~1v1~1example2/get'
+    - '#/paths/~1v1~1key~1{appUser}~1example3/get'
+    - '#/paths/~1v1~1sessions~1{token}/delete'
+    - '#/paths/~1v1~1sessions~1current/delete'
+    - '#/paths/~1v1~1users/get'
+    - '#/paths/~1v1~1users/post'
+    - '#/paths/~1v1~1users~1{actorId}/get'
+    - '#/paths/~1v1~1users~1{actorId}/delete'
+    - '#/paths/~1v1~1users~1{actorId}/patch'
+    - '#/paths/~1v1~1user-preferences~1project~1{projectId}~1{propertyName}/put'
+    - >-
+      #/paths/~1v1~1user-preferences~1project~1{projectId}~1{propertyName}/delete
+    - '#/paths/~1v1~1user-preferences~1site~1{propertyName}/put'
+    - '#/paths/~1v1~1user-preferences~1site~1{propertyName}/delete'
+    - '#/paths/~1v1~1users~1current/get'
+    - '#/paths/~1v1~1users~1{actorId}~1password/put'
+    - '#/paths/~1v1~1users~1reset~1initiate/post'
+    - '#/paths/~1v1~1projects~1{projectId}~1app-users/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1app-users/post'
+    - '#/paths/~1v1~1projects~1{projectId}~1app-users~1{id}/delete'
+    - '#/paths/~1v1~1roles/get'
+    - '#/paths/~1v1~1roles~1{id}/get'
+    - '#/paths/~1v1~1assignments/get'
+    - '#/paths/~1v1~1assignments~1{roleId}/get'
+    - '#/paths/~1v1~1assignments~1{roleId}~1{actorId}/post'
+    - '#/paths/~1v1~1assignments~1{roleId}~1{actorId}/delete'
+    - '#/paths/~1v1~1projects/get'
+    - '#/paths/~1v1~1projects/post'
+    - '#/paths/~1v1~1projects~1{id}/get'
+    - '#/paths/~1v1~1projects~1{id}/put'
+    - '#/paths/~1v1~1projects~1{id}/delete'
+    - '#/paths/~1v1~1projects~1{id}/patch'
+    - '#/paths/~1v1~1projects~1{id}~1key/post'
+    - '#/paths/~1v1~1projects~1{projectId}~1assignments/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1assignments~1{roleId}/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1assignments~1{roleId}~1{actorId}/post'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1assignments~1{roleId}~1{actorId}/delete
+    - '#/paths/~1v1~1projects~1{projectId}~1assignments~1forms/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1assignments~1forms~1{roleId}/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms/post'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}/delete'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}/patch'
+    - '#/paths/~1v1~1form-links~1{formLinkId}~1form/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.xml/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.xlsx/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1attachments/get'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1attachments~1{filename}/get
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1fields/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{id}~1restore/post'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft/post'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft/delete'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.xml/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.xlsx/get'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/delete
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/patch
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1fields/get'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1publish/post
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions/get'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}.xml/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}.xlsx/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}~1attachments/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}~1attachments~1{filename}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1versions~1{version}~1fields/get
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1assignments/get'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1assignments~1{roleId}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1assignments~1{roleId}~1{actorId}/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1assignments~1{roleId}~1{actorId}/delete
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1public-links/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1public-links/post'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1public-links~1{linkId}/delete
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1dataset-diff/get'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1dataset-diff/get
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions/post'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/put
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/delete
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}/patch
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1restore/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}.xml/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1edit/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions.csv.zip/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions.csv.zip/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions.csv/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions.csv/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1audits/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1keys/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1submitters/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1comments/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1comments/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments~1{filename}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments~1{filename}/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments~1{filename}/delete
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions~1{versionId}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions~1{versionId}.xml/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions~1{versionId}~1attachments/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1versions~1{versionId}~1attachments~1{filename}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1diffs/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions.csv.zip/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions.csv.zip/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1keys/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}.xml/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}~1attachments/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}~1attachments~1{filename}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}~1attachments~1{filename}/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submissions~1{instanceId}~1attachments~1{filename}/delete
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets/post'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}/patch'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1properties/post'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities.csv/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities/get'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1creators/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/delete
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}/patch
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1restore/post
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1versions/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1diffs/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1entities~1{uuid}~1audits/get
+    - >-
+      #/paths/~1projects~1{projectId}~1datasets~1{name}~1entities~1bulk-delete/post
+    - >-
+      #/paths/~1projects~1{projectId}~1datasets~1{name}~1entities~1bulk-restore/post
+    - '#/paths/~1v1~1projects~1{projectId}~1formList/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1submission/post'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1manifest/get'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1datasets~1{name}~1integrity?id={UUIDs}/get
+    - >-
+      #/paths/~1v1~1test~1{token}~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1formList/get
+    - >-
+      #/paths/~1v1~1test~1{token}~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1submission/post
+    - >-
+      #/paths/~1v1~1test~1{token}~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1manifest/get
+    - >-
+      #/paths/~1v1~1test~1{token}~1projects~1{projectId}~1forms~1{xmlFormId}~1draft~1attachments~1{filename}/get
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.svc/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.svc~1$metadata/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}.svc~1{table}/get'
+    - >-
+      #/paths/~1dl~1projects{projectId}~1forms~1{xmlFormId}~1submissions~1{instanceId}~1attachments~1{filename}/get
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1$metadata/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1datasets~1{name}.svc~1Entities/get'
+    - '#/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.svc/get'
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.svc~1$metadata/get
+    - >-
+      #/paths/~1v1~1projects~1{projectId}~1forms~1{xmlFormId}~1draft.svc~1{table}/get
+    - '#/paths/~1v1~1config~1analytics/get'
+    - '#/paths/~1v1~1config~1analytics/post'
+    - '#/paths/~1v1~1config~1analytics/delete'
+    - '#/paths/~1v1~1analytics~1preview/get'
+    - '#/paths/~1v1~1audits/get'
+    - '#/paths/~1v1~1backup/post'
