@@ -520,6 +520,9 @@ info:
     * **Changed** both OpenRosa and REST Submission creation processes to create and accept only the attachment filenames that are indicated to exist by the Submission XML.
 
     * **Changed** `GET` Submission Attachemnts listing to return an array of objects containing attachment details rather than an array of filename strings.
+  license:
+    name: Apache License 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
 servers:
 - url: /
 tags:
@@ -745,6 +748,8 @@ tags:
     It is not yet possible to modify a Form's XML definition once it is created.
 - name: Individual Form
   x-parent-tag: Form Management
+  description: |-
+    These endpoints operate on a specific `Form` within a Project. They return the metadata for the Form, its XML definition, and artifacts like the XLSX representation or manifest that clients need to download and work with the Form.
 - name: Draft Form
   x-parent-tag: Form Management
   description: |-
