@@ -44,4 +44,4 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Playwright Test Report
-        path: test/e2e/oidc/playwright-tests/results/
+        path: playwright-report/
