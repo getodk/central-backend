@@ -44,6 +44,15 @@ info:
 
     **Added**:
     - New endpoint [GET /projects/:id/datasets/:name/entities/creators](/central-api-entity-management/#entities-creators) to retrieve a list of all Actors who have created Entities in a Dataset, sorted by display name.
+    - [Bulk delete Entities](/central-api-entity-management/#bulk-deleting-entities) endpoint for deleting multiple Entities at once.
+    - [Bulk restore Entities](/central-api-entity-management/#bulk-restoring-entities) endpoint for restoring multiple soft-deleted Entities at once.
+
+    **Changed**:
+    - [Download Dataset](/central-api-dataset-management/#download-dataset) API now supports $search query parameter.
+    - Added `deleted` query parameter to [GET /projects/:id/forms/:xmlFormId/submissions](/central-api-submission-management/#listing-all-submissions-on-a-form) to retrieve deleted submissions.
+
+    **Changed**:
+    - [GET /users](/central-api-accounts-and-users/#listing-users) and [GET /users/:actorId](/central-api-accounts-and-users/#getting-user-details) now include `lastLoginAt` field.
 
     ## ODK Central v2025.2
 
@@ -658,7 +667,7 @@ tags:
   description: |-
     This is the authentication method used by the ODK Central Frontend packaged with Central Backend. Only `User`s can authenticate this way. It consists mostly of two steps:
 
-    1. **Logging in**: presenting an Email Address and a Password for verification, after which a new `Session` is created. Associated with the Session is an expiration and a bearer token. Sessions expire 24 hours after they are created.
+    1. **Logging in**: presenting an Email Address and a Password for verification, after which a new `Session` is created. Associated with the Session is an expiration and a bearer token. By default, sessions will expire 24 hours after they are created. This can be changed through the `default.sessionLifetime` configuration setting.
     2. **Using the session**: each request to the API needs a header attached to it: `Authorization: Bearer {token}`. This authenticates that particular request as belonging to the Session we created by logging in.
 
     You might notice that Step 2 greatly resembles how OAuth 2.0 works. This was an intentional first step towards OAuth support, and should make the forward migration of your code easier down the road.
@@ -917,6 +926,8 @@ tags:
     * `entity.delete` when an Entity is deleted.
     * `entity.restore` when a deleted Entity is restored.
     * `entity.purge` when a deleted Entity is purged (ppermanently deleted).
+    * `entity.bulk.delete` when Entities are deleted in bulk.
+    * `entity.bulk.restore` when Entities are restored in bulk.
     * `config.set` when a system configuration is set.
     * `upgrade.server` when Central is upgraded to a new version.
     * `upgrade.process.form.entities_version` when Central flags an Entity-related Form for a potential automatic upgrade.
@@ -5895,6 +5906,12 @@ paths:
         schema:
           type: string
         example: simple
+      - name: deleted
+        in: query
+        description: If set to `true`, returns only deleted submissions.
+        schema:
+          type: boolean
+        example: true
       responses:
         200:
           description: OK
@@ -8523,7 +8540,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets:
+  /v1/projects/{projectId}/datasets:
     get:
       tags:
       - Dataset Management
@@ -8654,7 +8671,7 @@ paths:
               example:
                 code: 409.3
                 message: A resource already exists with name,projectId value(s) of trees,1.
-  /projects/{projectId}/datasets/{name}:
+  /v1/projects/{projectId}/datasets/{name}:
     get:
       tags:
       - Dataset Management
@@ -8785,7 +8802,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/properties:
+  /v1/projects/{projectId}/datasets/{name}/properties:
     post:
       tags:
       - Dataset Management
@@ -8839,7 +8856,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities.csv:
+  /v1/projects/{projectId}/datasets/{name}/entities.csv:
     get:
       tags:
       - Dataset Management
@@ -8850,6 +8867,8 @@ paths:
         The CSV format closely matches the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service) format, with columns for system properties such as `__id` (the Entity UUID), `__createdAt`, `__creatorName`, etc., the Entity Label `label`, and the Dataset/Entity Properties themselves. If any Property for an given Entity is blank (e.g. it was not captured by that Form or was left blank), that field of the CSV is blank.
 
         The `$filter` querystring parameter can be used to filter on system-level properties, similar to how filtering in the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service) works.
+
+        The `$search` querystring parameter can be used to search entity data (user-defined properties) and the `label` field, using the same search behavior as the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service).
 
         This endpoint supports `ETag` header, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, the endpoint returns a value in the ETag header. If you pass that value in the If-None-Match header of a subsequent request, then if the Dataset has not been changed since the previous request, you will receive `304 Not Modified` response; otherwise you'll get the new data.
       operationId: Download Dataset
@@ -8874,6 +8893,12 @@ paths:
         schema:
           type: string
         example: __system/conflict eq \'hard\'
+      - name: $search
+        in: query
+        description: If provided, will search entity data (user-defined properties) and the `label` field.
+        schema:
+          type: string
+        example: john
       responses:
         200:
           description: OK
@@ -8907,7 +8932,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities:
+  /v1/projects/{projectId}/datasets/{name}/entities:
     get:
       tags:
       - Entity Management
@@ -9005,7 +9030,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities/creators:
+  /v1/projects/{projectId}/datasets/{name}/entities/creators:
     get:
       tags:
       - Entity Management
@@ -9173,7 +9198,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities/{uuid}:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}:
     get:
       tags:
       - Entity Management
@@ -9460,7 +9485,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error403'
     
-  /projects/{projectId}/datasets/{name}/entities/{uuid}/restore:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/restore:
     post:
       tags:
       - Entity Management
@@ -9508,7 +9533,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error404'
-  /projects/{projectId}/datasets/{name}/entities/{uuid}/versions:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/versions:
     get:
       tags:
       - Entity Management
@@ -9629,7 +9654,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities/{uuid}/diffs:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/diffs:
     get:
       tags:
       - Entity Management
@@ -9693,7 +9718,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error403'
-  /projects/{projectId}/datasets/{name}/entities/{uuid}/audits:
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/audits:
     get:
       tags:
       - Entity Management
@@ -9742,7 +9767,131 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error403'             
+                $ref: '#/components/schemas/Error403'
+  /projects/{projectId}/datasets/{name}/entities/bulk-delete:
+    post:
+      tags:
+      - Entity Management
+      summary: Bulk Deleting Entities
+      description: |-
+        Use this API to delete multiple Entities at once. This endpoint accepts an array of Entity UUIDs and performs soft-deletion on all of them.
+      operationId: Bulk Deleting Entities
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of Entity UUIDs to delete
+              required:
+                - ids
+            example:
+              ids: ["12345678-1234-4123-8234-123456789abc", "12345678-1234-4123-8234-123456789aaa"]
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+  /projects/{projectId}/datasets/{name}/entities/bulk-restore:
+    post:
+      tags:
+      - Entity Management
+      summary: Bulk Restoring Entities
+      description: |-
+        Use this API to restore multiple deleted Entities at once. This endpoint accepts an array of Entity UUIDs and restores all of them that were previously deleted.
+      operationId: Bulk Restoring Entities
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of Entity UUIDs to restore
+              required:
+                - ids
+            example:
+              ids: ["12345678-1234-4123-8234-123456789abc", "12345678-1234-4123-8234-123456789aaa"]
+      responses:
+        200:
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+        404:
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
   /v1/projects/{projectId}/formList:
     get:
       tags:
@@ -10642,6 +10791,7 @@ paths:
 
         | Submission Metadata                      | REST API Name | OData Field Name          |
         | ---------------------------------------- | ------------- | ------------------------- |
+        | Submission ID                            | `instanceId`  | `__id`                    |
         | Submitter Actor ID                       | `submitterId` | `__system/submitterId`    |
         | Submission Timestamp                     | `createdAt`   | `__system/submissionDate` |
         | Submission Update Timestamp              | `updatedAt`   | `__system/updatedAt`      |
@@ -11187,6 +11337,7 @@ paths:
 
         | Entity Metadata         | OData Field Name     |
         | ------------------------| -------------------- |
+        | Entity UUID             | `__id`               |
         | Entity Creator Actor ID | `__system/creatorId` |
         | Entity Timestamp        | `__system/createdAt` |
         | Entity Update Timestamp | `__system/updatedAt` |
@@ -12183,6 +12334,12 @@ components:
               type: string
               description: The email address of the user
               example:
+            lastLoginAt:
+              type: string
+              format: date-time
+              nullable: true
+              description: The timestamp of when the user last logged in. Will be null if the user has never logged in.
+              example: "2025-01-15T10:30:00.000Z"
     AppUser:
       allOf: 
         - $ref: '#/components/schemas/Actor'

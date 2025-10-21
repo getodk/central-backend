@@ -1,6 +1,7 @@
 default: base
 
 NODE_CONFIG_ENV ?= test
+export PGAPPNAME ?= odkcentral
 
 node_modules: package.json
 	npm install
