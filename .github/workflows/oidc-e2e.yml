@@ -45,3 +45,6 @@ jobs:
       with:
         name: Playwright Screenshots
         path: test/e2e/oidc/playwright-tests/results/**/*.png
+    - name: Fake OIDC Server Logs
+      if: always()
+      run: "! [[ -f ./fake-oidc-server.log ]] || cat ./fake-oidc-server.log"
