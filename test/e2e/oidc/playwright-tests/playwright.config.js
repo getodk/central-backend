@@ -56,7 +56,6 @@ const config = {
     headless: true,
   },
   projects,
-  outputDir: 'results/',
   globalSetup: require.resolve('./src/global-setup-teardown'),
 };
 
