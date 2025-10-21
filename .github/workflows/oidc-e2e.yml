@@ -44,7 +44,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: Playwright Screenshots
-        path: test/e2e/oidc/playwright-tests/results/**/*.png
+        path: test/e2e/oidc/playwright-tests/results/**/*
     - name: Fake OIDC Server Logs
       if: always()
       run: "! [[ -f ./fake-oidc-server.log ]] || cat ./fake-oidc-server.log"
