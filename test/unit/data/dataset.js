@@ -54,6 +54,21 @@ describe('parsing dataset from entity block', () => {
         .replace('entities-version="2022.1.0"', ''))
         .should.be.rejectedWith(Problem, { problemCode: 400.25,
           message: 'The entity definition within the form is invalid. Entities specification version is missing.' }));
+
+    it('should reject multiple datasets declared in <2025.1 version', () =>
+      getDatasets(testData.forms.repeatEntityHousehold
+        .replace('2025.1.0', '2024.1.0'))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version [2024.1.0] is not compatible with multiple entity lists.  Please use version 2025.1.0 or later.' }));
+
+    // This is a tricky test where there is actually just one dataset (trees).
+    // If there is a duplicate dataset declaration in a jr:template block, it will reject.
+    // If not (current case) it wont reject and the test fails.
+    it('should reject entity repeat dataset declared in <2025.1 version', () =>
+      getDatasets(testData.forms.repeatEntityTrees
+        .replace('2025.1.0', '2024.1.0'))
+        .should.be.rejectedWith(Problem, { problemCode: 400.25,
+          message: 'The entity definition within the form is invalid. Entities specification version [2024.1.0] is not compatible with multiple entity lists.  Please use version 2025.1.0 or later.' }));
   });
 
   describe('extracting dataset name', () => {
