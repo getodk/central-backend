@@ -21,9 +21,8 @@ const loadJson = path => JSON.parse(fs.readFileSync(path, { encoding: 'utf8' }))
 const ACCOUNTS_JSON_PATH = Path.resolve('./accounts.json');
 const ACCOUNTS = loadJson(ACCOUNTS_JSON_PATH);
 
-const pkg = loadJson('../../../../package.json');
 // eslint-disable-next-line no-console
-const log = (...args) => console.error(pkg.name, new Date().toISOString(), 'INFO', ...args);
+const log = (...args) => console.error('[fake-oidc-server]', new Date().toISOString(), 'INFO', ...args);
 log.info = log;
 
 function forHumans(o) {
