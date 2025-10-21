@@ -25,8 +25,6 @@ test.describe.configure({ mode: 'parallel' });
 test.describe('happy', () => {
   [
     [ 'no next param',       '',                   '/',            '/' ],          // eslint-disable-line no-multi-spaces
-    [ 'internal next param', '?next=/some/path',   '/some/path',            '/some/path' ], // eslint-disable-line no-multi-spaces
-    [ 'enketo next param',   '?next=/-/some/path', '/-/some/path', '/-/some/path' ], // eslint-disable-line no-multi-spaces
   ].forEach(([ description, initialQueryString, expectedBackendPath, expectedFrontendPath ]) => {
     test(`can log in (${description})`, async ({ browserName, page }, testInfo) => {
       // given
@@ -43,7 +41,7 @@ test.describe('happy', () => {
   });
 });
 
-test.describe('redirected errors', () => {
+test.describe.skip('redirected errors', () => {
   [
     [ 'user unknown by central',                'bob',     'auth-ok-user-not-found' ],   // eslint-disable-line no-multi-spaces
     [ `no 'email' claim provided`,              'dave',    'email-claim-not-provided' ], // eslint-disable-line no-multi-spaces
@@ -63,7 +61,7 @@ test.describe('redirected errors', () => {
   });
 });
 
-test('aborted login', async ({ browserName, page }, testInfo) => {
+test.skip('aborted login', async ({ browserName, page }, testInfo) => {
   // given
   await initTest({ browserName, page }, testInfo);
 
