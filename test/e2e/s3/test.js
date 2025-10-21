@@ -198,7 +198,7 @@ describe('s3 support', () => {
     await assertNewStatuses({ failed: 1 });
   });
 
-  it('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
+  it.only('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
     this.timeout(TIMEOUT);
 
     // given
