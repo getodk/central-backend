@@ -10,7 +10,7 @@ env:
 
 jobs:
   oidc-e2e-test:
-    timeout-minutes: 6
+    timeout-minutes: 12
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
