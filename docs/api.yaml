@@ -5,6 +5,7 @@
 openapi: 3.0.1
 info:
   title: ODK Central API
+  version: ""
   description: |-
     [ODK Central Backend](https://github.com/getodk/central-backend) is a RESTful API server that provides key functionality for creating and managing ODK data collection campaigns. It couples with [Central Frontend](https://github.com/getodk/central-frontend), an independent frontend interface, to form [ODK Central](https://github.com/getodk/central), a complete user-installable ODK server solution. While Central Frontend is the primary consumer of the ODK Central API, the API this server provides is fully public and generic: anything that can be done in the user interface can be done directly via the API.
 
@@ -519,7 +520,6 @@ info:
     * **Changed** both OpenRosa and REST Submission creation processes to create and accept only the attachment filenames that are indicated to exist by the Submission XML.
 
     * **Changed** `GET` Submission Attachemnts listing to return an array of objects containing attachment details rather than an array of filename strings.
-  version: ""
 servers:
 - url: /
 tags:
