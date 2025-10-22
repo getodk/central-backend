@@ -48,7 +48,7 @@
     "yauzl": "^3.2.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.56.1",
+    "@playwright/test": "^1.52.0",
     "@redocly/cli": "^2.0.6",
     "@sinonjs/fake-timers": "^14.0.0",
     "app-root-path": "~3",
