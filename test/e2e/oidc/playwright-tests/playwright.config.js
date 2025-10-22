@@ -36,7 +36,7 @@ const projects = requestedBrowsers
 const config = {
   testDir: 'src',
   /* Maximum time one test can run for. */
-  timeout: 10 * 1000,
+  timeout: 30 * 1000, // ci: sometimes webkit takes ages to do `browserContext.newPage`
   expect: { timeout: 2000 },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
