@@ -35,6 +35,10 @@ jobs:
         node-version: 22.16.0
         cache: 'npm'
     - run: make test-oidc-e2e
+    - name: debug playwright reports location 1
+      run: ls -al playwright-report/
+    - name: debug playwright reports location 2
+      run: ls -al test/e2e/oidc/playwright-tests/results/
     - name: Archive playwright screenshots
       if: failure()
       uses: actions/upload-artifact@v4
