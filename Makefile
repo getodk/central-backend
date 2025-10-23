@@ -168,6 +168,7 @@ api-docs:
 .PHONY: api-docs-lint
 api-docs-lint:
 	npx --no @redocly/cli lint \
+	--extends recommended \
 	--skip-rule no-ambiguous-paths \
 	--skip-rule no-invalid-media-type-examples \
 	--skip-rule no-unused-components \
@@ -178,5 +179,4 @@ api-docs-lint:
 	--skip-rule path-not-include-query \
 	--skip-rule path-parameters-defined \
 	--skip-rule security-defined \
-	--extends=recommended \
 	docs/api.yaml
