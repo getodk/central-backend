@@ -199,6 +199,7 @@ describe('s3 support', () => {
   });
 
   it.only('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
+    const log = (...args) => console.log(`[test: ${this.fullTitle()}]`, ...args);
     this.timeout(TIMEOUT);
 
     // given
@@ -206,12 +207,16 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 });
 
     // when
+    log('Starting sacrificial upload...');
     const uploading = forSacrifice(cli('upload-pending'));
+    log('Waiting until upload in progress...');
     await untilUploadInProgress(); // TODO possible this is not actually working correctly?
     // and
+    log('Killing upload...');
     await execSync(`kill -2 ${uploading.pid}`);
 
     // then
+    log('Staring assertions...');
     await expectRejectionFrom(uploading);
     // debug
     await sleep(5000);
