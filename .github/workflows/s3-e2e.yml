@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+env:
+  LOG_LEVEL: debug
+
 jobs:
   s3-e2e:
     strategy:

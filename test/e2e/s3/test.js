@@ -412,6 +412,8 @@ function cli(cmd) {
         return reject(err);
       }
 
+      log.debug('cli()', 'stderr:', stderr.toString().trim());
+
       const res = stdout.toString().trim();
       log.debug('cli()', 'returned:', res);
       resolve(res);
