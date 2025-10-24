@@ -6,7 +6,7 @@ on:
 
 env:
   DEBUG: pw:api
-  ODK_PLAYWRIGHT_BROWSERS: chromium
+  ODK_PLAYWRIGHT_BROWSERS: chromium,firefox,webkit
 
 jobs:
   oidc-e2e-test:
