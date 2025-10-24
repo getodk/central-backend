@@ -28,6 +28,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
+
+    # This one weird trick speeds up every build!
+    # see: https://github.com/getodk/central-backend/pull/1642
+    # see: https://github.com/actions/runner/issues/4030
+    - run: sudo apt-get remove --purge man-db
+
     - uses: actions/checkout@v4
     - name: Set node version
       uses: actions/setup-node@v4
