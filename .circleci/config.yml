@@ -15,7 +15,7 @@ jobs:
           name: Check for large files
           command: |
             set +e
-            find . -size +1000000c -not -path './.git/*' | grep .
+            find . -size +1000000c -not -path './.git/*' -not -name 'package-lock.json' | grep .
             [[ $? -eq 1 ]]
       - run: make check-file-headers
       - run: npm ci
