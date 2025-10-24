@@ -514,15 +514,7 @@ describe('property name validation', () => {
 });
 
 describe('entities from repeats', () => {
-  describe('parsing multiple entities/datasetes from a form def', () => {
-    it('should retrieve the names of a dataset in a repeat group', async () => {
-      const ds = await getDatasets(testData.forms.repeatEntityTrees).then(o => o.get());
-      should.not.exist(ds.warnings);
-      ds.datasets.should.eql([
-        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' }
-      ]);
-    });
-
+  describe('parsing multiple entities/datasets from a form def', () => {
     it('should retrieve the names of datasets at root and in repeat group', async () => {
       const ds = await getDatasets(testData.forms.repeatEntityHousehold).then(o => o.get());
       should.not.exist(ds.warnings);
@@ -539,6 +531,26 @@ describe('entities from repeats', () => {
         { name: 'farmers', actions: [ 'create' ], path: '/farm/farmer/' },
         { name: 'farms', actions: [ 'create' ], path: '/farm/' }
       ]);
+    });
+
+    it('should retrieve the names of a dataset in a repeat group', async () => {
+      const ds = await getDatasets(testData.forms.repeatEntityTrees).then(o => o.get());
+      should.not.exist(ds.warnings);
+      // Includes dataset from jr:template block and regular block
+      ds.datasets.length.should.equal(2);
+      ds.datasets.should.eql([
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' },
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' }
+      ]);
+
+      const ff = await getFormFields(testData.forms.repeatEntityTrees);
+      const res = matchFieldsWithDatasets(ds.datasets, ff);
+
+      // After matchFieldsWithDataset, duplicate dataset is removed
+      res.length.should.equal(1);
+      res[0].dataset.should.eql(
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/', isRepeat: true }
+      );
     });
   });
 

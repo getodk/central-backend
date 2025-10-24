@@ -3224,6 +3224,36 @@ describe('datasets and entities', () => {
           .set('If-None-Match', etag)
           .expect(200); // Not 304, content HAS been modified
       }));
+
+      it('should return new ETag if content has changed - draft token', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        const draftToken = await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(({ body }) => body.draftToken);
+
+        const etag = await service.get(`/v1/test/${draftToken}/projects/1/forms/withAttachments/draft/attachments/people.csv`)
+          .expect(200)
+          .then(result => result.get('ETag'));
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Jane (22)'
+          })
+          .expect(200);
+
+        await service.get(`/v1/test/${draftToken}/projects/1/forms/withAttachments/draft/attachments/people.csv`)
+          .expect(200)
+          .then(result => {
+            const secondEtag = result.get('ETag');
+            etag.should.not.be.undefined();
+            secondEtag.should.not.be.undefined();
+            secondEtag.should.not.be.equal(etag);
+          });
+      }));
     });
   });
 
