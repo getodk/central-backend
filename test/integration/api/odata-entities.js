@@ -376,6 +376,33 @@ describe('api: /datasets/:name.svc', () => {
         });
     }));
 
+    it('should allow filtering by UUID', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      const entityUuids = await container.allFirst(sql`SELECT uuid FROM entities`);
+      entityUuids.length.should.eql(2);
+
+      for (const id of entityUuids) {
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq '${id}'`) // eslint-disable-line no-await-in-loop
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+
+            const [ val ] = body.value;
+            Object.keys(val).should.eqlInAnyOrder([ '__id', 'label', '__system', 'first_name', 'age' ]);
+            val.__id.should.eql(id);
+            val.__system.createdAt.should.be.an.isoDate();
+          });
+      }
+    }));
+
     it('should return only searched entities', testService(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -483,23 +510,6 @@ describe('api: /datasets/:name.svc', () => {
         .expect(501)
         .then(({ body }) => {
           body.message.should.eql('The given OData filter expression references fields not supported by this server: label at 0');
-        });
-    }));
-
-    it('should NOT filter by id', testService(async (service, container) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .set('Content-Type', 'application/xml')
-        .send(testData.forms.simpleEntity)
-        .expect(200);
-
-      await createSubmissions(asAlice, container, 2);
-
-      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq \'1234\'')
-        .expect(501)
-        .then(({ body }) => {
-          body.message.should.eql('The given OData filter expression references fields not supported by this server: __id at 0');
         });
     }));
 

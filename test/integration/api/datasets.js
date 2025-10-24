@@ -1197,6 +1197,72 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should search the Entities with $search parameter', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Jane Smith',
+            data: { first_name: 'Jane', age: '25' }
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv?$search=Johnny')
+          .expect(200)
+          .then(({ text }) => {
+            text.should.match(/Johnny Doe/);
+            text.should.not.match(/Jane Smith/);
+          });
+      }));
+
+      it('should combine $filter and $search parameters', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Johnny Doe',
+            data: { first_name: 'Johnny', age: '22' }
+          })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Johnny Smith',
+            data: { first_name: 'Johnny', age: '25' }
+          })
+          .expect(200);
+
+        await container.run(sql`UPDATE entities SET "createdAt" = '2019-01-01T00:00:00Z' WHERE uuid = '12345678-1234-4123-8234-111111111aaa'`);
+
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv?$filter=__system/createdAt gt 2020-01-01T00:00:00Z&$search=Johnny')
+          .expect(200)
+          .then(r => r.text);
+
+        result.should.match(/Johnny Smith/);
+        result.should.not.match(/Johnny Doe/);
+      }));
+
       describe('ETag on entities.csv', () => {
         it('should return 304 content not changed if ETag matches', testService(async (service, container) => {
           const asAlice = await service.login('alice');
@@ -3157,6 +3223,36 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
           .set('If-None-Match', etag)
           .expect(200); // Not 304, content HAS been modified
+      }));
+
+      it('should return new ETag if content has changed - draft token', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        const draftToken = await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(({ body }) => body.draftToken);
+
+        const etag = await service.get(`/v1/test/${draftToken}/projects/1/forms/withAttachments/draft/attachments/people.csv`)
+          .expect(200)
+          .then(result => result.get('ETag'));
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111aaa',
+            label: 'Jane (22)'
+          })
+          .expect(200);
+
+        await service.get(`/v1/test/${draftToken}/projects/1/forms/withAttachments/draft/attachments/people.csv`)
+          .expect(200)
+          .then(result => {
+            const secondEtag = result.get('ETag');
+            etag.should.not.be.undefined();
+            secondEtag.should.not.be.undefined();
+            secondEtag.should.not.be.equal(etag);
+          });
       }));
     });
   });
@@ -5831,15 +5927,17 @@ describe('datasets and entities', () => {
             logs[0].details.source.event.action.should.equal('submission.create');
           });
 
-        // only one entity def should have a source with a non-null parent id
-        // the submission that only created an entity
-        const defSourceParentIds = await container.all(sql`
-        select eds.details->'submission'->'instanceId' as "submissionInstanceId"
+        // the parent event of the entity def created from submission 'two'
+        // should be the event that triggered converting all pending submissions
+        const parentEventId = await container.oneFirst(sql`
+        select eds.details->'parentEventId' as "parentEventId"
         from entity_defs as ed
         join entity_def_sources as eds on ed."sourceId" = eds.id
-        where eds.details->'parentEventId' is not null`);
-        defSourceParentIds.length.should.equal(1);
-        defSourceParentIds[0].submissionInstanceId.should.equal('two');
+        where eds.details->'parentEventId' is not null
+        and eds.details->'submission'->'instanceId' = to_jsonb('two'::text)`);
+
+        const parentEvent = await container.one(sql`select * from audits where id = ${parentEventId}`);
+        parentEvent.action.should.equal('dataset.update');
       }));
     });
 
