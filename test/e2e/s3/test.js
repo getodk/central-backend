@@ -199,7 +199,7 @@ describe('s3 support', () => {
   });
 
   it.only('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
-    const log = (...args) => console.log(`[test: ${this.fullTitle()}]`, ...args);
+    const log = (...args) => console.log(`[test: SIGINT]`, ...args);
     this.timeout(TIMEOUT);
 
     // given
