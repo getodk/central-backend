@@ -213,8 +213,9 @@ describe('s3 support', () => {
 
     // then
     await expectRejectionFrom(uploading);
-
-    // then
+    // debug
+    await sleep(1000);
+    // and
     await assertNewStatuses({ failed: 1 });
   });
 
@@ -468,4 +469,8 @@ function bigFileExists(attDir, sizeMb, idx) {
       fs.appendFileSync(bigFile, randomBytes(batchSize));
     } while((remaining-=batchSize) > 0); // eslint-disable-line no-cond-assign
   }
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
