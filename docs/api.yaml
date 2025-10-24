@@ -9440,7 +9440,7 @@ paths:
                     <integrityUrl>https://your.odk.server/v1/projects/7/datasets/people/integrity</integrityUrl>
                   </mediaFile>
                 </manifest>
-  /v1/projects/{projectId}/datasets/{name}/integrity?id={UUIDs}:
+  /v1/projects/{projectId}/datasets/{name}/integrity:
     get:
       tags:
       - OpenRosa Endpoints
@@ -11773,10 +11773,14 @@ components:
               example: {event: {}, submission: {}}
             baseDiff:
               type: array
+              items:
+                type: string
               description: List of properties that are different between this version and its base version. Includes the label if it differs between the two versions.
               example: ['name', 'age']
             serverDiff:
               type: array
+              items:
+                type: string
               description: List of properties that are different between this version and the previous version on the server. Includes the label if it differs between the two versions.
               example: ['name', 'age']
             conflict:
