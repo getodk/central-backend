@@ -35,7 +35,7 @@ jobs:
         node-version: 22.16.0
         cache: 'npm'
     - run: make test-oidc-e2e
-    - name: Archive playwright screenshots
+    - name: Archive Playwright Test Report
       if: failure()
       uses: actions/upload-artifact@v4
       with:
