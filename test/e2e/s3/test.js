@@ -413,12 +413,12 @@ function cli(cmd) {
       }
 
       log.debug('cli()', '--- stderr: begin ---');
-      log.debug(stderr.toString());
+      log.debug(stderr.toString().replace(/\n$/, ''));
       log.debug('cli()', '--- stderr: end ---');
 
 
       log.debug('cli()', '--- stdout: begin ---');
-      log.debug(stdout.toString());
+      log.debug(stdout.toString().replace(/\n$/, ''));
       log.debug('cli()', '--- stdout: end ---');
 
       const res = stdout.toString().trim();
