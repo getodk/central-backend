@@ -412,12 +412,6 @@ function cli(cmd) {
 
   const promise = new Promise((resolve, reject) => {
     const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout, stderr) => {
-      if (err) {
-        err.stdout = stdout; // eslint-disable-line no-param-reassign
-        err.stderr = stderr; // eslint-disable-line no-param-reassign
-        return reject(err);
-      }
-
       dbg(`--- [${pid}] stderr: begin ---`);
       dbg(stderr.toString().replace(/\n$/, ''));
       dbg(`--- [${pid}] stderr: end ---`);
@@ -426,6 +420,14 @@ function cli(cmd) {
       dbg(`--- [${pid}] stdout: begin ---`);
       dbg(stdout.toString().replace(/\n$/, ''));
       dbg(`--- [${pid}] stdout: end ---`);
+
+      if (err) {
+        dbg('Exited with err:', err);
+
+        err.stdout = stdout; // eslint-disable-line no-param-reassign
+        err.stderr = stderr; // eslint-disable-line no-param-reassign
+        return reject(err);
+      }
 
       const res = stdout.toString().trim();
       resolve(res);
