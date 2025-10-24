@@ -216,7 +216,7 @@ describe('s3 support', () => {
     await execSync(`kill -2 ${uploading.pid}`);
 
     // then
-    log('Staring assertions...');
+    log('Starting assertions...');
     await expectRejectionFrom(uploading);
     // debug
     await sleep(5000);
@@ -404,9 +404,10 @@ describe('s3 support', () => {
 
 function cli(cmd) {
   let pid;
+  const dbg = (...args) => log.debug('cli()', `[${pid}]`, ...args);
 
   cmd = `exec node lib/bin/s3 ${cmd}`; // eslint-disable-line no-param-reassign
-  log.debug('cli()', 'calling:', cmd);
+  dbg('calling:', cmd);
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
 
   const promise = new Promise((resolve, reject) => {
@@ -417,19 +418,20 @@ function cli(cmd) {
         return reject(err);
       }
 
-      log.debug('cli()', '--- stderr: begin ---');
-      log.debug(stderr.toString().replace(/\n$/, ''));
-      log.debug('cli()', '--- stderr: end ---');
+      dbg(`--- [${pid}] stderr: begin ---`);
+      dbg(stderr.toString().replace(/\n$/, ''));
+      dbg(`--- [${pid}] stderr: end ---`);
 
 
-      log.debug('cli()', '--- stdout: begin ---');
-      log.debug(stdout.toString().replace(/\n$/, ''));
-      log.debug('cli()', '--- stdout: end ---');
+      dbg(`--- [${pid}] stdout: begin ---`);
+      dbg(stdout.toString().replace(/\n$/, ''));
+      dbg(`--- [${pid}] stdout: end ---`);
 
       const res = stdout.toString().trim();
       resolve(res);
     });
     pid = child.pid;
+    dbg(`[pid:${pid}]`, cmd);
   });
 
   promise.pid = pid;
