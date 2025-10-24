@@ -207,7 +207,7 @@ describe('s3 support', () => {
 
     // when
     const uploading = forSacrifice(cli('upload-pending'));
-    await untilUploadInProgress();
+    await untilUploadInProgress(); // TODO possible this is not actually working correctly?
     // and
     await execSync(`kill -2 ${uploading.pid}`);
 
