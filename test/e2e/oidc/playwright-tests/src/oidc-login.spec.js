@@ -45,7 +45,7 @@ test.describe('happy', () => {
 
 test.describe('redirected errors', () => {
   [
-    [ 'user unknown by central',                'bob',     'deliberate-failure' ],       // eslint-disable-line no-multi-spaces
+    [ 'user unknown by central',                'bob',     'auth-ok-user-not-found' ],   // eslint-disable-line no-multi-spaces
     [ `no 'email' claim provided`,              'dave',    'email-claim-not-provided' ], // eslint-disable-line no-multi-spaces
     [ `claim 'email_verified' has value false`, 'charlie', 'email-not-verified' ],       // eslint-disable-line no-multi-spaces
   ].forEach(([ description, username, expectedError ]) => {
