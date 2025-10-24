@@ -412,10 +412,16 @@ function cli(cmd) {
         return reject(err);
       }
 
-      log.debug('cli()', 'stderr:', stderr.toString().trim());
+      log.debug('cli()', '--- stderr: begin ---');
+      log.debug(stderr.toString());
+      log.debug('cli()', '--- stderr: end ---');
+
+
+      log.debug('cli()', '--- stdout: begin ---');
+      log.debug(stdout.toString());
+      log.debug('cli()', '--- stdout: end ---');
 
       const res = stdout.toString().trim();
-      log.debug('cli()', 'returned:', res);
       resolve(res);
     });
     pid = child.pid;
