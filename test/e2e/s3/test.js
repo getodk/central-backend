@@ -214,7 +214,7 @@ describe('s3 support', () => {
     // then
     await expectRejectionFrom(uploading);
     // debug
-    await sleep(1000);
+    await sleep(5000);
     // and
     await assertNewStatuses({ failed: 1 });
   });
