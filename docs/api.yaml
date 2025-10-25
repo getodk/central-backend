@@ -47,6 +47,14 @@ info:
     - New endpoint [GET /projects/:id/datasets/:name/entities/creators](/central-api-entity-management/#entities-creators) to retrieve a list of all Actors who have created Entities in a Dataset, sorted by display name.
     - [Bulk delete Entities](/central-api-entity-management/#bulk-deleting-entities) endpoint for deleting multiple Entities at once.
     - [Bulk restore Entities](/central-api-entity-management/#bulk-restoring-entities) endpoint for restoring multiple soft-deleted Entities at once.
+    - Endpoints for getting submissions' and entities' geodata in GeoJSON format.
+      Their current primary use case is to deliver data for the map in Central.
+      
+      ⚠️ This API will likely change in a future release.
+      
+      The endpoints are:
+      - [GET /projects/:id/datasets/:name/entities.geojson](/central-api-entity-management/#entities-geodata)
+      - [GET /projects/:id/forms/:xmlFormId/submissions.geojson](/central-api-submission-management/#submissions-geodata)
 
     **Changed**:
     - [Download Dataset](/central-api-dataset-management/#download-dataset) API now supports $search query parameter.
@@ -6074,6 +6082,89 @@ paths:
               example:
                 code: "409.1"
                 message: A resource already exists with id value(s) of 1.
+  /v1/projects/{projectId}/forms/{xmlFormId}/submissions.geojson:
+    get:
+      tags:
+      - Submissions
+      summary: Retrieving Submissions Geodata
+      description: |-
+        Submissions' geodata, one form field per submission, in [GeoJSON](https://geojson.org) format.
+        If no particular field path is supplied, the first non-repeat geopoint/geotrace/geoshape field is used.
+        No particular ordering is implied.
+        
+        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
+        Its current behaviour should not be depended upon.
+        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
+      operationId: Submissions Geodata
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "10"
+      - name: xmlFormId
+        in: path
+        description: The `xmlFormId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: simple
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: |
+                  Submission geodata, in [GeoJSON](https://geojson.org) format.
+                  Geodata is grouped by submission. Submissions are represented as a GeoJSON "feature".
+                  
+                  When the provenance of the geodata (the form's field path) is not evident from the request, the origin field path of the geodata will be denoted in a `fieldpath` property in the feature's GeoJSON `properties` object. This is the case in when no field path is specified in the request, as in that situation the first geopoint-, geotrace-, or geoshape-field (not in any repeatgroup) of the form is used. And thus as forms get revised, what is the first geo-type field (not in any repeatgroup) may change; without the `fieldpath` extra information, the data provenance would be unclear. 
+                type: object
+              example: |
+                {
+                  "type": "FeatureCollection",
+                  "features": [
+                    {
+                      "type": "Feature",
+                      "id": "uuid:f7ec6523-05f5-450c-9153-934b640b7467",
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [170.511231, -52.123783, 654]
+                      },
+                      "properties": {
+                        "fieldpath": "/some_group/some_geopoint"
+                      }
+                    },
+                    {
+                      "type": "Feature",
+                      "id": "uuid:0de0e925-0f0e-467c-b809-31a7427f1518",
+                      "geometry": {
+                        "type": "Polygon",
+                        "coordinates": [
+                          [
+                            [170,     10,      653],
+                            [171.123, 20.123, -30.30],
+                            [172,     30,      65.65],
+                            [170,     10,      653]
+                          ]
+                        ]
+                      },
+                      "properties": {
+                        "fieldpath": "/some_geoshape"
+                      }
+                    }
+                  ]
+                }
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}:
     get:
       tags:
@@ -9024,6 +9115,76 @@ paths:
                     type: user
                     updatedAt: '2018-04-18T23:42:11.406Z'
                     deletedAt: '2018-04-18T23:42:11.406Z'
+        403:
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error403'
+  /projects/{projectId}/datasets/{name}/entities.geojson:
+    get:
+      tags:
+      - Entity Management
+      summary: Entities Geodata
+      description: |-
+        This endpoint returns the geometry-interpretable value of the `geometry` attribute of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
+        No particular ordering is implied.
+        
+        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
+        Its current behaviour should not be depended upon.
+        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
+      operationId: Entities Geodata
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "10"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: |
+                  Value of the `geometry` attribute (if geometry-interpretable) of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
+
+                  Each entity is represented as a GeoJSON feature.
+                type: object
+              example: |
+                {
+                  "type": "FeatureCollection",
+                  "features": [
+                    {
+                      "type": "Feature",
+                      "id": "06f1b19a-a14e-4916-b850-b5a5155ea4b7",
+                      "properties": null,
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [27.98833, 86.92528, 8848]
+                      }
+                    },
+                    {
+                      "type": "Feature",
+                      "id": "b4677e0a-8731-4b75-b8df-8e4337ff9b5e",
+                      "properties": null,
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [11.3733, 142.5917, -10984]
+                      }
+                    }
+                  ]
+                }
+
         403:
           description: Forbidden
           content:
