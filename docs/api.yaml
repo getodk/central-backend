@@ -9159,12 +9159,6 @@ paths:
                   Value of the `geometry` attribute (if geometry-interpretable) of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
 
                   Each entity is represented as a GeoJSON feature.
-
-                  A quirk occurs when a `geotrace` is 4 or more points long, and starts and ends at the exact same measured point. In that case, it is represented as a GeoJSON `Polygon` type, which is not the type one would expect when the entities' geodata has been recorded using an ODK `geotrace` field.
-                  
-                  The reason this happens is due to the fact that entities do not have full field-type typing; the entity's `geometry` attribute's type is therefore guessed from the shape of its data. And in the data, the only thing distinguishing a `geoshape` from a `geotrace` is that the former is "closed"; its first and last point are identical.
-                  
-                  Surprises due to this guessing are very unlikely to occur in real-world GPS usage scenarios as noise in the measurements far exceeds the logged point components' precision, therefore, in real-world scenarios, GPS-made geotraces are very unlikely to start and end on the exact same point.
                 type: object
               example: |
                 {
