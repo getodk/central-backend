@@ -1,4 +1,6 @@
 rules:
+  struct: error
+  no-unresolved-refs: error
   no-ambiguous-paths: warn
   no-empty-servers: warn
   no-enum-type-mismatch: warn
