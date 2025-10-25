@@ -74,7 +74,7 @@ fake-s3-server-persistent:
 
 .PHONY: migrations
 migrations: node_version
-	node lib/bin/run-migrations.js
+	node --preserve-symlinks lib/bin/run-migrations.js
 
 
 ################################################################################
