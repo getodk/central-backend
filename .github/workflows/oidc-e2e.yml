@@ -28,6 +28,12 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
+
+    # This one weird trick speeds up every build!
+    # see: https://github.com/getodk/central-backend/pull/1642
+    # see: https://github.com/actions/runner/issues/4030
+    - run: sudo apt-get remove --purge man-db
+
     - uses: actions/checkout@v4
     - name: Set node version
       uses: actions/setup-node@v4
@@ -35,9 +41,9 @@ jobs:
         node-version: 22.16.0
         cache: 'npm'
     - run: make test-oidc-e2e
-    - name: Archive playwright screenshots
+    - name: Archive Playwright Test Report
       if: failure()
       uses: actions/upload-artifact@v4
       with:
-        name: Playwright Screenshots
-        path: test/e2e/oidc/playwright-tests/results/**/*.png
+        name: Playwright Test Report
+        path: test/e2e/oidc/playwright-tests/results/html-report/
