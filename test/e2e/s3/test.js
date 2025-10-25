@@ -198,8 +198,7 @@ describe('s3 support', () => {
     await assertNewStatuses({ failed: 1 });
   });
 
-  it.only('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
-    const log = (...args) => console.log(`[test: SIGINT]`, ...args);
+  it('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
     this.timeout(TIMEOUT);
 
     // given
@@ -207,20 +206,14 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 });
 
     // when
-    log('Starting sacrificial upload...');
     const uploading = forSacrifice(cli('upload-pending'));
-    log('Waiting until upload in progress...');
-    await untilUploadInProgress(); // TODO possible this is not actually working correctly?
+    await untilUploadInProgress();
     // and
     log(`Killing upload with pid ${uploading.pid}...`);
     await execSync(`kill -2 ${uploading.pid}`);
 
     // then
-    log('Starting assertions...');
     await expectRejectionFrom(uploading);
-    log(`Rejection received from ${uploading.pid}`);
-    // debug
-    await sleep(5000);
     // and
     await assertNewStatuses({ failed: 1 });
   });
@@ -405,36 +398,24 @@ describe('s3 support', () => {
 
 function cli(cmd) {
   let pid;
-  const dbg = (...args) => log.debug('cli()', `[${pid}]`, ...args);
 
   cmd = `exec node lib/bin/s3 ${cmd}`; // eslint-disable-line no-param-reassign
-  dbg('calling:', cmd);
+  log.debug('cli()', 'calling:', cmd);
   const env = { ..._.pick(process.env, 'PATH'), NODE_CONFIG_ENV:'s3-dev' };
 
   const promise = new Promise((resolve, reject) => {
     const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout, stderr) => {
-      dbg(`--- [${pid}] stderr: begin ---`);
-      dbg(stderr.toString().replace(/\n$/, ''));
-      dbg(`--- [${pid}] stderr: end ---`);
-
-
-      dbg(`--- [${pid}] stdout: begin ---`);
-      dbg(stdout.toString().replace(/\n$/, ''));
-      dbg(`--- [${pid}] stdout: end ---`);
-
       if (err) {
-        dbg('Exited with err:', err);
-
         err.stdout = stdout; // eslint-disable-line no-param-reassign
         err.stderr = stderr; // eslint-disable-line no-param-reassign
         return reject(err);
       }
 
       const res = stdout.toString().trim();
+      log.debug('cli()', 'returned:', res);
       resolve(res);
     });
     pid = child.pid;
-    dbg(`[pid:${pid}]`, cmd);
   });
 
   promise.pid = pid;
@@ -487,8 +468,4 @@ function bigFileExists(attDir, sizeMb, idx) {
       fs.appendFileSync(bigFile, randomBytes(batchSize));
     } while((remaining-=batchSize) > 0); // eslint-disable-line no-cond-assign
   }
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
 }
