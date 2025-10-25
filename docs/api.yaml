@@ -536,6 +536,18 @@ tags:
     Next, you will find documentation on each of the three authentication methods described above. It is best not to present multiple credentials. If you do, the first _presented_ scheme out of `/key` token, Bearer, Basic, then Cookie will be used for the request. If the multiple schemes are sent at once, and the first matching scheme fails, the request will be immediately rejected.
 
     **Note:** If Single Sign-on with Open ID Connect is enabled on the ODK Central, you can neither use HTTP Basic Authentication nor login with `POST /v1/session` endpoint.
+    ### Authentication Errors
+
+    When authentication fails or access is denied, the API returns standard HTTP error codes:
+
+    * **401 Unauthorized**: Authentication is required but missing or invalid. This occurs when:
+      - No authentication credentials are provided
+      - Invalid session tokens, passwords, or App User tokens are used
+      - Expired session tokens are presented
+
+    * **403 Forbidden**: Authentication succeeded but the authenticated Actor lacks sufficient permissions. This occurs when:
+      - The Actor does not have the required role or permissions for the requested action
+      - The Actor is trying to access resources outside their assigned scope (e.g., App Users accessing administrative endpoints)
 - name: Accounts and Users
   description: |-
     Today, there are two types of accounts: `Users`, which are the administrative accounts held by staff members managing the data collection process, and `App Users`, which are restricted access keys granted per Form within a Project to data collection clients in the field. Although both of these entities are backed by `Actor`s as we explain in the [Authentication section](/central-api-authentication) above, there is not yet any way to directly create or manipulate an Actor. Today, you can only create, manage, and delete Users and App Users.
@@ -1122,12 +1134,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/sessions/current:
     delete:
       tags:
@@ -1145,12 +1151,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/users:
     get:
       tags:
@@ -1189,12 +1189,6 @@ paths:
                 updatedAt: 2018-04-18T23:42:11.406Z
                 deletedAt: 2018-04-18T23:42:11.406Z
                 email: my.email.address@getodk.org
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Users
@@ -1295,12 +1289,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/users/{actorId}:
     get:
@@ -1371,12 +1359,6 @@ paths:
                 updatedAt: 2018-04-18T23:42:11.406Z
                 deletedAt: 2018-04-18T23:42:11.406Z
                 email: my.email.address@getodk.org
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Users
@@ -1409,12 +1391,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Users
@@ -1524,12 +1500,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/user-preferences/project/{projectId}/{propertyName}:
     put:
@@ -1818,12 +1788,6 @@ paths:
                   projects:
                     "1":
                       formTrashCollapsed: false
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/users/{actorId}/password:
     put:
       tags:
@@ -1868,12 +1832,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/users/reset/initiate:
     post:
@@ -1917,12 +1875,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{projectId}/app-users:
     get:
@@ -2098,12 +2050,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{projectId}/app-users/{id}:
     delete:
@@ -2137,12 +2083,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/roles:
     get:
       tags:
@@ -2246,12 +2186,6 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 roleId: 4
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/assignments/{roleId}:
     get:
       tags:
@@ -2286,12 +2220,6 @@ paths:
                 type: user
                 updatedAt: 2018-04-18T23:42:11.406Z
                 deletedAt: 2018-04-18T23:42:11.406Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/assignments/{roleId}/{actorId}:
     post:
       tags:
@@ -2325,12 +2253,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Assignments
@@ -2362,12 +2284,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects:
     get:
       tags:
@@ -2490,12 +2406,6 @@ paths:
                 description: Description of this Project to show on Central.
                 keyId: 3
                 archived: false
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body  
   /v1/projects/{id}:
     get:
@@ -2552,12 +2462,6 @@ paths:
                 verbs:
                   - "form.create"
                   - "form.delete"
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     put:
       tags:
       - Projects
@@ -2657,12 +2561,6 @@ paths:
                 description: Description of this Project to show on Central.
                 keyId: 3
                 archived: false
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         501:
           description: Not Implemented
           content:
@@ -2705,12 +2603,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Projects
@@ -2787,12 +2679,6 @@ paths:
                 description: Description of this Project to show on Central.
                 keyId: 3
                 archived: false
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{id}/key:
     post:
@@ -2893,12 +2779,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -2961,12 +2841,6 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 roleId: 4
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/assignments/{roleId}:
     get:
       tags:
@@ -3008,12 +2882,6 @@ paths:
                 type: user
                 updatedAt: 2018-04-18T23:42:11.406Z
                 deletedAt: 2018-04-18T23:42:11.406Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/assignments/{roleId}/{actorId}:
     post:
       tags:
@@ -3098,12 +2966,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/assignments/forms:
     get:
       tags:
@@ -3150,12 +3012,6 @@ paths:
                   deletedAt: 2018-04-18T23:42:11.406Z
                 xmlFormId: simple
                 roleId: 4
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/assignments/forms/{roleId}:
     get:
       tags:
@@ -3296,12 +3152,6 @@ paths:
                   deletedAt: 2018-04-18T23:42:11.406Z
                 entityRelated: false
                 publicLinks: 4
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Forms
@@ -3455,12 +3305,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -3552,12 +3396,6 @@ paths:
                   deletedAt: 2018-04-18T23:42:11.406Z
                 entityRelated: false
                 publicLinks: 4
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Individual Form
@@ -3597,12 +3435,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Individual Form
@@ -3742,12 +3574,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/form-links/{formLinkId}/form:
     get:
@@ -3783,12 +3609,6 @@ paths:
                 publishedAt: 2018-01-21T00:04:11.153Z
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}.xml:
     get:
       tags:
@@ -3953,12 +3773,6 @@ paths:
                 datasetExists: false
                 hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}:
     get:
       tags:
@@ -4015,12 +3829,6 @@ paths:
               example: (binary data)
         304:
           description:  Not Modified
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/fields:
     get:
       tags:
@@ -4114,12 +3922,6 @@ paths:
                 path: /photo
                 type: binary
                 binary: true
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{id}/restore:
     post:
       tags:
@@ -4154,12 +3956,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft:
     get:
       tags:
@@ -4190,12 +3986,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/DraftForm'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Draft Form
@@ -4273,12 +4063,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Draft Form
@@ -4310,12 +4094,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft.xml:
     get:
       tags:
@@ -4488,12 +4266,6 @@ paths:
                 datasetExists: false
                 hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}:
     get:
       tags:
@@ -4597,12 +4369,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FormAttachment'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Draft Form
@@ -4642,12 +4408,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Draft Form
@@ -4694,12 +4454,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         404:
           description: Not Found
           content:
@@ -4803,12 +4557,6 @@ paths:
                 path: /photo
                 type: binary
                 binary: true
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/publish:
     post:
       tags:
@@ -4853,12 +4601,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -4992,12 +4734,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Form'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}.xml:
     get:
       tags:
@@ -5190,12 +4926,6 @@ paths:
                 datasetExists: false
                 hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/attachments/{filename}:
     get:
       tags:
@@ -5260,12 +4990,6 @@ paths:
               example: (binary data)
         304:
           description:  Not Modified
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/fields:
     get:
       tags:
@@ -5360,12 +5084,6 @@ paths:
                 path: /photo
                 type: binary
                 binary: true
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/assignments:
     get:
       tags:
@@ -5472,12 +5190,6 @@ paths:
                 type: user
                 updatedAt: 2018-04-18T23:42:11.406Z
                 deletedAt: 2018-04-18T23:42:11.406Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/assignments/{roleId}/{actorId}:
     post:
       tags:
@@ -5525,9 +5237,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content: {}
     delete:
       tags:
       - Form Assignments
@@ -5573,12 +5282,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/public-links:
     get:
       tags:
@@ -5748,12 +5451,6 @@ paths:
                 deletedAt: 2018-04-18T23:42:11.406Z
                 token: d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT
                 once: false
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{projectId}/forms/{xmlFormId}/public-links/{linkId}:
     delete:
@@ -5794,12 +5491,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/dataset-diff:
     get:
       tags:
@@ -6052,12 +5743,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -6167,12 +5852,6 @@ paths:
           content:
             text/html:
               example: "<Redirects to correct Submission URL>"
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     put:
       tags:
       - Submissions
@@ -6257,12 +5936,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -6334,12 +6007,6 @@ paths:
                   userAgent: Enketo/3.0.4
                   createdAt: 2018-01-19T23:58:03.395Z
                   current: true
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Submissions
@@ -6377,12 +6044,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         404:
           description: Not Found
           content:
@@ -6435,12 +6096,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         404:
           description: Not Found
           content:
@@ -6541,13 +6196,10 @@ paths:
             Location:
               schema:
                 type: string
-          content: {}
-        403:
-          description: Forbidden
           content:
-            application/json:
+            text/html:
               schema:
-                $ref: '#/components/schemas/Error403'
+                type: string
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv.zip:
     get:
       tags:
@@ -6630,7 +6282,12 @@ paths:
             Content-Disposition:
               schema:
                 type: string
-          content: {}
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+                example: (binary data)
         400:
           description: Bad Request
           content:
@@ -6652,12 +6309,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Submissions
@@ -6733,7 +6384,12 @@ paths:
             Content-Disposition:
               schema:
                 type: string
-          content: {}
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+                example: (binary data)
         400:
           description: Bad Request
           content:
@@ -6755,12 +6411,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions.csv:
     get:
       tags:
@@ -6803,7 +6453,11 @@ paths:
       responses:
         200:
           description: OK
-          content: {}
+          content:
+            application/zip:
+              schema:
+                type: string
+                example: (csv data)
         400:
           description: Bad Request
           content:
@@ -6825,12 +6479,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Submissions
@@ -6872,7 +6520,11 @@ paths:
       responses:
         200:
           description: OK
-          content: {}
+          content:
+            application/zip:
+              schema:
+                type: string
+                example: (csv data)
         400:
           description: Bad Request
           content:
@@ -6894,12 +6546,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/audits:
     get:
       tags:
@@ -6965,12 +6611,6 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/keys:
     get:
       tags:
@@ -7011,12 +6651,6 @@ paths:
                   public: bcFeKDF3Sg8W91Uf5uxaIlsuhzmjbgUnIyiLzIjrx4CAaf9Y9LG7TAu6wKPqfbH6ZAkJTFSfjLNovbKhpOQcmO5VZGGay6yvXrX1TFW6C6RLITy74erxfUAStdtpP4nraCYqQYqn5zD4/1OmgweJt5vzGXW2ch7lrROEQhXB9lK+bjEeWx8TFW/+6ha/oRLnl6a2RBRL6mhwy3PoByNTKndB2MP4TygCJ/Ini4ivk74iSqVnoeuNJR/xUcU+kaIpZEIjxpAS2VECJU9fZvS5Gt84e5wl/t7bUKu+dlh/cUgHfk6+6bwzqGQYOe5A==
                   managed: true
                   hint: it was a secret
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/submitters:
     get:
       tags:
@@ -7057,12 +6691,6 @@ paths:
                 type: user
                 updatedAt: 2018-04-18T23:42:11.406Z
                 deletedAt: 2018-04-18T23:42:11.406Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/comments:
     get:
       tags:
@@ -7122,12 +6750,6 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Comments
@@ -7191,12 +6813,6 @@ paths:
               example:
                 body: this is my comment
                 actorId: 42
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments:
     get:
@@ -7247,12 +6863,6 @@ paths:
                 exists: false
               - name: file3.jpg
                 exists: true
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/attachments/{filename}:
     get:
       tags:
@@ -7368,12 +6978,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Attachments
@@ -7419,12 +7023,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions:
     get:
       tags:
@@ -7579,12 +7177,6 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 formVersion: "1.0"
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}.xml:
     get:
       tags:
@@ -7706,12 +7298,6 @@ paths:
                 exists: false
               - name: file3.jpg
                 exists: true
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}/attachments/{filename}:
     get:
       tags:
@@ -7857,12 +7443,6 @@ paths:
                     path:
                     - meta
                     - deprecatedID
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions:
     get:
       tags:
@@ -7940,12 +7520,6 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Draft Submissions
@@ -8017,12 +7591,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -8069,7 +7637,12 @@ paths:
             Content-Disposition:
               schema:
                 type: string
-          content: {}
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+                example: (binary data)
         400:
           description: Bad Request
           content:
@@ -8091,12 +7664,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Draft Submissions
@@ -8126,7 +7693,12 @@ paths:
             Content-Disposition:
               schema:
                 type: string
-          content: {}
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+                example: (binary data)
         400:
           description: Bad Request
           content:
@@ -8148,12 +7720,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/keys:
     get:
       tags:
@@ -8191,12 +7757,6 @@ paths:
                   public: bcFeKDF3Sg8W91Uf5uxaIlsuhzmjbgUnIyiLzIjrx4CAaf9Y9LG7TAu6wKPqfbH6ZAkJTFSfjLNovbKhpOQcmO5VZGGay6yvXrX1TFW6C6RLITy74erxfUAStdtpP4nraCYqQYqn5zD4/1OmgweJt5vzGXW2ch7lrROEQhXB9lK+bjEeWx8TFW/+6ha/oRLnl6a2RBRL6mhwy3PoByNTKndB2MP4TygCJ/Ini4ivk74iSqVnoeuNJR/xUcU+kaIpZEIjxpAS2VECJU9fZvS5Gt84e5wl/t7bUKu+dlh/cUgHfk6+6bwzqGQYOe5A==
                   managed: true
                   hint: it was a secret
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}:
     get:
       tags:
@@ -8279,12 +7839,6 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/submissions/{instanceId}.xml:
     get:
       tags:
@@ -8485,12 +8039,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     delete:
       tags:
       - Draft Submissions
@@ -8534,12 +8082,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/datasets:
     get:
       tags:
@@ -8584,12 +8126,6 @@ paths:
                   lastEntity: '2018-04-18T03:04:51.695Z'
                   entities: 10
                   conflicts: 2
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Dataset Management
@@ -8649,12 +8185,6 @@ paths:
                 sourceForms: []
                 linkedForms: []
                 properties: []
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         409:
           description: Conflict
           content:
@@ -8721,12 +8251,6 @@ paths:
                   forms:
                   - xmlFormId: simple
                     name: Simple
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Dataset Management
@@ -8796,12 +8320,6 @@ paths:
                   forms:
                   - xmlFormId: simple
                     name: Simple
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/datasets/{name}/properties:
     post:
       tags:
@@ -8850,12 +8368,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/datasets/{name}/entities.csv:
     get:
       tags:
@@ -9024,12 +8536,6 @@ paths:
                     type: user
                     updatedAt: '2018-04-18T23:42:11.406Z'
                     deletedAt: '2018-04-18T23:42:11.406Z'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/datasets/{name}/entities/creators:
     get:
       tags:
@@ -9076,12 +8582,6 @@ paths:
                 createdAt: '2018-03-15T15:30:22.150Z'
                 updatedAt: '2018-03-15T15:30:22.150Z'
                 deletedAt: null
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     post:
       tags:
       - Entity Management
@@ -9192,12 +8692,6 @@ paths:
             application/json; bulk:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/datasets/{name}/entities/{uuid}:
     get:
       tags:
@@ -9321,12 +8815,6 @@ paths:
                     type: user
                     updatedAt: '2018-04-18T23:42:11.406Z'
                     deletedAt: '2018-04-18T23:42:11.406Z'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
     patch:
       tags:
       - Entity Management
@@ -9434,12 +8922,6 @@ paths:
                     firstName: John
                     age: '88'
                     label: John (88)
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
     delete:
       tags:
@@ -9478,13 +8960,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
-    
   /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/restore:
     post:
       tags:
@@ -9521,12 +8996,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         404:
           description: Not Found
           content:
@@ -9648,12 +9117,6 @@ paths:
                     type: user
                     updatedAt: '2018-04-18T23:42:11.406Z'
                     deletedAt: '2018-04-18T23:42:11.406Z'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/diffs:
     get:
       tags:
@@ -9712,12 +9175,6 @@ paths:
                 - new: Robert Doe
                   old: Doe Doe
                   propertyName: label
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/audits:
     get:
       tags:
@@ -9762,12 +9219,6 @@ paths:
                 action: entity.create
                 acteeId: 85cb9aff-005e-4edd-9739-dc9c1a829c44
                 loggedAt: 2018-04-18T23:19:14.802Z
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /projects/{projectId}/datasets/{name}/entities/bulk-delete:
     post:
       tags:
@@ -9818,12 +9269,6 @@ paths:
                   success:
                     type: boolean
                     example: true
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         404:
           description: Not Found
           content:
@@ -9880,12 +9325,6 @@ paths:
                   success:
                     type: boolean
                     example: true
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         404:
           description: Not Found
           content:
@@ -10961,12 +10400,6 @@ paths:
                   meta:
                     instanceID: uuid:297000fd-8eb2-4232-8863-d25f82521b87
                   name: Alice
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -11152,12 +10585,6 @@ paths:
                   - kind: EntitySet
                     name: Entities.children.child
                     url: Entities.children.child
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -11462,12 +10889,6 @@ paths:
                   geometry: 47.722581 18.562111 0 0,
                   species: mora,
                   circumference_cm: 345            
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -11909,12 +11330,6 @@ paths:
                   meta:
                     instanceID: uuid:297000fd-8eb2-4232-8863-d25f82521b87
                   name: Alice
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         406:
           description: Not Acceptable
           content:
@@ -12004,12 +11419,6 @@ paths:
                   enabled: true
                   email: my.email.address@getodk.org
                   organization: Organization Name
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
         404:
           description: Not Found
           content:
@@ -12105,12 +11514,6 @@ paths:
                   enabled: true
                   email: my.email.address@getodk.org
                   organization: Organization Name
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
       x-codegen-request-body-name: body
     delete:
       tags:
@@ -12126,12 +11529,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/analytics/preview:
     get:
       tags:
@@ -12145,13 +11542,11 @@ paths:
       responses:
         200:
           description: OK
-          content: {}
-        403:
-          description: Forbidden
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error403'
+                type: object
+                example:
   /v1/audits:
     get:
       tags:
@@ -12243,12 +11638,6 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        403:
-          description: Forbidden
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error403'
   /v1/backup:
     post:
       tags:
@@ -12278,14 +11667,12 @@ paths:
             Content-Disposition:
               schema:
                 type: string
-          content: {}
-        403:
-          description: Forbidden
           content:
-            application/json:
+            application/zip:
               schema:
-                $ref: '#/components/schemas/Error403'
-      x-codegen-request-body-name: body
+                type: string
+                format: binary
+                example: (binary data)
 components:
   schemas:
     Actor:
@@ -13501,4 +12888,3 @@ components:
         message:
           type: string
           example: The requested feature $unsupported is not supported by this server.
-  
