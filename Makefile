@@ -2,6 +2,7 @@ default: base
 
 NODE_CONFIG_ENV ?= test
 export PGAPPNAME ?= odkcentral
+mocha_incantation := BCRYPT=insecure node_modules/.bin/mocha --node-option=preserve-symlinks --recursive
 
 node_modules: package.json
 	npm install
@@ -100,29 +101,29 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=insecure npx mocha --recursive
+	${mocha_incantation}
 
 .PHONY: test-ci
 test-ci: lint
-	BCRYPT=insecure npx mocha --recursive --reporter test/ci-mocha-reporter.js
+	${mocha_incantation} --reporter test/ci-mocha-reporter.js
 
 .PHONY: test-db-migrations
 test-db-migrations:
-	NODE_CONFIG_ENV=db-migration-test npx mocha --bail --sort --timeout=20000 \
+	NODE_CONFIG_ENV=db-migration-test npx mocha --node-option=preserve-symlinks --bail --sort --timeout=20000 \
 	    --require test/db-migrations/mocha-setup.js \
 	    ./test/db-migrations/**/*.spec.js
 
 .PHONY: test-fast
 test-fast: node_version
-	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
+	NODE_CONFIG_ENV=test ${mocha_incantation} --fgrep @slow --invert
 
 .PHONY: test-integration
 test-integration: node_version
-	NODE_CONFIG_ENV=$(NODE_CONFIG_ENV) BCRYPT=insecure npx mocha --recursive test/integration
+	NODE_CONFIG_ENV=$(NODE_CONFIG_ENV) ${mocha_incantation} test/integration
 
 .PHONY: test-unit
 test-unit: node_version
-	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive test/unit
+	NODE_CONFIG_ENV=test ${mocha_incantation} test/unit
 
 .PHONY: test-coverage
 test-coverage: node_version
