@@ -218,6 +218,7 @@ describe('s3 support', () => {
     // then
     log('Starting assertions...');
     await expectRejectionFrom(uploading);
+    log(`Rejection received from ${uploading.pid}`);
     // debug
     await sleep(5000);
     // and
