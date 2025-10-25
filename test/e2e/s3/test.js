@@ -212,7 +212,7 @@ describe('s3 support', () => {
     log('Waiting until upload in progress...');
     await untilUploadInProgress(); // TODO possible this is not actually working correctly?
     // and
-    log('Killing upload...');
+    log(`Killing upload with pid ${uploading.pid}...`);
     await execSync(`kill -2 ${uploading.pid}`);
 
     // then
