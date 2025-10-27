@@ -178,43 +178,55 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending
   });
 
-  it('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
-    this.timeout(TIMEOUT);
+  [
+    [ 'SIGTERM' ],
+    [ 'SIGINT' ],
 
-    // given
-    await setup(5);
-    await assertNewStatuses({ pending: 1 });
+    //[ 'SIGINT',  'SIGINT' ],
+    //[ 'SIGINT',  'SIGTERM' ],
+    //[ 'SIGTERM', 'SIGINT' ],
+    //[ 'SIGTERM', 'SIGTERM' ],
 
-    // when
-    const uploading = forSacrifice(cli('upload-pending'));
-    await untilUploadInProgress();
-    // and
-    await execSync(`kill ${uploading.pid}`);
+    //[ 'SIGINT',  'SIGINT',  'SIGINT' ],
+    //[ 'SIGINT',  'SIGINT',  'SIGTERM' ],
+    //[ 'SIGINT',  'SIGTERM', 'SIGINT' ],
+    //[ 'SIGINT',  'SIGTERM', 'SIGTERM' ],
+    //[ 'SIGTERM', 'SIGINT',  'SIGINT' ],
+    //[ 'SIGTERM', 'SIGINT',  'SIGTERM' ],
+    //[ 'SIGTERM', 'SIGTERM', 'SIGINT' ],
+    //[ 'SIGTERM', 'SIGTERM', 'SIGTERM' ],
+  ].forEach((signals, testIdx) => {
+    it.only(`should gracefully handle upload-pending dying unexpectedly (${testIdx}:${signals})`, async function() {
+      this.timeout(TIMEOUT);
 
-    // then
-    await expectRejectionFrom(uploading);
+      // given
+      fs.writeFileSync(
+        `./test-forms/5-${testIdx}.xml`,
+        fs.readFileSync('./test-forms/5-template.xml', 'utf8')
+          .replace(/\{\{testIdx\}\}/gm, testIdx),
+      );
+      // and
+      await setup(`5-${testIdx}`);
+      await assertNewStatuses({ pending: 1 });
 
-    // then
-    await assertNewStatuses({ failed: 1 });
-  });
+      // when
+      const uploading = forSacrifice(cli('upload-pending'));
+      await untilUploadInProgress();
+      // and
+      for(const s of signals) {
+        switch(s) {
+          case 'SIGINT':  await execSync(`kill -2 ${uploading.pid}`); break;
+          case 'SIGTERM': await execSync(`kill    ${uploading.pid}`); break;
+          default: throw new Error(`No handling for signal '${s}'`);
+        }
+      }
 
-  it('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
-    this.timeout(TIMEOUT);
+      // then
+      await expectRejectionFrom(uploading);
 
-    // given
-    await setup(6);
-    await assertNewStatuses({ pending: 1 });
-
-    // when
-    const uploading = forSacrifice(cli('upload-pending'));
-    await untilUploadInProgress();
-    // and
-    await execSync(`kill -2 ${uploading.pid}`);
-
-    // then
-    await expectRejectionFrom(uploading);
-    // and
-    await assertNewStatuses({ failed: 1 });
+      // then
+      await assertNewStatuses({ failed: 1 });
+    });
   });
 
   // N.B. THIS TEST KILLS THE MINIO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
