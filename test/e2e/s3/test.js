@@ -237,7 +237,7 @@ describe('s3 support', () => {
     // and making sure the first uploads successfully before killing the server.
 
     // given
-    await setup(7, { bigFiles: 2, bigFileSizeMb: 250 });
+    await setup(6, { bigFiles: 2, bigFileSizeMb: 250 });
     await assertNewStatuses({ pending: 2 });
 
     // when
@@ -269,7 +269,7 @@ describe('s3 support', () => {
     // given
     minioTerminated();
     // and
-    await setup(8, { bigFiles: 0 });
+    await setup(7, { bigFiles: 0 });
     await assertNewStatuses({ pending: 2 });
 
     // when
