@@ -178,49 +178,57 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending
   });
 
-  const randomSignals = length => Array.from({ length }, () => Math.random() < 0.5 ? 'SIGTERM' : 'SIGINT');
+  describe('should gracefully handle upload dying unexpectedly', () => {
+    const randomSignal = () => (Math.random() < 0.5 ? 'SIGTERM' : 'SIGINT');
+    const randomSignals = length => Array.from({ length }, randomSignal);
 
-  [
-    [ 'SIGTERM' ],
-    [ 'SIGINT' ],
-
-    // Every iteration of this test takes 6+ seconds, so instead of running a
-    // full set of combinations of signals for 2 & 3 sequential signals,
-    // generate a few random datasets:
-    randomSignals(2),
-    randomSignals(3),
-    randomSignals(4),
-  ].forEach((signals, testIdx) => {
-    it.only(`should gracefully handle upload-pending dying unexpectedly (${testIdx}:${signals})`, async function() {
-      this.timeout(TIMEOUT);
-
-      // given
+    const formXmlTemplate = fs.readFileSync('./test-forms/5-template.xml', 'utf8');
+    const generateFormXml = testIdx => {
+      const formXmlPath = `./test-forms/5-${testIdx}.xml`;
       fs.writeFileSync(
-        `./test-forms/5-${testIdx}.xml`,
-        fs.readFileSync('./test-forms/5-template.xml', 'utf8')
-          .replace(/\{\{testIdx\}\}/gm, testIdx),
+        formXmlPath,
+        formXmlTemplate.replace(/\{\{testIdx\}\}/gm, testIdx),
       );
-      // and
-      await setup(`5-${testIdx}`);
-      await assertNewStatuses({ pending: 1 });
+    };
 
-      // when
-      const uploading = forSacrifice(cli('upload-pending'));
-      await untilUploadInProgress();
-      // and
-      for(const s of signals) {
-        switch(s) {
-          case 'SIGINT':  await execSync(`kill -2 ${uploading.pid}`); break;
-          case 'SIGTERM': await execSync(`kill    ${uploading.pid}`); break;
-          default: throw new Error(`No handling for signal '${s}'`);
+    [
+      [ 'SIGTERM' ],
+      [ 'SIGINT' ],
+
+      // Every iteration of this test takes 6+ seconds, so instead of running
+      // a full set of combinations of signals for 2 & 3 sequential signals,
+      // generate a few random datasets:
+      randomSignals(2),
+      randomSignals(3),
+      randomSignals(4),
+    ].forEach((signals, testIdx) => {
+      it(`Test #${testIdx}: signals [${signals}]`, async function() {
+        this.timeout(TIMEOUT);
+
+        // given
+        generateFormXml(testIdx);
+        // and
+        await setup(`5-${testIdx}`);
+        await assertNewStatuses({ pending: 1 });
+
+        // when
+        const uploading = forSacrifice(cli('upload-pending'));
+        await untilUploadInProgress();
+        // and
+        for(const s of signals) {
+          switch(s) {
+            case 'SIGINT':  await execSync(`kill -2 ${uploading.pid}`); break;
+            case 'SIGTERM': await execSync(`kill    ${uploading.pid}`); break;
+            default: throw new Error(`No handling for signal '${s}'`);
+          }
         }
-      }
 
-      // then
-      await expectRejectionFrom(uploading);
+        // then
+        await expectRejectionFrom(uploading);
 
-      // then
-      await assertNewStatuses({ failed: 1 });
+        // then
+        await assertNewStatuses({ failed: 1 });
+      });
     });
   });
 
