@@ -178,43 +178,58 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending
   });
 
-  it('should gracefully handle upload-pending dying unexpectedly (SIGTERM)', async function() {
-    this.timeout(TIMEOUT);
+  describe('should gracefully handle upload dying unexpectedly', () => {
+    const randomSignal = () => (Math.random() < 0.5 ? 'SIGTERM' : 'SIGINT');
+    const randomSignals = length => Array.from({ length }, randomSignal);
 
-    // given
-    await setup(5);
-    await assertNewStatuses({ pending: 1 });
+    const formXmlTemplate = fs.readFileSync('./test-forms/5-template.xml', 'utf8');
+    const generateFormXml = testIdx => {
+      const formXmlPath = `./test-forms/5-${testIdx}.xml`;
+      fs.writeFileSync(
+        formXmlPath,
+        formXmlTemplate.replace(/\{\{testIdx\}\}/gm, testIdx),
+      );
+    };
 
-    // when
-    const uploading = forSacrifice(cli('upload-pending'));
-    await untilUploadInProgress();
-    // and
-    await execSync(`kill ${uploading.pid}`);
+    [
+      [ 'SIGTERM' ],
+      [ 'SIGINT' ],
 
-    // then
-    await expectRejectionFrom(uploading);
+      // Every iteration of this test takes 6+ seconds, so instead of running
+      // a full set of combinations of signals for 2 & 3 sequential signals,
+      // generate a few random datasets:
+      randomSignals(2),
+      randomSignals(3),
+      randomSignals(4),
+    ].forEach((signals, testIdx) => {
+      it(`Test #${testIdx}: signals [${signals}]`, async function() {
+        this.timeout(TIMEOUT);
 
-    // then
-    await assertNewStatuses({ failed: 1 });
-  });
+        // given
+        generateFormXml(testIdx);
+        // and
+        await setup(`5-${testIdx}`);
+        await assertNewStatuses({ pending: 1 });
 
-  it('should gracefully handle upload-pending dying unexpectedly (SIGINT)', async function() {
-    this.timeout(TIMEOUT);
+        // when
+        const uploading = forSacrifice(cli('upload-pending'));
+        await untilUploadInProgress();
+        // and
+        for(const s of signals) {
+          switch(s) {
+            case 'SIGINT':  await execSync(`kill -2 ${uploading.pid}`); break;
+            case 'SIGTERM': await execSync(`kill    ${uploading.pid}`); break;
+            default: throw new Error(`No handling for signal '${s}'`);
+          }
+        }
 
-    // given
-    await setup(6);
-    await assertNewStatuses({ pending: 1 });
+        // then
+        await expectRejectionFrom(uploading);
 
-    // when
-    const uploading = forSacrifice(cli('upload-pending'));
-    await untilUploadInProgress();
-    // and
-    await execSync(`kill -2 ${uploading.pid}`);
-
-    // then
-    await expectRejectionFrom(uploading);
-    // and
-    await assertNewStatuses({ failed: 1 });
+        // then
+        await assertNewStatuses({ failed: 1 });
+      });
+    });
   });
 
   // N.B. THIS TEST KILLS THE MINIO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
@@ -225,7 +240,7 @@ describe('s3 support', () => {
     // and making sure the first uploads successfully before killing the server.
 
     // given
-    await setup(7, { bigFiles: 2, bigFileSizeMb: 250 });
+    await setup(6, { bigFiles: 2, bigFileSizeMb: 250 });
     await assertNewStatuses({ pending: 2 });
 
     // when
@@ -257,7 +272,7 @@ describe('s3 support', () => {
     // given
     minioTerminated();
     // and
-    await setup(8, { bigFiles: 0 });
+    await setup(7, { bigFiles: 0 });
     await assertNewStatuses({ pending: 2 });
 
     // when
