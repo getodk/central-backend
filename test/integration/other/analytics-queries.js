@@ -554,6 +554,62 @@ describe('analytics task queries', function () {
       const count = await container.Analytics.countOwnerOnlyDatasets();
       count.should.equal(2);
     }));
+
+    it('should count entity bulk delete audit logs with recent and total counts', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create a dataset first
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create some entities to delete
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-123456789abc',
+              label: 'Entity 1',
+            },
+            {
+              uuid: '12345678-1234-4123-8234-123456789def',
+              label: 'Entity 2'
+            },
+            {
+              uuid: '12345678-1234-4123-8234-123456789aaa',
+              label: 'Entity 3'
+            },
+            {
+              uuid: '12345678-1234-4123-8234-123456789bbb',
+              label: 'Entity 4'
+            }
+          ],
+          source: { name: 'test.csv', size: 100 }
+        })
+        .expect(200);
+
+      // Perform bulk delete (this will create entity.bulk.delete audit log)
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(200);
+
+      // Make first bulk delete action "old" (before the cutoff date)
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.bulk.delete'`);
+
+      // Perform another bulk delete
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789bbb']
+        })
+        .expect(200);
+
+      // Count entity bulk deletes
+      const counts = await container.Analytics.countEntityBulkDeletes();
+      counts.total.should.equal(2); // 2 bulk delete operations total
+      counts.recent.should.equal(1); // 1 recent bulk delete operation
+    }));
   });
 
   describe('user metrics', () => {
@@ -2292,6 +2348,22 @@ describe('analytics task queries', function () {
           (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 1),
           (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 5),
           (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 0)`);
+
+      // create entities so there are things to bulk-delete
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'bulk-create', size: 3 },
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789aaa', label: 'Entity A' },
+            { uuid: '12345678-1234-4123-8234-123456789bbb', label: 'Entity B' }
+          ]
+        })
+        .expect(200);
+
+      // perform a bulk delete to generate entity.bulk.delete audit log(s)
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({ ids: ['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789bbb'] })
+        .expect(200);
 
       const res = await container.Analytics.previewMetrics();
 
