@@ -8351,7 +8351,7 @@ paths:
                     type: user
                     updatedAt: '2018-04-18T23:42:11.406Z'
                     deletedAt: '2018-04-18T23:42:11.406Z'
-  /projects/{projectId}/datasets/{name}/entities.geojson:
+  /v1/projects/{projectId}/datasets/{name}/entities.geojson:
     get:
       tags:
       - Entity Management
@@ -9098,7 +9098,7 @@ paths:
                 action: entity.create
                 acteeId: 85cb9aff-005e-4edd-9739-dc9c1a829c44
                 loggedAt: 2018-04-18T23:19:14.802Z
-  /projects/{projectId}/datasets/{name}/entities/bulk-delete:
+  /v1/projects/{projectId}/datasets/{name}/entities/bulk-delete:
     post:
       tags:
       - Entity Management
@@ -9154,7 +9154,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error404'
-  /projects/{projectId}/datasets/{name}/entities/bulk-restore:
+  /v1/projects/{projectId}/datasets/{name}/entities/bulk-restore:
     post:
       tags:
       - Entity Management
