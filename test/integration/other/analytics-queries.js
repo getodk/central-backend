@@ -153,6 +153,27 @@ describe('analytics task queries', function () {
       res.should.equal(5);
     }));
 
+    it('should find the maximum number of geo points per form', testService(async (service, container) => {
+
+      const geoFormId = await createTestForm(service, container, geoForm, 1);
+      await submitToForm(service, 'alice', 1, geoFormId, geoSubmission('1'));
+      await submitToForm(service, 'alice', 1, geoFormId, geoSubmission('2'));
+      await submitToForm(service, 'alice', 1, geoFormId, geoSubmission('3'));
+
+      const asAlice = await service.login('alice');
+
+      // Trigger geo cache calculation by fetching the form's GeoJSON feed
+      await asAlice.get('/v1/projects/1/forms/simple-geo/submissions.geojson')
+        .expect(200);
+
+      // ensure any background processing from the geo endpoint finishes
+      await exhaust(container);
+
+      const maxGeo = await container.Analytics.maxGeoPerForm();
+      maxGeo.should.be.a.Number();
+      maxGeo.should.equal(3);
+    }));
+
     it('should count the number of unique roles across projects', testService(async (service, container) => {
       // managers, viewers, data collectors
       // bob is a manager on original project 1
@@ -2322,12 +2343,6 @@ describe('analytics task queries', function () {
         .send({ ownerOnly: true })
         .expect(200);
 
-      // After the interesting stuff above, encrypt and archive the project
-
-      // encrypting a project
-      await asAlice.post('/v1/projects/1/key')
-        .send({ passphrase: 'supersecret', hint: 'it is a secret' });
-
       // creating and archiving a project
       await asAlice.post('/v1/projects')
         .set('Content-Type', 'application/json')
@@ -2349,6 +2364,7 @@ describe('analytics task queries', function () {
           (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 5),
           (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 0)`);
 
+      // v2025.3
       // create entities so there are things to bulk-delete
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
@@ -2364,6 +2380,20 @@ describe('analytics task queries', function () {
       await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
         .send({ ids: ['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789bbb'] })
         .expect(200);
+
+      // Create a geo form with a submission
+      // Trigger geo cache calculation by fetching the form's GeoJSON feed
+      const geoFormId = await createTestForm(service, container, geoForm, 1);
+      await submitToForm(service, 'alice', 1, geoFormId, geoSubmission('123'));
+      await asAlice.get('/v1/projects/1/forms/simple-geo/submissions.geojson')
+        .expect(200);
+
+
+      // After the interesting stuff above, encrypt and archive the project
+
+      // encrypting a project
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' });
 
       const res = await container.Analytics.previewMetrics();
 
