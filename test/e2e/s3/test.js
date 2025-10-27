@@ -182,19 +182,19 @@ describe('s3 support', () => {
     [ 'SIGTERM' ],
     [ 'SIGINT' ],
 
-    //[ 'SIGINT',  'SIGINT' ],
-    //[ 'SIGINT',  'SIGTERM' ],
-    //[ 'SIGTERM', 'SIGINT' ],
-    //[ 'SIGTERM', 'SIGTERM' ],
+    [ 'SIGINT',  'SIGINT' ],
+    [ 'SIGINT',  'SIGTERM' ],
+    [ 'SIGTERM', 'SIGINT' ],
+    [ 'SIGTERM', 'SIGTERM' ],
 
-    //[ 'SIGINT',  'SIGINT',  'SIGINT' ],
-    //[ 'SIGINT',  'SIGINT',  'SIGTERM' ],
-    //[ 'SIGINT',  'SIGTERM', 'SIGINT' ],
-    //[ 'SIGINT',  'SIGTERM', 'SIGTERM' ],
-    //[ 'SIGTERM', 'SIGINT',  'SIGINT' ],
-    //[ 'SIGTERM', 'SIGINT',  'SIGTERM' ],
-    //[ 'SIGTERM', 'SIGTERM', 'SIGINT' ],
-    //[ 'SIGTERM', 'SIGTERM', 'SIGTERM' ],
+    [ 'SIGINT',  'SIGINT',  'SIGINT' ],
+    [ 'SIGINT',  'SIGINT',  'SIGTERM' ],
+    [ 'SIGINT',  'SIGTERM', 'SIGINT' ],
+    [ 'SIGINT',  'SIGTERM', 'SIGTERM' ],
+    [ 'SIGTERM', 'SIGINT',  'SIGINT' ],
+    [ 'SIGTERM', 'SIGINT',  'SIGTERM' ],
+    [ 'SIGTERM', 'SIGTERM', 'SIGINT' ],
+    [ 'SIGTERM', 'SIGTERM', 'SIGTERM' ],
   ].forEach((signals, testIdx) => {
     it.only(`should gracefully handle upload-pending dying unexpectedly (${testIdx}:${signals})`, async function() {
       this.timeout(TIMEOUT);
