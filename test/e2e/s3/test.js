@@ -178,23 +178,18 @@ describe('s3 support', () => {
     await assertNewStatuses({ pending: 1 }); // crashed process will roll back to pending
   });
 
+  const randomSignals = length => Array.from({ length }, () => Math.random() < 0.5 ? 'SIGTERM' : 'SIGINT');
+
   [
     [ 'SIGTERM' ],
     [ 'SIGINT' ],
 
-    [ 'SIGINT',  'SIGINT' ],
-    [ 'SIGINT',  'SIGTERM' ],
-    [ 'SIGTERM', 'SIGINT' ],
-    [ 'SIGTERM', 'SIGTERM' ],
-
-    [ 'SIGINT',  'SIGINT',  'SIGINT' ],
-    [ 'SIGINT',  'SIGINT',  'SIGTERM' ],
-    [ 'SIGINT',  'SIGTERM', 'SIGINT' ],
-    [ 'SIGINT',  'SIGTERM', 'SIGTERM' ],
-    [ 'SIGTERM', 'SIGINT',  'SIGINT' ],
-    [ 'SIGTERM', 'SIGINT',  'SIGTERM' ],
-    [ 'SIGTERM', 'SIGTERM', 'SIGINT' ],
-    [ 'SIGTERM', 'SIGTERM', 'SIGTERM' ],
+    // Every iteration of this test takes 5+ seconds, so instead of running a
+    // full set of combinations of signals for 2 & 3 sequential signals,
+    // generate a few random datasets:
+    randomSignals(2),
+    randomSignals(3),
+    randomSignals(4),
   ].forEach((signals, testIdx) => {
     it.only(`should gracefully handle upload-pending dying unexpectedly (${testIdx}:${signals})`, async function() {
       this.timeout(TIMEOUT);
