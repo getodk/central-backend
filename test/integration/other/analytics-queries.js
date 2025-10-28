@@ -604,6 +604,44 @@ describe('analytics task queries', function () {
       count.should.equal(2); // Only trees and buildings have geometry properties
     }));
 
+    it('should count entities with geometry properties', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create dataset with geometry property
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'locations' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/locations/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      // Create some entities in this dataset
+      await asAlice.post('/v1/projects/1/datasets/locations/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789aaa',
+          label: 'Location A',
+          data: { geometry: '0, 0' }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/locations/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789bbb',
+          label: 'Location B',
+          data: { geometry: '1, 1' }
+        })
+        .expect(200);
+
+      // Make one entity ancient
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE uuid = '12345678-1234-4123-8234-123456789aaa'`);
+
+      const result = await container.Analytics.countEntitiesWithGeometry();
+      result.length.should.equal(1);
+      result[0].total.should.equal(2); // Both entities in locations dataset
+      result[0].recent.should.equal(1); // Only one recent entity
+    }));
+
     it('should count entity bulk delete audit logs with recent and total counts', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -2676,6 +2714,12 @@ describe('analytics task queries', function () {
         })
         .expect(200);
 
+      // Add geometry property to dataset
+      // We don't need to add an entity with this data, we count all entities in a dataset with a property like this
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
       // Create an empty project
       const secondProject = await createTestProject(service, container, 'second');
       await createTestForm(service, container, testData.forms.simple, secondProject);
@@ -2686,7 +2730,7 @@ describe('analytics task queries', function () {
       const { id: _, ...secondDataset } = res.projects[0].datasets[1];
 
       firstDataset.should.be.eql({
-        num_properties: 2,
+        num_properties: 3,
         num_creation_forms: 2,
         num_followup_forms: 1,
         num_entities: {
@@ -2731,7 +2775,11 @@ describe('analytics task queries', function () {
           total: 1,
           recent: 1
         },
-        biggest_bulk_upload: 3
+        biggest_bulk_upload: 3,
+        num_entities_with_geometry: {
+          total: 5,
+          recent: 4
+        },
       });
 
       secondDataset.should.be.eql({
@@ -2780,7 +2828,11 @@ describe('analytics task queries', function () {
           total: 0,
           recent: 0
         },
-        biggest_bulk_upload: 0
+        biggest_bulk_upload: 0,
+        num_entities_with_geometry: {
+          total: 0,
+          recent: 0
+        },
       });
 
       // Assert that a Project without a Dataset returns an empty array
