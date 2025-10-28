@@ -576,6 +576,34 @@ describe('analytics task queries', function () {
       count.should.equal(2);
     }));
 
+    it('should count datasets with geometry property', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'buildings' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/buildings/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+
+      const count = await container.Analytics.countDatasetsWithGeometry();
+      count.should.equal(2); // Only trees and buildings have geometry properties
+    }));
+
     it('should count entity bulk delete audit logs with recent and total counts', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -2388,6 +2416,14 @@ describe('analytics task queries', function () {
       await asAlice.get('/v1/projects/1/forms/simple-geo/submissions.geojson')
         .expect(200);
 
+      // Create a dataset with a geometry property
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
 
       // After the interesting stuff above, encrypt and archive the project
 
