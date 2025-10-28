@@ -3315,7 +3315,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Form'
               example:
-              - projectId: 1
+                projectId: 1
                 xmlFormId: simple
                 name: Simple
                 version: "2.1"
