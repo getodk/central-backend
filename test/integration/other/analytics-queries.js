@@ -616,6 +616,10 @@ describe('analytics task queries', function () {
         .send({ name: 'geometry' })
         .expect(200);
 
+      await asAlice.post('/v1/projects/1/datasets/locations/properties')
+        .send({ name: 'type' })
+        .expect(200);
+
       // Create some entities in this dataset
       await asAlice.post('/v1/projects/1/datasets/locations/entities')
         .send({
@@ -630,6 +634,15 @@ describe('analytics task queries', function () {
           uuid: '12345678-1234-4123-8234-123456789bbb',
           label: 'Location B',
           data: { geometry: '1, 1' }
+        })
+        .expect(200);
+
+      // Add an entity to the dataset that doesnt have the geometry property
+      await asAlice.post('/v1/projects/1/datasets/locations/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789ccc',
+          label: 'Location C',
+          data: { type: 'hospital' }
         })
         .expect(200);
 
