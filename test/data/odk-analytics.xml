@@ -11,7 +11,7 @@
 		<h:title>ODK Analytics</h:title>
 		<model odk:xforms-version="1.0.0">
 			<instance>
-				<data id="odk-analytics" version="v2025.2.0_1">
+				<data id="odk-analytics" version="v2025.3.0_1">
 					<config>
 						<email/>
 						<organization/>
@@ -26,6 +26,7 @@
 							<total/>
 						</num_projects_encryption>
 						<num_questions_biggest_form/>
+						<max_geo_per_form/>
 						<num_audit_log_entries>
 							<recent/>
 							<total/>
@@ -56,6 +57,11 @@
 						<num_blob_files/>
 						<num_blob_files_on_s3/>
 						<num_reset_failed_to_pending_count/>
+						<num_entity_bulk_deletes>
+							<recent/>
+							<total/>
+						</num_entity_bulk_deletes>
+						<num_datasets_with_geometry/>
 					</system>
 					<projects jr:template="">
 						<id/>
@@ -120,6 +126,11 @@
 								<total/>
 							</num_closed_forms>
 							<num_forms_webforms_enabled/>
+							<num_entity_create_forms/>
+							<num_repeat_entity_create_forms/>
+							<num_entity_update_forms/>
+							<num_repeat_entity_update_forms/>
+							<num_entity_create_update_forms/>
 						</forms>
 						<submissions>
 							<num_submissions_received>
@@ -211,6 +222,10 @@
 								<total/>
 							</num_bulk_create_events>
 							<biggest_bulk_upload/>
+							<num_entities_with_geometry>
+								<recent/>
+								<total/>
+							</num_entities_with_geometry>
 						</datasets>
 						<other>
 							<description_length/>
@@ -279,6 +294,11 @@
 								<total/>
 							</num_closed_forms>
 							<num_forms_webforms_enabled/>
+							<num_entity_create_forms/>
+							<num_repeat_entity_create_forms/>
+							<num_entity_update_forms/>
+							<num_repeat_entity_update_forms/>
+							<num_entity_create_update_forms/>
 						</forms>
 						<submissions>
 							<num_submissions_received>
@@ -370,6 +390,10 @@
 								<total/>
 							</num_bulk_create_events>
 							<biggest_bulk_upload/>
+							<num_entities_with_geometry>
+								<recent/>
+								<total/>
+							</num_entities_with_geometry>
 						</datasets>
 						<other>
 							<description_length/>
@@ -387,6 +411,7 @@
 			<bind nodeset="/data/system/num_projects_encryption/recent" type="int"/>
 			<bind nodeset="/data/system/num_projects_encryption/total" type="int"/>
 			<bind nodeset="/data/system/num_questions_biggest_form" type="int"/>
+			<bind nodeset="/data/system/max_geo_per_form" type="int"/>
 			<bind nodeset="/data/system/num_audit_log_entries/recent" type="int"/>
 			<bind nodeset="/data/system/num_audit_log_entries/total" type="int"/>
 			<bind nodeset="/data/system/num_archived_projects" type="int"/>
@@ -415,6 +440,9 @@
 			<bind nodeset="/data/system/num_blob_files" type="int"/>
 			<bind nodeset="/data/system/num_blob_files_on_s3" type="int"/>
 			<bind nodeset="/data/system/num_reset_failed_to_pending_count" type="int"/>
+			<bind nodeset="/data/system/num_entity_bulk_deletes/recent" type="int"/>
+			<bind nodeset="/data/system/num_entity_bulk_deletes/total" type="int"/>
+			<bind nodeset="/data/system/num_datasets_with_geometry" type="int"/>
 			<bind nodeset="/data/projects/id" type="string"/>
 			<bind nodeset="/data/projects/users/num_managers/recent" type="int"/>
 			<bind nodeset="/data/projects/users/num_managers/total" type="int"/>
@@ -446,6 +474,11 @@
 			<bind nodeset="/data/projects/forms/num_closed_forms/recent" type="int"/>
 			<bind nodeset="/data/projects/forms/num_closed_forms/total" type="int"/>
 			<bind nodeset="/data/projects/forms/num_forms_webforms_enabled" type="int"/>
+			<bind nodeset="/data/projects/forms/num_entity_create_forms" type="int"/>
+			<bind nodeset="/data/projects/forms/num_repeat_entity_create_forms" type="int"/>
+			<bind nodeset="/data/projects/forms/num_entity_update_forms" type="int"/>
+			<bind nodeset="/data/projects/forms/num_repeat_entity_update_forms" type="int"/>
+			<bind nodeset="/data/projects/forms/num_entity_create_update_forms" type="int"/>
 			<bind nodeset="/data/projects/submissions/num_submissions_received/recent" type="int"/>
 			<bind nodeset="/data/projects/submissions/num_submissions_received/total" type="int"/>
 			<bind nodeset="/data/projects/submissions/num_submissions_approved/recent" type="int"/>
@@ -493,6 +526,8 @@
 			<bind nodeset="/data/projects/datasets/num_bulk_create_events/recent" type="int"/>
 			<bind nodeset="/data/projects/datasets/num_bulk_create_events/total" type="int"/>
 			<bind nodeset="/data/projects/datasets/biggest_bulk_upload" type="int"/>
+			<bind nodeset="/data/projects/datasets/num_entities_with_geometry/recent" type="int"/>
+			<bind nodeset="/data/projects/datasets/num_entities_with_geometry/total" type="int"/>
 			<bind nodeset="/data/projects/other/description_length" type="int"/>
 			<bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
 		</model>
@@ -529,6 +564,9 @@
 			</group>
 			<input ref="/data/system/num_questions_biggest_form">
 				<label>Number of questions in biggest Form</label>
+			</input>
+			<input ref="/data/system/max_geo_per_form">
+				<label>Max number of geo data in a form.</label>
 			</input>
 			<group ref="/data/system/num_audit_log_entries">
 				<label>Number of Audit Log entries</label>
@@ -616,6 +654,18 @@
 			</input>
 			<input ref="/data/system/num_reset_failed_to_pending_count">
 				<label>Number of times user has reset failed External Blob upload state</label>
+			</input>
+			<group ref="/data/system/num_entity_bulk_deletes">
+				<label>Number of bulk entity delete actions</label>
+				<input ref="/data/system/num_entity_bulk_deletes/recent">
+					<label>in the past 45 days</label>
+				</input>
+				<input ref="/data/system/num_entity_bulk_deletes/total">
+					<label>Total</label>
+				</input>
+			</group>
+			<input ref="/data/system/num_datasets_with_geometry">
+				<label>Number of Entity Lists with geometry property</label>
 			</input>
 		</group>
 		<group ref="/data/projects">
@@ -760,6 +810,21 @@
 					</group>
 					<input ref="/data/projects/forms/num_forms_webforms_enabled">
 						<label>Number of Forms with Web Forms enabled</label>
+					</input>
+					<input ref="/data/projects/forms/num_entity_create_forms">
+						<label>Number of Forms that create Entities</label>
+					</input>
+					<input ref="/data/projects/forms/num_repeat_entity_create_forms">
+						<label>Number of Forms that create Entities from repeats</label>
+					</input>
+					<input ref="/data/projects/forms/num_entity_update_forms">
+						<label>Number of Forms that update Entities</label>
+					</input>
+					<input ref="/data/projects/forms/num_repeat_entity_update_forms">
+						<label>Number of Forms that update Entities from repeats</label>
+					</input>
+					<input ref="/data/projects/forms/num_entity_create_update_forms">
+						<label>Number of Forms that create and update Entities</label>
 					</input>
 				</group>
 				<group ref="/data/projects/submissions">
@@ -969,6 +1034,15 @@
 						<input ref="/data/projects/datasets/biggest_bulk_upload">
 							<label>Number of rows in biggest bulk upload</label>
 						</input>
+						<group ref="/data/projects/datasets/num_entities_with_geometry">
+							<label>Number of Entities with geometry data</label>
+							<input ref="/data/projects/datasets/num_entities_with_geometry/recent">
+								<label>in the past 45 days</label>
+							</input>
+							<input ref="/data/projects/datasets/num_entities_with_geometry/total">
+								<label>Total</label>
+							</input>
+						</group>
 					</repeat>
 				</group>
 				<group ref="/data/projects/other">
