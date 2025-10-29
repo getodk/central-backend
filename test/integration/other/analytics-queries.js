@@ -1030,6 +1030,41 @@ describe('analytics task queries', function () {
         { projectId: proj2, total: 1 }
       ]);
     }));
+
+    it('should count number of forms that create and update entities and do so in repeats', testService(async (service, container) => {
+      // Two forms about repeats
+      await createTestForm(service, container, testData.forms.repeatEntityHousehold, 1); // creates
+      await createTestForm(service, container, testData.forms.repeatEntityTrees, 1); // creates and updates
+
+      // New project with one form only about entity updates
+      const proj2 = await createTestProject(service, container, 'New Proj');
+      await createTestForm(service, container, testData.forms.updateEntity, proj2);
+
+      // Upload a non-published form, too, which should not be counted
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiEntityFarm)
+          .expect(200));
+
+      const res = await container.Analytics.countFormsCreateUpdateEntitiesFromRepeats();
+
+      res[0].should.eql({
+        num_entity_create_forms: 2,
+        num_repeat_entity_create_forms: 2,
+        num_entity_update_forms: 1,
+        num_repeat_entity_update_forms: 1,
+        num_entity_create_update_forms: 1,
+        projectId: 1
+      });
+      res[1].should.eql({
+        num_entity_create_forms: 0,
+        num_repeat_entity_create_forms: 0,
+        num_entity_update_forms: 1,
+        num_repeat_entity_update_forms: 0,
+        num_entity_create_update_forms: 0,
+        projectId: proj2
+      });
+    }));
   });
 
   describe('submission metrics', () => {
@@ -2558,6 +2593,9 @@ describe('analytics task queries', function () {
           .then(() => asAlice.patch('/v1/projects/1/forms/simple-geo')
             .send({ state: 'closing' })
             .expect(200)));
+
+      // form that counts for all kinds of entity forms: creates and updates entities with repeats
+      await createTestForm(service, container, testData.forms.repeatEntityTrees, 1); // creates and updates
 
       const res = await container.Analytics.previewMetrics();
 
