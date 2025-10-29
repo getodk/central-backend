@@ -1655,13 +1655,13 @@ describe('analytics task queries', function () {
       const datasets = await container.Analytics.getDatasetEvents();
 
       const datasetOfFirstProject = datasets.find(d => d.projectId === 1);
-      datasetOfFirstProject.id.should.be.equal(dsInDatabase[datasetOfFirstProject.id].id);
+      datasetOfFirstProject.datasetId.should.be.equal(dsInDatabase[datasetOfFirstProject.datasetId].id);
       datasetOfFirstProject.num_bulk_create_events_total.should.be.equal(2);
       datasetOfFirstProject.num_bulk_create_events_recent.should.be.equal(1);
       datasetOfFirstProject.biggest_bulk_upload.should.be.equal(3);
 
       const datasetOfSecondProject = datasets.find(d => d.projectId === secondProjectId);
-      datasetOfSecondProject.id.should.be.equal(dsInDatabase[datasetOfSecondProject.id].id);
+      datasetOfSecondProject.datasetId.should.be.equal(dsInDatabase[datasetOfSecondProject.datasetId].id);
       datasetOfSecondProject.num_bulk_create_events_total.should.be.equal(1);
       datasetOfSecondProject.num_bulk_create_events_recent.should.be.equal(0);
       datasetOfSecondProject.biggest_bulk_upload.should.be.equal(1);
@@ -2733,6 +2733,15 @@ describe('analytics task queries', function () {
         .send({ name: 'geometry' })
         .expect(200);
 
+      // Add entity with geometry property to this dataset
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789ddd',
+          label: 'person 1',
+          data: { geometry: '1, 1' }
+        })
+        .expect(200);
+
       // Create an empty project
       const secondProject = await createTestProject(service, container, 'second');
       await createTestForm(service, container, testData.forms.simple, secondProject);
@@ -2747,8 +2756,8 @@ describe('analytics task queries', function () {
         num_creation_forms: 2,
         num_followup_forms: 1,
         num_entities: {
-          total: 5, // made one Entity ancient
-          recent: 4 // 2 from submissions, 3 from bulk uploads
+          total: 6, // made one Entity ancient
+          recent: 5 // 2 from submissions, 3 from bulk uploads, 1 from api (with geometry)
         },
         num_failed_entities: { // two Submissions failed due to invalid UUID
           total: 2, // made one Error ancient
@@ -2771,8 +2780,8 @@ describe('analytics task queries', function () {
           recent: 2
         },
         num_entity_creates_api: {
-          total: 0,
-          recent: 0
+          total: 1,
+          recent: 1
         },
         num_entity_creates_bulk: {
           total: 3,
@@ -2790,8 +2799,8 @@ describe('analytics task queries', function () {
         },
         biggest_bulk_upload: 3,
         num_entities_with_geometry: {
-          total: 5,
-          recent: 4
+          total: 1,
+          recent: 1
         },
       });
 
