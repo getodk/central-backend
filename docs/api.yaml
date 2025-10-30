@@ -995,7 +995,7 @@ paths:
                   example: my.super.secure.password
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1040,7 +1040,7 @@ paths:
           type: string
         example: Bearer lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1073,7 +1073,7 @@ paths:
           type: string
         example: Basic bXkuZW1haWwuYWRkcmVzc0BvcGVuZGF0YWtpdC5vcmc6bXkucGFzc3dvcmQ=
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1101,7 +1101,7 @@ paths:
           type: string
         example: '!Ms7V3$Zdnd63j5HFacIPFEvFAuwNqTUZW$AsVOmaQFf$vIC!F8dJjdgiDnJXXOt'
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1130,7 +1130,7 @@ paths:
           type: string
         example: lSpAIeksRu1CNZs7!qjAot2T17dPzkrw9B4iTtpj7OoIJBmXvnHM8z8Ka4QPEjR7
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1147,7 +1147,7 @@ paths:
         Only the session that was used to authenticate the request is logged out. If the Actor associated with the session has other sessions as well, those are not logged out.
       operationId: Logging out current session
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1175,7 +1175,7 @@ paths:
           type: string
         example: alice
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1222,7 +1222,7 @@ paths:
                 email: my.email.address@getodk.org
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1270,7 +1270,7 @@ paths:
                 updatedAt: 2018-04-18T23:42:11.406Z
                 deletedAt: 2018-04-18T23:42:11.406Z
                 email: my.email.address@getodk.org
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -1313,7 +1313,7 @@ paths:
           type: string
         example: "42"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1387,7 +1387,7 @@ paths:
           type: string
         example: "42"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1433,7 +1433,7 @@ paths:
                 email: new.email.address@getodk.org
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1481,7 +1481,7 @@ paths:
                 updatedAt: 2018-04-18T23:42:11.406Z
                 deletedAt: 2018-04-18T23:42:11.406Z
                 email: my.email.address@getodk.org
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -1536,13 +1536,13 @@ paths:
                 propertyValue: true
         required: true
       responses:
-        200:
+        "200":
           description: The preference was stored
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        404:
+        "404":
           description: The specified project does not exist
           content:
             application/json:
@@ -1568,13 +1568,13 @@ paths:
             type: string
           example: "frobwazzleEnabled"
       responses:
-        200:
+        "200":
           description: The preference was stored
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        404:
+        "404":
           description: The preference does not exist
           content:
             application/json:
@@ -1607,7 +1607,7 @@ paths:
         required: true
 
       responses:
-        200:
+        "200":
           description: The preference was stored
           content:
             application/json:
@@ -1626,13 +1626,13 @@ paths:
             type: string
           example: "frobwazzleEnabled"
       responses:
-        200:
+        "200":
           description: The preference was deleted
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        404:
+        "404":
           description: The specified preference does not exist
           content:
             application/json:
@@ -1654,7 +1654,7 @@ paths:
         - an object containing the preferences of the authenticated User/Actor
       operationId: Getting authenticated User details
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -1804,7 +1804,7 @@ paths:
                 new: new.password
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1847,7 +1847,7 @@ paths:
                 email: my.email.address@getodk.org
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -1873,7 +1873,7 @@ paths:
           type: number
         example: "7"
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -1947,7 +1947,7 @@ paths:
                 displayName: My Display Name
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2001,7 +2001,7 @@ paths:
                 deletedAt: 2018-04-18T23:42:11.406Z
                 token: d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT
                 projectId: 1
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -2049,7 +2049,7 @@ paths:
           type: number
         example: "7"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2066,7 +2066,7 @@ paths:
         at any time.'
       operationId: Listing all Roles
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2105,7 +2105,7 @@ paths:
           type: string
         example: "1"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2131,7 +2131,7 @@ paths:
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID.
       operationId: Listing all Assignments
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -2177,7 +2177,7 @@ paths:
           type: string
         example: admin
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2219,7 +2219,7 @@ paths:
           type: number
         example: "14"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2250,7 +2250,7 @@ paths:
           type: number
         example: "14"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2288,7 +2288,7 @@ paths:
             type: boolean
           example: "true"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2342,7 +2342,7 @@ paths:
                 name: Project Name
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2400,7 +2400,7 @@ paths:
           type: number
         example: "16"
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -2497,7 +2497,7 @@ paths:
                   state: closed
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2533,7 +2533,7 @@ paths:
                 description: Description of this Project to show on Central.
                 keyId: 3
                 archived: false
-        501:
+        "501":
           description: Not Implemented
           content:
             application/json:
@@ -2569,7 +2569,7 @@ paths:
           type: number
         example: "16"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2615,7 +2615,7 @@ paths:
                 archived: true
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2694,7 +2694,7 @@ paths:
                 hint: it was a secret
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2730,7 +2730,7 @@ paths:
                 description: Description of this Project to show on Central.
                 keyId: 3
                 archived: false
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -2751,7 +2751,7 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        409:
+        "409":
           description: Conflict
           content:
             application/json:
@@ -2787,7 +2787,7 @@ paths:
           type: number
         example: "2"
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -2839,7 +2839,7 @@ paths:
           type: number
         example: "16"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2888,7 +2888,7 @@ paths:
           type: number
         example: "14"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2926,7 +2926,7 @@ paths:
           type: number
         example: "14"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -2951,7 +2951,7 @@ paths:
           type: number
         example: "16"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3004,7 +3004,7 @@ paths:
           type: number
         example: "16"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3060,7 +3060,7 @@ paths:
           type: boolean
         example: "true"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3168,7 +3168,7 @@ paths:
           type: string
         example: filename.xlsx
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3244,7 +3244,7 @@ paths:
                 publishedAt: 2018-01-21T00:04:11.153Z
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -3265,7 +3265,7 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        409:
+        "409":
           description: Conflict
           content:
             application/json:
@@ -3307,7 +3307,7 @@ paths:
           type: number
         example: "16"
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -3389,7 +3389,7 @@ paths:
           type: number
         example: "16"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3437,7 +3437,7 @@ paths:
                 state: open
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3513,7 +3513,7 @@ paths:
                 publishedAt: 2018-01-21T00:04:11.153Z
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -3551,7 +3551,7 @@ paths:
           type: string
         example: abcdef
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3593,7 +3593,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/xml:
@@ -3652,7 +3652,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
@@ -3685,7 +3685,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3740,7 +3740,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -3755,7 +3755,7 @@ paths:
               schema:
                 type: object
               example: (binary data)
-        304:
+        "304":
           description:  Not Modified
   /v1/projects/{projectId}/forms/{xmlFormId}/fields:
     get:
@@ -3795,7 +3795,7 @@ paths:
           type: boolean
         example: "false"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3878,7 +3878,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3908,7 +3908,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -3964,13 +3964,13 @@ paths:
           type: string
         example: filename.xlsx
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -4016,7 +4016,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -4046,7 +4046,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/xml:
@@ -4107,7 +4107,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           headers:
             ETag:
@@ -4146,7 +4146,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -4197,7 +4197,7 @@ paths:
           type: string
         example: people.csv
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -4243,7 +4243,7 @@ paths:
           type: string
         example: people.csv
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -4282,7 +4282,7 @@ paths:
           type: string
         example: people.csv
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -4328,13 +4328,13 @@ paths:
               $ref: '#/components/schemas/PatchAttachment'
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        404:
+        "404":
           description: Not Found
           content:
             application/json:
@@ -4382,7 +4382,7 @@ paths:
           type: boolean
         example: "false"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -4475,13 +4475,13 @@ paths:
           type: string
         example: newVersion
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        409:
+        "409":
           description: Conflict
           content:
             application/json:
@@ -4523,7 +4523,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: Ok
           content:
             application/json:
@@ -4602,7 +4602,7 @@ paths:
           type: string
         example: one
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -4640,7 +4640,7 @@ paths:
           type: string
         example: one
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/xml:
@@ -4709,7 +4709,7 @@ paths:
           type: string
         example: one
       responses:
-        200:
+        "200":
           description: OK
           headers:
             ETag:
@@ -4752,7 +4752,7 @@ paths:
           type: string
         example: one
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -4815,7 +4815,7 @@ paths:
           type: string
         example: people.csv
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -4830,7 +4830,7 @@ paths:
               schema:
                 type: object
               example: (binary data)
-        304:
+        "304":
           description:  Not Modified
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/fields:
     get:
@@ -4871,7 +4871,7 @@ paths:
           type: boolean
         example: "false"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -4952,7 +4952,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -5011,7 +5011,7 @@ paths:
           type: string
         example: manager
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5067,7 +5067,7 @@ paths:
           type: number
         example: "14"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5112,7 +5112,7 @@ paths:
           type: number
         example: "14"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5144,7 +5144,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -5233,7 +5233,7 @@ paths:
                 once: false
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5321,7 +5321,7 @@ paths:
           type: integer
         example: "42"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5353,7 +5353,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: This is the standard response
           content:
             application/json:
@@ -5393,7 +5393,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: This is the standard response
           content:
             application/json:
@@ -5440,7 +5440,7 @@ paths:
           type: boolean
         example: true
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5529,7 +5529,7 @@ paths:
           type: string
         example: b1628661-65ed-4cab-8e30-19c17fef2de0
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5552,7 +5552,7 @@ paths:
                   userAgent: Enketo/3.0.4
                   createdAt: 2018-01-19T23:58:03.395Z
                   current: true
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -5573,7 +5573,7 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        409:
+        "409":
           description: Conflict
           content:
             application/json:
@@ -5619,7 +5619,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5703,7 +5703,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -5754,7 +5754,7 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
-        301:
+        "301":
           description: Returns 301 with URL of the specific Submission version if `instanceId` of a Submission edit is provided
           content:
             text/html:
@@ -5799,7 +5799,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5822,7 +5822,7 @@ paths:
                   userAgent: Enketo/3.0.4
                   createdAt: 2018-01-19T23:58:03.395Z
                   current: true
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -5843,7 +5843,7 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        409:
+        "409":
           description: Conflict
           content:
             application/json:
@@ -5891,7 +5891,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -5945,13 +5945,13 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        404:
+        "404":
           description: Not Found
           content:
             application/json:
@@ -5997,13 +5997,13 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        404:
+        "404":
           description: Not Found
           content:
             application/json:
@@ -6050,7 +6050,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/xml:
@@ -6097,7 +6097,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        302:
+        "302":
           description: Found
           headers:
             Location:
@@ -6183,7 +6183,7 @@ paths:
           type: boolean
         example: "false"
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -6195,7 +6195,7 @@ paths:
                 type: string
                 format: binary
                 example: (binary data)
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -6285,7 +6285,7 @@ paths:
           type: boolean
         example: "false"
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -6297,7 +6297,7 @@ paths:
                 type: string
                 format: binary
                 example: (binary data)
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -6358,14 +6358,14 @@ paths:
           type: string
         example: year(__system/submissionDate) lt year(now())
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/zip:
               schema:
                 type: string
                 example: (csv data)
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -6425,14 +6425,14 @@ paths:
           type: string
         example: year(__system/submissionDate) lt year(now())
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/zip:
               schema:
                 type: string
                 example: (csv data)
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -6488,7 +6488,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -6545,7 +6545,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -6583,7 +6583,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -6631,7 +6631,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -6701,7 +6701,7 @@ paths:
                 body: this is the text of my comment
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -6755,7 +6755,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -6810,7 +6810,7 @@ paths:
           type: string
         example: file1.jpg
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -6863,7 +6863,7 @@ paths:
           type: string
         example: file1.jpg
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -6908,7 +6908,7 @@ paths:
           type: string
         example: file1.jpg
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -6948,7 +6948,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -7027,7 +7027,7 @@ paths:
           type: string
         example: uuid:b1628661-65ed-4cab-8e30-19c17fef2de0
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -7100,7 +7100,7 @@ paths:
           type: string
         example: uuid:b1628661-65ed-4cab-8e30-19c17fef2de0
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/xml:
@@ -7152,7 +7152,7 @@ paths:
           type: string
         example: uuid:b1628661-65ed-4cab-8e30-19c17fef2de0
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -7216,7 +7216,7 @@ paths:
           type: string
         example: file1.jpg
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -7266,7 +7266,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -7320,7 +7320,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -7400,7 +7400,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -7423,7 +7423,7 @@ paths:
                   userAgent: Enketo/3.0.4
                   createdAt: 2018-01-19T23:58:03.395Z
                   current: true
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -7444,7 +7444,7 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
-        409:
+        "409":
           description: Conflict
           content:
             application/json:
@@ -7484,7 +7484,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -7496,7 +7496,7 @@ paths:
                 type: string
                 format: binary
                 example: (binary data)
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -7540,7 +7540,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -7552,7 +7552,7 @@ paths:
                 type: string
                 format: binary
                 example: (binary data)
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -7597,7 +7597,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -7641,7 +7641,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: 'This is the Extended Metadata response, if requested via the
             appropriate header:'
           content:
@@ -7723,7 +7723,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/xml:
@@ -7764,7 +7764,7 @@ paths:
           type: string
         example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -7817,7 +7817,7 @@ paths:
           type: string
         example: file1.jpg
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -7864,7 +7864,7 @@ paths:
           type: string
         example: file1.jpg
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -7907,7 +7907,7 @@ paths:
           type: string
         example: file1.jpg
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -7929,7 +7929,7 @@ paths:
           type: number
         example: "16"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8000,7 +8000,7 @@ paths:
                   approvalRequired: false
           required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8016,7 +8016,7 @@ paths:
                 sourceForms: []
                 linkedForms: []
                 properties: []
-        409:
+        "409":
           description: Conflict
           content:
             application/json:
@@ -8056,7 +8056,7 @@ paths:
           type: string
         example: people
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8125,7 +8125,7 @@ paths:
               example:
                 approvalRequired: true
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8193,7 +8193,7 @@ paths:
                   name: circumference
           required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8243,7 +8243,7 @@ paths:
           type: string
         example: john
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -8285,7 +8285,7 @@ paths:
           type: string
         example: people
       responses:        
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8380,7 +8380,7 @@ paths:
           type: string
         example: people
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8439,7 +8439,7 @@ paths:
           type: string
         example: people
       responses:        
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8536,7 +8536,7 @@ paths:
                 name: my_dataset.csv
                 size: 100
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8615,7 +8615,7 @@ paths:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8769,7 +8769,7 @@ paths:
                 firstName: John
                 age: '88'
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8833,7 +8833,7 @@ paths:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -8869,13 +8869,13 @@ paths:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
-        404:
+        "404":
           description: Not Found
           content:
             application/json:
@@ -8922,7 +8922,7 @@ paths:
           type: boolean
         example: true
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -9030,7 +9030,7 @@ paths:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
       responses:
-        200:
+        "200":
           description: + Response 200
           content:
             application/json:
@@ -9085,7 +9085,7 @@ paths:
           type: string
         example: 54a405a0-53ce-4748-9788-d23a30cc3afa
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -9138,7 +9138,7 @@ paths:
             example:
               ids: ["12345678-1234-4123-8234-123456789abc", "12345678-1234-4123-8234-123456789aaa"]
       responses:
-        200:
+        "200":
           description: Success
           content:
             application/json:
@@ -9148,7 +9148,7 @@ paths:
                   success:
                     type: boolean
                     example: true
-        404:
+        "404":
           description: Not Found
           content:
             application/json:
@@ -9194,7 +9194,7 @@ paths:
             example:
               ids: ["12345678-1234-4123-8234-123456789abc", "12345678-1234-4123-8234-123456789aaa"]
       responses:
-        200:
+        "200":
           description: Success
           content:
             application/json:
@@ -9204,7 +9204,7 @@ paths:
                   success:
                     type: boolean
                     example: true
-        404:
+        "404":
           description: Not Found
           content:
             application/json:
@@ -9255,7 +9255,7 @@ paths:
           type: string
         example: "1.0"
       responses:
-        200:
+        "200":
           description: OK
           headers:
             X-OpenRosa-Version:
@@ -9329,7 +9329,7 @@ paths:
           type: string
         example: "1.0"
       responses:
-        201:
+        "201":
           description: Created
           headers:
             X-OpenRosa-Version:
@@ -9341,7 +9341,7 @@ paths:
                 <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
                   <message nature="">full submission upload was successful!</message>
                 </OpenRosaResponse>
-        400:
+        "400":
           description: 'This is one of several possible `400` failures the API might
             return:'
           headers:
@@ -9354,7 +9354,7 @@ paths:
                 <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
                   <message nature="error">A resource already exists with a attachment file name of attachment1.jpg.</message>
                 </OpenRosaResponse>
-        409:
+        "409":
           description: Conflict
           headers:
             X-OpenRosa-Version:
@@ -9412,7 +9412,7 @@ paths:
           type: string
         example: "1.0"
       responses:
-        200:
+        "200":
           description: OK
           headers:
             X-OpenRosa-Version:
@@ -9481,7 +9481,7 @@ paths:
           type: string
         example: "1.0"
       responses:
-        200:
+        "200":
           description: OK
           headers:
             X-OpenRosa-Version:
@@ -9538,7 +9538,7 @@ paths:
           type: string
         example: "1.0"
       responses:
-        200:
+        "200":
           description: OK
           headers:
             X-OpenRosa-Version:
@@ -9595,7 +9595,7 @@ paths:
           type: string
         example: "1.0"
       responses:
-        201:
+        "201":
           description: Created
           headers:
             X-OpenRosa-Version:
@@ -9607,7 +9607,7 @@ paths:
                 <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
                   <message nature="">full submission upload was successful!</message>
                 </OpenRosaResponse>
-        400:
+        "400":
           description: 'This is one of several possible `400` failures the API might
             return:'
           headers:
@@ -9620,7 +9620,7 @@ paths:
                 <OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">
                   <message nature="error">A resource already exists with a attachment file name of attachment1.jpg.</message>
                 </OpenRosaResponse>
-        409:
+        "409":
           description: Conflict
           headers:
             X-OpenRosa-Version:
@@ -9668,7 +9668,7 @@ paths:
           type: string
         example: "1.0"
       responses:
-        200:
+        "200":
           description: OK
           headers:
             X-OpenRosa-Version:
@@ -9722,7 +9722,7 @@ paths:
           type: string
         example: file1.jpg
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
@@ -9761,7 +9761,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json; charset=utf-8; odata.metadata=minimal:
@@ -9833,7 +9833,7 @@ paths:
                   - kind: EntitySet
                     name: Submissions.children.child
                     url: Submissions.children.child
-        406:
+        "406":
           description: Not Acceptable
           content:
             application/json; charset=utf-8; odata.metadata=minimal:
@@ -9897,7 +9897,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/xml:
@@ -9956,7 +9956,7 @@ paths:
                       </Schema>
                     </edmx:DataServices>
                   </edmx:Edmx>
-        406:
+        "406":
           description: Not Acceptable
           content:
             application/xml:
@@ -10115,7 +10115,7 @@ paths:
         schema:
           type: string
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -10171,7 +10171,7 @@ paths:
                   meta:
                     instanceID: uuid:297000fd-8eb2-4232-8863-d25f82521b87
                   name: Alice
-        406:
+        "406":
           description: Not Acceptable
           content:
             application/json:
@@ -10188,7 +10188,7 @@ paths:
                 code: "406.1"
                 message: 'Requested format not acceptable; this resource allows: (application/json,
                   json).'
-        501:
+        "501":
           description: Not Implemented
           content:
             application/json:
@@ -10252,7 +10252,7 @@ paths:
           type: string
         example: file1.jpg
       responses:
-        200:
+        "200":
           description: OK
           content:
             text/html:
@@ -10284,7 +10284,7 @@ paths:
           type: string
         example: trees
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json; charset=utf-8; odata.metadata=minimal:
@@ -10356,7 +10356,7 @@ paths:
                   - kind: EntitySet
                     name: Entities.children.child
                     url: Entities.children.child
-        406:
+        "406":
           description: Not Acceptable
           content:
             application/json:
@@ -10399,7 +10399,7 @@ paths:
           type: string
         example: people
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/xml:
@@ -10476,7 +10476,7 @@ paths:
                         </Schema>
                     </edmx:DataServices>
                 </edmx:Edmx>
-        406:
+        "406":
           description: Not Acceptable
           content:
             application/xml:
@@ -10607,7 +10607,7 @@ paths:
         schema:
           type: string
       responses:
-        200:
+        "200":
           description: Ok
           content:
             application/json:
@@ -10644,7 +10644,7 @@ paths:
                   geometry: 47.722581 18.562111 0 0,
                   species: mora,
                   circumference_cm: 345            
-        406:
+        "406":
           description: Not Acceptable
           content:
             application/json:
@@ -10661,7 +10661,7 @@ paths:
                 code: "406.1"
                 message: 'Requested format not acceptable; this resource allows: (application/json,
                   json).'
-        501:
+        "501":
           description: Not Implemented
           content:
             application/json:
@@ -10703,7 +10703,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json; charset=utf-8; odata.metadata=minimal:
@@ -10775,7 +10775,7 @@ paths:
                   - kind: EntitySet
                     name: Submissions.children.child
                     url: Submissions.children.child
-        406:
+        "406":
           description: Not Acceptable
           content:
             application/json; charset=utf-8; odata.metadata=minimal:
@@ -10827,7 +10827,7 @@ paths:
           type: string
         example: simple
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/xml:
@@ -10886,7 +10886,7 @@ paths:
                       </Schema>
                     </edmx:DataServices>
                   </edmx:Edmx>
-        406:
+        "406":
           description: Not Acceptable
           content:
             application/xml:
@@ -10997,7 +10997,7 @@ paths:
           type: string
         example: __id, age, name, meta/instanceID
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -11053,7 +11053,7 @@ paths:
                   meta:
                     instanceID: uuid:297000fd-8eb2-4232-8863-d25f82521b87
                   name: Alice
-        406:
+        "406":
           description: Not Acceptable
           content:
             application/json:
@@ -11070,7 +11070,7 @@ paths:
                 code: "406.1"
                 message: 'Requested format not acceptable; this resource allows: (application/json,
                   json).'
-        501:
+        "501":
           description: Not Implemented
           content:
             application/json:
@@ -11099,7 +11099,7 @@ paths:
         will also return the provided work email address and organization name.
       operationId: Getting the current configuration
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -11142,7 +11142,7 @@ paths:
                   enabled: true
                   email: my.email.address@getodk.org
                   organization: Organization Name
-        404:
+        "404":
           description: Not Found
           content:
             application/json:
@@ -11194,7 +11194,7 @@ paths:
                 organization: Organization Name
         required: false
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -11246,7 +11246,7 @@ paths:
         once again see a message on the the Central administration website.
       operationId: Unsetting the current configuration
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -11263,7 +11263,7 @@ paths:
         Usage Report; that is handled internally as a scheduled Central task.
       operationId: Getting the Usage Report preview
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -11318,7 +11318,7 @@ paths:
           type: number
         example: "200"
       responses:
-        200:
+        "200":
           description: OK
           content:
             application/json:
@@ -11352,7 +11352,7 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
-        400:
+        "400":
           description: Bad Request
           content:
             application/json:
@@ -11384,7 +11384,7 @@ paths:
                 passphrase: my-password
         required: false
       responses:
-        200:
+        "200":
           description: OK
           headers:
             Content-Disposition:
