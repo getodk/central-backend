@@ -26,10 +26,10 @@ const testEntities = (test) => testService(async (service, container) => {
     '12345678-1234-4123-8234-123456789abc'
   ];
 
-  await Promise.all(uuids.map(uuid =>
+  await Promise.all(uuids.map(_uuid =>
     asAlice.post('/v1/projects/1/datasets/people/entities')
       .send({
-        uuid,
+        uuid: _uuid,
         label: 'John Doe'
       })
       .expect(200)
