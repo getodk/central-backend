@@ -167,4 +167,5 @@ api-docs:
 
 .PHONY: api-docs-lint
 api-docs-lint:
+	node lib/bin/openapi-docs-lint.js docs/api.yaml && \
 	npx --no @redocly/cli lint --config docs/redocly.conf.yaml docs/api.yaml
