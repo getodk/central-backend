@@ -29,7 +29,7 @@
     "no-multiple-empty-lines": "off",
     "no-nested-ternary": "off",
     "no-only-tests/no-only-tests": [ "error", { "block": [ "describe", "it", "describeMigration" ] } ],
-    "no-restricted-syntax": ["error",
+    "no-restricted-syntax": [ "error",
       {
         "message": "Do not use async functions in .forEach()",
         "selector": "CallExpression[callee.property.name='forEach'] > :matches(ArrowFunctionExpression, FunctionExpression)[async=true].arguments"
