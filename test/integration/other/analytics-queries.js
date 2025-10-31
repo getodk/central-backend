@@ -174,6 +174,62 @@ describe('analytics task queries', function () {
       maxGeo.should.equal(3);
     }));
 
+    it('should only use first geo field when counting max geo points per form', testService(async (service, container) => {
+
+      const multiGeoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <h:head>
+    <h:title>Simple Geo</h:title>
+    <model odk:xforms-version="1">
+      <instance>
+        <data id="simple-geo">
+          <location_gps/>
+          <start_gps/>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/location_gps" type="geopoint"/>
+      <bind nodeset="/data/start_gps" type="geopoint"/>
+      <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/location_gps">
+      <label>Location Position</label>
+    </input>
+  </h:body>
+</h:html>`;
+
+      const multiGeoSubmission = (instanceId) =>
+        `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="simple-geo">
+        <location_gps>20.96144 18.512518 0 0</location_gps>
+        <start_gps>40.96144 44.512518 0 0</start_gps>
+        <meta>
+          <instanceID>${instanceId}</instanceID>
+        </meta>
+      </data>`;
+
+      const geoFormId = await createTestForm(service, container, multiGeoForm, 1);
+      await submitToForm(service, 'alice', 1, geoFormId, multiGeoSubmission('1'));
+      await submitToForm(service, 'alice', 1, geoFormId, multiGeoSubmission('2'));
+      await submitToForm(service, 'alice', 1, geoFormId, multiGeoSubmission('3'));
+
+      const asAlice = await service.login('alice');
+
+      // Trigger geo cache calculation by fetching the form's GeoJSON feed
+      // Only the first geo field is cached here
+      await asAlice.get('/v1/projects/1/forms/simple-geo/submissions.geojson')
+        .expect(200);
+
+      // ensure any background processing from the geo endpoint finishes
+      await exhaust(container);
+
+      const maxGeo = await container.Analytics.maxGeoPerForm();
+      maxGeo.should.be.a.Number();
+      maxGeo.should.equal(3);
+    }));
+
     it('should count the number of unique roles across projects', testService(async (service, container) => {
       // managers, viewers, data collectors
       // bob is a manager on original project 1
@@ -2352,7 +2408,17 @@ describe('analytics task queries', function () {
     it('should combine system level queries', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      // creating client audits (before encrypting the project)
+      // creating and archiving a project
+      await asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'New Project' })
+        .expect(200)
+        .then(({ body }) => asAlice.patch(`/v1/projects/${body.id}`)
+          .set('Content-Type', 'application/json')
+          .send({ archived: true })
+          .expect(200));
+
+      // creating client audits (this project will be encrypted later)
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
         .send(testData.forms.clientAudits)
@@ -2457,16 +2523,6 @@ describe('analytics task queries', function () {
         .send({ ownerOnly: true })
         .expect(200);
 
-      // creating and archiving a project
-      await asAlice.post('/v1/projects')
-        .set('Content-Type', 'application/json')
-        .send({ name: 'New Project' })
-        .expect(200)
-        .then(({ body }) => asAlice.patch(`/v1/projects/${body.id}`)
-          .set('Content-Type', 'application/json')
-          .send({ archived: true })
-          .expect(200));
-
       // creating more roles
       await createTestUser(service, container, 'Viewer1', 'viewer', 1);
       await createTestUser(service, container, 'Collector1', 'formfill', 1);
@@ -2511,9 +2567,10 @@ describe('analytics task queries', function () {
         .send({ name: 'geometry' })
         .expect(200);
 
-      // After the interesting stuff above, encrypt and archive the project
 
-      // encrypting a project
+      // ---- Add new behavior above ---
+
+      // encrypt the non-empty project
       await asAlice.post('/v1/projects/1/key')
         .send({ passphrase: 'supersecret', hint: 'it is a secret' });
 
