@@ -7162,6 +7162,65 @@ paths:
                   <name>Alice</name>
                   <age>32</age>
                 </data>
+  /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}.geojson:
+    get:
+      tags:
+      - Submission Versions
+      summary: Getting Version GeoJSON
+      description: Returns the GeoJSON of a particular version of the submission.
+      operationId: Getting Version GeoJSON
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: xmlFormId
+        in: path
+        description: The `xmlFormId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: simple
+      - name: instanceId
+        in: path
+        description: The `instanceId` of the Submission being referenced.
+        required: true
+        schema:
+          type: string
+        example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+      - name: versionId
+        in: path
+        description: The `instanceId` of the particular version of this submission
+          in question.
+        required: true
+        schema:
+          type: string
+        example: uuid:b1628661-65ed-4cab-8e30-19c17fef2de0
+      responses:
+        "200":
+          description: OK
+          content:
+            application/xml:
+              example: |
+                {
+                  "type": "FeatureCollection",
+                  "features": [
+                    {
+                      "type": "Feature",
+                      "id": "uuid:b1628661-65ed-4cab-8e30-19c17fef2de0",
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [4.7871262893819555, 52.24107555748181, 0]
+                      },
+                      "properties": {
+                        "fieldpath": "/singular/input_geopoint"
+                      }
+                    }
+                  ]
+                }
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/versions/{versionId}/attachments:
     get:
       tags:
