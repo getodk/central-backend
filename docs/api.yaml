@@ -9098,6 +9098,58 @@ paths:
                 action: entity.create
                 acteeId: 85cb9aff-005e-4edd-9739-dc9c1a829c44
                 loggedAt: 2018-04-18T23:19:14.802Z
+  /v1/projects/{projectId}/datasets/{name}/entities/{uuid}/geojson:
+    get:
+      tags:
+      - Entity Management
+      summary: Entity GeoJSON representation
+      description: Returns the GeoJSON representation of an Entity's `geometry` attribute, if available.
+      operationId: Entity GeoJSON representation
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      - name: uuid
+        in: path
+        description: UUID of the Entity
+        required: true
+        schema:
+          type: string
+        example: 54a405a0-53ce-4748-9788-d23a30cc3afa
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: GeoJSON FeatureCollection, with one Feature.
+                type: object
+              example: |
+                {
+                  "type": "FeatureCollection",
+                  "features": [
+                    {
+                      "type": "Feature",
+                      "id": "54a405a0-53ce-4748-9788-d23a30cc3afa",
+                      "properties": null,
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [1.087337169764714, 40.007726575882074, 44.93365478515625]
+                      }
+                    }
+                  ]
+                }
   /v1/projects/{projectId}/datasets/{name}/entities/bulk-delete:
     post:
       tags:
