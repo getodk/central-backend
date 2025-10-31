@@ -32,19 +32,40 @@ describeMigration('20250910-02-backfill-last-login-at', ({ runMigrationBeingTest
       { actorId: 2, action: 'user.session.create', acteeId: 'actee2', loggedAt: new Date('2025-01-08T16:45:00Z') },
     );
 
+    // Delete Alice
+    await db.any(sql`UPDATE actors SET "deletedAt" = '2025-01-01' WHERE id = 1`);
+
+    // Create Alice again
+    await rowsExistFor('actees',
+      { id: 'actee4', species: 'user' }
+    );
+    await rowsExistFor('actors',
+      { id: 4, type: 'user', acteeId: 'actee4', displayName: 'NewAlice', createdAt: new Date('2025-01-06T10:00:00Z') }
+    );
+    await rowsExistFor('users',
+      { actorId: 4, email: 'alice@test.com', lastLoginAt: null }
+    );
+    // Login with new Alice
+    await rowsExistFor('audits',
+      { actorId: 4, action: 'user.session.create', acteeId: 'actee4', loggedAt: new Date('2025-01-20T10:00:00Z') }
+    );
+
     await runMigrationBeingTested();
   });
 
   it('should backfill lastLoginAt with most recent login timestamp for users with login history', async () => {
     await assertTableContents('users',
-      // Alice should get her most recent login time (2025-01-15T14:30:00Z)
-      { actorId: 1, email: 'alice@test.com', lastLoginAt: 1736951400000 },
+      // Alice should not be update because she is deleted
+      { actorId: 1, email: 'alice@test.com', lastLoginAt: null },
 
       // Bob should get his only login time (2025-01-08T16:45:00Z)
       { actorId: 2, email: 'bob@test.com', lastLoginAt: 1736354700000 },
 
       // Charlie should remain null (never logged in)
-      { actorId: 3, email: 'charlie@test.com', lastLoginAt: null }
+      { actorId: 3, email: 'charlie@test.com', lastLoginAt: null },
+
+      // New Alice should get his login time (2025-01-20T10:00:00Z)
+      { actorId: 4, email: 'alice@test.com', lastLoginAt: 1737367200000 },
     );
   });
 });
