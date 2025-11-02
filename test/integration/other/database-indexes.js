@@ -55,18 +55,6 @@ describe('database indexes', () => {
         return false;
       });
 
-    const envVarName = 'DEBUG_FK_INDEXES';
-    if (process.env[envVarName]) {
-      console.log('\n┌── Foreign Key Reverse Indexes ───────┐'); // eslint-disable-line no-console
-      console.table( // eslint-disable-line no-console
-        sortWith([
-          ascend(prop('FK table')),
-          ascend(prop('foreign key')),
-          ascend(prop('database index')),
-        ])(fkIndexes),
-      );
-    }
-
     await Promise.all(missingIndexes
       .map(async fk => {
         const cols = await all(sql`
@@ -82,17 +70,24 @@ describe('database indexes', () => {
       }),
     );
 
-    missingIndexes.length.should.eql(0, `${missingIndexes.length} foreign key indexes are missing from the database.
+    if (missingIndexes.length) {
+      console.log('\n┌── Foreign Key Reverse Indexes ───────┐'); // eslint-disable-line no-console
+      console.table( // eslint-disable-line no-console
+        sortWith([
+          ascend(prop('FK table')),
+          ascend(prop('foreign key')),
+          ascend(prop('database index')),
+        ])(fkIndexes),
+      );
 
-      Either: exceptions should be added to: ${__filename}
-      Or:     a database migration should be added with the following indexes:
+      missingIndexes.length.should.eql(0, `${missingIndexes.length} foreign key indexes are missing from the database.
 
-        ${missingIndexes.map(createIdxStatement).sort().join('\n        ')}
+        Either: exceptions should be added to: ${__filename}
+        Or:     a database migration should be added with the following indexes:
 
-      To see existing indexes, run:
-
-        ${envVarName}=1 npx mocha ${__filename}
-    `);
+          ${missingIndexes.map(createIdxStatement).sort().join('\n        ')}
+      `);
+    }
   }));
 });
 
