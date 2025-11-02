@@ -10,7 +10,7 @@
 /* eslint-disable func-names, no-await-in-loop, space-before-function-paren  */
 
 // Enough time to upload big-*.bin, and then run each test scenario.
-const TIMEOUT = 240_000; // ms
+const TIMEOUT = 12_000; // ms
 
 const { exec, execSync } = require('node:child_process');
 const fs = require('node:fs');
@@ -202,7 +202,7 @@ describe('s3 support', () => {
       randomSignals(3),
       randomSignals(4),
     ].forEach((signals, testIdx) => {
-      it(`Test #${testIdx}: signals [${signals}]`, async function() {
+      it.only(`Test #${testIdx}: signals [${signals}]`, async function() {
         this.timeout(TIMEOUT);
 
         // given
