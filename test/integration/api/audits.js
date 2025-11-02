@@ -6,6 +6,7 @@ const { plain } = require('../../util/util');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { Form } = require(appRoot + '/lib/model/frames');
 
 const assertAuditActions = (audits, expected) => {
   audits.map(a => a.action).should.deepEqual(expected);
@@ -63,7 +64,8 @@ describe('/audits', () => {
               audits[0].details.should.eql({ data: {
                 actorId: david.actor.id,
                 email: 'david@getodk.org',
-                password: null
+                password: null,
+                lastLoginAt: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
 
@@ -102,7 +104,7 @@ describe('/audits', () => {
               asAlice.get('/v1/audits').set('X-Extended-Metadata', true)
                 .expect(200).then(({ body }) => body),
               Projects.getById(projectId).then((o) => o.get())
-                .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')
+                .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', Form.PublishedVersion)
                   .then((o) => o.get())
                   .then((form) => [ project, form ])),
               Users.getByEmail('alice@getodk.org').then((o) => o.get()),
@@ -126,7 +128,8 @@ describe('/audits', () => {
               audits[0].details.should.eql({ data: {
                 actorId: david.actor.id,
                 email: 'david@getodk.org',
-                password: null
+                password: null,
+                lastLoginAt: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
 

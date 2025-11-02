@@ -1,5 +1,6 @@
 const should = require('should');
 const { testService } = require('../setup');
+const { sleep } = require('../../util/util');
 
 describe('api: /users', () => {
   describe('GET', () => {
@@ -20,6 +21,9 @@ describe('api: /users', () => {
             body.forEach((user) => user.should.be.a.User());
             body.map((user) => user.displayName).should.eql([ 'Alice', 'Bob', 'Chelsea' ]);
             body.map((user) => user.email).should.eql([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
+            body.forEach((user) => user.should.have.property('lastLoginAt'));
+            body[0].lastLoginAt.should.not.be.null();
+            body.slice(1).map((user) => user.lastLoginAt).should.eql([ null, null]);
           }))));
 
     it('should search user display names if a query is given', testService((service) =>
@@ -74,6 +78,39 @@ describe('api: /users', () => {
             body[0].email.should.equal('alice@getodk.org');
             body[0].displayName.should.equal('Alice');
           }))));
+
+    it('should return lastLoginAt as null for users who have never logged in', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'newuser@getodk.org' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users/?q=newuser@getodk.org')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].email.should.equal('newuser@getodk.org');
+              should(body[0].lastLoginAt).be.null();
+            })))));
+
+    it('should update lastLoginAt when user logs in multiple times', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const firstLogin = await asAlice.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body);
+      should(firstLogin.lastLoginAt).not.be.null();
+      const firstLoginTime = new Date(firstLogin.lastLoginAt);
+
+      await sleep(1);
+      await service.login('alice');
+      const secondLogin = await asAlice.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body);
+      should(secondLogin.lastLoginAt).not.be.null();
+      const secondLoginTime = new Date(secondLogin.lastLoginAt);
+
+      secondLoginTime.should.be.greaterThan(firstLoginTime);
+    }));
   });
 
   describe('POST', () => {
@@ -221,7 +258,8 @@ describe('api: /users', () => {
                   log.details.should.eql({
                     data: {
                       email: 'david@getodk.org',
-                      password: null
+                      password: null,
+                      lastLoginAt: null
                     }
                   });
                 })))));
@@ -437,13 +475,13 @@ describe('api: /users', () => {
           .expect(200)
           .then(({ body }) => body.email.should.equal('chelsea@getodk.org')))));
 
-    it('should not return sidewide verbs if not extended', testService((service) =>
+    it('should not return site-wide verbs if not extended', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
           .expect(200)
           .then(({ body }) => { should.not.exist(body.verbs); }))));
 
-    it('should return sidewide verbs if logged in (alice)', testService((service) =>
+    it('should return site-wide verbs if logged in (alice)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
           .set('X-Extended-Metadata', 'true')
@@ -456,7 +494,7 @@ describe('api: /users', () => {
             body.verbs.should.containDeep([ 'user.password.invalidate', 'assignment.create', 'role.update' ]);
           }))));
 
-    it('should return sidewide verbs if logged in (chelsea)', testService((service) =>
+    it('should return site-wide verbs if logged in (chelsea)', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/users/current')
           .set('X-Extended-Metadata', 'true')
@@ -518,6 +556,18 @@ describe('api: /users', () => {
     it('should reject if the user does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/99').expect(404))));
+
+    it('should include lastLoginAt field when getting a user by id', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => asAlice.get(`/v1/users/${body.id}`)
+            .expect(200)
+            .then(({ body: user }) => {
+              user.should.be.a.User();
+              user.email.should.equal('alice@getodk.org');
+              user.lastLoginAt.should.be.recentIsoDate();
+            })))));
   });
 
   describe('/users/:id PATCH', () => {

@@ -1,6 +1,7 @@
 default: base
 
 NODE_CONFIG_ENV ?= test
+export PGAPPNAME ?= odkcentral
 
 node_modules: package.json
 	npm install
@@ -166,4 +167,5 @@ api-docs:
 
 .PHONY: api-docs-lint
 api-docs-lint:
-	npx --no @redocly/cli lint --extends=minimal docs/api.yaml
+	node lib/bin/openapi-docs-lint.js docs/api.yaml && \
+	npx --no @redocly/cli lint --config docs/redocly.conf.yaml docs/api.yaml

@@ -438,7 +438,7 @@ describe.skip('database migrations: 20230123-01-remove-google-backups', function
       });
     }));
 
-    it('does not modify other actor data', testServiceFullTrx(async (service, container) => {
+    it.skip('does not modify other actor data', testServiceFullTrx(async (service, container) => {
       await populateUsers(container);
       await service.login('alice');
       await createToken(container);

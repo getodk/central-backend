@@ -3109,6 +3109,27 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
               body.map((submission) => submission.instanceId).should.eql([ 'two', 'one' ]);
             })))));
 
+    it('should return a list of deleted submissions', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const createSubmissionsPromises = ['one', 'two', 'three'].map(instanceId => asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple[instanceId])
+        .set('Content-Type', 'text/xml')
+        .expect(200));
+
+      await Promise.all(createSubmissionsPromises);
+
+      await asAlice.delete('/v1/projects/1/forms/simple/submissions/one')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions?deleted=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.forEach((submission) => submission.should.be.a.Submission());
+          body.map((submission) => submission.instanceId).should.eql([ 'one' ]);
+        });
+    }));
+
     it('should list with extended metadata if requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -3263,7 +3284,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'encrypted', Form.PublishedVersion).then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
@@ -3296,7 +3317,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'text/xml')
             .expect(200))
           .then(() => Promise.all([
-            Forms.getByProjectAndXmlFormId(1, 'encrypted').then((o) => o.get()),
+            Forms.getByProjectAndXmlFormId(1, 'encrypted', Form.PublishedVersion).then((o) => o.get()),
             Form.fromXml(testData.forms.encrypted
               .replace(/PublicKey="[a-z0-9+/]+"/i, 'PublicKey="keytwo"')
               .replace('working3', 'working4'))
@@ -4354,7 +4375,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             })))));
   });
 
-  describe('[version] /:rootId/versions/instanceId/attachments GET', () => {
+  describe('[version] /:rootId/versions/instanceId/attachments/:attachment GET', () => {
     it('should return notfound if the attachment does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4838,7 +4859,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
@@ -4877,7 +4898,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())
@@ -4975,7 +4996,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .set('Content-Type', 'video/mp4')
             .send('testvideo')
             .expect(200))
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType'))
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'binaryType', Form.WithoutDef))
           .then((o) => o.get())
           .then((form) => Submissions.getAnyDefByFormAndInstanceId(form.id, 'both', false)
             .then((o) => o.get())

@@ -6,6 +6,7 @@ const uuid = require('uuid').v4;
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
+const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');
 
 const geoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -150,6 +151,83 @@ describe('analytics task queries', function () {
       const res = await Analytics.biggestForm();
       // fixture form withrepeats has 4 questions plus meta/instanceID, which is included in this count
       res.should.equal(5);
+    }));
+
+    it('should find the maximum number of geo points per form', testService(async (service, container) => {
+
+      const geoFormId = await createTestForm(service, container, geoForm, 1);
+      await submitToForm(service, 'alice', 1, geoFormId, geoSubmission('1'));
+      await submitToForm(service, 'alice', 1, geoFormId, geoSubmission('2'));
+      await submitToForm(service, 'alice', 1, geoFormId, geoSubmission('3'));
+
+      const asAlice = await service.login('alice');
+
+      // Trigger geo cache calculation by fetching the form's GeoJSON feed
+      await asAlice.get('/v1/projects/1/forms/simple-geo/submissions.geojson')
+        .expect(200);
+
+      // ensure any background processing from the geo endpoint finishes
+      await exhaust(container);
+
+      const maxGeo = await container.Analytics.maxGeoPerForm();
+      maxGeo.should.be.a.Number();
+      maxGeo.should.equal(3);
+    }));
+
+    it('should only use first geo field when counting max geo points per form', testService(async (service, container) => {
+
+      const multiGeoForm = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <h:head>
+    <h:title>Simple Geo</h:title>
+    <model odk:xforms-version="1">
+      <instance>
+        <data id="simple-geo">
+          <location_gps/>
+          <start_gps/>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/location_gps" type="geopoint"/>
+      <bind nodeset="/data/start_gps" type="geopoint"/>
+      <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+    </model>
+  </h:head>
+  <h:body>
+    <input ref="/data/location_gps">
+      <label>Location Position</label>
+    </input>
+  </h:body>
+</h:html>`;
+
+      const multiGeoSubmission = (instanceId) =>
+        `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="simple-geo">
+        <location_gps>20.96144 18.512518 0 0</location_gps>
+        <start_gps>40.96144 44.512518 0 0</start_gps>
+        <meta>
+          <instanceID>${instanceId}</instanceID>
+        </meta>
+      </data>`;
+
+      const geoFormId = await createTestForm(service, container, multiGeoForm, 1);
+      await submitToForm(service, 'alice', 1, geoFormId, multiGeoSubmission('1'));
+      await submitToForm(service, 'alice', 1, geoFormId, multiGeoSubmission('2'));
+      await submitToForm(service, 'alice', 1, geoFormId, multiGeoSubmission('3'));
+
+      const asAlice = await service.login('alice');
+
+      // Trigger geo cache calculation by fetching the form's GeoJSON feed
+      // Only the first geo field is cached here
+      await asAlice.get('/v1/projects/1/forms/simple-geo/submissions.geojson')
+        .expect(200);
+
+      // ensure any background processing from the geo endpoint finishes
+      await exhaust(container);
+
+      const maxGeo = await container.Analytics.maxGeoPerForm();
+      maxGeo.should.be.a.Number();
+      maxGeo.should.equal(3);
     }));
 
     it('should count the number of unique roles across projects', testService(async (service, container) => {
@@ -453,7 +531,7 @@ describe('analytics task queries', function () {
       xmlOnlyFormDefs.should.equal(3);
 
       // upgrading the old version of the entity form creates more form defs
-      const { acteeId } = await container.Forms.getByProjectAndXmlFormId(1, 'updateEntity').then(o => o.get());
+      const { acteeId } = await container.Forms.getByProjectAndXmlFormId(1, 'updateEntity', Form.WithoutDef).then(o => o.get());
       await container.Audits.log(null, 'upgrade.process.form.entities_version', { acteeId });
 
       // Run form upgrade
@@ -552,6 +630,141 @@ describe('analytics task queries', function () {
       // count datasets
       const count = await container.Analytics.countOwnerOnlyDatasets();
       count.should.equal(2);
+    }));
+
+    it('should count datasets with geometry property', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'buildings' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/buildings/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+
+      const count = await container.Analytics.countDatasetsWithGeometry();
+      count.should.equal(2); // Only trees and buildings have geometry properties
+    }));
+
+    it('should count entities with geometry properties', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create dataset with geometry property
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'locations' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/locations/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/locations/properties')
+        .send({ name: 'type' })
+        .expect(200);
+
+      // Create some entities in this dataset
+      await asAlice.post('/v1/projects/1/datasets/locations/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789aaa',
+          label: 'Location A',
+          data: { geometry: '0, 0' }
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/locations/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789bbb',
+          label: 'Location B',
+          data: { geometry: '1, 1' }
+        })
+        .expect(200);
+
+      // Add an entity to the dataset that doesnt have the geometry property
+      await asAlice.post('/v1/projects/1/datasets/locations/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789ccc',
+          label: 'Location C',
+          data: { type: 'hospital' }
+        })
+        .expect(200);
+
+      // Make one entity ancient
+      await container.run(sql`UPDATE entities SET "createdAt" = '1999-1-1T00:00:00Z' WHERE uuid = '12345678-1234-4123-8234-123456789aaa'`);
+
+      const result = await container.Analytics.countEntitiesWithGeometry();
+      result.length.should.equal(1);
+      result[0].total.should.equal(2); // Both entities in locations dataset
+      result[0].recent.should.equal(1); // Only one recent entity
+    }));
+
+    it('should count entity bulk delete audit logs with recent and total counts', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create a dataset first
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create some entities to delete
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-123456789abc',
+              label: 'Entity 1',
+            },
+            {
+              uuid: '12345678-1234-4123-8234-123456789def',
+              label: 'Entity 2'
+            },
+            {
+              uuid: '12345678-1234-4123-8234-123456789aaa',
+              label: 'Entity 3'
+            },
+            {
+              uuid: '12345678-1234-4123-8234-123456789bbb',
+              label: 'Entity 4'
+            }
+          ],
+          source: { name: 'test.csv', size: 100 }
+        })
+        .expect(200);
+
+      // Perform bulk delete (this will create entity.bulk.delete audit log)
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(200);
+
+      // Make first bulk delete action "old" (before the cutoff date)
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.bulk.delete'`);
+
+      // Perform another bulk delete
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789bbb']
+        })
+        .expect(200);
+
+      // Count entity bulk deletes
+      const counts = await container.Analytics.countEntityBulkDeletes();
+      counts.total.should.equal(2); // 2 bulk delete operations total
+      counts.recent.should.equal(1); // 1 recent bulk delete operation
     }));
   });
 
@@ -872,6 +1085,41 @@ describe('analytics task queries', function () {
         { projectId: 1, total: 2 },
         { projectId: proj2, total: 1 }
       ]);
+    }));
+
+    it('should count number of forms that create and update entities and do so in repeats', testService(async (service, container) => {
+      // Two forms about repeats
+      await createTestForm(service, container, testData.forms.repeatEntityHousehold, 1); // creates
+      await createTestForm(service, container, testData.forms.repeatEntityTrees, 1); // creates and updates
+
+      // New project with one form only about entity updates
+      const proj2 = await createTestProject(service, container, 'New Proj');
+      await createTestForm(service, container, testData.forms.updateEntity, proj2);
+
+      // Upload a non-published form, too, which should not be counted
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.multiEntityFarm)
+          .expect(200));
+
+      const res = await container.Analytics.countFormsCreateUpdateEntitiesFromRepeats();
+
+      res[0].should.eql({
+        num_entity_create_forms: 2,
+        num_repeat_entity_create_forms: 2,
+        num_entity_update_forms: 1,
+        num_repeat_entity_update_forms: 1,
+        num_entity_create_update_forms: 1,
+        projectId: 1
+      });
+      res[1].should.eql({
+        num_entity_create_forms: 0,
+        num_repeat_entity_create_forms: 0,
+        num_entity_update_forms: 1,
+        num_repeat_entity_update_forms: 0,
+        num_entity_create_update_forms: 0,
+        projectId: proj2
+      });
     }));
   });
 
@@ -1498,13 +1746,13 @@ describe('analytics task queries', function () {
       const datasets = await container.Analytics.getDatasetEvents();
 
       const datasetOfFirstProject = datasets.find(d => d.projectId === 1);
-      datasetOfFirstProject.id.should.be.equal(dsInDatabase[datasetOfFirstProject.id].id);
+      datasetOfFirstProject.datasetId.should.be.equal(dsInDatabase[datasetOfFirstProject.datasetId].id);
       datasetOfFirstProject.num_bulk_create_events_total.should.be.equal(2);
       datasetOfFirstProject.num_bulk_create_events_recent.should.be.equal(1);
       datasetOfFirstProject.biggest_bulk_upload.should.be.equal(3);
 
       const datasetOfSecondProject = datasets.find(d => d.projectId === secondProjectId);
-      datasetOfSecondProject.id.should.be.equal(dsInDatabase[datasetOfSecondProject.id].id);
+      datasetOfSecondProject.datasetId.should.be.equal(dsInDatabase[datasetOfSecondProject.datasetId].id);
       datasetOfSecondProject.num_bulk_create_events_total.should.be.equal(1);
       datasetOfSecondProject.num_bulk_create_events_recent.should.be.equal(0);
       datasetOfSecondProject.biggest_bulk_upload.should.be.equal(1);
@@ -2160,7 +2408,17 @@ describe('analytics task queries', function () {
     it('should combine system level queries', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
-      // creating client audits (before encrypting the project)
+      // creating and archiving a project
+      await asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'New Project' })
+        .expect(200)
+        .then(({ body }) => asAlice.patch(`/v1/projects/${body.id}`)
+          .set('Content-Type', 'application/json')
+          .send({ archived: true })
+          .expect(200));
+
+      // creating client audits (this project will be encrypted later)
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
         .send(testData.forms.clientAudits)
@@ -2265,22 +2523,6 @@ describe('analytics task queries', function () {
         .send({ ownerOnly: true })
         .expect(200);
 
-      // After the interesting stuff above, encrypt and archive the project
-
-      // encrypting a project
-      await asAlice.post('/v1/projects/1/key')
-        .send({ passphrase: 'supersecret', hint: 'it is a secret' });
-
-      // creating and archiving a project
-      await asAlice.post('/v1/projects')
-        .set('Content-Type', 'application/json')
-        .send({ name: 'New Project' })
-        .expect(200)
-        .then(({ body }) => asAlice.patch(`/v1/projects/${body.id}`)
-          .set('Content-Type', 'application/json')
-          .send({ archived: true })
-          .expect(200));
-
       // creating more roles
       await createTestUser(service, container, 'Viewer1', 'viewer', 1);
       await createTestUser(service, container, 'Collector1', 'formfill', 1);
@@ -2291,6 +2533,46 @@ describe('analytics task queries', function () {
           (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 1),
           (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 5),
           (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 0)`);
+
+      // v2025.3
+      // create entities so there are things to bulk-delete
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'bulk-create', size: 3 },
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789aaa', label: 'Entity A' },
+            { uuid: '12345678-1234-4123-8234-123456789bbb', label: 'Entity B' }
+          ]
+        })
+        .expect(200);
+
+      // perform a bulk delete to generate entity.bulk.delete audit log(s)
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({ ids: ['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789bbb'] })
+        .expect(200);
+
+      // Create a geo form with a submission
+      // Trigger geo cache calculation by fetching the form's GeoJSON feed
+      const geoFormId = await createTestForm(service, container, geoForm, 1);
+      await submitToForm(service, 'alice', 1, geoFormId, geoSubmission('123'));
+      await asAlice.get('/v1/projects/1/forms/simple-geo/submissions.geojson')
+        .expect(200);
+
+      // Create a dataset with a geometry property
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+
+      // ---- Add new behavior above ---
+
+      // encrypt the non-empty project
+      await asAlice.post('/v1/projects/1/key')
+        .send({ passphrase: 'supersecret', hint: 'it is a secret' });
 
       const res = await container.Analytics.previewMetrics();
 
@@ -2368,6 +2650,9 @@ describe('analytics task queries', function () {
           .then(() => asAlice.patch('/v1/projects/1/forms/simple-geo')
             .send({ state: 'closing' })
             .expect(200)));
+
+      // form that counts for all kinds of entity forms: creates and updates entities with repeats
+      await createTestForm(service, container, testData.forms.repeatEntityTrees, 1); // creates and updates
 
       const res = await container.Analytics.previewMetrics();
 
@@ -2537,6 +2822,21 @@ describe('analytics task queries', function () {
         })
         .expect(200);
 
+      // Add geometry property to dataset
+      // We don't need to add an entity with this data, we count all entities in a dataset with a property like this
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      // Add entity with geometry property to this dataset
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789ddd',
+          label: 'person 1',
+          data: { geometry: '1, 1' }
+        })
+        .expect(200);
+
       // Create an empty project
       const secondProject = await createTestProject(service, container, 'second');
       await createTestForm(service, container, testData.forms.simple, secondProject);
@@ -2547,12 +2847,12 @@ describe('analytics task queries', function () {
       const { id: _, ...secondDataset } = res.projects[0].datasets[1];
 
       firstDataset.should.be.eql({
-        num_properties: 2,
+        num_properties: 3,
         num_creation_forms: 2,
         num_followup_forms: 1,
         num_entities: {
-          total: 5, // made one Entity ancient
-          recent: 4 // 2 from submissions, 3 from bulk uploads
+          total: 6, // made one Entity ancient
+          recent: 5 // 2 from submissions, 3 from bulk uploads, 1 from api (with geometry)
         },
         num_failed_entities: { // two Submissions failed due to invalid UUID
           total: 2, // made one Error ancient
@@ -2575,8 +2875,8 @@ describe('analytics task queries', function () {
           recent: 2
         },
         num_entity_creates_api: {
-          total: 0,
-          recent: 0
+          total: 1,
+          recent: 1
         },
         num_entity_creates_bulk: {
           total: 3,
@@ -2592,7 +2892,11 @@ describe('analytics task queries', function () {
           total: 1,
           recent: 1
         },
-        biggest_bulk_upload: 3
+        biggest_bulk_upload: 3,
+        num_entities_with_geometry: {
+          total: 1,
+          recent: 1
+        },
       });
 
       secondDataset.should.be.eql({
@@ -2641,7 +2945,11 @@ describe('analytics task queries', function () {
           total: 0,
           recent: 0
         },
-        biggest_bulk_upload: 0
+        biggest_bulk_upload: 0,
+        num_entities_with_geometry: {
+          total: 0,
+          recent: 0
+        },
       });
 
       // Assert that a Project without a Dataset returns an empty array

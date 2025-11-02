@@ -30,10 +30,11 @@
       "analytics": {
         "url": "https://data.getodk.cloud/v1/key/eOZ7S4bzyUW!g1PF6dIXsnSqktRuewzLTpmc6ipBtRq$LDfIMTUKswCexvE0UwJ9/projects/1/forms/odk-analytics/submissions",
         "formId": "odk-analytics",
-        "version": "v2025.2.0_1"
+        "version": "v2025.3.0_1"
       },
       "s3blobStore": {}
-    }
+    },
+    "sessionLifetime": 86400
   },
   "test": {
     "database": {
