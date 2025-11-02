@@ -9,7 +9,7 @@ const idxNameFor = fk => `idx_fk_${fk.local_tbl_name}_${fk.local_col_names}`;
 const colsForIdx = fk => fk.local_col_names.map(col => `"${col}"`).join(', ');
 const createIdxStatement = fk => `CREATE UNIQUE? INDEX ${idxNameFor(fk)} ON "${fk.local_tbl_name}" (${colsForIdx(fk)});`;
 
-describe.only('database indexes', () => {
+describe('database indexes', () => {
   it('should define indexes on both sides of foreign key relationships', testContainer(async ({ all }) => {
     const existingIndexes = await all(sql`
       SELECT tbl_class.relnamespace::regnamespace::text AS tbl_schema
