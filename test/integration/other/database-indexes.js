@@ -1,5 +1,5 @@
 const { sql } = require('slonik');
-const { curry, equals, slice } = require('ramda');
+const { ascend, curry, equals, prop, slice, sortWith } = require('ramda');
 
 const { testContainer } = require('../setup');
 
@@ -9,7 +9,7 @@ const idxNameFor = fk => `idx_fk_${fk.local_tbl_name}_${fk.local_col_names}`;
 const colsForIdx = fk => fk.local_col_names.map(col => `"${col}"`).join(', ');
 const createIdxStatement = fk => `CREATE UNIQUE? INDEX ${idxNameFor(fk)} ON "${fk.local_tbl_name}" (${colsForIdx(fk)});`;
 
-describe('database indexes', () => {
+describe.only('database indexes', () => {
   it('should define indexes on both sides of foreign key relationships', testContainer(async ({ all }) => {
     const existingIndexes = await all(sql`
       SELECT tbl_class.relnamespace::regnamespace::text AS tbl_schema
@@ -36,15 +36,36 @@ describe('database indexes', () => {
       WHERE pg_constraint.contype = 'f'
     `);
 
+    const fkIndexes = [];
     const missingIndexes = foreignKeys
       .filter(fk => {
         const colsMatch = startsWith(fk.local_col_indexes);
-        return !existingIndexes.find(idx => { // eslint-disable-line arrow-body-style
+        const foundIdx = existingIndexes.find(idx => { // eslint-disable-line arrow-body-style
           return idx.tbl_schema === fk.local_tbl_schema &&
                  idx.tbl_name   === fk.local_tbl_name && // eslint-disable-line no-multi-spaces
                  colsMatch(idx.indexed_columns);
         });
+        if (!foundIdx) return true;
+
+        fkIndexes.push({
+          'FK table': fk.local_tbl_name,
+          'foreign key': fk.fk_name,
+          'database index': foundIdx.idx_name,
+        });
+        return false;
       });
+
+    const envVarName = 'DEBUG_FK_INDEXES'
+    if (process.env[envVarName]) {
+      console.log('\n┌── Foreign Key Reverse Indexes ───────┐'); // eslint-disable-line no-console
+      console.table( // eslint-disable-line no-console
+        sortWith([
+          ascend(prop('FK table')),
+          ascend(prop('foreign key')),
+          ascend(prop('database index')),
+        ])(fkIndexes),
+      );
+    }
 
     await Promise.all(missingIndexes
       .map(async fk => {
@@ -67,6 +88,10 @@ describe('database indexes', () => {
       Or:     a database migration should be added with the following indexes:
 
         ${missingIndexes.map(createIdxStatement).sort().join('\n        ')}
+
+      To see existing indexes, run:
+
+        ${envVarName}=1 npx mocha ${__filename}
     `);
   }));
 });
