@@ -55,7 +55,7 @@ describe('database indexes', () => {
         return false;
       });
 
-    const envVarName = 'DEBUG_FK_INDEXES'
+    const envVarName = 'DEBUG_FK_INDEXES';
     if (process.env[envVarName]) {
       console.log('\n┌── Foreign Key Reverse Indexes ───────┐'); // eslint-disable-line no-console
       console.table( // eslint-disable-line no-console
