@@ -59,6 +59,7 @@
     "fetch-cookie": "^2.2.0",
     "http-proxy-middleware": "^2.0.9",
     "jsonschema": "^1.5.0",
+    "libxmljs": "^1.0.11",
     "lodash": "^4.17.21",
     "mocha": "^10.2.0",
     "mocha-junit-reporter": "^2.2.1",
