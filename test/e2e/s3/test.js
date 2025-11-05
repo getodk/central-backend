@@ -206,19 +206,25 @@ describe('s3 support', () => {
         this.timeout(TIMEOUT);
 
         // given
+        log('Generating form xml...');
         generateFormXml(testIdx);
         // and
+        log('Setting up test...');
         await setup(`5-${testIdx}`);
+        log('Checking 1 new attachment is pending...');
         await assertNewStatuses({ pending: 1 });
 
         // when
+        log('Starting upload...');
         const uploading = forSacrifice(cli('upload-pending'));
+        log('Waiting for upload to start...');
         await untilUploadInProgress();
         // and
+        log('Sending signals...');
         for(const s of signals) {
           switch(s) {
-            case 'SIGINT':  await execSync(`kill -2 ${uploading.pid}`); break;
-            case 'SIGTERM': await execSync(`kill    ${uploading.pid}`); break;
+            case 'SIGINT':  execSync(`kill -2 ${uploading.pid}`); break;
+            case 'SIGTERM': execSync(`kill    ${uploading.pid}`); break;
             default: throw new Error(`No handling for signal '${s}'`);
           }
         }
