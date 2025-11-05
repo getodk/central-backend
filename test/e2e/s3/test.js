@@ -54,7 +54,7 @@ describe('s3 support', () => {
     await cli('reset-failed-to-pending');
     await cli('upload-pending');
 
-    assert.equal(await countByStatus('pending'), 0, 'All pending blobs should have been uploaded.');
+    (await countByStatus('pending')).should.eql(0);
   });
 
   async function setup(testNumber, opts={}) {
