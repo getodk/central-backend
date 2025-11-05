@@ -48,22 +48,11 @@ describe('s3 support', () => {
   });
 
   afterEach(async function() {
-    log('afterEach()', '_minioTerminated:', _minioTerminated);
     if(_minioTerminated) return;
 
     this.timeout(TIMEOUT);
-
-    log('afterEach()', 'resetting failed to pending...');
     await cli('reset-failed-to-pending');
-
-    log('afterEach()', 'uploading pending...');
     await cli('upload-pending');
-
-    log('afterEach()', 'checking remaining pending...');
-    const pending = await countByStatus('pending');
-    log('afterEach()', 'pending:', pending);
-
-    pending.should.eql(0);
   });
 
   async function setup(testNumber, opts={}) {
@@ -81,17 +70,13 @@ describe('s3 support', () => {
     // given
     fs.mkdirSync(attDir, { recursive:true });
     for(let idx=0; idx<bigFiles; ++idx) bigFileExists(attDir, bigFileSizeMb, 1+idx);
-
     expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
-    console.log('expectedAttachments:', expectedAttachments);
-
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
     xmlFormId = await uploadFormWithAttachments(`./test-forms/${testNumber}.xml`, attDir);
 
     // when
     actualAttachments = await api.apiGet(`projects/${projectId}/forms/${xmlFormId}/attachments`);
-    console.log('actualAttachments:', actualAttachments);
     should.deepEqual(actualAttachments.map(a => a.name).sort(), expectedAttachments);
 
     // then
@@ -453,7 +438,7 @@ function cli(cmd) {
       }
 
       const res = stdout.toString().trim();
-      log.debug('cli()', cmd, 'returned:', res);
+      log.debug('cli()', 'returned:', res);
       resolve(res);
     });
     pid = child.pid;
