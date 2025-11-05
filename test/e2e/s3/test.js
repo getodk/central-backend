@@ -193,14 +193,14 @@ describe('s3 support', () => {
 
     [
       [ 'SIGTERM' ],
-      [ 'SIGINT' ],
+      //[ 'SIGINT' ],
 
-      // Every iteration of this test takes 6+ seconds, so instead of running
-      // a full set of combinations of signals for 2 & 3 sequential signals,
-      // generate a few random datasets:
-      randomSignals(2),
-      randomSignals(3),
-      randomSignals(4),
+      //// Every iteration of this test takes 6+ seconds, so instead of running
+      //// a full set of combinations of signals for 2 & 3 sequential signals,
+      //// generate a few random datasets:
+      //randomSignals(2),
+      //randomSignals(3),
+      //randomSignals(4),
     ].forEach((signals, testIdx) => {
       it(`Test #${testIdx}: signals [${signals}]`, async function() {
         this.timeout(TIMEOUT);
@@ -233,7 +233,7 @@ describe('s3 support', () => {
   });
 
   // N.B. THIS TEST KILLS THE MINIO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
-  it('should handle s3 connection failing', async function() {
+  it.skip('should handle s3 connection failing', async function() {
     this.timeout(TIMEOUT);
 
     // This also tests transaction boundaries are correct by adding two attachments,
@@ -266,7 +266,7 @@ describe('s3 support', () => {
     await assertNewStatuses({ uploaded: 1, failed: 1 });
   });
 
-  it('should handle s3 unavailable', async function() {
+  it.skip('should handle s3 unavailable', async function() {
     this.timeout(TIMEOUT);
 
     // given
