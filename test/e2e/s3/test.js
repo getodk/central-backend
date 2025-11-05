@@ -432,7 +432,7 @@ function cli(cmd) {
       }
 
       const res = stdout.toString().trim();
-      log.debug('cli()', 'returned:', res);
+      log.debug('cli()', cmd, 'returned:', res);
       resolve(res);
     });
     pid = child.pid;
