@@ -94,6 +94,12 @@ describe('sentry', () => {
 
       [ '/projects/:projectId/forms/:xmlFormId.svc/more-path', '/projects/1/forms/form_name.svc/more-path',  '/projects/1/forms/:xmlFormId.svc/more-path' ],
       [ '/projects/:projectId/forms/:xmlFormId.svc/more-path', '/projects/11/forms/form_name.svc/more-path', '/projects/11/forms/:xmlFormId.svc/more-path' ],
+
+      // alternate file extensions
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/1.xls',  '/projects/1/forms/:xmlFormId.xls' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/1.xlsx', '/projects/1/forms/:xmlFormId.xlsx' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/1.7z',   '/projects/1/forms/:xmlFormId.7z' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/1.xyz',  '/projects/1/forms/:xmlFormId.xyz' ],
     ].forEach(([ transaction, originalUrl, expectedUrl ]) => {
       it(`should convert ${originalUrl} to ${expectedUrl}`, () => {
         filterXmlFormIdFromUrl(transaction, originalUrl).should.eql(expectedUrl);
