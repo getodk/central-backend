@@ -53,6 +53,8 @@ describe('s3 support', () => {
     this.timeout(TIMEOUT);
     await cli('reset-failed-to-pending');
     await cli('upload-pending');
+
+    assert.equal(await countByStatus('pending'), 0, 'All pending blobs should have been uploaded.');
   });
 
   async function setup(testNumber, opts={}) {
