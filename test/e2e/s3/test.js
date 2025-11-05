@@ -193,14 +193,14 @@ describe('s3 support', () => {
 
     [
       [ 'SIGTERM' ],
-      //[ 'SIGINT' ],
+      [ 'SIGINT' ],
 
       //// Every iteration of this test takes 6+ seconds, so instead of running
       //// a full set of combinations of signals for 2 & 3 sequential signals,
       //// generate a few random datasets:
-      //randomSignals(2),
-      //randomSignals(3),
-      //randomSignals(4),
+      randomSignals(2),
+      randomSignals(3),
+      randomSignals(4),
     ].forEach((signals, testIdx) => {
       it(`Test #${testIdx}: signals [${signals}]`, async function() {
         this.timeout(TIMEOUT);
