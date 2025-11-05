@@ -48,6 +48,7 @@ describe('s3 support', () => {
   });
 
   afterEach(async function() {
+    log('afterEach()', '_minioTerminated:', _minioTerminated);
     if(_minioTerminated) return;
 
     this.timeout(TIMEOUT);
