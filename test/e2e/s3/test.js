@@ -101,7 +101,7 @@ describe('s3 support', () => {
   }
 
   describe('with running minio', () => {
-    beforeEach(() => _minioTerminated.should.be.undefined());
+    beforeEach(() => should(_minioTerminated).be.undefined());
 
     it('should shift submission attachments to s3', async function() {
       this.timeout(TIMEOUT);
