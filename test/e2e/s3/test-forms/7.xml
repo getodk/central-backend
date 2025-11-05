@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
   <h:head>
-    <h:title>Blob Test 8</h:title>
+    <h:title>Blob Test 7</h:title>
     <model odk:xforms-version="1.0.0">
       <itext>
         <translation lang="default" default="true()">
@@ -16,7 +16,7 @@
         </translation>
       </itext>
       <instance>
-        <data id="blob_test_8" version="20240506130956">
+        <data id="blob_test_7" version="20240506130956">
           <meta>
             <instanceID/>
           </meta>
