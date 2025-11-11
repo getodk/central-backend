@@ -7,7 +7,7 @@ const { testService } = require('../setup');
 // an empty structural field like entity.
 
 const emptyEntityForm = `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
 <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -28,7 +28,7 @@ const emptyEntityForm = `<?xml version="1.0"?>
   </h:head>
 </h:html>`;
 
-const emptyEntitySub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="emptyEntity" version="1.0">
+const emptyEntitySub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" id="emptyEntity" version="1.0">
 <meta>
   <instanceID>one</instanceID>
   <orx:instanceName>one</orx:instanceName>
@@ -142,7 +142,7 @@ describe('empty entity structure field', () => {
           '<entity dataset="people" id="" create="" update="" baseVersion=""><label/></entity>')
         .replace('orx:version="1.0"', 'orx:version="2.0"');
 
-      const sub2 = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="emptyEntity" version="1.0">
+      const sub2 = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" id="emptyEntity" version="1.0">
         <meta>
           <instanceID>two</instanceID>
           <orx:instanceName>two</orx:instanceName>
