@@ -89,7 +89,7 @@ describe('external/s3', () => {
         () => s3.deleteObjsFor([ exampleBlob ]),
         {
           name: 'Error',
-          message: 'The upstream S3 server had an internal problem.',
+          message: `The upstream S3 server had an internal problem performing 'removeObjects'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
           problemCode: 500.5,
           problemDetails: {
             amzRequestId,
@@ -132,7 +132,7 @@ describe('external/s3', () => {
         () => s3.getContentFor(exampleBlob),
         {
           name: 'Error',
-          message: 'The upstream S3 server had an internal problem.',
+          message: `The upstream S3 server had an internal problem performing 'getObject'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
           problemCode: 500.5,
           problemDetails: {
             amzRequestId,
@@ -175,7 +175,7 @@ describe('external/s3', () => {
         () => s3.uploadFromBlob(exampleBlob),
         {
           name: 'Error',
-          message: 'The upstream S3 server had an internal problem.',
+          message: `The upstream S3 server had an internal problem performing 'putObject'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
           problemCode: 500.5,
           problemDetails: {
             amzRequestId,
