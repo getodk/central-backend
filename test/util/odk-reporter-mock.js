@@ -9,16 +9,25 @@
 //
 // Mocks the odk analytics client to pretend successful and failed requests.
 
-class ODKAnalytics {
+class ODKReporterMock {
+
+  resetMock() {
+    delete this.dataSent;
+  }
+
+  enableMock() {
+    this.dataSent = null;
+  }
 
   constructor() {
     this.mockError = null;
   }
 
-  submit() {
+  submit(data) {
     if (this.mockError !== null) {
       return Promise.reject(this.mockError);
     }
+    this.dataSent = data;
     return Promise.resolve();
   }
 
@@ -28,5 +37,5 @@ class ODKAnalytics {
   }
 }
 
-module.exports = { ODKAnalytics };
+module.exports = { ODKReporterMock };
 

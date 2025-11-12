@@ -63,10 +63,10 @@ describe('task: analytics', () => {
           should.exist(report.projects[0].submissions);
         }))));
 
-  it('should log request errors', testTask(({ Configs, Audits, odkAnalytics }) =>
+  it('should log request errors', testTask(({ Configs, Audits, odkAnalyticsReporter }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
       // eslint-disable-next-line space-in-parens, object-curly-spacing
-      .then(odkAnalytics.setError({ testError: 'foo'} ))
+      .then(odkAnalyticsReporter.setError({ testError: 'foo'} ))
       .then(() => runAnalytics()
         .then((res) => {
           res.sent.should.equal(false);
@@ -77,5 +77,14 @@ describe('task: analytics', () => {
           // eslint-disable-next-line object-curly-spacing
           au.details.error.should.eql({ testError: 'foo'});
         }))));
+
+  it('should check what was sent by analytics reporter', testTask(async ({ Configs, odkAnalyticsReporter }) => {
+    await odkAnalyticsReporter.resetMock();
+    await Configs.set('analytics', { enabled: true, email: 'test@getodk.org' });
+    await runAnalytics();
+    odkAnalyticsReporter.dataSent.startsWith('<?xml version="1.0"?>').should.be.true();
+    odkAnalyticsReporter.dataSent.includes('id="odk-analytics"').should.be.true();
+    odkAnalyticsReporter.dataSent.includes('<config><email>test@getodk.org</email></config>').should.be.true();
+  }));
 });
 
