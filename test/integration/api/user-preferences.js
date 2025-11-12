@@ -1,3 +1,4 @@
+const should = require('should');
 const { testService } = require('../setup');
 
 describe('api: user-preferences', () => {
@@ -191,4 +192,56 @@ describe('api: user-preferences', () => {
         });
       });
   }));
+
+  describe('audit log', () => {
+    it('can log audit events for updating and deleting site property', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.put('/v1/user-preferences/site/some-preference')
+        .send({ propertyValue: 'some-value' })
+        .expect(200);
+
+      await asAlice.delete('/v1/user-preferences/site/some-preference')
+        .expect(200);
+
+      await asAlice.get('/v1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].action.should.equal('user.preference.delete');
+          body[0].actorId.should.equal(5);
+          body[0].details.should.eql({ site: 'some-preference' });
+          should.not.exist(body[0].acteeId);
+
+          body[1].action.should.equal('user.preference.update');
+          body[1].actorId.should.equal(5);
+          body[1].details.should.eql({ site: 'some-preference' });
+          should.not.exist(body[1].acteeId);
+        });
+    }));
+
+    it('can log audit events for updating and deleting project property', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.put('/v1/user-preferences/project/1/some-preference')
+        .send({ propertyValue: 'some-value' })
+        .expect(200);
+
+      await asAlice.delete('/v1/user-preferences/project/1/some-preference')
+        .expect(200);
+
+      await asAlice.get('/v1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].action.should.equal('user.preference.delete');
+          body[0].actorId.should.equal(5);
+          body[0].details.should.eql({ project: 'some-preference' });
+          should.not.exist(body[0].acteeId);
+
+          body[1].action.should.equal('user.preference.update');
+          body[1].actorId.should.equal(5);
+          body[1].details.should.eql({ project: 'some-preference' });
+          should.not.exist(body[1].acteeId);
+        });
+    }));
+  });
 });
