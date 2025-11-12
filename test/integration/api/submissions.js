@@ -1710,8 +1710,7 @@ describe('api: /forms/:id/submissions', () => {
     it('should include all repeat rows @slow', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(`
-<?xml version="1.0"?>
+        .send(`<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
 <h:head><h:title>single-repeat-1-instance-10qs</h:title><model odk:xforms-version="1.0.0">
 <instance><data id="single-repeat-1-instance-10qs"><q1/><q2/><q3/><q4/><q5/><q6/><q7/><q8/><q9/><q10/><q11/><q12/><q13/><q14/><q15/><q16/><q17/><q18/><q19/><q20/><q21/><repeat jr:template=""><q22/><q23/><q24/><q25/><q26/><q27/><q28/><q29/><q30/><q31/><q32/><q33/><q34/><q35/><q36/><q37/><q38/><q39/><q40/><q41/></repeat><repeat><q22/><q23/><q24/><q25/><q26/><q27/><q28/><q29/><q30/><q31/><q32/><q33/><q34/><q35/><q36/><q37/><q38/><q39/><q40/><q41/></repeat><q42/><q43/><q44/><q45/><q46/><q47/><q48/><q49/><q50/><meta><instanceID/></meta></data></instance>
@@ -2129,8 +2128,7 @@ describe('api: /forms/:id/submissions', () => {
             .send(testData.instances.simple.two))
           .then(() => asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
             .set('Content-Type', 'application/xml')
-            .send(`
-              <?xml version="1.0"?>
+            .send(`<?xml version="1.0"?>
               <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
                 <h:head>
                   <model>
@@ -2866,8 +2864,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft/publish?version=2').expect(200)) // introduce a new version with same schema as before
             .then(() => asAlice.post('/v1/projects/1/forms/selectMultiple/draft?ignoreWarnings=true')
               .set('Content-Type', 'application/xml')
-              .send(`
-                <?xml version="1.0"?>
+              .send(`<?xml version="1.0"?>
                 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
                   <h:head>
                     <model>
