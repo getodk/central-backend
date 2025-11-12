@@ -2392,7 +2392,7 @@ describe('datasets and entities', () => {
       describe('autolink when publishing form that creates and consumes new dataset', () => {
         // update form that consumes dataset
         const updateForm = `<?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
           <h:head>
             <model entities:entities-version="2024.1.0">
               <instance>
@@ -2483,7 +2483,7 @@ describe('datasets and entities', () => {
           const asAlice = await service.login('alice');
 
           const differentDataset = `<?xml version="1.0"?>
-          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
             <h:head>
               <model entities:entities-version="2024.1.0">
                 <instance>
@@ -2631,7 +2631,7 @@ describe('datasets and entities', () => {
           const asAlice = await service.login('alice');
 
           const noDataset = `<?xml version="1.0"?>
-          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
             <h:head>
               <model entities:entities-version="2024.1.0">
                 <instance>
@@ -2675,7 +2675,7 @@ describe('datasets and entities', () => {
           const asAlice = await service.login('alice');
 
           const caseChange = `<?xml version="1.0"?>
-          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
             <h:head>
               <model entities:entities-version="2024.1.0">
                 <instance>
@@ -2726,7 +2726,7 @@ describe('datasets and entities', () => {
             .expect(200);
 
           const caseChange = `<?xml version="1.0"?>
-            <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+            <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
               <h:head>
                 <model entities:entities-version="2024.1.0">
                   <instance>
@@ -3765,7 +3765,7 @@ describe('datasets and entities', () => {
             }))));
 
       it('should accept entity form and save dataset with no binds', testService((service) => {
-        const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
         <h:head>
           <h:title>nobinds</h:title>
           <model entities:entities-version='2024.1.0'>
@@ -3808,7 +3808,7 @@ describe('datasets and entities', () => {
 
       it('should ignore a saveto incorrrectly placed on a bind on a structural field', testService(async (service) => {
         const alice = await service.login('alice');
-        const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        const xml = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
           <h:head>
             <model entities:entities-version='2024.1.0'>
               <instance>
@@ -4891,7 +4891,7 @@ describe('datasets and entities', () => {
       const asAlice = await service.login('alice');
 
       const form = `<?xml version="1.0"?>
-      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -4920,7 +4920,7 @@ describe('datasets and entities', () => {
         })
         .expect(200);
 
-      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" id="brokenForm" version="1.0">
         <meta>
           <instanceID>one</instanceID>
           <orx:instanceName>one</orx:instanceName>
@@ -4956,7 +4956,7 @@ describe('datasets and entities', () => {
       const asAlice = await service.login('alice');
 
       const form = `<?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -4973,7 +4973,7 @@ describe('datasets and entities', () => {
       </h:html>`;
 
       const form2 = `<?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -5008,7 +5008,7 @@ describe('datasets and entities', () => {
       const asAlice = await service.login('alice');
 
       const form = `<?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -5031,7 +5031,7 @@ describe('datasets and entities', () => {
 
       // Form with label nested under entity
       const form2 = `<?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -5077,7 +5077,7 @@ describe('datasets and entities', () => {
       const asAlice = await service.login('alice');
 
       const form = `<?xml version="1.0"?>
-      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
         <h:head>
           <model entities:entities-version="2024.1.0">
             <instance>
@@ -5106,7 +5106,7 @@ describe('datasets and entities', () => {
         })
         .expect(200);
 
-      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" id="brokenForm" version="1.0">
         <meta>
           <instanceID>one</instanceID>
           <orx:instanceName>one</orx:instanceName>
