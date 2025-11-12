@@ -45,8 +45,9 @@ afterEach(resetEnketo);
 const { s3 } = require(appRoot + '/test/util/s3');
 
 // set up odk analytics mock.
-const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
-const odkAnalytics = new ODKAnalytics();
+const { ODKReporterMock } = require(appRoot + '/test/util/odk-reporter-mock');
+const analyticsReporter = new ODKReporterMock('odk-analytics', 'test-version');
+beforeEach(() => { analyticsReporter.resetMock(); });
 
 // set up mock context
 const context = { query: {}, transitoryData: new Map(), headers: [] };
@@ -144,7 +145,7 @@ const augment = (service) => {
 // FINAL TEST WRAPPERS
 
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context, s3 });
+const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, analyticsReporter, context, s3 });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
