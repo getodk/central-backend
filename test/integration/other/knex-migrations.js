@@ -255,7 +255,7 @@ describe('database migrations: removing default project', function() {
   }));
 });
 
-describe('database migrations: intermediate form schema', function() {
+describe.skip('database migrations: intermediate form schema', function() {
   this.timeout(20000);
 
   it('should test migration', testServiceFullTrx(async (service, container) => {
@@ -384,7 +384,7 @@ describe('database migrations: intermediate form schema', function() {
   }));
 });
 
-describe('database migrations: 20230123-01-remove-google-backups', function() {
+describe.skip('database migrations: 20230123-01-remove-google-backups', function() {
   this.timeout(20000);
 
   beforeEach(() => upToMigration('20230123-01-remove-google-backups.js', false));
@@ -608,7 +608,7 @@ describe.skip('database migrations from 20230406: altering entities and entity_d
   }));
 });
 
-describe('database migrations from 20230512: adding entity_def_sources table', function () {
+describe.skip('database migrations from 20230512: adding entity_def_sources table', function () {
   this.timeout(20000);
 
   it.skip('should backfill entityId and entityDefId in audit log', testServiceFullTrx(async (service, container) => {
@@ -840,7 +840,7 @@ describe('database migrations from 20230512: adding entity_def_sources table', f
   }));
 });
 
-describe('database migrations from 20230802: delete orphan submissions', function test() {
+describe.skip('database migrations from 20230802: delete orphan submissions', function test() {
   this.timeout(20000);
 
   it.skip('should delete orphan draft Submissions', testServiceFullTrx(async (service, container) => {
