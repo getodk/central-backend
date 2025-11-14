@@ -3,15 +3,21 @@ const should = require('should');
 const { testTask } = require('../setup');
 const { runAnalytics } = require(appRoot + '/lib/task/analytics');
 
+// Reset the mock as part of each test
+const testTaskWithReset = (testFn) => testTask((container) => {
+  container.odkAnalyticsReporter.resetMock();
+  return testFn(container);
+});
+
 describe('task: analytics', () => {
-  it('should not compute analytics if not enabled', testTask(() =>
+  it('should not compute analytics if not enabled', testTaskWithReset(() =>
     runAnalytics()
       .then((res) => {
         res.sent.should.equal(false);
         res.message.should.equal('Config not set');
       })));
 
-  it('should not compute analytics if explicitly disabled', testTask(({ Configs }) =>
+  it('should not compute analytics if explicitly disabled', testTaskWithReset(({ Configs }) =>
     Configs.set('analytics', { enabled: false })
       .then(() => runAnalytics()
         .then((res) => {
@@ -19,7 +25,7 @@ describe('task: analytics', () => {
           res.message.should.equal('Analytics disabled in config');
         }))));
 
-  it('should not compute analytics if analytics sent recently', testTask(({ Configs, Audits }) =>
+  it('should not compute analytics if analytics sent recently', testTaskWithReset(({ Configs, Audits }) =>
     Configs.set('analytics', { enabled: true })
       // eslint-disable-next-line object-curly-spacing
       .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: true})
@@ -29,14 +35,14 @@ describe('task: analytics', () => {
             res.message.includes('Analytics sent recently').should.equal(true);
           })))));
 
-  it('should send analytics if enabled and time to send', testTask(({ Configs }) =>
+  it('should send analytics if enabled and time to send', testTaskWithReset(({ Configs }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
       .then(() => runAnalytics()
         .then((res) => {
           res.sent.should.equal(true);
         }))));
 
-  it('should resend analytics if last attempt failed', testTask(({ Configs, Audits }) =>
+  it('should resend analytics if last attempt failed', testTaskWithReset(({ Configs, Audits }) =>
     Configs.set('analytics', { enabled: true })
       // eslint-disable-next-line object-curly-spacing
       .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: false})
@@ -45,7 +51,7 @@ describe('task: analytics', () => {
             res.sent.should.equal(true);
           })))));
 
-  it('should log event and full report if analytics sent successfully', testTask(({ Configs, Audits }) =>
+  it('should log event and full report if analytics sent successfully', testTaskWithReset(({ Configs, Audits }) =>
     Configs.set('analytics', { email: 'test@getodk.org', organization: 'ODK', enabled: true })
       .then(() => runAnalytics())
       .then(() => Audits.getLatestByAction('analytics').then((o) => o.get())
@@ -63,10 +69,10 @@ describe('task: analytics', () => {
           should.exist(report.projects[0].submissions);
         }))));
 
-  it('should log request errors', testTask(({ Configs, Audits, odkAnalytics }) =>
+  it('should log request errors', testTaskWithReset(({ Configs, Audits, odkAnalyticsReporter }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
       // eslint-disable-next-line space-in-parens, object-curly-spacing
-      .then(odkAnalytics.setError({ testError: 'foo'} ))
+      .then(odkAnalyticsReporter.setError({ testError: 'foo'} ))
       .then(() => runAnalytics()
         .then((res) => {
           res.sent.should.equal(false);
@@ -77,5 +83,16 @@ describe('task: analytics', () => {
           // eslint-disable-next-line object-curly-spacing
           au.details.error.should.eql({ testError: 'foo'});
         }))));
+
+
+  it('should check what was sent by analytics reporter', testTaskWithReset(async ({ Configs, odkAnalyticsReporter }) => {
+    //await odkAnalyticsReporter.resetMock();
+    //await odkAnalyticsReporter.enableMock();
+    await Configs.set('analytics', { enabled: true, email: 'test@getodk.org' });
+    await runAnalytics();
+    odkAnalyticsReporter.dataSent.startsWith('<?xml version="1.0"?>').should.be.true();
+    odkAnalyticsReporter.dataSent.includes('id="odk-analytics"').should.be.true();
+    odkAnalyticsReporter.dataSent.includes('<config><email>test@getodk.org</email></config>').should.be.true();
+  }));
 });
 
