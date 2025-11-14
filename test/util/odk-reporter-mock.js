@@ -12,15 +12,12 @@
 class ODKReporterMock {
 
   resetMock() {
-    delete this.dataSent;
-  }
-
-  enableMock() {
     this.dataSent = null;
+    this.mockError = null;
   }
 
   constructor() {
-    this.mockError = null;
+    this.resetMock();
   }
 
   submit(data) {
