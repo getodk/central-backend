@@ -1,5 +1,5 @@
 const { sql } = require('slonik');
-const { curry, equals, slice } = require('ramda');
+const { ascend, curry, equals, prop, slice, sortWith } = require('ramda');
 
 const { testContainer } = require('../setup');
 
@@ -36,14 +36,23 @@ describe('database indexes', () => {
       WHERE pg_constraint.contype = 'f'
     `);
 
+    const fkIndexes = [];
     const missingIndexes = foreignKeys
       .filter(fk => {
         const colsMatch = startsWith(fk.local_col_indexes);
-        return !existingIndexes.find(idx => { // eslint-disable-line arrow-body-style
+        const foundIdx = existingIndexes.find(idx => { // eslint-disable-line arrow-body-style
           return idx.tbl_schema === fk.local_tbl_schema &&
                  idx.tbl_name   === fk.local_tbl_name && // eslint-disable-line no-multi-spaces
                  colsMatch(idx.indexed_columns);
         });
+        if (!foundIdx) return true;
+
+        fkIndexes.push({
+          'FK table': fk.local_tbl_name,
+          'foreign key': fk.fk_name,
+          'database index': foundIdx.idx_name,
+        });
+        return false;
       });
 
     await Promise.all(missingIndexes
@@ -61,13 +70,24 @@ describe('database indexes', () => {
       }),
     );
 
-    missingIndexes.length.should.eql(0, `${missingIndexes.length} foreign key indexes are missing from the database.
+    if (missingIndexes.length) {
+      console.log('\n┌── Foreign Key Reverse Indexes ───────┐'); // eslint-disable-line no-console
+      console.table( // eslint-disable-line no-console
+        sortWith([
+          ascend(prop('FK table')),
+          ascend(prop('foreign key')),
+          ascend(prop('database index')),
+        ])(fkIndexes),
+      );
 
-      Either: exceptions should be added to: ${__filename}
-      Or:     a database migration should be added with the following indexes:
+      missingIndexes.length.should.eql(0, `${missingIndexes.length} foreign key indexes are missing from the database.
 
-        ${missingIndexes.map(createIdxStatement).sort().join('\n        ')}
-    `);
+        Either: exceptions should be added to: ${__filename}
+        Or:     a database migration should be added with the following indexes:
+
+          ${missingIndexes.map(createIdxStatement).sort().join('\n        ')}
+      `);
+    }
   }));
 });
 
