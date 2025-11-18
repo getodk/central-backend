@@ -70,7 +70,7 @@ describe('api: user-preferences', () => {
 
     await asAlice.put('/v1/user-preferences/project/123/someProperty')
       .send({ propertyValue: 'someValue' })
-      .expect(400); // project 123 doesn't exist
+      .expect(404); // project 123 doesn't exist
   }));
 
   it('PUT/DELETE preference storage operations', testService(async (service) => {
@@ -240,12 +240,12 @@ describe('api: user-preferences', () => {
           body[0].action.should.equal('user.preference.delete');
           body[0].actorId.should.equal(5);
           body[0].acteeId.should.equal(alice.actor.acteeId);
-          body[0].details.should.eql({ propertyName: 'some-preference', projectId: '1', scope: 'project' });
+          body[0].details.should.eql({ propertyName: 'some-preference', projectId: 1, scope: 'project' });
 
           body[1].action.should.equal('user.preference.update');
           body[1].actorId.should.equal(5);
           body[1].acteeId.should.equal(alice.actor.acteeId);
-          body[1].details.should.eql({ propertyName: 'some-preference', propertyValue: 'some-value', projectId: '1', scope: 'project' });
+          body[1].details.should.eql({ propertyName: 'some-preference', propertyValue: 'some-value', projectId: 1, scope: 'project' });
         });
     }));
   });
