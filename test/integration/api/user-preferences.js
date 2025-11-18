@@ -212,12 +212,12 @@ describe('api: user-preferences', () => {
           body[0].action.should.equal('user.preference.delete');
           body[0].actorId.should.equal(5);
           body[0].acteeId.should.equal(alice.actor.acteeId);
-          body[0].details.should.eql({ site: 'some-preference' });
+          body[0].details.should.eql({ propertyName: 'some-preference', scope: 'site' });
 
           body[1].action.should.equal('user.preference.update');
           body[1].actorId.should.equal(5);
           body[1].acteeId.should.equal(alice.actor.acteeId);
-          body[1].details.should.eql({ site: 'some-preference' });
+          body[1].details.should.eql({ propertyName: 'some-preference', propertyValue: 'some-value', scope: 'site' });
         });
     }));
 
@@ -240,12 +240,12 @@ describe('api: user-preferences', () => {
           body[0].action.should.equal('user.preference.delete');
           body[0].actorId.should.equal(5);
           body[0].acteeId.should.equal(alice.actor.acteeId);
-          body[0].details.should.eql({ project: 'some-preference' });
+          body[0].details.should.eql({ propertyName: 'some-preference', projectId: '1', scope: 'project' });
 
           body[1].action.should.equal('user.preference.update');
           body[1].actorId.should.equal(5);
           body[1].acteeId.should.equal(alice.actor.acteeId);
-          body[1].details.should.eql({ project: 'some-preference' });
+          body[1].details.should.eql({ propertyName: 'some-preference', propertyValue: 'some-value', projectId: '1', scope: 'project' });
         });
     }));
   });
