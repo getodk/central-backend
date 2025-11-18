@@ -181,7 +181,7 @@ describe('submission field streamer', () => {
     // related to issue c#551 where <entity> block had no children so extracting the attributes was breaking.
     it('should handle attributes on entity tag with no children', async () => {
       const form = `<?xml version="1.0"?>
-      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
         <h:head>
           <model entities:entities-version="2023.1.0">
             <instance>
@@ -207,7 +207,7 @@ describe('submission field streamer', () => {
       fields.map(f => f.name).should.eql(['age', 'location', 'hometown', 'meta', 'entity']);
       fields.map(f => f.type).should.eql(['int', 'structure', 'string', 'structure', 'structure']);
 
-      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms" id="brokenForm" version="1.0">
+      const sub = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" id="brokenForm" version="1.0">
         <meta>
           <instanceID>one</instanceID>
           <orx:instanceName>one</orx:instanceName>
