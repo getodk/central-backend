@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const appRoot = require('app-root-path');
 const nock = require('nock');
+const should = require('should');
 const { init } = require(appRoot + '/lib/external/s3');
 
 // An example request ID.  This taken from Digital Ocean Spaces; different
@@ -56,6 +57,16 @@ describe('external/s3', () => {
       // Maybe caused by: https://github.com/minio/minio-js/issues/1400
       if (err.message !== 'Aborted by request') throw err;
     }
+  });
+
+  describe('destroy()', () => {
+    it('should resolve when no requests were made', async () => {
+      // given
+      const singleUseS3 = init(s3Config);
+
+      // expect
+      should(await singleUseS3.destroy()).be.undefined();
+    });
   });
 
   describe('deleteObjsFor()', () => {
