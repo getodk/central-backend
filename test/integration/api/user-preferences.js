@@ -1,4 +1,3 @@
-const should = require('should');
 const { testService } = require('../setup');
 
 describe('api: user-preferences', () => {
@@ -194,8 +193,11 @@ describe('api: user-preferences', () => {
   }));
 
   describe('audit log', () => {
-    it('can log audit events for updating and deleting site property', testService(async (service) => {
+    it('can log audit events for updating and deleting site property', testService(async (service, container) => {
       const asAlice = await service.login('alice');
+
+      const { Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
 
       await asAlice.put('/v1/user-preferences/site/some-preference')
         .send({ propertyValue: 'some-value' })
@@ -209,18 +211,21 @@ describe('api: user-preferences', () => {
         .then(({ body }) => {
           body[0].action.should.equal('user.preference.delete');
           body[0].actorId.should.equal(5);
+          body[0].acteeId.should.equal(alice.actor.acteeId);
           body[0].details.should.eql({ site: 'some-preference' });
-          should.not.exist(body[0].acteeId);
 
           body[1].action.should.equal('user.preference.update');
           body[1].actorId.should.equal(5);
+          body[1].acteeId.should.equal(alice.actor.acteeId);
           body[1].details.should.eql({ site: 'some-preference' });
-          should.not.exist(body[1].acteeId);
         });
     }));
 
-    it('can log audit events for updating and deleting project property', testService(async (service) => {
+    it('can log audit events for updating and deleting project property', testService(async (service, container) => {
       const asAlice = await service.login('alice');
+
+      const { Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
 
       await asAlice.put('/v1/user-preferences/project/1/some-preference')
         .send({ propertyValue: 'some-value' })
@@ -234,13 +239,13 @@ describe('api: user-preferences', () => {
         .then(({ body }) => {
           body[0].action.should.equal('user.preference.delete');
           body[0].actorId.should.equal(5);
+          body[0].acteeId.should.equal(alice.actor.acteeId);
           body[0].details.should.eql({ project: 'some-preference' });
-          should.not.exist(body[0].acteeId);
 
           body[1].action.should.equal('user.preference.update');
           body[1].actorId.should.equal(5);
+          body[1].acteeId.should.equal(alice.actor.acteeId);
           body[1].details.should.eql({ project: 'some-preference' });
-          should.not.exist(body[1].acteeId);
         });
     }));
   });
