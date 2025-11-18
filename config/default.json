@@ -32,6 +32,11 @@
         "formId": "odk-analytics",
         "version": "v2025.3.0_1"
       },
+      "mailingListOptIn": {
+        "url": "https://data.getodk.cloud/v1/key/Dd0XJq$!skdvUmMLUO1!srDmrxePJSIiGuj3ttbzlayelMxxXMQF3hmeJ24rcT8N/projects/8/forms/mailing_list_opt_in/submissions",
+        "formId": "mailing_list_opt_in",
+        "version": "20251118131223"
+      },
       "s3blobStore": {}
     },
     "sessionLifetime": 86400
