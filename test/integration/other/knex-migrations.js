@@ -614,7 +614,7 @@ describe.skip('database migrations from 20230406: altering entities and entity_d
   }));
 });
 
-describe.skip('database migrations from 20230512: adding entity_def_sources table', function () {
+describe('database migrations from 20230512: adding entity_def_sources table', function () {
   this.timeout(20000);
 
   it.skip('should backfill entityId and entityDefId in audit log', testServiceFullTrx(async (service, container) => {
