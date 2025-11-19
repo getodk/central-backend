@@ -1,5 +1,5 @@
 const appRoot = require('app-root-path');
-const { _init } = require(appRoot + '/lib/external/sentry');
+const { _init, filterXmlFormIdFromUrl } = require(appRoot + '/lib/external/sentry');
 
 describe('sentry', () => {
   it('should have expected integrations', () => {
@@ -52,4 +52,56 @@ describe('sentry', () => {
       'Tedious',
     ]);
   });
+
+  /* eslint-disable no-multi-spaces */
+  describe('filterXmlFormIdFromUrl()', () => {
+    [
+      [ '/projects/:projectId/forms/:xmlFormId', '/projects/1/forms/1',  '/projects/1/forms/:xmlFormId' ],
+      [ '/projects/:projectId/forms/:xmlFormId', '/projects/11/forms/1', '/projects/11/forms/:xmlFormId' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId', '/projects/1/forms/11',  '/projects/1/forms/:xmlFormId' ],
+      [ '/projects/:projectId/forms/:xmlFormId', '/projects/11/forms/11', '/projects/11/forms/:xmlFormId' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId', '/projects/1/forms/form_name',  '/projects/1/forms/:xmlFormId' ],
+      [ '/projects/:projectId/forms/:xmlFormId', '/projects/11/forms/form_name', '/projects/11/forms/:xmlFormId' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/1.svc',  '/projects/1/forms/:xmlFormId.svc' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/11/forms/1.svc', '/projects/11/forms/:xmlFormId.svc' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/11.svc',  '/projects/1/forms/:xmlFormId.svc' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/11/forms/11.svc', '/projects/11/forms/:xmlFormId.svc' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/form_name.svc',  '/projects/1/forms/:xmlFormId.svc' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/11/forms/form_name.svc', '/projects/11/forms/:xmlFormId.svc' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId/more-path', '/projects/1/forms/1/more-path',  '/projects/1/forms/:xmlFormId/more-path' ],
+      [ '/projects/:projectId/forms/:xmlFormId/more-path', '/projects/11/forms/1/more-path', '/projects/11/forms/:xmlFormId/more-path' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId/more-path', '/projects/1/forms/11/more-path',  '/projects/1/forms/:xmlFormId/more-path' ],
+      [ '/projects/:projectId/forms/:xmlFormId/more-path', '/projects/11/forms/11/more-path', '/projects/11/forms/:xmlFormId/more-path' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId/more-path', '/projects/1/forms/form_name/more-path',  '/projects/1/forms/:xmlFormId/more-path' ],
+      [ '/projects/:projectId/forms/:xmlFormId/more-path', '/projects/11/forms/form_name/more-path', '/projects/11/forms/:xmlFormId/more-path' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId.svc/more-path', '/projects/1/forms/1.svc/more-path',  '/projects/1/forms/:xmlFormId.svc/more-path' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc/more-path', '/projects/11/forms/1.svc/more-path', '/projects/11/forms/:xmlFormId.svc/more-path' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId.svc/more-path', '/projects/1/forms/11.svc/more-path',  '/projects/1/forms/:xmlFormId.svc/more-path' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc/more-path', '/projects/11/forms/11.svc/more-path', '/projects/11/forms/:xmlFormId.svc/more-path' ],
+
+      [ '/projects/:projectId/forms/:xmlFormId.svc/more-path', '/projects/1/forms/form_name.svc/more-path',  '/projects/1/forms/:xmlFormId.svc/more-path' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc/more-path', '/projects/11/forms/form_name.svc/more-path', '/projects/11/forms/:xmlFormId.svc/more-path' ],
+
+      // alternate file extensions
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/1.xls',  '/projects/1/forms/:xmlFormId.xls' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/1.xlsx', '/projects/1/forms/:xmlFormId.xlsx' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/1.7z',   '/projects/1/forms/:xmlFormId.7z' ],
+      [ '/projects/:projectId/forms/:xmlFormId.svc', '/projects/1/forms/1.xyz',  '/projects/1/forms/:xmlFormId.xyz' ],
+    ].forEach(([ transaction, originalUrl, expectedUrl ]) => {
+      it(`should convert ${originalUrl} to ${expectedUrl}`, () => {
+        filterXmlFormIdFromUrl(transaction, originalUrl).should.eql(expectedUrl);
+      });
+    });
+  });
+  /* eslint-enable no-multi-spaces */
 });
