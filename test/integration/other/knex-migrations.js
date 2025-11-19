@@ -255,6 +255,9 @@ describe('database migrations: removing default project', function() {
   }));
 });
 
+// skipped: test setup relies on populateUsers(), which relies on application
+// code which has changed since the test was written.
+// REVIEW: this test will never work again, and should probably be deleted.
 describe.skip('database migrations: intermediate form schema', function() {
   this.timeout(20000);
 
