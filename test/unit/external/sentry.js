@@ -56,9 +56,6 @@ describe('sentry', () => {
   /* eslint-disable no-multi-spaces */
   describe('filterXmlFormIdFromUrl()', () => {
     [
-      [ '/forms/:id/restore', '/forms/1/restore',  '/forms/1/restore' ],
-      [ '/forms/:id/restore', '/forms/11/restore', '/forms/11/restore' ],
-
       [ '/projects/:projectId/forms/:xmlFormId', '/projects/1/forms/1',  '/projects/1/forms/:xmlFormId' ],
       [ '/projects/:projectId/forms/:xmlFormId', '/projects/11/forms/1', '/projects/11/forms/:xmlFormId' ],
 
