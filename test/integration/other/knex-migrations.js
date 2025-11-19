@@ -1164,7 +1164,7 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
       await asAlice.get('/v1/projects/1/forms/updateEntity.xml')
         .then(({ text }) => {
           text.should.equal(`<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -1190,7 +1190,7 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
       await asAlice.get('/v1/projects/1/forms/updateEntity/draft.xml')
         .then(({ text }) => {
           text.should.equal(`<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -1217,7 +1217,7 @@ testMigration('20240914-02-remove-orphaned-client-audits.js', () => {
       await asAlice.get('/v1/projects/1/forms/updateEntity2/draft.xml')
         .then(({ text }) => {
           text.should.equal(`<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>

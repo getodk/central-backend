@@ -9,7 +9,7 @@ const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 const upgradedUpdateEntity = `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -31,7 +31,7 @@ const upgradedUpdateEntity = `<?xml version="1.0"?>
 </h:html>`;
 
 const upgradedSimpleEntity = `<?xml version="1.0"?>
-<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
   <h:head>
     <model entities:entities-version="2024.1.0">
       <instance>
@@ -382,7 +382,7 @@ describe('Update / migrate entities-version within form', () => {
       <formID>updateEntity</formID>
       <name>updateEntity</name>
       <version>1.0</version>
-      <hash>md5:e4902c380ef428aa3d35e4ed17ea6c04</hash>
+      <hash>md5:83792255bc7ad6b67822b7847a7f749b</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/updateEntity.xml</downloadUrl>
     </xform>`));
 
@@ -393,7 +393,7 @@ describe('Update / migrate entities-version within form', () => {
       <formID>updateEntity</formID>
       <name>updateEntity</name>
       <version>1.0</version>
-      <hash>md5:e4902c380ef428aa3d35e4ed17ea6c04</hash>
+      <hash>md5:83792255bc7ad6b67822b7847a7f749b</hash>
       <downloadUrl>${domain}/v1/test/${token}/projects/1/forms/updateEntity/draft.xml</downloadUrl>
     </xform>`));
 
@@ -410,7 +410,7 @@ describe('Update / migrate entities-version within form', () => {
       <formID>updateEntity</formID>
       <name>updateEntity</name>
       <version>1.0[upgrade]</version>
-      <hash>md5:77292dd9e1ad532bb5a4f7128e0a9596</hash>
+      <hash>md5:71f0896cc4c502ae5fa2cc6b0a55f5e6</hash>
       <downloadUrl>${domain}/v1/projects/1/forms/updateEntity.xml</downloadUrl>
     </xform>`));
 
@@ -421,7 +421,7 @@ describe('Update / migrate entities-version within form', () => {
       <formID>updateEntity</formID>
       <name>updateEntity</name>
       <version>1.0[upgrade]</version>
-      <hash>md5:77292dd9e1ad532bb5a4f7128e0a9596</hash>
+      <hash>md5:71f0896cc4c502ae5fa2cc6b0a55f5e6</hash>
       <downloadUrl>${domain}/v1/test/${token}/projects/1/forms/updateEntity/draft.xml</downloadUrl>
     </xform>`));
     }));
