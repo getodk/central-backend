@@ -900,6 +900,8 @@ tags:
     * `user.update` when User information is updated, like email or password.
     * `user.assignment.create` when a User is assigned to a Server Role.
     * `user.assignment.delete` when a User is unassigned from a Server Role.
+    * `user.preference.update` when a site-wide or project-specific User preference is set or updated.
+    * `user.preference.delete` when a site-wide or project-specific User preference is removed.
     * `user.session.create` when a User logs in.
     * `user.delete` when a User is deleted.
     * `project.create` when a new Project is created.
@@ -5630,7 +5632,7 @@ paths:
                   
                   When the provenance of the geodata (the form's field path) is not evident from the request, the origin field path of the geodata will be denoted in a `fieldpath` property in the feature's GeoJSON `properties` object. This is the case in when no field path is specified in the request, as in that situation the first geopoint-, geotrace-, or geoshape-field (not in any repeatgroup) of the form is used. And thus as forms get revised, what is the first geo-type field (not in any repeatgroup) may change; without the `fieldpath` extra information, the data provenance would be unclear. 
                 type: object
-              example: |
+              example:
                 {
                   "type": "FeatureCollection",
                   "features": [
@@ -6095,7 +6097,7 @@ paths:
           description: OK
           content:
             application/json:
-              example: |
+              example:
                 {
                   "type": "FeatureCollection",
                   "features": [
@@ -7203,8 +7205,8 @@ paths:
         "200":
           description: OK
           content:
-            application/xml:
-              example: |
+            application/json:
+              example:
                 {
                   "type": "FeatureCollection",
                   "features": [
@@ -8501,7 +8503,7 @@ paths:
 
                   Each entity is represented as a GeoJSON feature.
                 type: object
-              example: |
+              example:
                 {
                   "type": "FeatureCollection",
                   "features": [
@@ -9246,7 +9248,7 @@ paths:
               schema:
                 description: GeoJSON FeatureCollection, with one Feature.
                 type: object
-              example: |
+              example:
                 {
                   "type": "FeatureCollection",
                   "features": [

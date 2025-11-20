@@ -7,8 +7,8 @@ const { getCount, setFailedToPending, uploadPending } = require(appRoot + '/lib/
 const { Blob } = require(appRoot + '/lib/model/frames');
 
 // eslint-disable-next-line camelcase
-const aBlobExistsWith = async (container, { status }) => {
-  const blob = await Blob.fromBuffer(crypto.randomBytes(100));
+const aBlobExistsWith = async (container, { status, contentLength=100 }) => {
+  const blob = await Blob.fromBuffer(crypto.randomBytes(contentLength));
   await container.run(sql`
     INSERT INTO BLOBS (sha, md5, content, "contentType", s3_status)
       VALUES (${blob.sha}, ${blob.md5}, ${sql.binary(blob.content)}, ${blob.contentType || sql`DEFAULT`}, ${status})
@@ -44,6 +44,9 @@ describe('task: s3', () => {
     const assertUploadCount = (expected) => {
       global.s3.uploads.successful.should.equal(expected);
     };
+    const assertSkippedCount = (expected) => {
+      global.s3.uploads.skipped.should.equal(expected);
+    };
 
     beforeEach(() => {
       global.s3.enableMock();
@@ -54,6 +57,7 @@ describe('task: s3', () => {
         ['pending', 1],
         ['uploaded', 2],
         ['failed', 3],
+        ['skipped', 4],
       ].forEach(([ status, expectedCount ]) => {
         it(`should return count of ${status} blobs`, testTask(async (container) => {
           // given
@@ -65,6 +69,11 @@ describe('task: s3', () => {
           await aBlobExistsWith(container, { status: 'failed' });
           await aBlobExistsWith(container, { status: 'failed' });
           await aBlobExistsWith(container, { status: 'failed' });
+
+          await aBlobExistsWith(container, { status: 'skipped' });
+          await aBlobExistsWith(container, { status: 'skipped' });
+          await aBlobExistsWith(container, { status: 'skipped' });
+          await aBlobExistsWith(container, { status: 'skipped' });
 
           // when
           const count = await getCount(status);
@@ -88,6 +97,10 @@ describe('task: s3', () => {
         await aBlobExistsWith(container, { status: 'failed' });
         await aBlobExistsWith(container, { status: 'failed' });
         await aBlobExistsWith(container, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'skipped' });
+        await aBlobExistsWith(container, { status: 'skipped' });
+        await aBlobExistsWith(container, { status: 'skipped' });
+        await aBlobExistsWith(container, { status: 'skipped' });
 
         // expect
         (await getCount('pending')).should.equal(1);
@@ -118,9 +131,11 @@ describe('task: s3', () => {
         await aBlobExistsWith(container, { status: 'pending' });
         await aBlobExistsWith(container, { status: 'uploaded' });
         await aBlobExistsWith(container, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'skipped' });
         await aBlobExistsWith(container, { status: 'pending' });
         await aBlobExistsWith(container, { status: 'uploaded' });
         await aBlobExistsWith(container, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'skipped' });
 
         // when
         await uploadPending();
@@ -128,6 +143,20 @@ describe('task: s3', () => {
         // then
         assertUploadCount(2);
         (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 2, failed: 0 });
+      }));
+
+      it('should skip 0-byte blobs', testTask(async (container) => {
+        // given
+        await aBlobExistsWith(container, { status: 'pending', contentLength: 0 });
+        await aBlobExistsWith(container, { status: 'pending', contentLength: 100 });
+
+        // when
+        await uploadPending();
+
+        // then
+        assertUploadCount(1);
+        assertSkippedCount(1);
+        (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0, skipped: 1 });
       }));
 
       it('should return error if uploading fails', testTask(async (container) => {
@@ -181,7 +210,7 @@ describe('task: s3', () => {
             await new Promise(resolve => {
               resumeFirstUpload = resolve;
             });
-            original.apply(global.s3, args);
+            return original.apply(global.s3, args);
           };
         });
 
