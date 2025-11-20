@@ -1,3 +1,12 @@
+/*
+ * WARNING: DEPRECATED
+ *
+ * Database migration tests should be added in test/db-migrations/,
+ * and should not follow the patterns in this file.
+ *
+ * WARNING: DEPRECATED
+ */
+
 const { readFileSync } = require('fs');
 const appRoot = require('app-root-path');
 const uuid = require('uuid').v4;
