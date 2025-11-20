@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const appRoot = require('app-root-path');
 const nock = require('nock');
+const should = require('should');
 const { init } = require(appRoot + '/lib/external/s3');
 
 // An example request ID.  This taken from Digital Ocean Spaces; different
@@ -40,7 +41,7 @@ describe('external/s3', () => {
       'Content-Type': 'application/xml',
       'X-Amz-Request-Id': amzRequestId,
     });
-  const exampleBlob = { id: 1, sha: 'a-blob-sha', content: '' };
+  const exampleBlob = { id: 1, sha: 'a-blob-sha', content: 'some-actual-content' };
 
   beforeEach(() => {
     if (!nock.isActive()) nock.activate();
@@ -89,7 +90,7 @@ describe('external/s3', () => {
         () => s3.deleteObjsFor([ exampleBlob ]),
         {
           name: 'Error',
-          message: 'The upstream S3 server had an internal problem.',
+          message: `The upstream S3 server had an internal problem performing 'removeObjects'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
           problemCode: 500.5,
           problemDetails: {
             amzRequestId,
@@ -132,7 +133,7 @@ describe('external/s3', () => {
         () => s3.getContentFor(exampleBlob),
         {
           name: 'Error',
-          message: 'The upstream S3 server had an internal problem.',
+          message: `The upstream S3 server had an internal problem performing 'getObject'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
           problemCode: 500.5,
           problemDetails: {
             amzRequestId,
@@ -145,6 +146,11 @@ describe('external/s3', () => {
   });
 
   describe('uploadFromBlob()', () => {
+    it('should return undefined for zero-length blob', async () => {
+      // expect
+      should(await s3.uploadFromBlob({ id: 1, sha: 'a-blob-sha', content: '' })).be.undefined();
+    });
+
     it('should return details for upstream permission error', async () => {
       // given
       s3mock.get(/.*/).reply(403, amzPermissionError); // get for bucket location is (always?) ignored
@@ -175,7 +181,7 @@ describe('external/s3', () => {
         () => s3.uploadFromBlob(exampleBlob),
         {
           name: 'Error',
-          message: 'The upstream S3 server had an internal problem.',
+          message: `The upstream S3 server had an internal problem performing 'putObject'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
           problemCode: 500.5,
           problemDetails: {
             amzRequestId,

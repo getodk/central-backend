@@ -34,7 +34,7 @@ const testEntities = (test) => testService(async (service, container) => {
 
   const promises = [];
 
-  ['one', 'two'].forEach(async instanceId => {
+  ['one', 'two'].forEach(instanceId => {
     promises.push(asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
       .send(testData.instances.simpleEntity[instanceId])
       .set('Content-Type', 'application/xml')

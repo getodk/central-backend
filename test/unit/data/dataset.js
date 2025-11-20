@@ -60,7 +60,7 @@ describe('parsing dataset from entity block', () => {
     it('should retrieve the name of a dataset defined in entity block', () => {
       const xml = `
       <?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms/entities">
         <h:head>
           <model entities:entities-version="2022.1.0">
             <instance>
@@ -84,7 +84,7 @@ describe('parsing dataset from entity block', () => {
     it('should retrieve the name of a dataset with namespace prefix on dataset attribute ', () => {
       const xml = `
       <?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms/entities">
         <h:head>
           <model entities:entities-version="2022.1.0">
             <instance>
@@ -108,7 +108,7 @@ describe('parsing dataset from entity block', () => {
     it('should find dataset name even if other fields are in meta block before entity block', () => {
       const xml = `
       <?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms/entities">
           <h:head>
               <h:title>Foo Registration 2</h:title>
               <model entities:entities-version="2022.1.0">
@@ -136,7 +136,7 @@ describe('parsing dataset from entity block', () => {
     it('should return rejected promise if dataset name is missing', () => {
       const xml = `
       <?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms/entities">
         <h:head>
           <model entities:entities-version="2022.1.0">
             <instance>
@@ -163,7 +163,7 @@ describe('parsing dataset from entity block', () => {
     it('should return rejected promise if dataset name is invalid', () => {
       const xml = `
       <?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms/entities">
         <h:head>
           <model entities:entities-version="2022.1.0">
             <instance>
@@ -190,7 +190,7 @@ describe('parsing dataset from entity block', () => {
     it('should return rejected promise for <entities:entity> if dataset name is missing', () => {
       const xml = `
       <?xml version="1.0"?>
-      <h:html xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns:entities="http://www.opendatakit.org/xforms/entities">
         <h:head>
           <model entities:entities-version="2022.1.0">
             <instance>
@@ -262,7 +262,7 @@ describe('parsing dataset from entity block', () => {
 
   it('should always parse entity field as type structure', async () => {
     const form = (entityBlock) => `<?xml version="1.0"?>
-      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
         <h:head>
           <model entities:entities-version="2023.1.0">
             <instance>
@@ -328,7 +328,7 @@ describe('parsing dataset from entity block', () => {
 
   it('should always parse entity field as type structure even in group or repeat', async () => {
     const form = `<?xml version="1.0"?>
-      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+      <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
         <h:head>
           <model entities:entities-version="2025.1.0">
             <instance>
@@ -514,15 +514,7 @@ describe('property name validation', () => {
 });
 
 describe('entities from repeats', () => {
-  describe('parsing multiple entities/datasetes from a form def', () => {
-    it('should retrieve the names of a dataset in a repeat group', async () => {
-      const ds = await getDatasets(testData.forms.repeatEntityTrees).then(o => o.get());
-      should.not.exist(ds.warnings);
-      ds.datasets.should.eql([
-        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' }
-      ]);
-    });
-
+  describe('parsing multiple entities/datasets from a form def', () => {
     it('should retrieve the names of datasets at root and in repeat group', async () => {
       const ds = await getDatasets(testData.forms.repeatEntityHousehold).then(o => o.get());
       should.not.exist(ds.warnings);
@@ -539,6 +531,26 @@ describe('entities from repeats', () => {
         { name: 'farmers', actions: [ 'create' ], path: '/farm/farmer/' },
         { name: 'farms', actions: [ 'create' ], path: '/farm/' }
       ]);
+    });
+
+    it('should retrieve the names of a dataset in a repeat group', async () => {
+      const ds = await getDatasets(testData.forms.repeatEntityTrees).then(o => o.get());
+      should.not.exist(ds.warnings);
+      // Includes dataset from jr:template block and regular block
+      ds.datasets.length.should.equal(2);
+      ds.datasets.should.eql([
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' },
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/' }
+      ]);
+
+      const ff = await getFormFields(testData.forms.repeatEntityTrees);
+      const res = matchFieldsWithDatasets(ds.datasets, ff);
+
+      // After matchFieldsWithDataset, duplicate dataset is removed
+      res.length.should.equal(1);
+      res[0].dataset.should.eql(
+        { name: 'trees', actions: [ 'create', 'update' ], path: '/tree/', isRepeat: true }
+      );
     });
   });
 
