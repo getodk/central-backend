@@ -2156,6 +2156,37 @@ describe('form schema', () => {
     </input>
   </h:body>
 </h:html>`)));
+
+    it('should set the version even when existing version has special characters - getodk/central#1470', () =>
+      setVersion(testData.forms.simple2.replace('2.1', '&lt;{}&gt;'), '9').then((result) => result.should.equal(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
+  <h:head>
+    <h:title>Simple 2</h:title>
+    <model>
+      <instance>
+        <data id="simple2" version="9">
+          <meta>
+            <instanceID/>
+          </meta>
+          <name/>
+          <age/>
+        </data>
+      </instance>
+
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+      <bind nodeset="/data/name" type="string"/>
+      <bind nodeset="/data/age" type="int"/>
+    </model>
+
+  </h:head>
+  <h:body>
+    <input ref="/data/name">
+      <label>What is your name?</label>
+    </input>
+    <input ref="/data/age">
+      <label>What is your age?</label>
+    </input>
+  </h:body>
+</h:html>`)));
   });
 
   describe('updateEntityForm', () => {
