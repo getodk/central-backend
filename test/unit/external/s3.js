@@ -41,7 +41,7 @@ describe('external/s3', () => {
       'Content-Type': 'application/xml',
       'X-Amz-Request-Id': amzRequestId,
     });
-  const exampleBlob = { id: 1, sha: 'a-blob-sha', content: '' };
+  const exampleBlob = { id: 1, sha: 'a-blob-sha', content: 'some-actual-content' };
 
   beforeEach(() => {
     if (!nock.isActive()) nock.activate();
@@ -156,6 +156,11 @@ describe('external/s3', () => {
   });
 
   describe('uploadFromBlob()', () => {
+    it('should return undefined for zero-length blob', async () => {
+      // expect
+      should(await s3.uploadFromBlob({ id: 1, sha: 'a-blob-sha', content: '' })).be.undefined();
+    });
+
     it('should return details for upstream permission error', async () => {
       // given
       s3mock.get(/.*/).reply(403, amzPermissionError); // get for bucket location is (always?) ignored
