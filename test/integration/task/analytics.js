@@ -80,11 +80,13 @@ describe('task: analytics', () => {
 
 
   it('should check xml content of what analytics reporter sent', testTask(async ({ Configs, analyticsReporter }) => {
+    // Organization is empty and wont show up in <config>. Also tested in unit/data/odk-reporter.js
     await Configs.set('analytics', { enabled: true, email: 'test@getodk.org' });
     await runAnalytics();
-    analyticsReporter.dataSent.startsWith('<?xml version="1.0"?>').should.be.true();
-    analyticsReporter.dataSent.includes('id="odk-analytics"').should.be.true();
-    analyticsReporter.dataSent.includes('<config><email>test@getodk.org</email></config>').should.be.true();
+    analyticsReporter.dataSent.should.startWith('<?xml version="1.0"?>');
+    analyticsReporter.dataSent.should.containEql('id="odk-analytics"');
+    analyticsReporter.dataSent.should.containEql('version="test-version"');
+    analyticsReporter.dataSent.should.containEql('<config><email>test@getodk.org</email></config>');
   }));
 });
 
