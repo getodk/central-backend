@@ -41,6 +41,16 @@ describe('odk reporter utility functions', () => {
     });
   });
 
+  it('should encode data to be safe for xml', () => {
+    const testData = {
+      email: `email@example.com`,
+      organization: `Hélène's ♫ Research & Development <RnD>`
+    };
+    const xml = buildSubmission(formId, formVersion, testData);
+    xml.includes('<email>email@example.com</email>').should.equal(true);
+    xml.includes('<organization>H&#xe9;l&#xe8;ne&apos;s &#x266b; Research &amp; Development &lt;RnD&gt;</organization>').should.equal(true);
+  });
+
   it('should build xml when config/contact is empty', () => {
     const simpleData = { num_admins: 1, config: {} };
     const xml = buildSubmission(formId, formVersion, simpleData);
