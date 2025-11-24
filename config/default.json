@@ -35,7 +35,7 @@
       "mailingListOptIn": {
         "url": "https://data.getodk.cloud/v1/key/Dd0XJq$!skdvUmMLUO1!srDmrxePJSIiGuj3ttbzlayelMxxXMQF3hmeJ24rcT8N/projects/8/forms/mailing_list_opt_in/submissions",
         "formId": "mailing_list_opt_in",
-        "version": "20251118131223"
+        "version": "v2025.4.0_1"
       },
       "s3blobStore": {}
     },
