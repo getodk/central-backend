@@ -834,7 +834,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .set('Content-Type', 'application/xml')
                 .expect(200)
                 .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
-                  .send(testData.forms.simple2.replace('id="simple2"', 'id="simple2" version="drafty2"').replace(/age/g, 'number'))
+                  .send(testData.forms.simple2.replace('id="simple2 version=2.1"', 'id="simple2" version="drafty2"').replace(/age/g, 'number'))
                   .set('Content-Type', 'application/xml')
                   .expect(200))
                 .then(() => Promise.all([
