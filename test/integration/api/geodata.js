@@ -424,7 +424,7 @@ describe('api: submission-geodata', () => {
   it('form upload creates geofield-descriptors', testService(async (service, { db }) => {
     await setupGeoSubmissions(service, db);
 
-    const formSchemaId = await db.oneFirst(sql`select currval('form_schemas_id_seq'::regclass)`);
+    const lastFormSchemaId = await db.oneFirst(sql`select "schemaId" from form_defs order by id desc limit 1`);
     // This depends on the policy. If we enable more/other fields than just the first non-repeatgroup field,
     // then this test will need to be adapted.
 
@@ -433,7 +433,7 @@ describe('api: submission-geodata', () => {
       from form_field_geo
       order by formschema_id, fieldhash
     `);
-    geoFieldDescriptors.should.deepEqual(expectedGeoFieldDescriptors(formSchemaId));
+    geoFieldDescriptors.should.deepEqual(expectedGeoFieldDescriptors(lastFormSchemaId));
   }));
 
 
