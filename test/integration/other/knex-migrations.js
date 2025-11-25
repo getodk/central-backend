@@ -94,7 +94,10 @@ describe('database migrations: removing default project', function() {
   }));
 });
 
-describe('database migrations: intermediate form schema', function() {
+// skipped: test setup relies on populateUsers(), which relies on application
+// code which has changed since the test was written.
+// REVIEW: this test will never work again, and should probably be deleted.
+describe.skip('database migrations: intermediate form schema', function() {
   this.timeout(20000);
 
   it('should test migration', testServiceFullTrx(async (service, container) => {
@@ -257,7 +260,10 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
       return actor.id;
     };
 
-    it('consumes a token', testContainerFullTrx(async (container) => {
+    // skipped: test setup relies on createToken(), which relies on application
+    // code which has changed since the test was written.
+    // REVIEW: this test will never work again, and should probably be deleted.
+    it.skip('consumes a token', testContainerFullTrx(async (container) => {
       const actorId = await createToken(container);
       const { one } = container;
       const count = () => one(sql`SELECT
