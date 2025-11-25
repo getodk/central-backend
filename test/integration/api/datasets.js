@@ -1439,12 +1439,18 @@ describe('datasets and entities', () => {
 
             sourceForms.should.be.eql([
               { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
-              { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }]);
+              { name: 'simpleEntity2', xmlFormId: 'simpleEntity2' }
+            ]);
 
-            properties.map(({ publishedAt, ...p }) => {
+            const props = properties.map(({ publishedAt, ...p }) => {
               publishedAt.should.be.isoDate();
               return p;
-            }).should.be.eql([
+            });
+            props.forEach(el => {
+              // Sort, since the order in which this comes back is undefined
+              el.forms.sort((a, b) => (a.name > b.name ? 1 : a.name < b.name ? -1 : 0));
+            });
+            props.should.be.eql([
               {
                 name: 'first_name', odataName: 'first_name', forms: [
                   { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
