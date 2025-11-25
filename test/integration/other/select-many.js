@@ -117,7 +117,7 @@ describe('select many value processing', () => {
       .set('Content-Type', 'application/xml')
       .expect(200);
 
-    // <q1>b</q1><g1><q2>x</q2>
+    // <q1>b</q1><g1><q2>x</q2></g1>
     await asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
       .send(testData.instances.selectMultiple.two.replace('m x', 'x')) // just send one value for each field
       .set('Content-Type', 'application/xml')
@@ -132,7 +132,7 @@ describe('select many value processing', () => {
     await asAlice.post('/v1/projects/1/forms/selectMultiple/draft/publish?version=2')
       .expect(200);
 
-    //<q1>a b</q1><g1><q2>x y z</q2>
+    //<q1>a b</q1><g1><q2>x y z</q2></g1>
     await asAlice.post('/v1/projects/1/forms/selectMultiple/submissions')
       .send(testData.instances.selectMultiple.one.replace('id="selectMultiple"', 'id="selectMultiple" version="2"'))
       .set('Content-Type', 'text/xml')
