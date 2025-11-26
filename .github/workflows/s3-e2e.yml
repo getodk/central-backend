@@ -23,26 +23,9 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-      minio:
-        # see: https://github.com/minio/minio/discussions/16099
-        image: minio/minio:edge-cicd
-        env:
-          MINIO_ROOT_USER: odk-central-dev
-          MINIO_ROOT_PASSWORD: topSecret123
-          # Enable encryption - this changes how s3 ETags work
-          # See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html
-          # See: https://github.com/minio/minio/discussions/19012
-          MINIO_KMS_AUTO_ENCRYPTION: on
-          MINIO_KMS_SECRET_KEY: odk-minio-test-key:QfdUCrn3UQ58W5pqCS5SX4SOlec9sT8yb4rZ4zK24w0=
-        ports:
-          - 9000:9000
-        options: >-
-          --health-cmd "curl -s http://localhost:9000/minio/health/live"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
     - uses: actions/checkout@v4
+    - run: make fake-s3-server-persistent
     - name: Set node version
       uses: actions/setup-node@v4
       with:
@@ -50,6 +33,7 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
+    - run: sudo apt-get install wait-for-it
     - name: E2E Test
       timeout-minutes: 10
       run: ./test/e2e/s3/run-tests.sh
