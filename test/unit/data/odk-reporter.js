@@ -28,7 +28,7 @@ describe('odk reporter utility functions', () => {
   });
 
   it('should convert null values to empty string', () => {
-    const xml = convertObjectToXml({ val:null });
+    const xml = convertObjectToXml({ val: null });
     xml.should.equal('<val></val>');
   });
 
