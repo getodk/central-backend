@@ -93,16 +93,26 @@ describe('s3 support', () => {
 
       // given
       await setup(1);
-      await assertNewStatuses({ pending: 13 });
+      await assertNewStatuses({ pending: 14 });
 
       // when
       await cli('upload-pending');
 
       // then
-      await assertNewStatuses({ uploaded: 13 });
+      await assertNewStatuses({ uploaded: 13, skipped: 1 });
       // and
-      await assertAllRedirect(actualAttachments);
-      await assertAllDownloadsMatchOriginal(actualAttachments);
+      for(const att of actualAttachments) {
+        log.debug('checking attachment:', att.name);
+        const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
+        if(att.name === 'zero.bin') {
+          res.status.should.eql(200);
+          res.headers.get('Content-Length').should.eql('0');
+        } else {
+          res.status.should.eql(307);
+          await assertDownloadMatchesOriginal(await fetch(res.location), att.name);
+        }
+        log.debug('  Looks OK.');
+      }
     });
 
     it('should continue to serve blobs while upload-pending is running', async function() {
@@ -376,27 +386,6 @@ describe('s3 support', () => {
       should.ok(!(res instanceof Redirect), `${att.name} is a redirect!`);
       should.equal(res.status, 200);
       log.debug('assertNoneRedirect()', '  Looks OK.');
-    }
-  }
-
-  async function assertAllRedirect(attachments) {
-    for(const att of attachments) {
-      log.debug('assertAllRedirect()', 'checking attachment:', att.name);
-      const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
-      should.ok(res instanceof Redirect, `${att.name} is not a redirect - returned HTTP status: ${res.status}`);
-      log.debug('assertAllRedirect()', '  Looks OK.');
-    }
-  }
-
-  async function assertAllDownloadsMatchOriginal(attachments) {
-    for(const att of attachments) {
-      const res = await api.apiRawHead(`projects/${projectId}/forms/${xmlFormId}/attachments/${att.name}`);
-      if(!(res instanceof Redirect) || res.status !== 307) {
-        throw new Error(`Unexpected response for attachment ${JSON.stringify(att)}: ${res}`);
-      }
-
-      const res2 = await fetch(res.location);
-      await assertDownloadMatchesOriginal(res2, att.name);
     }
   }
 
