@@ -27,6 +27,11 @@ describe('odk reporter utility functions', () => {
     xml.should.equal(expected);
   });
 
+  it('should convert null values to empty string', () => {
+    const xml = convertObjectToXml({ val: null });
+    xml.should.equal('<val></val>');
+  });
+
   it('should make a meta/uuid segment of xml', () => {
     const xml = metaWithUuidXml();
     xml.should.match(/<meta><instanceID>uuid:.*<\/instanceID><\/meta>/);
