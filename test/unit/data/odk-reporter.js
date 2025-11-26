@@ -1,7 +1,9 @@
 const appRoot = require('app-root-path');
-const { buildSubmission, convertObjectToXml, metaWithUuidXml } = require(appRoot + '/lib/data/analytics');
+const { buildSubmission, convertObjectToXml, metaWithUuidXml } = require(appRoot + '/lib/data/odk-reporter');
 const { Submission } = require(appRoot + '/lib/model/frames');
 
+const formId = 'the-form-id';
+const formVersion = '123';
 const data = {
   system: {
     num_admins: { recent: 11, total: 22 }
@@ -18,7 +20,7 @@ const data = {
   ]
 };
 
-describe('analytics data', () => {
+describe('odk reporter utility functions', () => {
   it('should convert metrics report object to submission xml', () => {
     const expected = '<system><num_admins><recent>11</recent><total>22</total></num_admins></system><projects><id>123</id><users><num_managers><recent>2</recent><total>2</total></num_managers></users></projects><projects><id>456</id><users><num_managers><recent>3</recent><total>3</total></num_managers></users></projects>';
     const xml = convertObjectToXml(data);
@@ -31,10 +33,7 @@ describe('analytics data', () => {
   });
 
   it('should build a valid xml submission that central can parse', () => {
-    const formId = 'the-form-id';
-    const formVersion = '123';
-    const config = { email: 'test@getodk.org', organization: 'ODK' };
-    const xml = buildSubmission(formId, formVersion, data, config);
+    const xml = buildSubmission(formId, formVersion, data);
 
     return Submission.fromXml(xml).then((partial) => {
       partial.xmlFormId.should.equal('the-form-id');
@@ -43,40 +42,23 @@ describe('analytics data', () => {
   });
 
   it('should build xml when config/contact is empty', () => {
-    const formId = 'the-form-id';
-    const formVersion = '123';
-    const config = {};
-    const simpleData = { num_admins: 1 };
-    const xml = buildSubmission(formId, formVersion, simpleData, config);
+    const simpleData = { num_admins: 1, config: {} };
+    const xml = buildSubmission(formId, formVersion, simpleData);
     xml.includes('<config></config>').should.equal(true);
   });
 
   it('should build xml when config is email only, no organization', () => {
-    const formId = 'the-form-id';
-    const formVersion = '123';
     const config = { email: 'test@getodk.org' };
-    const simpleData = { num_admins: 1 };
+    const simpleData = { num_admins: 1, config };
     const xml = buildSubmission(formId, formVersion, simpleData, config);
     xml.includes('<config><email>test@getodk.org</email></config>').should.equal(true);
   });
 
   it('should build xml with full config info', () => {
-    const formId = 'the-form-id';
-    const formVersion = '123';
     const config = { email: 'test@getodk.org', organization: 'ODK' };
-    const simpleData = { num_admins: 1 };
-    const xml = buildSubmission(formId, formVersion, simpleData, config);
+    const simpleData = { num_admins: 1, config };
+    const xml = buildSubmission(formId, formVersion, simpleData);
     xml.includes('<config><email>test@getodk.org</email><organization>ODK</organization></config>').should.equal(true);
-  });
-
-
-  it('should build xml without email and org if they are undefined', () => {
-    const formId = 'the-form-id';
-    const formVersion = '123';
-    const config = { email: undefined, organization: undefined };
-    const simpleData = { num_admins: 1 };
-    const xml = buildSubmission(formId, formVersion, simpleData, config);
-    xml.includes('<config></config>').should.equal(true);
   });
 });
 

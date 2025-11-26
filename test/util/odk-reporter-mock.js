@@ -9,16 +9,29 @@
 //
 // Mocks the odk analytics client to pretend successful and failed requests.
 
-class ODKAnalytics {
+const appRoot = require('app-root-path');
+const { buildSubmission } = require(appRoot + '/lib/data/odk-reporter');
 
-  constructor() {
+
+class ODKReporterMock {
+
+  resetMock() {
+    this.dataSent = null;
     this.mockError = null;
   }
 
-  submit() {
+  constructor(formId, version) {
+    this.formId = formId;
+    this.version = version;
+    this.resetMock();
+  }
+
+  submit(data) {
+    const formXml = buildSubmission(this.formId, this.version, data);
     if (this.mockError !== null) {
       return Promise.reject(this.mockError);
     }
+    this.dataSent = formXml;
     return Promise.resolve();
   }
 
@@ -28,5 +41,5 @@ class ODKAnalytics {
   }
 }
 
-module.exports = { ODKAnalytics };
+module.exports = { ODKReporterMock };
 
