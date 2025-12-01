@@ -88,5 +88,14 @@ describe('task: analytics', () => {
     analyticsReporter.dataSent.should.containEql('version="test-version"');
     analyticsReporter.dataSent.should.containEql('<config><email>test@getodk.org</email></config>');
   }));
+
+  it('should encode XML entities in user-controlled fields in analytics XML', testTask(async ({ Configs, analyticsReporter }) => {
+    await Configs.set('analytics', { enabled: true, email: 'test@getodk.org&</bad>' });
+    await runAnalytics();
+    analyticsReporter.dataSent.should.startWith('<?xml version="1.0"?>');
+    analyticsReporter.dataSent.should.containEql('id="odk-analytics"');
+    analyticsReporter.dataSent.should.containEql('version="test-version"');
+    analyticsReporter.dataSent.should.containEql('<config><email>test@getodk.org&amp;&lt;/bad&gt;</email></config>');
+  }));
 });
 
