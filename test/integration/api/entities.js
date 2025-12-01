@@ -2168,15 +2168,26 @@ describe('Entities API', () => {
     it('should reject if the entity has not been deleted', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+      await asAlice.post('/v1/projects/1/datasets/people/entities/uuid:12345678-1234-4123-8234-123456789abc/restore')
         .expect(404);
     }));
 
     it('should reject if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/datasets/people/entities/00000000-0000-0000-0000-000000000000/restore')
+      await asAlice.post('/v1/projects/1/datasets/people/entities/uuid:00000000-0000-4000-8000-000000000000/restore')
         .expect(404);
+    }));
+
+    it('should reject if the entity uuid is not valid', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/uuid:not-a-uuid/restore')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.11);
+          body.message.should.equal('Invalid input data type: expected (uuid) to be (valid version 4 UUID)');
+        });
     }));
 
     it('should reject if the user cannot restore', testEntities(async (service) => {
