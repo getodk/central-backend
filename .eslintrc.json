@@ -44,6 +44,7 @@
     "object-property-newline": "off",
     "operator-linebreak": "off",
     "padded-blocks": "off",
+    "prefer-object-has-own": "error",
     "prefer-object-spread": "off",
     "prefer-template": "off",
     "quotes": [ "error", "single", { "allowTemplateLiterals": true, "avoidEscape": true } ],
