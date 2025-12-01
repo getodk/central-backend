@@ -27,6 +27,11 @@ describe('odk reporter utility functions', () => {
     xml.should.equal(expected);
   });
 
+  it('should convert null values to empty string', () => {
+    const xml = convertObjectToXml({ val: null });
+    xml.should.equal('<val></val>');
+  });
+
   it('should make a meta/uuid segment of xml', () => {
     const xml = metaWithUuidXml();
     xml.should.match(/<meta><instanceID>uuid:.*<\/instanceID><\/meta>/);
@@ -39,6 +44,16 @@ describe('odk reporter utility functions', () => {
       partial.xmlFormId.should.equal('the-form-id');
       partial.instanceId.length.should.equal(41);
     });
+  });
+
+  it('should encode data to be safe for xml', () => {
+    const testData = {
+      email: `email@example.com`,
+      organization: `Hélène's ♫ Research & Development <RnD>`
+    };
+    const xml = buildSubmission(formId, formVersion, testData);
+    xml.includes('<email>email@example.com</email>').should.equal(true);
+    xml.includes('<organization>H&#xe9;l&#xe8;ne&apos;s &#x266b; Research &amp; Development &lt;RnD&gt;</organization>').should.equal(true);
   });
 
   it('should build xml when config/contact is empty', () => {
