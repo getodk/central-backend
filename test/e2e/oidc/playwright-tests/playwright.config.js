@@ -22,7 +22,7 @@ const requestedBrowsers = process.env.ODK_PLAYWRIGHT_BROWSERS || 'firefox';
 const projects = requestedBrowsers
   .split(',')
   .map(name => {
-    if (!Object.prototype.hasOwnProperty.call(availableProjects, name)) {
+    if (!Object.hasOwn(availableProjects, name)) {
       throw new Error(`No project config available with name '${name}'!`);
     }
     const use = availableProjects[name];
