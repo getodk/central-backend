@@ -568,7 +568,7 @@ describe('Entities from Repeats', () => {
 
       // First entity in this submission is an update with no prior version so
       // it will be put in the backlog
-      const uuid = require('uuid').v4;
+      const { v4: uuid } = require('uuid');
       const branchId = uuid();
       await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
         .send(testData.instances.repeatEntityTrees.two
