@@ -49,8 +49,8 @@ describe('database indexes', () => {
 
         fkIndexes.push({
           'FK table': fk.local_tbl_name,
-          'database index': foundIdx.idx_name,
           'foreign key': fk.fk_name,
+          'database index': foundIdx.idx_name,
         });
         return false;
       });
