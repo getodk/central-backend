@@ -12,7 +12,6 @@
     "@sentry/node": "^9.27.0",
     "archiver": "^7.0.1",
     "bcrypt": "^6.0.0",
-    "body-parser": "~1.20",
     "cloneable-readable": "^3.0.0",
     "commander": "^14.0.2",
     "config": "^4.1.1",
