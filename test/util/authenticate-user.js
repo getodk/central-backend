@@ -1,7 +1,8 @@
 // Allow main functionality to stay at top of file:
 /* eslint-disable no-use-before-define */
 
-const makeFetchCookie = require('fetch-cookie');
+// fetch-cookie v3+ is an ES module, so we need to destructure the default export when using require()
+const { default: fetchCookie } = require('fetch-cookie');
 
 module.exports = async (service, user, includeCsrf) => {
   if (!user) throw new Error('Did you forget the **service** arg?');
@@ -31,14 +32,14 @@ async function oidcAuthFor(service, user) {
 
   // custom cookie jar probably not important, but we will need these cookies
   // for the final redirect
-  const cookieJar = new makeFetchCookie.toughCookie.CookieJar();
+  const cookieJar = new fetchCookie.toughCookie.CookieJar();
   res1.headers['set-cookie'].forEach(cookieString => {
     cookieJar.setCookie(cookieString, 'http://localhost:8383/v1/oidc/login');
   });
 
   const location1 = res1.headers.location;
 
-  const fetchC = makeFetchCookie(fetch, cookieJar);
+  const fetchC = fetchCookie(fetch, cookieJar);
   const res2 = await fetchC(location1);
   if (res2.status !== 200) throw new Error('Non-200 response');
 
