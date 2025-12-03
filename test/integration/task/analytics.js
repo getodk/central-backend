@@ -63,10 +63,10 @@ describe('task: analytics', () => {
           should.exist(report.projects[0].submissions);
         }))));
 
-  it('should log request errors', testTask(({ Configs, Audits, odkAnalytics }) =>
+  it('should log request errors', testTask(({ Configs, Audits, analyticsReporter }) =>
     Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
       // eslint-disable-next-line space-in-parens, object-curly-spacing
-      .then(odkAnalytics.setError({ testError: 'foo'} ))
+      .then(analyticsReporter.setError({ testError: 'foo'} ))
       .then(() => runAnalytics()
         .then((res) => {
           res.sent.should.equal(false);
@@ -77,5 +77,25 @@ describe('task: analytics', () => {
           // eslint-disable-next-line object-curly-spacing
           au.details.error.should.eql({ testError: 'foo'});
         }))));
+
+
+  it('should check xml content of what analytics reporter sent', testTask(async ({ Configs, analyticsReporter }) => {
+    // Organization is empty and wont show up in <config>. Also tested in unit/data/odk-reporter.js
+    await Configs.set('analytics', { enabled: true, email: 'test@getodk.org' });
+    await runAnalytics();
+    analyticsReporter.dataSent.should.startWith('<?xml version="1.0"?>');
+    analyticsReporter.dataSent.should.containEql('id="odk-analytics"');
+    analyticsReporter.dataSent.should.containEql('version="test-version"');
+    analyticsReporter.dataSent.should.containEql('<config><email>test@getodk.org</email></config>');
+  }));
+
+  it('should encode XML entities in user-controlled fields in analytics XML', testTask(async ({ Configs, analyticsReporter }) => {
+    await Configs.set('analytics', { enabled: true, email: 'test@getodk.org&</bad>' });
+    await runAnalytics();
+    analyticsReporter.dataSent.should.startWith('<?xml version="1.0"?>');
+    analyticsReporter.dataSent.should.containEql('id="odk-analytics"');
+    analyticsReporter.dataSent.should.containEql('version="test-version"');
+    analyticsReporter.dataSent.should.containEql('<config><email>test@getodk.org&amp;&lt;/bad&gt;</email></config>');
+  }));
 });
 
