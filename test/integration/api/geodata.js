@@ -803,6 +803,18 @@ describe('api: entities-geodata', () => {
   }));
 
 
+  it('Attribute label filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$search=a`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(1);
+      });
+
+  }));
+
+
   it('conflict status filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
