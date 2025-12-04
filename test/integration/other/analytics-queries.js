@@ -2983,5 +2983,66 @@ describe('analytics task queries', function () {
       res.isEmpty().should.equal(true);
     }));
   });
+
+  describe('parsing official analytics form', () => {
+    it('should validate form fields match metrics template', testService(async (service) => {
+      const config = require('config');
+
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(readFileSync(appRoot + '/test/data/odk-analytics.xml'))
+        .expect(200);
+
+      const { body: form } = await asAlice.get('/v1/projects/1/forms/odk-analytics');
+      form.version.should.equal(config.get('default.external.analytics.version'));
+
+      const { body: fields } = await asAlice.get('/v1/projects/1/forms/odk-analytics/fields');
+
+      // Extract all data paths from fields (excluding structure types and meta fields)
+      const fieldPaths = new Set();
+      fields.forEach(field => {
+        if (field.type !== 'structure' && !field.path.startsWith('/meta')) {
+          fieldPaths.add(field.path);
+        }
+      });
+
+      // Extract all paths from metricsTemplate recursively
+      const extractPathsFromTemplate = (obj, prefix = '') => {
+        const paths = [];
+        for (const [key, value] of Object.entries(obj)) {
+          const currentPath = `${prefix}/${key}`;
+          if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
+            paths.push(currentPath);
+            // Handle array templates (like projects/datasets)
+            paths.push(...extractPathsFromTemplate(value[0], currentPath));
+          } else if (typeof value === 'object' && value !== null) {
+            // Handle nested objects like recent/total
+            paths.push(...extractPathsFromTemplate(value, currentPath));
+          } else {
+            // Leaf value
+            paths.push(currentPath);
+          }
+        }
+        return paths;
+      };
+
+      const { metricsTemplate } = require(appRoot + '/lib/data/analytics');
+      const templatePaths = new Set(extractPathsFromTemplate(metricsTemplate));
+
+      // Find missing fields (skip config fields we don't care about)
+      const missingInForm = [...templatePaths].filter(path => !fieldPaths.has(path));
+      const missingInTemplate = [...fieldPaths].filter(path =>
+        !templatePaths.has(path) &&
+        !path.startsWith('/config/email') &&
+        !path.startsWith('/config/organization')
+      );
+
+      // Assert no missing fields (will show the missing paths in failure message)
+      missingInForm.should.have.length(0);
+      missingInTemplate.should.have.length(0);
+    }));
+  });
 });
 
