@@ -26,7 +26,7 @@
     "fast-myers-diff": "~3",
     "htmlparser2": "~3.9",
     "knex": "~0.21",
-    "luxon": "~0.3",
+    "luxon": "^3.7.2",
     "minio": "8.0.4",
     "morgan": "^1.10.0",
     "multer": "^2.0.0",
