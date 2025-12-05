@@ -11,6 +11,8 @@ const { Entity } = require('../../../lib/model/frames');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
+const NONEXISTENT_ENTITY = '00000000-0000-4000-8000-000000000000';
+
 const testDataset = (test) => testService(async (service, container) => {
   const asAlice = await service.login('alice');
 
@@ -244,14 +246,14 @@ describe('Entities API', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/00000000-0000-4000-8000-000000000000')
+      await asAlice.get(`/v1/projects/1/datasets/nonexistent/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/00000000-0000-4000-8000-000000000000')
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
@@ -496,7 +498,7 @@ describe('Entities API', () => {
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/00000000-0000-4000-8000-000000000000/versions')
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}/versions`)
         .expect(404);
     }));
 
@@ -815,7 +817,7 @@ describe('Entities API', () => {
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/00000000-0000-4000-8000-000000000000/diffs')
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}/diffs`)
         .expect(404);
     }));
 
@@ -872,7 +874,7 @@ describe('Entities API', () => {
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/00000000-0000-4000-8000-000000000000/audits')
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}/audits`)
         .expect(404);
     }));
 
@@ -1539,19 +1541,19 @@ describe('Entities API', () => {
   describe('PATCH /datasets/:name/entities/:uuid', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
-      await asAlice.patch('/v1/projects/1/datasets/nonexistent/entities/00000000-0000-4000-8000-000000000000')
+      await asAlice.patch(`/v1/projects/1/datasets/nonexistent/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/00000000-0000-4000-8000-000000000000')
+      await asAlice.patch(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
     it('should reject if the user cannot update', testEntities(async (service) => {
       const asChelsea = await service.login('chelsea');
-      await asChelsea.patch('/v1/projects/1/datasets/people/entities/00000000-0000-4000-8000-000000000000')
+      await asChelsea.patch(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}`)
         .expect(403);
     }));
 
@@ -2111,14 +2113,14 @@ describe('Entities API', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/datasets/nonexistent/entities/00000000-0000-4000-8000-000000000000')
+      await asAlice.delete(`/v1/projects/1/datasets/nonexistent/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/datasets/people/entities/00000000-0000-4000-8000-000000000000')
+      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
@@ -2175,7 +2177,7 @@ describe('Entities API', () => {
     it('should reject if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/datasets/people/entities/uuid:00000000-0000-4000-8000-000000000000/restore')
+      await asAlice.post(`/v1/projects/1/datasets/people/entities/uuid:${NONEXISTENT_ENTITY}/restore`)
         .expect(404);
     }));
 
@@ -2987,7 +2989,7 @@ describe('Entities API', () => {
 
       await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
         .send({
-          ids: ['12345678-1234-4123-8234-0123456789ab']
+          ids: [NONEXISTENT_ENTITY]
         })
         .expect(200)
         .then(({ body }) => {
@@ -3098,7 +3100,7 @@ describe('Entities API', () => {
 
       await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
         .send({
-          ids: ['12345678-1234-4123-8234-0123456789ab']
+          ids: [NONEXISTENT_ENTITY]
         })
         .expect(200)
         .then(({ body }) => {
@@ -3179,7 +3181,7 @@ describe('Entities API', () => {
       // Try to restore both a valid deleted entity and a nonexistent one
       await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
         .send({
-          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-0123456789ab']
+          ids: ['12345678-1234-4123-8234-123456789abc', NONEXISTENT_ENTITY]
         })
         .expect(200)
         .then(({ body }) => {
