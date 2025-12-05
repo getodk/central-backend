@@ -29,7 +29,7 @@ async function startFakeFrontend() {
   console.log('Starting fake frontend proxy...'); // eslint-disable-line no-console
   const fakeFrontend = express();
   fakeFrontend.use(cookieParser());
-  fakeFrontend.use(createProxyMiddleware('/v1', { target: backendUrl }));
+  fakeFrontend.use('/v1', createProxyMiddleware({ target: backendUrl }));
   fakeFrontend.get('*',    successHandler); // eslint-disable-line no-use-before-define
 
   if (frontendUrl.startsWith('http://')) {
