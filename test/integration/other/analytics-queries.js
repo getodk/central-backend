@@ -3000,10 +3000,13 @@ describe('analytics task queries', function () {
 
       const { body: fields } = await asAlice.get('/v1/projects/1/forms/odk-analytics/fields');
 
-      // Extract all data paths from fields (excluding structure types and meta fields)
+      // Extract all leaf data paths from fields
+      // exclude structure and repeat fields
+      // exclude meta block and config block
       const fieldPaths = new Set();
       fields.forEach(field => {
-        if (field.type !== 'structure' && !field.path.startsWith('/meta')) {
+        if (field.type !== 'structure' && field.type !== 'repeat' &&
+          !field.path.startsWith('/meta') && !field.path.startsWith('/config')) {
           fieldPaths.add(field.path);
         }
       });
@@ -3013,11 +3016,10 @@ describe('analytics task queries', function () {
         const paths = [];
         for (const [key, value] of Object.entries(obj)) {
           const currentPath = `${prefix}/${key}`;
-          if (Array.isArray(value) && value.length > 0 && typeof value[0] === 'object') {
-            paths.push(currentPath);
+          if (Array.isArray(value)) {
             // Handle array templates (like projects/datasets)
             paths.push(...extractPathsFromTemplate(value[0], currentPath));
-          } else if (typeof value === 'object' && value !== null) {
+          } else if (typeof value === 'object') {
             // Handle nested objects like recent/total
             paths.push(...extractPathsFromTemplate(value, currentPath));
           } else {
@@ -3033,11 +3035,7 @@ describe('analytics task queries', function () {
 
       // Find missing fields (skip config fields we don't care about)
       const missingInForm = [...templatePaths].filter(path => !fieldPaths.has(path));
-      const missingInTemplate = [...fieldPaths].filter(path =>
-        !templatePaths.has(path) &&
-        !path.startsWith('/config/email') &&
-        !path.startsWith('/config/organization')
-      );
+      const missingInTemplate = [...fieldPaths].filter(path => !templatePaths.has(path));
 
       // Assert no missing fields (will show the missing paths in failure message)
       missingInForm.should.have.length(0);
