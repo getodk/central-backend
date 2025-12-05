@@ -547,10 +547,8 @@ describe('Entities from Repeats', () => {
           problemDetails.should.containEql({ count: 2, total: 3 });
           const detailErrors = problemDetails.errors;
           detailErrors.length.should.equal(2);
-          detailErrors[0].should.be.a.Problem();
-          detailErrors[0].problemCode.should.equal(400.2);
-          detailErrors[1].should.be.a.Problem();
-          detailErrors[1].problemCode.should.equal(400.11);
+          detailErrors[0].problem.problemCode.should.equal(400.2);
+          detailErrors[1].problem.problemCode.should.equal(400.11);
         });
     }));
 
