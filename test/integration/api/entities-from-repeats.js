@@ -538,9 +538,19 @@ describe('Entities from Repeats', () => {
         .then(({ body }) => {
           body[0].action.should.equal('entity.error');
           body[0].details.problem.problemCode.should.equal(400.43);
-          body[0].details.errorMessage.includes('Failed to process 2 of 3 Entities in submission').should.be.true();
-          body[0].details.errorMessage.includes('Required parameter label missing').should.be.true();
-          body[0].details.errorMessage.includes('Invalid input data type: expected (uuid)').should.be.true();
+
+          body[0].details.errorMessage.includes('Failed to process 2 of 3 entities in submission').should.be.true();
+          body[0].details.errorMessage.includes('(Entity 2) Required parameter label missing').should.be.true();
+          body[0].details.errorMessage.includes('(Entity 3) Invalid input data type: expected (uuid)').should.be.true();
+
+          const { problemDetails } = body[0].details.problem;
+          problemDetails.should.containEql({ count: 2, total: 3 });
+          const detailErrors = problemDetails.errors;
+          detailErrors.length.should.equal(2);
+          detailErrors[0].should.be.a.Problem();
+          detailErrors[0].problemCode.should.equal(400.2);
+          detailErrors[1].should.be.a.Problem();
+          detailErrors[1].problemCode.should.equal(400.11);
         });
     }));
 
