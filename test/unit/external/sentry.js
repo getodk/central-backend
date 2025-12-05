@@ -6,13 +6,23 @@ describe('sentry', () => {
 
     // Note, this test may break for the following reasons:
     //
-    // * Sentry does not have a documented way to check the enabled integrations,
-    //   so this test may break due to changing internals of the @sentry/node
-    //   module.
-    // * Sentry may change the default integrations.  In the case of new default
-    //   integrations, consider if they should be added to the expected list
-    //   below.  In the case of default integrations being removed, consider if
-    //   they should be re-enabled manually.
+    // 1. Sentry does not have a documented way to check the enabled integrations,
+    //    so this test may break due to changing internals of the @sentry/node
+    //    module.  In this case, you will need to find a new way to check Sentry's
+    //    enabled integrations, and update this test to use the new approach.
+    //
+    // 2. Sentry may change the default integrations.
+    //
+    //    In the case of new default integrations, consider if they are relevant.
+    //
+    //    * if yes: add them to the list of expected integrations below
+    //    * if no:  disable them in lib/external/sentry.js
+    //
+    //    In the case of default integrations being removed, consider if they should
+    //    be re-enabled manually.
+    //
+    //    * if yes: re-enable them in lib/external/sentry.js
+    //    * if no:  remove them from the list below
 
     const config = {
       project: 1,
