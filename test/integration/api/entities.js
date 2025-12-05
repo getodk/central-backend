@@ -243,6 +243,14 @@ describe('Entities API', () => {
 
   describe('GET /datasets/:name/entities/:uuid', () => {
 
+    it('should strip uuid: prefix from query param in entity requests', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/uuid:12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => body.uuid.should.equal('12345678-1234-4123-8234-123456789abc'));
+    }));
+
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -2170,14 +2178,14 @@ describe('Entities API', () => {
     it('should reject if the entity has not been deleted', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/datasets/people/entities/uuid:12345678-1234-4123-8234-123456789abc/restore')
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
         .expect(404);
     }));
 
     it('should reject if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.post(`/v1/projects/1/datasets/people/entities/uuid:${NONEXISTENT_ENTITY}/restore`)
+      await asAlice.post(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}/restore`)
         .expect(404);
     }));
 
