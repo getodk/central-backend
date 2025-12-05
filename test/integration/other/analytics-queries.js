@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
 const { createReadStream, readFileSync } = require('fs');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
