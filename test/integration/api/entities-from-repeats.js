@@ -539,7 +539,7 @@ describe('Entities from Repeats', () => {
           body[0].action.should.equal('entity.error');
           body[0].details.problem.problemCode.should.equal(400.43);
 
-          body[0].details.errorMessage.includes('Failed to process 2 of 3 entities in submission').should.be.true();
+          body[0].details.errorMessage.includes('Failed to process 3 entities in submission due to 2 errors').should.be.true();
           body[0].details.errorMessage.includes('(Entity 2) Required parameter label missing').should.be.true();
           body[0].details.errorMessage.includes('(Entity 3) Invalid input data type: expected (uuid)').should.be.true();
 
