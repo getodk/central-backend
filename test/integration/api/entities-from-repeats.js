@@ -431,7 +431,7 @@ describe('Entities from Repeats', () => {
     }));
   });
 
-  describe('entity sources and backlog', () => {
+  describe('errors, entity sources and backlog', () => {
     it('should assign the same entity source to multiple entities created by the same submission', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -484,6 +484,72 @@ describe('Entities from Repeats', () => {
 
       await asAlice.get('/v1/projects/1/datasets/trees/entities')
         .then(({ body }) => { body.length.should.equal(0); });
+    }));
+
+    it('should log an error when one of multiple entities fails', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const subXml = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="repeatEntityTrees" version="1">
+      <plot_id>1</plot_id>
+      <tree>
+        <species>pine</species>
+        <circumference>12</circumference>
+        <meta>
+          <entity dataset="trees" create="1" id="f73ea0a0-f51f-4d13-a7cb-c2123ba06f34">
+            <label>Pine</label>
+          </entity>
+        </meta>
+      </tree>
+      <tree>
+        <species>oak</species>
+        <circumference>13</circumference>
+        <meta>
+          <entity dataset="trees" create="1" id="090c56ff-25f4-4503-b760-f6bef8528152">
+          </entity>
+        </meta>
+      </tree>
+      <tree>
+        <species>maple</species>
+        <circumference>14</circumference>
+        <meta>
+          <entity dataset="trees" create="1" id="invalid-uuid">
+            <label>Maple</label>
+          </entity>
+        </meta>
+      </tree>
+      <meta>
+        <instanceID>one</instanceID>
+      </meta>
+    </data>`;
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(subXml)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/repeatEntityTrees/submissions/one/audits')
+        .then(({ body }) => {
+          body[0].action.should.equal('entity.error');
+          body[0].details.problem.problemCode.should.equal(400.43);
+
+          body[0].details.errorMessage.includes('Failed to process 3 entities in submission due to 2 errors').should.be.true();
+          body[0].details.errorMessage.includes('(Entity 2) Required parameter label missing').should.be.true();
+          body[0].details.errorMessage.includes('(Entity 3) Invalid input data type: expected (uuid)').should.be.true();
+
+          const { problemDetails } = body[0].details.problem;
+          problemDetails.should.containEql({ count: 2, total: 3 });
+          const detailErrors = problemDetails.errors;
+          detailErrors.length.should.equal(2);
+          detailErrors[0].problem.problemCode.should.equal(400.2);
+          detailErrors[1].problem.problemCode.should.equal(400.11);
+        });
     }));
 
     it('should note what happens when two entities hold submission into backlog', testService(async (service, container) => {
