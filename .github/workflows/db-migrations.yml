@@ -44,7 +44,7 @@ jobs:
     - name: Set node version
       uses: actions/setup-node@v4
       with:
-        node-version: 22.21.0
+        node-version: 22.21.1
         cache: 'npm'
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
