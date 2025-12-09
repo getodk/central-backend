@@ -4,7 +4,7 @@
     <h:title>ODK Analytics</h:title>
     <model odk:xforms-version="1.0.0">
       <instance>
-        <data id="odk-analytics" version="v2025.3.0_1">
+        <data id="odk-analytics" version="v2025.4.0_1">
           <config>
             <email/>
             <organization/>
@@ -55,6 +55,7 @@
               <total/>
             </num_entity_bulk_deletes>
             <num_datasets_with_geometry/>
+            <num_multi_entity_errors/>
           </system>
           <projects jr:template="">
             <id/>
@@ -436,6 +437,7 @@
       <bind nodeset="/data/system/num_entity_bulk_deletes/recent" type="int"/>
       <bind nodeset="/data/system/num_entity_bulk_deletes/total" type="int"/>
       <bind nodeset="/data/system/num_datasets_with_geometry" type="int"/>
+      <bind nodeset="/data/system/num_multi_entity_errors" type="int"/>
       <bind nodeset="/data/projects/id" type="string"/>
       <bind nodeset="/data/projects/users/num_managers/recent" type="int"/>
       <bind nodeset="/data/projects/users/num_managers/total" type="int"/>
@@ -659,6 +661,9 @@
       </group>
       <input ref="/data/system/num_datasets_with_geometry">
         <label>Number of Entity Lists with geometry property</label>
+      </input>
+      <input ref="/data/system/num_multi_entity_errors">
+        <label>Number of errors from repeat Entities</label>
       </input>
     </group>
     <group ref="/data/projects">
