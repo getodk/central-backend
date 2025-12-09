@@ -55,6 +55,7 @@ describe('sentry', () => {
       'LruMemoizer',
       'Modules',
       'NodeFetch',
+      'NodeSystemError',
       'OnUncaughtException',
       'OnUnhandledRejection',
       'Postgres',
