@@ -1,1057 +1,1050 @@
 <?xml version="1.0"?>
-<h:html
-	xmlns="http://www.w3.org/2002/xforms"
-	xmlns:h="http://www.w3.org/1999/xhtml"
-	xmlns:ev="http://www.w3.org/2001/xml-events"
-	xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-	xmlns:jr="http://openrosa.org/javarosa"
-	xmlns:orx="http://openrosa.org/xforms"
-	xmlns:odk="http://www.opendatakit.org/xforms">
-	<h:head>
-		<h:title>ODK Analytics</h:title>
-		<model odk:xforms-version="1.0.0">
-			<instance>
-				<data id="odk-analytics" version="v2025.3.0_1">
-					<config>
-						<email/>
-						<organization/>
-					</config>
-					<system>
-						<num_admins>
-							<recent/>
-							<total/>
-						</num_admins>
-						<num_projects_encryption>
-							<recent/>
-							<total/>
-						</num_projects_encryption>
-						<num_questions_biggest_form/>
-						<max_geo_per_form/>
-						<num_audit_log_entries>
-							<recent/>
-							<total/>
-						</num_audit_log_entries>
-						<num_archived_projects/>
-						<num_unique_managers/>
-						<num_unique_viewers/>
-						<num_unique_collectors/>
-						<database_size/>
-						<uses_external_db/>
-						<uses_external_blob_store/>
-						<sso_enabled/>
-						<num_client_audit_attachments/>
-						<num_client_audit_attachments_failures/>
-						<num_client_audit_rows/>
-						<num_audits_failed/>
-						<num_audits_failed5/>
-						<num_audits_unprocessed/>
-						<num_offline_entity_branches/>
-						<num_offline_entity_interrupted_branches/>
-						<num_offline_entity_submissions_reprocessed/>
-						<num_offline_entity_submissions_force_processed/>
-						<max_entity_submission_delay/>
-						<avg_entity_submission_delay/>
-						<max_entity_branch_delay/>
-						<num_owner_only_datasets/>
-						<num_xml_only_form_defs/>
-						<num_blob_files/>
-						<num_blob_files_on_s3/>
-						<num_reset_failed_to_pending_count/>
-						<num_entity_bulk_deletes>
-							<recent/>
-							<total/>
-						</num_entity_bulk_deletes>
-						<num_datasets_with_geometry/>
-					</system>
-					<projects jr:template="">
-						<id/>
-						<users>
-							<num_managers>
-								<recent/>
-								<total/>
-							</num_managers>
-							<num_viewers>
-								<recent/>
-								<total/>
-							</num_viewers>
-							<num_data_collectors>
-								<recent/>
-								<total/>
-							</num_data_collectors>
-							<num_app_users>
-								<recent/>
-								<total/>
-							</num_app_users>
-							<num_device_ids>
-								<recent/>
-								<total/>
-							</num_device_ids>
-							<num_public_access_links>
-								<recent/>
-								<total/>
-							</num_public_access_links>
-						</users>
-						<forms>
-							<num_forms>
-								<recent/>
-								<total/>
-							</num_forms>
-							<num_forms_with_repeats>
-								<recent/>
-								<total/>
-							</num_forms_with_repeats>
-							<num_forms_with_geospatial>
-								<recent/>
-								<total/>
-							</num_forms_with_geospatial>
-							<num_forms_with_encryption>
-								<recent/>
-								<total/>
-							</num_forms_with_encryption>
-							<num_forms_with_audits>
-								<recent/>
-								<total/>
-							</num_forms_with_audits>
-							<num_reused_form_ids/>
-							<num_open_forms>
-								<recent/>
-								<total/>
-							</num_open_forms>
-							<num_closing_forms>
-								<recent/>
-								<total/>
-							</num_closing_forms>
-							<num_closed_forms>
-								<recent/>
-								<total/>
-							</num_closed_forms>
-							<num_forms_webforms_enabled/>
-							<num_entity_create_forms/>
-							<num_repeat_entity_create_forms/>
-							<num_entity_update_forms/>
-							<num_repeat_entity_update_forms/>
-							<num_entity_create_update_forms/>
-						</forms>
-						<submissions>
-							<num_submissions_received>
-								<recent/>
-								<total/>
-							</num_submissions_received>
-							<num_submissions_approved>
-								<recent/>
-								<total/>
-							</num_submissions_approved>
-							<num_submissions_has_issues>
-								<recent/>
-								<total/>
-							</num_submissions_has_issues>
-							<num_submissions_rejected>
-								<recent/>
-								<total/>
-							</num_submissions_rejected>
-							<num_submissions_edited>
-								<recent/>
-								<total/>
-							</num_submissions_edited>
-							<num_submissions_with_edits>
-								<recent/>
-								<total/>
-							</num_submissions_with_edits>
-							<num_submissions_with_comments>
-								<recent/>
-								<total/>
-							</num_submissions_with_comments>
-							<num_submissions_from_app_users>
-								<recent/>
-								<total/>
-							</num_submissions_from_app_users>
-							<num_submissions_from_public_links>
-								<recent/>
-								<total/>
-							</num_submissions_from_public_links>
-							<num_submissions_from_web_users>
-								<recent/>
-								<total/>
-							</num_submissions_from_web_users>
-						</submissions>
-						<datasets jr:template="">
-							<id/>
-							<num_properties/>
-							<num_creation_forms/>
-							<num_followup_forms/>
-							<num_entities>
-								<recent/>
-								<total/>
-							</num_entities>
-							<num_entity_creates_sub>
-								<recent/>
-								<total/>
-							</num_entity_creates_sub>
-							<num_entity_creates_api>
-								<recent/>
-								<total/>
-							</num_entity_creates_api>
-							<num_entity_creates_bulk>
-								<recent/>
-								<total/>
-							</num_entity_creates_bulk>
-							<num_failed_entities>
-								<recent/>
-								<total/>
-							</num_failed_entities>
-							<num_entity_updates>
-								<recent/>
-								<total/>
-							</num_entity_updates>
-							<num_entity_updates_sub>
-								<recent/>
-								<total/>
-							</num_entity_updates_sub>
-							<num_entity_updates_api>
-								<recent/>
-								<total/>
-							</num_entity_updates_api>
-							<num_entities_updated>
-								<recent/>
-								<total/>
-							</num_entities_updated>
-							<num_entity_conflicts/>
-							<num_entity_conflicts_resolved/>
-							<num_bulk_create_events>
-								<recent/>
-								<total/>
-							</num_bulk_create_events>
-							<biggest_bulk_upload/>
-							<num_entities_with_geometry>
-								<recent/>
-								<total/>
-							</num_entities_with_geometry>
-						</datasets>
-						<other>
-							<description_length/>
-						</other>
-					</projects>
-					<projects>
-						<id/>
-						<users>
-							<num_managers>
-								<recent/>
-								<total/>
-							</num_managers>
-							<num_viewers>
-								<recent/>
-								<total/>
-							</num_viewers>
-							<num_data_collectors>
-								<recent/>
-								<total/>
-							</num_data_collectors>
-							<num_app_users>
-								<recent/>
-								<total/>
-							</num_app_users>
-							<num_device_ids>
-								<recent/>
-								<total/>
-							</num_device_ids>
-							<num_public_access_links>
-								<recent/>
-								<total/>
-							</num_public_access_links>
-						</users>
-						<forms>
-							<num_forms>
-								<recent/>
-								<total/>
-							</num_forms>
-							<num_forms_with_repeats>
-								<recent/>
-								<total/>
-							</num_forms_with_repeats>
-							<num_forms_with_geospatial>
-								<recent/>
-								<total/>
-							</num_forms_with_geospatial>
-							<num_forms_with_encryption>
-								<recent/>
-								<total/>
-							</num_forms_with_encryption>
-							<num_forms_with_audits>
-								<recent/>
-								<total/>
-							</num_forms_with_audits>
-							<num_reused_form_ids/>
-							<num_open_forms>
-								<recent/>
-								<total/>
-							</num_open_forms>
-							<num_closing_forms>
-								<recent/>
-								<total/>
-							</num_closing_forms>
-							<num_closed_forms>
-								<recent/>
-								<total/>
-							</num_closed_forms>
-							<num_forms_webforms_enabled/>
-							<num_entity_create_forms/>
-							<num_repeat_entity_create_forms/>
-							<num_entity_update_forms/>
-							<num_repeat_entity_update_forms/>
-							<num_entity_create_update_forms/>
-						</forms>
-						<submissions>
-							<num_submissions_received>
-								<recent/>
-								<total/>
-							</num_submissions_received>
-							<num_submissions_approved>
-								<recent/>
-								<total/>
-							</num_submissions_approved>
-							<num_submissions_has_issues>
-								<recent/>
-								<total/>
-							</num_submissions_has_issues>
-							<num_submissions_rejected>
-								<recent/>
-								<total/>
-							</num_submissions_rejected>
-							<num_submissions_edited>
-								<recent/>
-								<total/>
-							</num_submissions_edited>
-							<num_submissions_with_edits>
-								<recent/>
-								<total/>
-							</num_submissions_with_edits>
-							<num_submissions_with_comments>
-								<recent/>
-								<total/>
-							</num_submissions_with_comments>
-							<num_submissions_from_app_users>
-								<recent/>
-								<total/>
-							</num_submissions_from_app_users>
-							<num_submissions_from_public_links>
-								<recent/>
-								<total/>
-							</num_submissions_from_public_links>
-							<num_submissions_from_web_users>
-								<recent/>
-								<total/>
-							</num_submissions_from_web_users>
-						</submissions>
-						<datasets>
-							<id/>
-							<num_properties/>
-							<num_creation_forms/>
-							<num_followup_forms/>
-							<num_entities>
-								<recent/>
-								<total/>
-							</num_entities>
-							<num_entity_creates_sub>
-								<recent/>
-								<total/>
-							</num_entity_creates_sub>
-							<num_entity_creates_api>
-								<recent/>
-								<total/>
-							</num_entity_creates_api>
-							<num_entity_creates_bulk>
-								<recent/>
-								<total/>
-							</num_entity_creates_bulk>
-							<num_failed_entities>
-								<recent/>
-								<total/>
-							</num_failed_entities>
-							<num_entity_updates>
-								<recent/>
-								<total/>
-							</num_entity_updates>
-							<num_entity_updates_sub>
-								<recent/>
-								<total/>
-							</num_entity_updates_sub>
-							<num_entity_updates_api>
-								<recent/>
-								<total/>
-							</num_entity_updates_api>
-							<num_entities_updated>
-								<recent/>
-								<total/>
-							</num_entities_updated>
-							<num_entity_conflicts/>
-							<num_entity_conflicts_resolved/>
-							<num_bulk_create_events>
-								<recent/>
-								<total/>
-							</num_bulk_create_events>
-							<biggest_bulk_upload/>
-							<num_entities_with_geometry>
-								<recent/>
-								<total/>
-							</num_entities_with_geometry>
-						</datasets>
-						<other>
-							<description_length/>
-						</other>
-					</projects>
-					<meta>
-						<instanceID/>
-					</meta>
-				</data>
-			</instance>
-			<bind nodeset="/data/config/email" type="string"/>
-			<bind nodeset="/data/config/organization" type="string"/>
-			<bind nodeset="/data/system/num_admins/recent" type="int"/>
-			<bind nodeset="/data/system/num_admins/total" type="int"/>
-			<bind nodeset="/data/system/num_projects_encryption/recent" type="int"/>
-			<bind nodeset="/data/system/num_projects_encryption/total" type="int"/>
-			<bind nodeset="/data/system/num_questions_biggest_form" type="int"/>
-			<bind nodeset="/data/system/max_geo_per_form" type="int"/>
-			<bind nodeset="/data/system/num_audit_log_entries/recent" type="int"/>
-			<bind nodeset="/data/system/num_audit_log_entries/total" type="int"/>
-			<bind nodeset="/data/system/num_archived_projects" type="int"/>
-			<bind nodeset="/data/system/num_unique_managers" type="int"/>
-			<bind nodeset="/data/system/num_unique_viewers" type="int"/>
-			<bind nodeset="/data/system/num_unique_collectors" type="int"/>
-			<bind nodeset="/data/system/database_size" type="decimal"/>
-			<bind nodeset="/data/system/uses_external_db" type="int"/>
-			<bind nodeset="/data/system/uses_external_blob_store" type="int"/>
-			<bind nodeset="/data/system/sso_enabled" type="int"/>
-			<bind nodeset="/data/system/num_client_audit_attachments" type="int"/>
-			<bind nodeset="/data/system/num_client_audit_attachments_failures" type="int"/>
-			<bind nodeset="/data/system/num_client_audit_rows" type="int"/>
-			<bind nodeset="/data/system/num_audits_failed" type="int"/>
-			<bind nodeset="/data/system/num_audits_failed5" type="int"/>
-			<bind nodeset="/data/system/num_audits_unprocessed" type="int"/>
-			<bind nodeset="/data/system/num_offline_entity_branches" type="int"/>
-			<bind nodeset="/data/system/num_offline_entity_interrupted_branches" type="int"/>
-			<bind nodeset="/data/system/num_offline_entity_submissions_reprocessed" type="int"/>
-			<bind nodeset="/data/system/num_offline_entity_submissions_force_processed" type="int"/>
-			<bind nodeset="/data/system/max_entity_submission_delay" type="decimal"/>
-			<bind nodeset="/data/system/avg_entity_submission_delay" type="decimal"/>
-			<bind nodeset="/data/system/max_entity_branch_delay" type="decimal"/>
-			<bind nodeset="/data/system/num_owner_only_datasets" type="int"/>
-			<bind nodeset="/data/system/num_xml_only_form_defs" type="int"/>
-			<bind nodeset="/data/system/num_blob_files" type="int"/>
-			<bind nodeset="/data/system/num_blob_files_on_s3" type="int"/>
-			<bind nodeset="/data/system/num_reset_failed_to_pending_count" type="int"/>
-			<bind nodeset="/data/system/num_entity_bulk_deletes/recent" type="int"/>
-			<bind nodeset="/data/system/num_entity_bulk_deletes/total" type="int"/>
-			<bind nodeset="/data/system/num_datasets_with_geometry" type="int"/>
-			<bind nodeset="/data/projects/id" type="string"/>
-			<bind nodeset="/data/projects/users/num_managers/recent" type="int"/>
-			<bind nodeset="/data/projects/users/num_managers/total" type="int"/>
-			<bind nodeset="/data/projects/users/num_viewers/recent" type="int"/>
-			<bind nodeset="/data/projects/users/num_viewers/total" type="int"/>
-			<bind nodeset="/data/projects/users/num_data_collectors/recent" type="int"/>
-			<bind nodeset="/data/projects/users/num_data_collectors/total" type="int"/>
-			<bind nodeset="/data/projects/users/num_app_users/recent" type="int"/>
-			<bind nodeset="/data/projects/users/num_app_users/total" type="int"/>
-			<bind nodeset="/data/projects/users/num_device_ids/recent" type="int"/>
-			<bind nodeset="/data/projects/users/num_device_ids/total" type="int"/>
-			<bind nodeset="/data/projects/users/num_public_access_links/recent" type="int"/>
-			<bind nodeset="/data/projects/users/num_public_access_links/total" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms/recent" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms/total" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms_with_repeats/recent" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms_with_repeats/total" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms_with_geospatial/recent" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms_with_geospatial/total" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms_with_encryption/recent" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms_with_encryption/total" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms_with_audits/recent" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms_with_audits/total" type="int"/>
-			<bind nodeset="/data/projects/forms/num_reused_form_ids" type="int"/>
-			<bind nodeset="/data/projects/forms/num_open_forms/recent" type="int"/>
-			<bind nodeset="/data/projects/forms/num_open_forms/total" type="int"/>
-			<bind nodeset="/data/projects/forms/num_closing_forms/recent" type="int"/>
-			<bind nodeset="/data/projects/forms/num_closing_forms/total" type="int"/>
-			<bind nodeset="/data/projects/forms/num_closed_forms/recent" type="int"/>
-			<bind nodeset="/data/projects/forms/num_closed_forms/total" type="int"/>
-			<bind nodeset="/data/projects/forms/num_forms_webforms_enabled" type="int"/>
-			<bind nodeset="/data/projects/forms/num_entity_create_forms" type="int"/>
-			<bind nodeset="/data/projects/forms/num_repeat_entity_create_forms" type="int"/>
-			<bind nodeset="/data/projects/forms/num_entity_update_forms" type="int"/>
-			<bind nodeset="/data/projects/forms/num_repeat_entity_update_forms" type="int"/>
-			<bind nodeset="/data/projects/forms/num_entity_create_update_forms" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_received/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_received/total" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_approved/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_approved/total" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_has_issues/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_has_issues/total" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_rejected/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_rejected/total" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_edited/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_edited/total" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_with_edits/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_with_edits/total" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_with_comments/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_with_comments/total" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_from_app_users/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_from_app_users/total" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_from_public_links/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_from_public_links/total" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_from_web_users/recent" type="int"/>
-			<bind nodeset="/data/projects/submissions/num_submissions_from_web_users/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/id" type="string"/>
-			<bind nodeset="/data/projects/datasets/num_properties" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_creation_forms" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_followup_forms" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entities/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entities/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_creates_sub/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_creates_sub/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_creates_api/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_creates_api/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_creates_bulk/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_creates_bulk/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_failed_entities/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_failed_entities/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_updates/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_updates/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_updates_sub/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_updates_sub/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_updates_api/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_updates_api/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entities_updated/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entities_updated/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_conflicts" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entity_conflicts_resolved" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_bulk_create_events/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_bulk_create_events/total" type="int"/>
-			<bind nodeset="/data/projects/datasets/biggest_bulk_upload" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entities_with_geometry/recent" type="int"/>
-			<bind nodeset="/data/projects/datasets/num_entities_with_geometry/total" type="int"/>
-			<bind nodeset="/data/projects/other/description_length" type="int"/>
-			<bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
-		</model>
-	</h:head>
-	<h:body>
-		<group ref="/data/config">
-			<label>Analytics Configuration</label>
-			<input ref="/data/config/email">
-				<label>Email</label>
-			</input>
-			<input ref="/data/config/organization">
-				<label>Organization</label>
-			</input>
-		</group>
-		<group ref="/data/system">
-			<label>System</label>
-			<group ref="/data/system/num_admins">
-				<label>Number of Administrators</label>
-				<input ref="/data/system/num_admins/recent">
-					<label>Recent activity</label>
-				</input>
-				<input ref="/data/system/num_admins/total">
-					<label>Total</label>
-				</input>
-			</group>
-			<group ref="/data/system/num_projects_encryption">
-				<label>Number of Projects with encryption enabled</label>
-				<input ref="/data/system/num_projects_encryption/recent">
-					<label>Recent activity</label>
-				</input>
-				<input ref="/data/system/num_projects_encryption/total">
-					<label>Total</label>
-				</input>
-			</group>
-			<input ref="/data/system/num_questions_biggest_form">
-				<label>Number of questions in biggest Form</label>
-			</input>
-			<input ref="/data/system/max_geo_per_form">
-				<label>Max number of geo data in a form.</label>
-			</input>
-			<group ref="/data/system/num_audit_log_entries">
-				<label>Number of Audit Log entries</label>
-				<input ref="/data/system/num_audit_log_entries/recent">
-					<label>Recent activity</label>
-				</input>
-				<input ref="/data/system/num_audit_log_entries/total">
-					<label>Total</label>
-				</input>
-			</group>
-			<input ref="/data/system/num_archived_projects">
-				<label>Number of archived Projects</label>
-			</input>
-			<input ref="/data/system/num_unique_managers">
-				<label>Number of unique Project Managers</label>
-			</input>
-			<input ref="/data/system/num_unique_viewers">
-				<label>Number of unique Project Viewers</label>
-			</input>
-			<input ref="/data/system/num_unique_collectors">
-				<label>Number of unique Data Collectors</label>
-			</input>
-			<input ref="/data/system/database_size">
-				<label>System database size</label>
-			</input>
-			<input ref="/data/system/uses_external_db">
-				<label>Server uses an external database</label>
-			</input>
-			<input ref="/data/system/uses_external_blob_store">
-				<label>Server uses external blob store</label>
-			</input>
-			<input ref="/data/system/sso_enabled">
-				<label>SSO enabled on Server</label>
-			</input>
-			<input ref="/data/system/num_client_audit_attachments">
-				<label>Number of Client Audit Attachments</label>
-			</input>
-			<input ref="/data/system/num_client_audit_attachments_failures">
-				<label>Number of Client Audit processing failures</label>
-			</input>
-			<input ref="/data/system/num_client_audit_rows">
-				<label>Number of Client Audit rows</label>
-			</input>
-			<input ref="/data/system/num_audits_failed">
-				<label>Number of Audit Log Events that failed at least once</label>
-			</input>
-			<input ref="/data/system/num_audits_failed5">
-				<label>Number of Audit Log Events that failed completely</label>
-			</input>
-			<input ref="/data/system/num_audits_unprocessed">
-				<label>Number of outdated unprocessed Audit Log Events</label>
-			</input>
-			<input ref="/data/system/num_offline_entity_branches">
-				<label>Number of Offline Entity branches</label>
-			</input>
-			<input ref="/data/system/num_offline_entity_interrupted_branches">
-				<label>Number of interrupted Offline Entity branches</label>
-			</input>
-			<input ref="/data/system/num_offline_entity_submissions_reprocessed">
-				<label>Number of reordered Offline Entity submissions</label>
-			</input>
-			<input ref="/data/system/num_offline_entity_submissions_force_processed">
-				<label>Number of force-processed Offline Entity submissions</label>
-			</input>
-			<input ref="/data/system/max_entity_submission_delay">
-				<label>Maximum Entity Submission processing delay</label>
-			</input>
-			<input ref="/data/system/avg_entity_submission_delay">
-				<label>Average Entity Submission processing delay</label>
-			</input>
-			<input ref="/data/system/max_entity_branch_delay">
-				<label>Maximum Offline Entity branch processing time</label>
-			</input>
-			<input ref="/data/system/num_owner_only_datasets">
-				<label>Number of Entity Lists restricted to Owner Only</label>
-			</input>
-			<input ref="/data/system/num_xml_only_form_defs">
-				<label>Number of XML-only Form Defs with no associated XLSForm</label>
-			</input>
-			<input ref="/data/system/num_blob_files">
-				<label>Number of binary files</label>
-			</input>
-			<input ref="/data/system/num_blob_files_on_s3">
-				<label>Number of binary files currently stored in external Blob store</label>
-			</input>
-			<input ref="/data/system/num_reset_failed_to_pending_count">
-				<label>Number of times user has reset failed External Blob upload state</label>
-			</input>
-			<group ref="/data/system/num_entity_bulk_deletes">
-				<label>Number of bulk entity delete actions</label>
-				<input ref="/data/system/num_entity_bulk_deletes/recent">
-					<label>in the past 45 days</label>
-				</input>
-				<input ref="/data/system/num_entity_bulk_deletes/total">
-					<label>Total</label>
-				</input>
-			</group>
-			<input ref="/data/system/num_datasets_with_geometry">
-				<label>Number of Entity Lists with geometry property</label>
-			</input>
-		</group>
-		<group ref="/data/projects">
-			<label>Project Details</label>
-			<repeat nodeset="/data/projects">
-				<input ref="/data/projects/id">
-					<label>Project ID</label>
-				</input>
-				<group ref="/data/projects/users">
-					<label>Users</label>
-					<group ref="/data/projects/users/num_managers">
-						<label>Number of Project Managers</label>
-						<input ref="/data/projects/users/num_managers/recent">
-							<label>With activity in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/users/num_managers/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/users/num_viewers">
-						<label>Number of Project Viewers</label>
-						<input ref="/data/projects/users/num_viewers/recent">
-							<label>With activity in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/users/num_viewers/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/users/num_data_collectors">
-						<label>Number of Data Collectors</label>
-						<input ref="/data/projects/users/num_data_collectors/recent">
-							<label>With activity in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/users/num_data_collectors/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/users/num_app_users">
-						<label>Number of App Users</label>
-						<input ref="/data/projects/users/num_app_users/recent">
-							<label>in projects with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/users/num_app_users/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/users/num_device_ids">
-						<label>Number of device IDs</label>
-						<input ref="/data/projects/users/num_device_ids/recent">
-							<label>in projects with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/users/num_device_ids/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/users/num_public_access_links">
-						<label>Number of Public Access Links</label>
-						<input ref="/data/projects/users/num_public_access_links/recent">
-							<label>in projects with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/users/num_public_access_links/total">
-							<label>Total</label>
-						</input>
-					</group>
-				</group>
-				<group ref="/data/projects/forms">
-					<label>Forms</label>
-					<group ref="/data/projects/forms/num_forms">
-						<label>Number of Forms</label>
-						<input ref="/data/projects/forms/num_forms/recent">
-							<label>with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/forms/num_forms/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/forms/num_forms_with_repeats">
-						<label>Number of Forms with repeats</label>
-						<input ref="/data/projects/forms/num_forms_with_repeats/recent">
-							<label>with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/forms/num_forms_with_repeats/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/forms/num_forms_with_geospatial">
-						<label>Number of Forms with geodata</label>
-						<input ref="/data/projects/forms/num_forms_with_geospatial/recent">
-							<label>with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/forms/num_forms_with_geospatial/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/forms/num_forms_with_encryption">
-						<label>Number of Forms with encryption</label>
-						<input ref="/data/projects/forms/num_forms_with_encryption/recent">
-							<label>with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/forms/num_forms_with_encryption/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/forms/num_forms_with_audits">
-						<label>Number of Forms with audits</label>
-						<input ref="/data/projects/forms/num_forms_with_audits/recent">
-							<label>with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/forms/num_forms_with_audits/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<input ref="/data/projects/forms/num_reused_form_ids">
-						<label>Number of reused Form IDs</label>
-					</input>
-					<group ref="/data/projects/forms/num_open_forms">
-						<label>Number of open Forms</label>
-						<input ref="/data/projects/forms/num_open_forms/recent">
-							<label>with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/forms/num_open_forms/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/forms/num_closing_forms">
-						<label>Number of closing Forms</label>
-						<input ref="/data/projects/forms/num_closing_forms/recent">
-							<label>with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/forms/num_closing_forms/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/forms/num_closed_forms">
-						<label>Number of closed Forms</label>
-						<input ref="/data/projects/forms/num_closed_forms/recent">
-							<label>with submissions in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/forms/num_closed_forms/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<input ref="/data/projects/forms/num_forms_webforms_enabled">
-						<label>Number of Forms with Web Forms enabled</label>
-					</input>
-					<input ref="/data/projects/forms/num_entity_create_forms">
-						<label>Number of Forms that create Entities</label>
-					</input>
-					<input ref="/data/projects/forms/num_repeat_entity_create_forms">
-						<label>Number of Forms that create Entities from repeats</label>
-					</input>
-					<input ref="/data/projects/forms/num_entity_update_forms">
-						<label>Number of Forms that update Entities</label>
-					</input>
-					<input ref="/data/projects/forms/num_repeat_entity_update_forms">
-						<label>Number of Forms that update Entities from repeats</label>
-					</input>
-					<input ref="/data/projects/forms/num_entity_create_update_forms">
-						<label>Number of Forms that create and update Entities</label>
-					</input>
-				</group>
-				<group ref="/data/projects/submissions">
-					<label>Submissions</label>
-					<group ref="/data/projects/submissions/num_submissions_received">
-						<label>Number of Submissions - Received</label>
-						<input ref="/data/projects/submissions/num_submissions_received/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_received/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/submissions/num_submissions_approved">
-						<label>Number of Submissions - Approved</label>
-						<input ref="/data/projects/submissions/num_submissions_approved/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_approved/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/submissions/num_submissions_has_issues">
-						<label>Number of Submissions - Has Issues</label>
-						<input ref="/data/projects/submissions/num_submissions_has_issues/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_has_issues/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/submissions/num_submissions_rejected">
-						<label>Number of Submissions - Rejected</label>
-						<input ref="/data/projects/submissions/num_submissions_rejected/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_rejected/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/submissions/num_submissions_edited">
-						<label>Number of Submissions - Edited</label>
-						<input ref="/data/projects/submissions/num_submissions_edited/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_edited/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/submissions/num_submissions_with_edits">
-						<label>Number of Submissions with edits</label>
-						<input ref="/data/projects/submissions/num_submissions_with_edits/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_with_edits/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/submissions/num_submissions_with_comments">
-						<label>Number of Submissions with comments</label>
-						<input ref="/data/projects/submissions/num_submissions_with_comments/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_with_comments/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/submissions/num_submissions_from_app_users">
-						<label>Number of Submissions from App Users</label>
-						<input ref="/data/projects/submissions/num_submissions_from_app_users/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_from_app_users/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/submissions/num_submissions_from_public_links">
-						<label>Number of Submissions from Public Links</label>
-						<input ref="/data/projects/submissions/num_submissions_from_public_links/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_from_public_links/total">
-							<label>Total</label>
-						</input>
-					</group>
-					<group ref="/data/projects/submissions/num_submissions_from_web_users">
-						<label>Number of Submissions from Web Users</label>
-						<input ref="/data/projects/submissions/num_submissions_from_web_users/recent">
-							<label>in the past 45 days</label>
-						</input>
-						<input ref="/data/projects/submissions/num_submissions_from_web_users/total">
-							<label>Total</label>
-						</input>
-					</group>
-				</group>
-				<group ref="/data/projects/datasets">
-					<label>Dataset Details</label>
-					<repeat nodeset="/data/projects/datasets">
-						<input ref="/data/projects/datasets/id">
-							<label>Dataset ID</label>
-						</input>
-						<input ref="/data/projects/datasets/num_properties">
-							<label>Number of Properties</label>
-						</input>
-						<input ref="/data/projects/datasets/num_creation_forms">
-							<label>Number of Forms that update the Dataset</label>
-						</input>
-						<input ref="/data/projects/datasets/num_followup_forms">
-							<label>Number of Forms that use the Dataset</label>
-						</input>
-						<group ref="/data/projects/datasets/num_entities">
-							<label>Number of Entities in the Dataset</label>
-							<input ref="/data/projects/datasets/num_entities/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_entities/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<group ref="/data/projects/datasets/num_entity_creates_sub">
-							<label>Number of creates through Submissions</label>
-							<input ref="/data/projects/datasets/num_entity_creates_sub/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_entity_creates_sub/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<group ref="/data/projects/datasets/num_entity_creates_api">
-							<label>Number of creates through API</label>
-							<input ref="/data/projects/datasets/num_entity_creates_api/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_entity_creates_api/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<group ref="/data/projects/datasets/num_entity_creates_bulk">
-							<label>Number of creates through Bulk Upload</label>
-							<input ref="/data/projects/datasets/num_entity_creates_bulk/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_entity_creates_bulk/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<group ref="/data/projects/datasets/num_failed_entities">
-							<label>Number of Entity creation errors</label>
-							<input ref="/data/projects/datasets/num_failed_entities/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_failed_entities/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<group ref="/data/projects/datasets/num_entity_updates">
-							<label>Number of Entity updates</label>
-							<input ref="/data/projects/datasets/num_entity_updates/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_entity_updates/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<group ref="/data/projects/datasets/num_entity_updates_sub">
-							<label>Number of updates through Submissions</label>
-							<input ref="/data/projects/datasets/num_entity_updates_sub/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_entity_updates_sub/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<group ref="/data/projects/datasets/num_entity_updates_api">
-							<label>Number of updates through API</label>
-							<input ref="/data/projects/datasets/num_entity_updates_api/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_entity_updates_api/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<group ref="/data/projects/datasets/num_entities_updated">
-							<label>Number of modified Entities</label>
-							<input ref="/data/projects/datasets/num_entities_updated/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_entities_updated/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<input ref="/data/projects/datasets/num_entity_conflicts">
-							<label>Number of Entities ever with conflict</label>
-						</input>
-						<input ref="/data/projects/datasets/num_entity_conflicts_resolved">
-							<label>Number of Entities with resolved conflicts</label>
-						</input>
-						<group ref="/data/projects/datasets/num_bulk_create_events">
-							<label>Number of bulk uploads</label>
-							<input ref="/data/projects/datasets/num_bulk_create_events/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_bulk_create_events/total">
-								<label>Total</label>
-							</input>
-						</group>
-						<input ref="/data/projects/datasets/biggest_bulk_upload">
-							<label>Number of rows in biggest bulk upload</label>
-						</input>
-						<group ref="/data/projects/datasets/num_entities_with_geometry">
-							<label>Number of Entities with geometry data</label>
-							<input ref="/data/projects/datasets/num_entities_with_geometry/recent">
-								<label>in the past 45 days</label>
-							</input>
-							<input ref="/data/projects/datasets/num_entities_with_geometry/total">
-								<label>Total</label>
-							</input>
-						</group>
-					</repeat>
-				</group>
-				<group ref="/data/projects/other">
-					<label>Other</label>
-					<input ref="/data/projects/other/description_length">
-						<label>Length of the Project description</label>
-					</input>
-				</group>
-			</repeat>
-		</group>
-	</h:body>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
+  <h:head>
+    <h:title>ODK Analytics</h:title>
+    <model odk:xforms-version="1.0.0">
+      <instance>
+        <data id="odk-analytics" version="v2025.3.0_1">
+          <config>
+            <email/>
+            <organization/>
+          </config>
+          <system>
+            <num_admins>
+              <recent/>
+              <total/>
+            </num_admins>
+            <num_projects_encryption>
+              <recent/>
+              <total/>
+            </num_projects_encryption>
+            <num_questions_biggest_form/>
+            <max_geo_per_form/>
+            <num_audit_log_entries>
+              <recent/>
+              <total/>
+            </num_audit_log_entries>
+            <num_archived_projects/>
+            <num_unique_managers/>
+            <num_unique_viewers/>
+            <num_unique_collectors/>
+            <database_size/>
+            <uses_external_db/>
+            <uses_external_blob_store/>
+            <sso_enabled/>
+            <num_client_audit_attachments/>
+            <num_client_audit_attachments_failures/>
+            <num_client_audit_rows/>
+            <num_audits_failed/>
+            <num_audits_failed5/>
+            <num_audits_unprocessed/>
+            <num_offline_entity_branches/>
+            <num_offline_entity_interrupted_branches/>
+            <num_offline_entity_submissions_reprocessed/>
+            <num_offline_entity_submissions_force_processed/>
+            <max_entity_submission_delay/>
+            <avg_entity_submission_delay/>
+            <max_entity_branch_delay/>
+            <num_owner_only_datasets/>
+            <num_xml_only_form_defs/>
+            <num_blob_files/>
+            <num_blob_files_on_s3/>
+            <num_reset_failed_to_pending_count/>
+            <num_entity_bulk_deletes>
+              <recent/>
+              <total/>
+            </num_entity_bulk_deletes>
+            <num_datasets_with_geometry/>
+          </system>
+          <projects jr:template="">
+            <id/>
+            <users>
+              <num_managers>
+                <recent/>
+                <total/>
+              </num_managers>
+              <num_viewers>
+                <recent/>
+                <total/>
+              </num_viewers>
+              <num_data_collectors>
+                <recent/>
+                <total/>
+              </num_data_collectors>
+              <num_app_users>
+                <recent/>
+                <total/>
+              </num_app_users>
+              <num_device_ids>
+                <recent/>
+                <total/>
+              </num_device_ids>
+              <num_public_access_links>
+                <recent/>
+                <total/>
+              </num_public_access_links>
+            </users>
+            <forms>
+              <num_forms>
+                <recent/>
+                <total/>
+              </num_forms>
+              <num_forms_with_repeats>
+                <recent/>
+                <total/>
+              </num_forms_with_repeats>
+              <num_forms_with_geospatial>
+                <recent/>
+                <total/>
+              </num_forms_with_geospatial>
+              <num_forms_with_encryption>
+                <recent/>
+                <total/>
+              </num_forms_with_encryption>
+              <num_forms_with_audits>
+                <recent/>
+                <total/>
+              </num_forms_with_audits>
+              <num_reused_form_ids/>
+              <num_open_forms>
+                <recent/>
+                <total/>
+              </num_open_forms>
+              <num_closing_forms>
+                <recent/>
+                <total/>
+              </num_closing_forms>
+              <num_closed_forms>
+                <recent/>
+                <total/>
+              </num_closed_forms>
+              <num_forms_webforms_enabled/>
+              <num_entity_create_forms/>
+              <num_repeat_entity_create_forms/>
+              <num_entity_update_forms/>
+              <num_repeat_entity_update_forms/>
+              <num_entity_create_update_forms/>
+            </forms>
+            <submissions>
+              <num_submissions_received>
+                <recent/>
+                <total/>
+              </num_submissions_received>
+              <num_submissions_approved>
+                <recent/>
+                <total/>
+              </num_submissions_approved>
+              <num_submissions_has_issues>
+                <recent/>
+                <total/>
+              </num_submissions_has_issues>
+              <num_submissions_rejected>
+                <recent/>
+                <total/>
+              </num_submissions_rejected>
+              <num_submissions_edited>
+                <recent/>
+                <total/>
+              </num_submissions_edited>
+              <num_submissions_with_edits>
+                <recent/>
+                <total/>
+              </num_submissions_with_edits>
+              <num_submissions_with_comments>
+                <recent/>
+                <total/>
+              </num_submissions_with_comments>
+              <num_submissions_from_app_users>
+                <recent/>
+                <total/>
+              </num_submissions_from_app_users>
+              <num_submissions_from_public_links>
+                <recent/>
+                <total/>
+              </num_submissions_from_public_links>
+              <num_submissions_from_web_users>
+                <recent/>
+                <total/>
+              </num_submissions_from_web_users>
+            </submissions>
+            <datasets jr:template="">
+              <id/>
+              <num_properties/>
+              <num_creation_forms/>
+              <num_followup_forms/>
+              <num_entities>
+                <recent/>
+                <total/>
+              </num_entities>
+              <num_entity_creates_sub>
+                <recent/>
+                <total/>
+              </num_entity_creates_sub>
+              <num_entity_creates_api>
+                <recent/>
+                <total/>
+              </num_entity_creates_api>
+              <num_entity_creates_bulk>
+                <recent/>
+                <total/>
+              </num_entity_creates_bulk>
+              <num_failed_entities>
+                <recent/>
+                <total/>
+              </num_failed_entities>
+              <num_entity_updates>
+                <recent/>
+                <total/>
+              </num_entity_updates>
+              <num_entity_updates_sub>
+                <recent/>
+                <total/>
+              </num_entity_updates_sub>
+              <num_entity_updates_api>
+                <recent/>
+                <total/>
+              </num_entity_updates_api>
+              <num_entities_updated>
+                <recent/>
+                <total/>
+              </num_entities_updated>
+              <num_entity_conflicts/>
+              <num_entity_conflicts_resolved/>
+              <num_bulk_create_events>
+                <recent/>
+                <total/>
+              </num_bulk_create_events>
+              <biggest_bulk_upload/>
+              <num_entities_with_geometry>
+                <recent/>
+                <total/>
+              </num_entities_with_geometry>
+            </datasets>
+            <other>
+              <description_length/>
+            </other>
+          </projects>
+          <projects>
+            <id/>
+            <users>
+              <num_managers>
+                <recent/>
+                <total/>
+              </num_managers>
+              <num_viewers>
+                <recent/>
+                <total/>
+              </num_viewers>
+              <num_data_collectors>
+                <recent/>
+                <total/>
+              </num_data_collectors>
+              <num_app_users>
+                <recent/>
+                <total/>
+              </num_app_users>
+              <num_device_ids>
+                <recent/>
+                <total/>
+              </num_device_ids>
+              <num_public_access_links>
+                <recent/>
+                <total/>
+              </num_public_access_links>
+            </users>
+            <forms>
+              <num_forms>
+                <recent/>
+                <total/>
+              </num_forms>
+              <num_forms_with_repeats>
+                <recent/>
+                <total/>
+              </num_forms_with_repeats>
+              <num_forms_with_geospatial>
+                <recent/>
+                <total/>
+              </num_forms_with_geospatial>
+              <num_forms_with_encryption>
+                <recent/>
+                <total/>
+              </num_forms_with_encryption>
+              <num_forms_with_audits>
+                <recent/>
+                <total/>
+              </num_forms_with_audits>
+              <num_reused_form_ids/>
+              <num_open_forms>
+                <recent/>
+                <total/>
+              </num_open_forms>
+              <num_closing_forms>
+                <recent/>
+                <total/>
+              </num_closing_forms>
+              <num_closed_forms>
+                <recent/>
+                <total/>
+              </num_closed_forms>
+              <num_forms_webforms_enabled/>
+              <num_entity_create_forms/>
+              <num_repeat_entity_create_forms/>
+              <num_entity_update_forms/>
+              <num_repeat_entity_update_forms/>
+              <num_entity_create_update_forms/>
+            </forms>
+            <submissions>
+              <num_submissions_received>
+                <recent/>
+                <total/>
+              </num_submissions_received>
+              <num_submissions_approved>
+                <recent/>
+                <total/>
+              </num_submissions_approved>
+              <num_submissions_has_issues>
+                <recent/>
+                <total/>
+              </num_submissions_has_issues>
+              <num_submissions_rejected>
+                <recent/>
+                <total/>
+              </num_submissions_rejected>
+              <num_submissions_edited>
+                <recent/>
+                <total/>
+              </num_submissions_edited>
+              <num_submissions_with_edits>
+                <recent/>
+                <total/>
+              </num_submissions_with_edits>
+              <num_submissions_with_comments>
+                <recent/>
+                <total/>
+              </num_submissions_with_comments>
+              <num_submissions_from_app_users>
+                <recent/>
+                <total/>
+              </num_submissions_from_app_users>
+              <num_submissions_from_public_links>
+                <recent/>
+                <total/>
+              </num_submissions_from_public_links>
+              <num_submissions_from_web_users>
+                <recent/>
+                <total/>
+              </num_submissions_from_web_users>
+            </submissions>
+            <datasets>
+              <id/>
+              <num_properties/>
+              <num_creation_forms/>
+              <num_followup_forms/>
+              <num_entities>
+                <recent/>
+                <total/>
+              </num_entities>
+              <num_entity_creates_sub>
+                <recent/>
+                <total/>
+              </num_entity_creates_sub>
+              <num_entity_creates_api>
+                <recent/>
+                <total/>
+              </num_entity_creates_api>
+              <num_entity_creates_bulk>
+                <recent/>
+                <total/>
+              </num_entity_creates_bulk>
+              <num_failed_entities>
+                <recent/>
+                <total/>
+              </num_failed_entities>
+              <num_entity_updates>
+                <recent/>
+                <total/>
+              </num_entity_updates>
+              <num_entity_updates_sub>
+                <recent/>
+                <total/>
+              </num_entity_updates_sub>
+              <num_entity_updates_api>
+                <recent/>
+                <total/>
+              </num_entity_updates_api>
+              <num_entities_updated>
+                <recent/>
+                <total/>
+              </num_entities_updated>
+              <num_entity_conflicts/>
+              <num_entity_conflicts_resolved/>
+              <num_bulk_create_events>
+                <recent/>
+                <total/>
+              </num_bulk_create_events>
+              <biggest_bulk_upload/>
+              <num_entities_with_geometry>
+                <recent/>
+                <total/>
+              </num_entities_with_geometry>
+            </datasets>
+            <other>
+              <description_length/>
+            </other>
+          </projects>
+          <meta>
+            <instanceID/>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/config/email" type="string"/>
+      <bind nodeset="/data/config/organization" type="string"/>
+      <bind nodeset="/data/system/num_admins/recent" type="int"/>
+      <bind nodeset="/data/system/num_admins/total" type="int"/>
+      <bind nodeset="/data/system/num_projects_encryption/recent" type="int"/>
+      <bind nodeset="/data/system/num_projects_encryption/total" type="int"/>
+      <bind nodeset="/data/system/num_questions_biggest_form" type="int"/>
+      <bind nodeset="/data/system/max_geo_per_form" type="int"/>
+      <bind nodeset="/data/system/num_audit_log_entries/recent" type="int"/>
+      <bind nodeset="/data/system/num_audit_log_entries/total" type="int"/>
+      <bind nodeset="/data/system/num_archived_projects" type="int"/>
+      <bind nodeset="/data/system/num_unique_managers" type="int"/>
+      <bind nodeset="/data/system/num_unique_viewers" type="int"/>
+      <bind nodeset="/data/system/num_unique_collectors" type="int"/>
+      <bind nodeset="/data/system/database_size" type="decimal"/>
+      <bind nodeset="/data/system/uses_external_db" type="int"/>
+      <bind nodeset="/data/system/uses_external_blob_store" type="int"/>
+      <bind nodeset="/data/system/sso_enabled" type="int"/>
+      <bind nodeset="/data/system/num_client_audit_attachments" type="int"/>
+      <bind nodeset="/data/system/num_client_audit_attachments_failures" type="int"/>
+      <bind nodeset="/data/system/num_client_audit_rows" type="int"/>
+      <bind nodeset="/data/system/num_audits_failed" type="int"/>
+      <bind nodeset="/data/system/num_audits_failed5" type="int"/>
+      <bind nodeset="/data/system/num_audits_unprocessed" type="int"/>
+      <bind nodeset="/data/system/num_offline_entity_branches" type="int"/>
+      <bind nodeset="/data/system/num_offline_entity_interrupted_branches" type="int"/>
+      <bind nodeset="/data/system/num_offline_entity_submissions_reprocessed" type="int"/>
+      <bind nodeset="/data/system/num_offline_entity_submissions_force_processed" type="int"/>
+      <bind nodeset="/data/system/max_entity_submission_delay" type="decimal"/>
+      <bind nodeset="/data/system/avg_entity_submission_delay" type="decimal"/>
+      <bind nodeset="/data/system/max_entity_branch_delay" type="decimal"/>
+      <bind nodeset="/data/system/num_owner_only_datasets" type="int"/>
+      <bind nodeset="/data/system/num_xml_only_form_defs" type="int"/>
+      <bind nodeset="/data/system/num_blob_files" type="int"/>
+      <bind nodeset="/data/system/num_blob_files_on_s3" type="int"/>
+      <bind nodeset="/data/system/num_reset_failed_to_pending_count" type="int"/>
+      <bind nodeset="/data/system/num_entity_bulk_deletes/recent" type="int"/>
+      <bind nodeset="/data/system/num_entity_bulk_deletes/total" type="int"/>
+      <bind nodeset="/data/system/num_datasets_with_geometry" type="int"/>
+      <bind nodeset="/data/projects/id" type="string"/>
+      <bind nodeset="/data/projects/users/num_managers/recent" type="int"/>
+      <bind nodeset="/data/projects/users/num_managers/total" type="int"/>
+      <bind nodeset="/data/projects/users/num_viewers/recent" type="int"/>
+      <bind nodeset="/data/projects/users/num_viewers/total" type="int"/>
+      <bind nodeset="/data/projects/users/num_data_collectors/recent" type="int"/>
+      <bind nodeset="/data/projects/users/num_data_collectors/total" type="int"/>
+      <bind nodeset="/data/projects/users/num_app_users/recent" type="int"/>
+      <bind nodeset="/data/projects/users/num_app_users/total" type="int"/>
+      <bind nodeset="/data/projects/users/num_device_ids/recent" type="int"/>
+      <bind nodeset="/data/projects/users/num_device_ids/total" type="int"/>
+      <bind nodeset="/data/projects/users/num_public_access_links/recent" type="int"/>
+      <bind nodeset="/data/projects/users/num_public_access_links/total" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms/recent" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms/total" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms_with_repeats/recent" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms_with_repeats/total" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms_with_geospatial/recent" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms_with_geospatial/total" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms_with_encryption/recent" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms_with_encryption/total" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms_with_audits/recent" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms_with_audits/total" type="int"/>
+      <bind nodeset="/data/projects/forms/num_reused_form_ids" type="int"/>
+      <bind nodeset="/data/projects/forms/num_open_forms/recent" type="int"/>
+      <bind nodeset="/data/projects/forms/num_open_forms/total" type="int"/>
+      <bind nodeset="/data/projects/forms/num_closing_forms/recent" type="int"/>
+      <bind nodeset="/data/projects/forms/num_closing_forms/total" type="int"/>
+      <bind nodeset="/data/projects/forms/num_closed_forms/recent" type="int"/>
+      <bind nodeset="/data/projects/forms/num_closed_forms/total" type="int"/>
+      <bind nodeset="/data/projects/forms/num_forms_webforms_enabled" type="int"/>
+      <bind nodeset="/data/projects/forms/num_entity_create_forms" type="int"/>
+      <bind nodeset="/data/projects/forms/num_repeat_entity_create_forms" type="int"/>
+      <bind nodeset="/data/projects/forms/num_entity_update_forms" type="int"/>
+      <bind nodeset="/data/projects/forms/num_repeat_entity_update_forms" type="int"/>
+      <bind nodeset="/data/projects/forms/num_entity_create_update_forms" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_received/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_received/total" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_approved/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_approved/total" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_has_issues/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_has_issues/total" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_rejected/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_rejected/total" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_edited/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_edited/total" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_with_edits/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_with_edits/total" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_with_comments/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_with_comments/total" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_from_app_users/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_from_app_users/total" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_from_public_links/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_from_public_links/total" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_from_web_users/recent" type="int"/>
+      <bind nodeset="/data/projects/submissions/num_submissions_from_web_users/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/id" type="string"/>
+      <bind nodeset="/data/projects/datasets/num_properties" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_creation_forms" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_followup_forms" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entities/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entities/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_creates_sub/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_creates_sub/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_creates_api/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_creates_api/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_creates_bulk/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_creates_bulk/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_failed_entities/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_failed_entities/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_updates/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_updates/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_updates_sub/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_updates_sub/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_updates_api/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_updates_api/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entities_updated/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entities_updated/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_conflicts" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_conflicts_resolved" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_bulk_create_events/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_bulk_create_events/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/biggest_bulk_upload" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entities_with_geometry/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entities_with_geometry/total" type="int"/>
+      <bind nodeset="/data/projects/other/description_length" type="int"/>
+      <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+    </model>
+  </h:head>
+  <h:body>
+    <group ref="/data/config">
+      <label>Analytics Configuration</label>
+      <input ref="/data/config/email">
+        <label>Email</label>
+      </input>
+      <input ref="/data/config/organization">
+        <label>Organization</label>
+      </input>
+    </group>
+    <group ref="/data/system">
+      <label>System</label>
+      <group ref="/data/system/num_admins">
+        <label>Number of Administrators</label>
+        <input ref="/data/system/num_admins/recent">
+          <label>Recent activity</label>
+        </input>
+        <input ref="/data/system/num_admins/total">
+          <label>Total</label>
+        </input>
+      </group>
+      <group ref="/data/system/num_projects_encryption">
+        <label>Number of Projects with encryption enabled</label>
+        <input ref="/data/system/num_projects_encryption/recent">
+          <label>Recent activity</label>
+        </input>
+        <input ref="/data/system/num_projects_encryption/total">
+          <label>Total</label>
+        </input>
+      </group>
+      <input ref="/data/system/num_questions_biggest_form">
+        <label>Number of questions in biggest Form</label>
+      </input>
+      <input ref="/data/system/max_geo_per_form">
+        <label>Max number of geo data in a form.</label>
+      </input>
+      <group ref="/data/system/num_audit_log_entries">
+        <label>Number of Audit Log entries</label>
+        <input ref="/data/system/num_audit_log_entries/recent">
+          <label>Recent activity</label>
+        </input>
+        <input ref="/data/system/num_audit_log_entries/total">
+          <label>Total</label>
+        </input>
+      </group>
+      <input ref="/data/system/num_archived_projects">
+        <label>Number of archived Projects</label>
+      </input>
+      <input ref="/data/system/num_unique_managers">
+        <label>Number of unique Project Managers</label>
+      </input>
+      <input ref="/data/system/num_unique_viewers">
+        <label>Number of unique Project Viewers</label>
+      </input>
+      <input ref="/data/system/num_unique_collectors">
+        <label>Number of unique Data Collectors</label>
+      </input>
+      <input ref="/data/system/database_size">
+        <label>System database size</label>
+      </input>
+      <input ref="/data/system/uses_external_db">
+        <label>Server uses an external database</label>
+      </input>
+      <input ref="/data/system/uses_external_blob_store">
+        <label>Server uses external blob store</label>
+      </input>
+      <input ref="/data/system/sso_enabled">
+        <label>SSO enabled on Server</label>
+      </input>
+      <input ref="/data/system/num_client_audit_attachments">
+        <label>Number of Client Audit Attachments</label>
+      </input>
+      <input ref="/data/system/num_client_audit_attachments_failures">
+        <label>Number of Client Audit processing failures</label>
+      </input>
+      <input ref="/data/system/num_client_audit_rows">
+        <label>Number of Client Audit rows</label>
+      </input>
+      <input ref="/data/system/num_audits_failed">
+        <label>Number of Audit Log Events that failed at least once</label>
+      </input>
+      <input ref="/data/system/num_audits_failed5">
+        <label>Number of Audit Log Events that failed completely</label>
+      </input>
+      <input ref="/data/system/num_audits_unprocessed">
+        <label>Number of outdated unprocessed Audit Log Events</label>
+      </input>
+      <input ref="/data/system/num_offline_entity_branches">
+        <label>Number of Offline Entity branches</label>
+      </input>
+      <input ref="/data/system/num_offline_entity_interrupted_branches">
+        <label>Number of interrupted Offline Entity branches</label>
+      </input>
+      <input ref="/data/system/num_offline_entity_submissions_reprocessed">
+        <label>Number of reordered Offline Entity submissions</label>
+      </input>
+      <input ref="/data/system/num_offline_entity_submissions_force_processed">
+        <label>Number of force-processed Offline Entity submissions</label>
+      </input>
+      <input ref="/data/system/max_entity_submission_delay">
+        <label>Maximum Entity Submission processing delay</label>
+      </input>
+      <input ref="/data/system/avg_entity_submission_delay">
+        <label>Average Entity Submission processing delay</label>
+      </input>
+      <input ref="/data/system/max_entity_branch_delay">
+        <label>Maximum Offline Entity branch processing time</label>
+      </input>
+      <input ref="/data/system/num_owner_only_datasets">
+        <label>Number of Entity Lists restricted to Owner Only</label>
+      </input>
+      <input ref="/data/system/num_xml_only_form_defs">
+        <label>Number of XML-only Form Defs with no associated XLSForm</label>
+      </input>
+      <input ref="/data/system/num_blob_files">
+        <label>Number of binary files</label>
+      </input>
+      <input ref="/data/system/num_blob_files_on_s3">
+        <label>Number of binary files currently stored in external Blob store</label>
+      </input>
+      <input ref="/data/system/num_reset_failed_to_pending_count">
+        <label>Number of times user has reset failed External Blob upload state</label>
+      </input>
+      <group ref="/data/system/num_entity_bulk_deletes">
+        <label>Number of bulk entity delete actions</label>
+        <input ref="/data/system/num_entity_bulk_deletes/recent">
+          <label>in the past 45 days</label>
+        </input>
+        <input ref="/data/system/num_entity_bulk_deletes/total">
+          <label>Total</label>
+        </input>
+      </group>
+      <input ref="/data/system/num_datasets_with_geometry">
+        <label>Number of Entity Lists with geometry property</label>
+      </input>
+    </group>
+    <group ref="/data/projects">
+      <label>Project Details</label>
+      <repeat nodeset="/data/projects">
+        <input ref="/data/projects/id">
+          <label>Project ID</label>
+        </input>
+        <group ref="/data/projects/users">
+          <label>Users</label>
+          <group ref="/data/projects/users/num_managers">
+            <label>Number of Project Managers</label>
+            <input ref="/data/projects/users/num_managers/recent">
+              <label>With activity in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/users/num_managers/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/users/num_viewers">
+            <label>Number of Project Viewers</label>
+            <input ref="/data/projects/users/num_viewers/recent">
+              <label>With activity in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/users/num_viewers/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/users/num_data_collectors">
+            <label>Number of Data Collectors</label>
+            <input ref="/data/projects/users/num_data_collectors/recent">
+              <label>With activity in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/users/num_data_collectors/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/users/num_app_users">
+            <label>Number of App Users</label>
+            <input ref="/data/projects/users/num_app_users/recent">
+              <label>in projects with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/users/num_app_users/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/users/num_device_ids">
+            <label>Number of device IDs</label>
+            <input ref="/data/projects/users/num_device_ids/recent">
+              <label>in projects with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/users/num_device_ids/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/users/num_public_access_links">
+            <label>Number of Public Access Links</label>
+            <input ref="/data/projects/users/num_public_access_links/recent">
+              <label>in projects with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/users/num_public_access_links/total">
+              <label>Total</label>
+            </input>
+          </group>
+        </group>
+        <group ref="/data/projects/forms">
+          <label>Forms</label>
+          <group ref="/data/projects/forms/num_forms">
+            <label>Number of Forms</label>
+            <input ref="/data/projects/forms/num_forms/recent">
+              <label>with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/forms/num_forms/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/forms/num_forms_with_repeats">
+            <label>Number of Forms with repeats</label>
+            <input ref="/data/projects/forms/num_forms_with_repeats/recent">
+              <label>with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/forms/num_forms_with_repeats/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/forms/num_forms_with_geospatial">
+            <label>Number of Forms with geodata</label>
+            <input ref="/data/projects/forms/num_forms_with_geospatial/recent">
+              <label>with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/forms/num_forms_with_geospatial/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/forms/num_forms_with_encryption">
+            <label>Number of Forms with encryption</label>
+            <input ref="/data/projects/forms/num_forms_with_encryption/recent">
+              <label>with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/forms/num_forms_with_encryption/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/forms/num_forms_with_audits">
+            <label>Number of Forms with audits</label>
+            <input ref="/data/projects/forms/num_forms_with_audits/recent">
+              <label>with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/forms/num_forms_with_audits/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <input ref="/data/projects/forms/num_reused_form_ids">
+            <label>Number of reused Form IDs</label>
+          </input>
+          <group ref="/data/projects/forms/num_open_forms">
+            <label>Number of open Forms</label>
+            <input ref="/data/projects/forms/num_open_forms/recent">
+              <label>with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/forms/num_open_forms/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/forms/num_closing_forms">
+            <label>Number of closing Forms</label>
+            <input ref="/data/projects/forms/num_closing_forms/recent">
+              <label>with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/forms/num_closing_forms/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/forms/num_closed_forms">
+            <label>Number of closed Forms</label>
+            <input ref="/data/projects/forms/num_closed_forms/recent">
+              <label>with submissions in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/forms/num_closed_forms/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <input ref="/data/projects/forms/num_forms_webforms_enabled">
+            <label>Number of Forms with Web Forms enabled</label>
+          </input>
+          <input ref="/data/projects/forms/num_entity_create_forms">
+            <label>Number of Forms that create Entities</label>
+          </input>
+          <input ref="/data/projects/forms/num_repeat_entity_create_forms">
+            <label>Number of Forms that create Entities from repeats</label>
+          </input>
+          <input ref="/data/projects/forms/num_entity_update_forms">
+            <label>Number of Forms that update Entities</label>
+          </input>
+          <input ref="/data/projects/forms/num_repeat_entity_update_forms">
+            <label>Number of Forms that update Entities from repeats</label>
+          </input>
+          <input ref="/data/projects/forms/num_entity_create_update_forms">
+            <label>Number of Forms that create and update Entities</label>
+          </input>
+        </group>
+        <group ref="/data/projects/submissions">
+          <label>Submissions</label>
+          <group ref="/data/projects/submissions/num_submissions_received">
+            <label>Number of Submissions - Received</label>
+            <input ref="/data/projects/submissions/num_submissions_received/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_received/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/submissions/num_submissions_approved">
+            <label>Number of Submissions - Approved</label>
+            <input ref="/data/projects/submissions/num_submissions_approved/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_approved/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/submissions/num_submissions_has_issues">
+            <label>Number of Submissions - Has Issues</label>
+            <input ref="/data/projects/submissions/num_submissions_has_issues/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_has_issues/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/submissions/num_submissions_rejected">
+            <label>Number of Submissions - Rejected</label>
+            <input ref="/data/projects/submissions/num_submissions_rejected/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_rejected/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/submissions/num_submissions_edited">
+            <label>Number of Submissions - Edited</label>
+            <input ref="/data/projects/submissions/num_submissions_edited/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_edited/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/submissions/num_submissions_with_edits">
+            <label>Number of Submissions with edits</label>
+            <input ref="/data/projects/submissions/num_submissions_with_edits/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_with_edits/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/submissions/num_submissions_with_comments">
+            <label>Number of Submissions with comments</label>
+            <input ref="/data/projects/submissions/num_submissions_with_comments/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_with_comments/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/submissions/num_submissions_from_app_users">
+            <label>Number of Submissions from App Users</label>
+            <input ref="/data/projects/submissions/num_submissions_from_app_users/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_from_app_users/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/submissions/num_submissions_from_public_links">
+            <label>Number of Submissions from Public Links</label>
+            <input ref="/data/projects/submissions/num_submissions_from_public_links/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_from_public_links/total">
+              <label>Total</label>
+            </input>
+          </group>
+          <group ref="/data/projects/submissions/num_submissions_from_web_users">
+            <label>Number of Submissions from Web Users</label>
+            <input ref="/data/projects/submissions/num_submissions_from_web_users/recent">
+              <label>in the past 45 days</label>
+            </input>
+            <input ref="/data/projects/submissions/num_submissions_from_web_users/total">
+              <label>Total</label>
+            </input>
+          </group>
+        </group>
+        <group ref="/data/projects/datasets">
+          <label>Dataset Details</label>
+          <repeat nodeset="/data/projects/datasets">
+            <input ref="/data/projects/datasets/id">
+              <label>Dataset ID</label>
+            </input>
+            <input ref="/data/projects/datasets/num_properties">
+              <label>Number of Properties</label>
+            </input>
+            <input ref="/data/projects/datasets/num_creation_forms">
+              <label>Number of Forms that update the Dataset</label>
+            </input>
+            <input ref="/data/projects/datasets/num_followup_forms">
+              <label>Number of Forms that use the Dataset</label>
+            </input>
+            <group ref="/data/projects/datasets/num_entities">
+              <label>Number of Entities in the Dataset</label>
+              <input ref="/data/projects/datasets/num_entities/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entities/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_entity_creates_sub">
+              <label>Number of creates through Submissions</label>
+              <input ref="/data/projects/datasets/num_entity_creates_sub/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entity_creates_sub/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_entity_creates_api">
+              <label>Number of creates through API</label>
+              <input ref="/data/projects/datasets/num_entity_creates_api/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entity_creates_api/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_entity_creates_bulk">
+              <label>Number of creates through Bulk Upload</label>
+              <input ref="/data/projects/datasets/num_entity_creates_bulk/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entity_creates_bulk/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_failed_entities">
+              <label>Number of Entity creation errors</label>
+              <input ref="/data/projects/datasets/num_failed_entities/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_failed_entities/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_entity_updates">
+              <label>Number of Entity updates</label>
+              <input ref="/data/projects/datasets/num_entity_updates/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entity_updates/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_entity_updates_sub">
+              <label>Number of updates through Submissions</label>
+              <input ref="/data/projects/datasets/num_entity_updates_sub/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entity_updates_sub/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_entity_updates_api">
+              <label>Number of updates through API</label>
+              <input ref="/data/projects/datasets/num_entity_updates_api/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entity_updates_api/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_entities_updated">
+              <label>Number of modified Entities</label>
+              <input ref="/data/projects/datasets/num_entities_updated/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entities_updated/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <input ref="/data/projects/datasets/num_entity_conflicts">
+              <label>Number of Entities ever with conflict</label>
+            </input>
+            <input ref="/data/projects/datasets/num_entity_conflicts_resolved">
+              <label>Number of Entities with resolved conflicts</label>
+            </input>
+            <group ref="/data/projects/datasets/num_bulk_create_events">
+              <label>Number of bulk uploads</label>
+              <input ref="/data/projects/datasets/num_bulk_create_events/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_bulk_create_events/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <input ref="/data/projects/datasets/biggest_bulk_upload">
+              <label>Number of rows in biggest bulk upload</label>
+            </input>
+            <group ref="/data/projects/datasets/num_entities_with_geometry">
+              <label>Number of Entities with geometry data</label>
+              <input ref="/data/projects/datasets/num_entities_with_geometry/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entities_with_geometry/total">
+                <label>Total</label>
+              </input>
+            </group>
+          </repeat>
+        </group>
+        <group ref="/data/projects/other">
+          <label>Other</label>
+          <input ref="/data/projects/other/description_length">
+            <label>Length of the Project description</label>
+          </input>
+        </group>
+      </repeat>
+    </group>
+  </h:body>
 </h:html>
