@@ -102,6 +102,10 @@ describe('project viewer role', () => {
         body.map(v => v.version).should.be.eql(['2', '']);
       })))));
 
+  it('should not be able to get versions of the draft form', testService(withFormDrafts(viewer((asViewer) =>
+    asViewer.get('/v1/projects/1/forms/simple2/versions')
+      .expect(403)))));
+
   it('should be able to get details of the published version', testService(withFormDrafts(viewer((asViewer) =>
     asViewer.get('/v1/projects/1/forms/simple/versions/2')
       .expect(200)
