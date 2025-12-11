@@ -34,6 +34,27 @@ const withSubmissions = (f) => (service) =>
         .expect(200))
       .then(() => f(service)));
 
+const withFormDrafts = (f) => async (service) => {
+  const asAlice = await service.login('alice');
+
+  await asAlice.post('/v1/projects/1/forms/simple/draft')
+    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="2"'))
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/forms/simple/draft')
+    .send(testData.forms.simple.replace('id="simple"', 'id="simple" version="3"'))
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/forms')
+    .send(testData.forms.simple2)
+    .expect(200);
+
+  return f(service);
+};
+
 describe('project viewer role', () => {
   it('should be able to list projects it can access', testService((service) =>
     service.login('alice', (asAlice) =>
@@ -73,6 +94,24 @@ describe('project viewer role', () => {
     asViewer.get('/v1/projects/1/forms/simple')
       .expect(200)
       .then(({ body }) => { body.should.be.a.Form(); }))));
+
+  it('should be able to get form versions', testService(withFormDrafts(viewer((asViewer) =>
+    asViewer.get('/v1/projects/1/forms/simple/versions')
+      .expect(200)
+      .then(({ body }) => {
+        body.map(v => v.version).should.be.eql(['2', '']);
+      })))));
+
+  it('should be able to get details of the published version', testService(withFormDrafts(viewer((asViewer) =>
+    asViewer.get('/v1/projects/1/forms/simple/versions/2')
+      .expect(200)
+      .then(({ body }) => {
+        body.version.should.be.eql('2');
+      })))));
+
+  it('should not be able to get details of the unpublished version', testService(withFormDrafts(viewer((asViewer) =>
+    asViewer.get('/v1/projects/1/forms/simple/versions/3')
+      .expect(404)))));
 
   it('should not be able to update form details', testService(viewer((asViewer) =>
     asViewer.patch('/v1/projects/1/forms/simple')
