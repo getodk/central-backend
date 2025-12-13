@@ -697,20 +697,20 @@ describe('api: entities-geodata', () => {
   it('creatorId filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?creatorId=5&creatorId=6`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/creatorId eq 5 or __system/creatorId eq 6`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(3);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?creatorId=5`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/creatorId eq 5`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(2);
         body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789aab']);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?creatorId=6`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/creatorId eq 6`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
@@ -721,21 +721,21 @@ describe('api: entities-geodata', () => {
   it('entityUUID filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aaa&entityUUID=12345678-1234-4123-8234-123456789aab`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__id eq '12345678-1234-4123-8234-123456789aaa' or __id eq '12345678-1234-4123-8234-123456789aab'`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(2);
         body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789aab']);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aaa`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__id eq '12345678-1234-4123-8234-123456789aaa'`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
         body.features.map(f => f.id).should.deepEqual(['12345678-1234-4123-8234-123456789aaa']);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aab`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__id eq '12345678-1234-4123-8234-123456789aab'`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
@@ -752,19 +752,19 @@ describe('api: entities-geodata', () => {
       .then(async ({ body }) => {
         const [c1, , c5] = body.map(el => el.createdAt).sort();
 
-        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?end__lt=${c1}`)
+        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/createdAt lt ${c1}`)
           .expect(200)
           .then((resp) => {
             resp.body.features.length.should.equal(0);
           });
 
-        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?start__gt=${c5}`)
+        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/createdAt gt ${c5}`)
           .expect(200)
           .then((resp) => {
             resp.body.features.length.should.equal(0);
           });
 
-        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?start__gte=${c1}&end__lte=${c5}`)
+        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/createdAt ge ${c1} and __system/createdAt le ${c5}`)
           .expect(200)
           .then((resp) => {
             resp.body.features.length.should.equal(3); // while there are 5 entities, 2 have invalid geodata.
@@ -792,7 +792,7 @@ describe('api: entities-geodata', () => {
         resp.body.features.length.should.equal(2);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?deleted=true`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=not __system/deletedAt eq null`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(1);
@@ -804,7 +804,7 @@ describe('api: entities-geodata', () => {
   it('resultset limiter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?limit=2`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$limit=2`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(2);
@@ -828,7 +828,7 @@ describe('api: entities-geodata', () => {
   it('conflict status filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=soft`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/conflict eq 'soft'`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(0);
@@ -836,7 +836,7 @@ describe('api: entities-geodata', () => {
 
     await db.query(sql`update entities set conflict = 'soft'::"conflictType" where uuid = '12345678-1234-4123-8234-123456789aaa'`);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=soft`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/conflict eq 'soft'`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(1);
@@ -844,13 +844,13 @@ describe('api: entities-geodata', () => {
 
     await db.query(sql`update entities set conflict = 'hard'::"conflictType" where uuid = '12345678-1234-4123-8234-123456789aab'`);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=hard`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/conflict eq 'hard'`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(1);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=hard&conflict=soft`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/conflict eq 'hard' or __system/conflict eq 'soft'`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(2);
