@@ -9,7 +9,7 @@
 
 const fs = require('node:fs');
 const _ = require('lodash');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 const { program } = require('commander');
 
 const SUITE_NAME = 'test/e2e/soak';

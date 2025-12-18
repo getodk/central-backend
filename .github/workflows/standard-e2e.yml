@@ -15,7 +15,7 @@ jobs:
     services:
       # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
       postgres:
-        image: postgres:14.10
+        image: postgres:14.20
         env:
           POSTGRES_PASSWORD: odktest
         ports:
@@ -31,7 +31,7 @@ jobs:
     - name: Set node version
       uses: actions/setup-node@v4
       with:
-        node-version: 22.21.0
+        node-version: 22.21.1
         cache: 'npm'
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js

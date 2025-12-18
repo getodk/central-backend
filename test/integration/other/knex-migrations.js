@@ -8,7 +8,7 @@
  */
 
 const appRoot = require('app-root-path');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 const config = require('config');
 const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
