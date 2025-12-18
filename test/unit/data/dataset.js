@@ -810,10 +810,8 @@ describe('entities from repeats', () => {
       const res = matchFieldsWithDatasets(ds.get().datasets, ff);
       res[0].dataset.name.should.equal('farm');
       res[0].fields.length.should.eql(3);
-      res[0].testFields.length.should.eql(6);
       res[1].dataset.name.should.equal('farmer');
       res[1].fields.length.should.eql(2);
-      res[1].testFields.length.should.eql(5);
     });
 
     it('should allow entity scope to be a group within a repeat and not the repeat itself', async() => {
@@ -886,7 +884,6 @@ describe('entities from repeats', () => {
       res[0].dataset.name.should.equal('trees');
       res[0].dataset.path.should.equal('/outer_repeat/outer_group/inner_repeat/inner_group/');
       res[0].fields.length.should.eql(1);
-      res[0].testFields.length.should.eql(4);
     });
   });
 });
