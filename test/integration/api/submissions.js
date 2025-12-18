@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
 const { testService, testServiceFullTrx } = require('../setup');

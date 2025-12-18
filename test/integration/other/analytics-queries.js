@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
 const { createReadStream, readFileSync } = require('fs');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
@@ -1793,6 +1793,43 @@ describe('analytics task queries', function () {
       ds.num_bulk_create_events.should.eql({ total: 0, recent: 0 });
       ds.biggest_bulk_upload.should.equal(0);
     }));
+
+    it('should count number of multi entity errors (errors processing submission with entities from repeats)', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Submit forms
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityHousehold)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Submit submissions
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.one
+          .replace('<label>Pine</label>', '')
+          .replace('id="090c56ff-25f4-4503-b760-f6bef8528152"', 'id="invalid-uuid"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityHousehold/submissions')
+        .send(testData.instances.repeatEntityHousehold.one
+          .replace('id="04f22514-654d-46e6-9d94-41676a5c97e1"', 'id="invalid-uuid"')
+          .replace('id="3b082d6c-dcc8-4d42-9fe3-a4e4e5f1bb0a"', 'id="invalid-uuid"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const result = await container.Analytics.countMultiEntityErrors();
+      result.should.equal(2);
+    }));
   });
 
   describe('offline entity metrics', () => {
@@ -2527,13 +2564,6 @@ describe('analytics task queries', function () {
       await createTestUser(service, container, 'Viewer1', 'viewer', 1);
       await createTestUser(service, container, 'Collector1', 'formfill', 1);
 
-      // creating audit events in various states
-      await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt", "failures")
-        values
-          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 1),
-          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 5),
-          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 0)`);
-
       // v2025.3
       // create entities so there are things to bulk-delete
       await asAlice.post('/v1/projects/1/datasets/people/entities')
@@ -2568,7 +2598,30 @@ describe('analytics task queries', function () {
         .expect(200);
 
 
+      // v2025.4 trigger multi entity error
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.one
+          .replace('<label>Pine</label>', '')
+          .replace('id="090c56ff-25f4-4503-b760-f6bef8528152"', 'id="invalid-uuid"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
       // ---- Add new behavior above ---
+
+      // creating audit events in various states
+      await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt", "failures")
+        values
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 1),
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 5),
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 0)`);
 
       // encrypt the non-empty project
       await asAlice.post('/v1/projects/1/key')
@@ -2981,6 +3034,65 @@ describe('analytics task queries', function () {
       await container.all(sql`update audits set "loggedAt" = current_timestamp - interval '31 days' where action = 'analytics'`);
       const res = await container.Analytics.getLatestAudit();
       res.isEmpty().should.equal(true);
+    }));
+  });
+
+  describe('parsing official analytics form', () => {
+    it('should validate form fields match metrics template', testService(async (service) => {
+      const config = require('config');
+
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(readFileSync(appRoot + '/test/data/odk-analytics.xml'))
+        .expect(200);
+
+      const { body: form } = await asAlice.get('/v1/projects/1/forms/odk-analytics');
+      form.version.should.equal(config.get('default.external.analytics.version'));
+
+      const { body: fields } = await asAlice.get('/v1/projects/1/forms/odk-analytics/fields');
+
+      // Extract all leaf data paths from fields
+      // exclude structure and repeat fields
+      // exclude meta block and config block
+      const fieldPaths = new Set();
+      fields.forEach(field => {
+        if (field.type !== 'structure' && field.type !== 'repeat' &&
+          !field.path.startsWith('/meta') && !field.path.startsWith('/config')) {
+          fieldPaths.add(field.path);
+        }
+      });
+
+      // Extract all paths from metricsTemplate recursively
+      const extractPathsFromTemplate = (obj, prefix = '') => {
+        const paths = [];
+        for (const [key, value] of Object.entries(obj)) {
+          const currentPath = `${prefix}/${key}`;
+          if (Array.isArray(value)) {
+            // Handle array templates (like projects/datasets)
+            paths.push(...extractPathsFromTemplate(value[0], currentPath));
+          } else if (typeof value === 'object') {
+            // Handle nested objects like recent/total
+            paths.push(...extractPathsFromTemplate(value, currentPath));
+          } else {
+            // Leaf value
+            paths.push(currentPath);
+          }
+        }
+        return paths;
+      };
+
+      const { metricsTemplate } = require(appRoot + '/lib/data/analytics');
+      const templatePaths = new Set(extractPathsFromTemplate(metricsTemplate));
+
+      // Find missing fields (skip config fields we don't care about)
+      const missingInForm = [...templatePaths].filter(path => !fieldPaths.has(path));
+      const missingInTemplate = [...fieldPaths].filter(path => !templatePaths.has(path));
+
+      // Assert no missing fields (will show the missing paths in failure message)
+      missingInForm.should.have.length(0);
+      missingInTemplate.should.have.length(0);
     }));
   });
 });

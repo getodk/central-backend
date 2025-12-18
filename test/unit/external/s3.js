@@ -59,6 +59,16 @@ describe('external/s3', () => {
     }
   });
 
+  describe('destroy()', () => {
+    it('should resolve when no requests were made', async () => {
+      // given
+      const singleUseS3 = init(s3Config);
+
+      // expect
+      should(await singleUseS3.destroy()).be.undefined();
+    });
+  });
+
   describe('deleteObjsFor()', () => {
     it('should return details for upstream permission error', async () => {
       // given
