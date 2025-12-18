@@ -261,7 +261,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
         })));
 
     it('should call entities purge if entities uuid is specified', testTask(() =>
-      purgeTask({ entityUuid: 'abc', projectId: 1, datasetName: 'people' })
+      purgeTask({ entityUuid: '00000000-0000-4000-8000-000000000000', projectId: 1, datasetName: 'people' })
         .then((message) => {
           message.should.equal('Entities purged: 0');
         })));

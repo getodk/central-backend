@@ -264,6 +264,16 @@ describe('db: geodata parsing functions', () => {
       ['nope', null],
       ['170 80', null],
       ['90 190', null],
+
+      // regression tests for bug #1540 - consider extraneous leading zeroes invalid
+      [' 01.1 1.1 1.1', null],
+      ['-01.1 1.1 1.1', null],
+      ['1.1 -01.1 1.1', null],
+      ['1.1 -01.1 1.1', null],
+      ['1.1 1.1 01.1', null],
+      ['1.1 1.1 -01.1', null],
+      ['1.1 1.1 1.1 01.1', null],
+
       ['90 180', [180, 90]],
       // When it comes to the amount of whitespace between coordinate atoms, be liberal, since there is no ambiguity.
       ['90\t \t180', [180, 90]],
@@ -798,6 +808,18 @@ describe('api: entities-geodata', () => {
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(2);
+      });
+
+  }));
+
+
+  it('Attribute label filter does its job', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$search=a`)
+      .expect(200)
+      .then((resp) => {
+        resp.body.features.length.should.equal(1);
       });
 
   }));

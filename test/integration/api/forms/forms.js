@@ -92,6 +92,19 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
           }))));
 
+    it('should decode html entities in the value of form version - getodk/central#1470', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2.replace('2.1', '&lt;{}&gt;'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Form();
+            body.name.should.equal('Simple 2');
+            body.version.should.equal('<{}>');
+            body.hash.should.equal('232ffd287a8eaef0103ad2386dafa44e');
+          }))));
+
     it('should reject if form id ends in .xml', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')

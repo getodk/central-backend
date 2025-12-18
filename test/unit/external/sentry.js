@@ -1,31 +1,42 @@
+const assert = require('node:assert/strict');
+
 const appRoot = require('app-root-path');
 const { _init, filterXmlFormIdFromUrl } = require(appRoot + '/lib/external/sentry');
 
 describe('sentry', () => {
-  it('should have expected integrations', () => {
+  it('should have expected Integrations', () => {
+    const getIntegrations = () => {
+      try {
+        const config = {
+          project: 1,
+          key: 'abc-123',
+          orgSubdomain: 'example',
+        };
 
-    // Note, this test may break for the following reasons:
-    //
-    // * Sentry does not have a documented way to check the enabled integrations,
-    //   so this test may break due to changing internals of the @sentry/node
-    //   module.
-    // * Sentry may change the default integrations.  In the case of new default
-    //   integrations, consider if they should be added to the expected list
-    //   below.  In the case of default integrations being removed, consider if
-    //   they should be re-enabled manually.
+        return _init(config)
+          .getClient()
+          ._options
+          .integrations
+          .map(it => it.name)
+          .sort();
+      } catch (err) {
+        assert.fail(`
 
-    const config = {
-      project: 1,
-      key: 'abc-123',
-      orgSubdomain: 'example',
+          Fetching Sentry Integrations failed with error:
+
+              ${err}
+
+          Sentry does not have a documented way to check the enabled
+          Integrations, so this test may have broken due to changing
+          internals of the @sentry/node module.
+
+          Find a new way to check Sentry's enabled Integrations, and
+          update this test to use the new approach.
+        `);
+      }
     };
 
-    const integrations = _init(config)
-      .getClient()
-      ._options
-      .integrations
-      .map(it => it.name)
-      .sort();
+    const integrations = getIntegrations();
 
     integrations.should.eql([
       'ChildProcess',
@@ -44,13 +55,31 @@ describe('sentry', () => {
       'LruMemoizer',
       'Modules',
       'NodeFetch',
+      'NodeSystemError',
       'OnUncaughtException',
       'OnUnhandledRejection',
       'Postgres',
       'ProcessSession',
       'RequestData',
       'Tedious',
-    ]);
+    ], `
+
+       There's been a change in Sentry's default Integrations.
+
+       If a listed integration's been removed, consider if it should
+       be re-enabled manually.
+
+       If there's a new integration which isn't explicitly expected
+       in this test, consider if it's useful to this codebase.
+
+       To enable or disable Integrations, see:
+
+           lib/external/sentry.js
+
+       For a full list of available Integrations, see:
+
+           https://docs.sentry.io/platforms/javascript/guides/node/configuration/integrations/
+    `);
   });
 
   /* eslint-disable no-multi-spaces */

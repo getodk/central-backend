@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
 const { createReadStream, readFileSync } = require('fs');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 
 const { promisify } = require('util');
 const testData = require('../../data/xml');
@@ -1793,6 +1793,43 @@ describe('analytics task queries', function () {
       ds.num_bulk_create_events.should.eql({ total: 0, recent: 0 });
       ds.biggest_bulk_upload.should.equal(0);
     }));
+
+    it('should count number of multi entity errors (errors processing submission with entities from repeats)', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Submit forms
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityHousehold)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Submit submissions
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.one
+          .replace('<label>Pine</label>', '')
+          .replace('id="090c56ff-25f4-4503-b760-f6bef8528152"', 'id="invalid-uuid"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityHousehold/submissions')
+        .send(testData.instances.repeatEntityHousehold.one
+          .replace('id="04f22514-654d-46e6-9d94-41676a5c97e1"', 'id="invalid-uuid"')
+          .replace('id="3b082d6c-dcc8-4d42-9fe3-a4e4e5f1bb0a"', 'id="invalid-uuid"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      const result = await container.Analytics.countMultiEntityErrors();
+      result.should.equal(2);
+    }));
   });
 
   describe('offline entity metrics', () => {
@@ -2527,13 +2564,6 @@ describe('analytics task queries', function () {
       await createTestUser(service, container, 'Viewer1', 'viewer', 1);
       await createTestUser(service, container, 'Collector1', 'formfill', 1);
 
-      // creating audit events in various states
-      await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt", "failures")
-        values
-          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 1),
-          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 5),
-          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 0)`);
-
       // v2025.3
       // create entities so there are things to bulk-delete
       await asAlice.post('/v1/projects/1/datasets/people/entities')
@@ -2568,7 +2598,30 @@ describe('analytics task queries', function () {
         .expect(200);
 
 
+      // v2025.4 trigger multi entity error
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(testData.instances.repeatEntityTrees.one
+          .replace('<label>Pine</label>', '')
+          .replace('id="090c56ff-25f4-4503-b760-f6bef8528152"', 'id="invalid-uuid"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
       // ---- Add new behavior above ---
+
+      // creating audit events in various states
+      await container.run(sql`insert into audits ("actorId", action, "acteeId", details, "loggedAt", "failures")
+        values
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 1),
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 5),
+          (null, 'dummy.action', null, null, '1999-1-1T00:00:00Z', 0)`);
 
       // encrypt the non-empty project
       await asAlice.post('/v1/projects/1/key')
