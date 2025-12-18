@@ -594,14 +594,14 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         });
     }));
 
-    describe('with structure changed', () => {
-      const xmlWithStructureChange = testData.forms.simple.replace(/age/g, 'address');
+    describe('with structureChanged warning', () => {
+      const withStructuredChange = xml => xml.replace(/age/g, 'address');
 
       it('should reject', testService(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms/simple/draft')
-          .send(xmlWithStructureChange)
+          .send(withStructureChange(testData.forms.simple))
           .set('Content-Type', 'application/xml')
           .then(({ body }) => {
             body.code.should.be.eql(400.16);
@@ -613,7 +613,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
-          .send(xmlWithStructureChange)
+          .send(withStructureChange(testData.forms.simple))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
@@ -625,7 +625,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(xmlWithStructureChange)
+          .send(withStructureChange(testData.forms.simple2))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
