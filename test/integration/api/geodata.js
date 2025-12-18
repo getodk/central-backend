@@ -2,7 +2,7 @@ const { testService } = require('../setup');
 const { forms: { geoTypes } } = require('../../data/xml');
 const { sql } = require('slonik');
 const { palatableGeoJSON } = require('../../formats/palatable-geojson');
-// eslint-disable-next-line no-unused-vars
+// eslint-disable-next-line import/no-extraneous-dependencies
 const should = require('should');
 
 
@@ -488,20 +488,20 @@ describe('api: submission-geodata', () => {
   it('submissionID filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoSubmissions(service, db, true);
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submissionID=1&submissionID=2`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__id eq 1 or __id eq 2`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(2);
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submissionID=1`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__id eq 1`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
         body.features[0].id.should.equal('1');
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submissionID=2`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__id eq 2`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
@@ -528,20 +528,20 @@ describe('api: submission-geodata', () => {
   it('submitterId filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoSubmissions(service, db, true);
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submitterId=5&submitterId=6`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/submitterId eq 5 or __system/submitterId eq 6`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(2);
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submitterId=5`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/submitterId eq 5`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
         body.features[0].id.should.equal('1');
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?submitterId=6`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/submitterId eq 6`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
@@ -561,19 +561,19 @@ describe('api: submission-geodata', () => {
       .send({ reviewState: 'rejected' })
       .expect(200);
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?reviewState=approved`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/reviewState eq 'approved'`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?reviewState=rejected`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/reviewState eq 'rejected'`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?reviewState=approved&reviewState=rejected`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/reviewState eq 'approved' or __system/reviewState eq 'rejected'`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(2);
@@ -588,20 +588,21 @@ describe('api: submission-geodata', () => {
     await asAlice.delete('/v1/projects/1/forms/geotest/submissions/2')
       .expect(200);
 
+    // asserts that by default, deleted submissions are not included
     await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?deleted=false`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/deletedAt eq null`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
         body.features[0].id.should.equal('1');
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?deleted=true`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=not __system/deletedAt eq null`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
@@ -619,7 +620,7 @@ describe('api: submission-geodata', () => {
         body.features.length.should.equal(2);
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?limit=1`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$limit=1`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
@@ -636,20 +637,19 @@ describe('api: submission-geodata', () => {
       .then(async ({ body }) => {
         const [c1, c2] = body.map(el => el.createdAt).sort();
 
-        await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?end__lt=${c1}`)
-          .expect(200)
-          .then((resp) => {
-            // console.error(resp.body);
-            resp.body.features.length.should.equal(0);
-          });
-
-        await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?start__gt=${c2}`)
+        await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/submissionDate lt ${c1}`)
           .expect(200)
           .then((resp) => {
             resp.body.features.length.should.equal(0);
           });
 
-        await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?start__gte=${c1}&end__lte=${c2}`)
+        await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/submissionDate gt ${c2}`)
+          .expect(200)
+          .then((resp) => {
+            resp.body.features.length.should.equal(0);
+          });
+
+        await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$filter=__system/submissionDate ge ${c1} and (__system/submissionDate le ${c2})`)
           .expect(200)
           .then((resp) => {
             resp.body.features.length.should.equal(2);
@@ -697,20 +697,20 @@ describe('api: entities-geodata', () => {
   it('creatorId filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?creatorId=5&creatorId=6`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/creatorId eq 5 or __system/creatorId eq 6`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(3);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?creatorId=5`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/creatorId eq 5`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(2);
         body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789aab']);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?creatorId=6`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/creatorId eq 6`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
@@ -721,21 +721,21 @@ describe('api: entities-geodata', () => {
   it('entityUUID filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aaa&entityUUID=12345678-1234-4123-8234-123456789aab`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__id eq '12345678-1234-4123-8234-123456789aaa' or __id eq '12345678-1234-4123-8234-123456789aab'`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(2);
         body.features.map(f => f.id).sort().should.deepEqual(['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789aab']);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aaa`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__id eq '12345678-1234-4123-8234-123456789aaa'`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
         body.features.map(f => f.id).should.deepEqual(['12345678-1234-4123-8234-123456789aaa']);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?entityUUID=12345678-1234-4123-8234-123456789aab`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__id eq '12345678-1234-4123-8234-123456789aab'`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
@@ -752,19 +752,19 @@ describe('api: entities-geodata', () => {
       .then(async ({ body }) => {
         const [c1, , c5] = body.map(el => el.createdAt).sort();
 
-        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?end__lt=${c1}`)
+        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/createdAt lt ${c1}`)
           .expect(200)
           .then((resp) => {
             resp.body.features.length.should.equal(0);
           });
 
-        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?start__gt=${c5}`)
+        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/createdAt gt ${c5}`)
           .expect(200)
           .then((resp) => {
             resp.body.features.length.should.equal(0);
           });
 
-        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?start__gte=${c1}&end__lte=${c5}`)
+        await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/createdAt ge ${c1} and __system/createdAt le ${c5}`)
           .expect(200)
           .then((resp) => {
             resp.body.features.length.should.equal(3); // while there are 5 entities, 2 have invalid geodata.
@@ -792,7 +792,7 @@ describe('api: entities-geodata', () => {
         resp.body.features.length.should.equal(2);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?deleted=true`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=not __system/deletedAt eq null`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(1);
@@ -804,7 +804,7 @@ describe('api: entities-geodata', () => {
   it('resultset limiter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?limit=2`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$limit=2`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(2);
@@ -828,7 +828,7 @@ describe('api: entities-geodata', () => {
   it('conflict status filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=soft`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/conflict eq 'soft'`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(0);
@@ -836,7 +836,7 @@ describe('api: entities-geodata', () => {
 
     await db.query(sql`update entities set conflict = 'soft'::"conflictType" where uuid = '12345678-1234-4123-8234-123456789aaa'`);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=soft`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/conflict eq 'soft'`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(1);
@@ -844,13 +844,13 @@ describe('api: entities-geodata', () => {
 
     await db.query(sql`update entities set conflict = 'hard'::"conflictType" where uuid = '12345678-1234-4123-8234-123456789aab'`);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=hard`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/conflict eq 'hard'`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(1);
       });
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?conflict=hard&conflict=soft`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$filter=__system/conflict eq 'hard' or __system/conflict eq 'soft'`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(2);
