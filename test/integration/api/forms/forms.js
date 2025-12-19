@@ -594,50 +594,54 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         });
     }));
 
-    it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice');
+    describe('with structureChanged warning', () => {
+      const withChangedStructure = xml => xml.replace(/age/g, 'address');
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft')
-        .send(testData.forms.simple.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .then(({ body }) => {
-          body.code.should.be.eql(400.16);
-          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
-        });
-    }));
+      it('should reject', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-    it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(withChangedStructure(testData.forms.simple))
+          .set('Content-Type', 'application/xml')
+          .then(({ body }) => {
+            body.code.should.be.eql(400.16);
+            body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
+          });
+      }));
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
-        .send(testData.forms.simple.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+      it('should accept if ignoreWarnings set', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
-        .expect(200);
-    }));
+        await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+          .send(withChangedStructure(testData.forms.simple))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-    it('should reject with xls and structure changed warnings', testService(async (service) => {
-      const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
+          .expect(200);
+      }));
 
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.simple2.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+      it('should reject with xls', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      global.xlsformTest = 'warning'; // set up the mock service to warn.
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(withChangedStructure(testData.forms.simple2))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/simple2/draft')
-        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
-        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        .expect(400)
-        .then(({ body }) => {
-          body.code.should.be.eql(400.16);
-          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
-          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
-        });
-    }));
+        global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+        await asAlice.post('/v1/projects/1/forms/simple2/draft')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.16);
+            body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+            body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
+          });
+      }));
+    });
 
     it('should reject form with missing meta group', testService(async (service) => {
       const asAlice = await service.login('alice');
