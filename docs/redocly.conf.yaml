@@ -18,9 +18,9 @@ rules:
   no-unused-components: warn
   nullable-type-sibling: warn
   operation-2xx-response: warn
-  operation-operationId: warn
-  operation-operationId-unique: warn
-  operation-operationId-url-safe: warn
+  operation-operationId: error
+  operation-operationId-unique: error
+  operation-operationId-url-safe: error
   operation-parameters-unique: warn
   operation-summary: warn
   path-declaration-must-exist: warn
