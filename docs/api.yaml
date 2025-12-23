@@ -51,6 +51,9 @@ info:
       - The [`submissions.csv`](/central-api-submission-management/#exporting-root-data-to-plain-csv) endpoint
       - The [`submissions.csv.zip`](/central-api-submission-management/#exporting-form-submissions-to-csv) endpoint
 
+    **Changed**:
+    - The APIs introduced in 2025.3 yielding geographical information from submissions and entities in GeoJSON format have changed, and are now documented.
+
     ## ODK Central v2025.3
 
     **Added**:
@@ -5615,9 +5618,7 @@ paths:
         If no particular field path is supplied, the first non-repeat geopoint/geotrace/geoshape field is used.
         No particular ordering is implied.
         
-        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
-        Its current behaviour should not be depended upon.
-        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
+        You can use an [OData-style `$filter` query](/central-api-odata-endpoints/#data-document) to filter the submissions.
       operationId: getSubmissionsGeodata
       parameters:
       - name: projectId
@@ -5634,6 +5635,23 @@ paths:
         schema:
           type: string
         example: simple
+      - name: $filter
+        in: query
+        description: An [OData-style `$filter` query](/central-api-odata-endpoints/#data-document) to filter the submissions by.
+        schema:
+          type: string
+      - name: $limit
+        in: query
+        schema:
+          type: number
+        example: 100
+        description: Impose a limit on the number of submissions to extract geoinformation from.
+      - name: fieldpath
+        in: query
+        schema:
+          type: string
+        example: "/some_group/some_geopoint"
+        description: Extract geoinformation from the specified field. At most one field can be specified. If no field is specified, the "default" field (the first geofield not directly or indirectly part of any repeatroup) is used.
       responses:
         "200":
           description: OK
@@ -5644,7 +5662,7 @@ paths:
                   Submission geodata, in [GeoJSON](https://geojson.org) format.
                   Geodata is grouped by submission. Submissions are represented as a GeoJSON "feature".
                   
-                  When the provenance of the geodata (the form's field path) is not evident from the request, the origin field path of the geodata will be denoted in a `fieldpath` property in the feature's GeoJSON `properties` object. This is the case in when no field path is specified in the request, as in that situation the first geopoint-, geotrace-, or geoshape-field (not in any repeatgroup) of the form is used. And thus as forms get revised, what is the first geo-type field (not in any repeatgroup) may change; without the `fieldpath` extra information, the data provenance would be unclear. 
+                  When the provenance of the geodata (the form's field path) is not evident from the request, the origin field path of the geodata will be denoted in a `fieldpath` property in the feature's GeoJSON `properties` object. This is the case in when no `fieldpath` query parameter is present, as in that situation the first geopoint-, geotrace-, or geoshape-field (not in any repeatgroup) of the form is used. And thus as forms get revised, what is the first geo-type field (not in any repeatgroup) may change; without the `fieldpath` extra information, the data provenance would be unclear. 
                 type: object
               example:
                 {
@@ -8596,10 +8614,6 @@ paths:
       description: |-
         This endpoint returns the geometry-interpretable value of the `geometry` attribute of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
         No particular ordering is implied.
-        
-        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
-        Its current behaviour should not be depended upon.
-        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
       operationId: getEntitiesGeodata
       parameters:
       - name: projectId
@@ -8616,6 +8630,17 @@ paths:
         schema:
           type: string
         example: people
+      - name: $limit
+        in: query
+        schema:
+          type: number
+        example: 100
+        description: Impose a limit on the number of entities to extract geoinformation from.
+      - name: $search
+        in: query
+        description: The `$search` querystring parameter can be used to search entity data (user-defined properties) and the `label` field, using the same search behavior as the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service).
+        schema:
+          type: string
       responses:
         "200":
           description: OK
