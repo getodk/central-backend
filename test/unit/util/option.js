@@ -1,3 +1,4 @@
+const R = require('ramda');
 const Should = require('should');
 const Option = require('../../../lib/util/option');
 
@@ -107,6 +108,102 @@ describe('(libs/FP) Option type', () => {
     it('It is not empty / It is defined', () => {
       o.isDefined().should.be.false();
       o.isEmpty().should.be.true();
+    });
+  });
+
+  describe('ramda interactions', () => {
+    describe('R.equals()', () => {
+      it('Option.none() should equal Option.none()', () => {
+        R.equals(Option.none(), Option.none()).should.be.true();
+      });
+
+      it('Option.of(...) should equal Option.of(...) the same value', () => {
+        R.equals(Option.of(1), Option.of(1)).should.be.true();
+      });
+
+      [
+        [ Option.none(), Option.of(0) ],
+        [ Option.of(''), Option.of(0) ],
+        [ Option.of(0),  Option.of(1) ], // eslint-disable-line no-multi-spaces
+        [ Option.none(), null ],
+        [ Option.none(), undefined ],
+        [ Option.none(), 0 ],
+        [ Option.none(), false ],
+        [ Option.of(1),  1 ], // eslint-disable-line no-multi-spaces
+        [ Option.of(1),  { value: 1 } ], // eslint-disable-line no-multi-spaces
+      ].forEach(([a, b]) => {
+        it(`${a} should not equal ${b}`, () => {
+          R.equals(a, b).should.be.false();
+          R.equals(b, a).should.be.false();
+        });
+      });
+    });
+
+    describe('R.isEmpty()', () => {
+      it('Option.none() should be considered empty', () => {
+        R.isEmpty(Option.none()).should.be.true();
+      });
+
+      it('Option.of(...) should NOT be considered empty', () => {
+        R.isEmpty(Option.of(1)).should.be.false();
+      });
+    });
+  });
+
+  describe('assertion library interactions', () => {
+    // N.B. should.equal() is different from should.eql():
+    //
+    // * .equal(): check equality using ===
+    // * .eql():   check equality using "should-equal" module
+    //
+    // See: https://www.npmjs.com/package/should-equal
+
+    // TODO re-introduce this line when chai is added to the project
+    //const chaiAssert = require('chai').assert;
+    const nodeAssert = require('node:assert');
+
+    describe('equality', () => {
+      [
+        true,
+        false,
+        0,
+        1,
+        '',
+        'non-empty string',
+      ].forEach(val => {
+        it(`should.js should recognise two Options of '${val}' to be equal`, () => {
+          Option.of(val).should.eql(Option.of(val));
+        });
+
+        // TODO enable this test when chai is introduced to the project
+        //it(`chai should recognise two Options of '${val}' to be equal`, () => {
+        //  chaiAssert.deepEqual(Option.of(val), Option.of(val));
+        //});
+
+        it(`node:assert should recognise two Options of '${val}' to be equal`, () => {
+          nodeAssert.deepStrictEqual(Option.of(val), Option.of(val));
+        });
+      });
+
+      [
+        [ 0, 1 ],
+        [ 0, false ],
+        [ 0, '' ],
+        [ false, '' ],
+      ].forEach((a, b) => {
+        it(`should.js should not recognise Options of '${a}' and '${b}' as equal`, () => {
+          Option.of(a).should.not.eql(Option.of(b));
+        });
+
+        // TODO enable this test when chai is introduced to the project
+        //it(`chai should not recognise Options of '${a}' and '${b}' as equal`, () => {
+        //  chaiAssert.notDeepEqual(Option.of(a), Option.of(b));
+        //});
+
+        it(`node:assert should not recognise Options of '${a}' and '${b}' as equal`, () => {
+          nodeAssert.notDeepStrictEqual(Option.of(a), Option.of(b));
+        });
+      });
     });
   });
 });

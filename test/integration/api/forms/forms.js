@@ -7,8 +7,9 @@ const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
-const { without } = require(appRoot + '/lib/util/util');
+const { omit } = require(appRoot + '/lib/util/util');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
 
@@ -74,8 +75,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('Content-Type', 'application/xml')
             .expect(409)
             .then(({ body }) => {
-              body.details.fields.should.eql([ 'projectId', 'xmlFormId', 'version' ]);
-              body.details.values.should.eql([ '1', 'simple', '' ]);
+              body.message.should.eql("You tried to publish the form 'simple' with version '', but a published form has already existed in this project with those identifiers.");
+              body.details.should.eql({ xmlFormId: 'simple', version: '' });
             })))));
 
     it('should return the created form upon success', testService((service) =>
@@ -89,6 +90,19 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             body.name.should.equal('Simple 2');
             body.version.should.equal('2.1');
             body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
+          }))));
+
+    it('should decode html entities in the value of form version - getodk/central#1470', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2.replace('2.1', '&lt;{}&gt;'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Form();
+            body.name.should.equal('Simple 2');
+            body.version.should.equal('<{}>');
+            body.hash.should.equal('232ffd287a8eaef0103ad2386dafa44e');
           }))));
 
     it('should reject if form id ends in .xml', testService((service) =>
@@ -149,6 +163,25 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       global.xlsformTest = 'warning'; // set up the mock service to warn.
       return service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.equal(400.16);
+            body.details.warnings.xlsFormWarnings.should.eql([ 'warning 1', 'warning 2' ]);
+          }));
+    }));
+
+    it('should fail on warnings even for valid xlsx files', testService(async (service) => {
+      await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(200));
+
+      global.xlsformTest = 'warning'; // set up the mock service to warn.
+      return service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple2/draft')
           .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
           .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
           .expect(400)
@@ -295,7 +328,35 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .expect(200)
             .then(({ body }) => {
               body.publishedAt.should.be.a.recentIsoDate();
-            })))));
+              body.publishedAt.should.eql(body.createdAt);
+              (body.updatedAt == null).should.equal(true);
+            })
+            .then(() => asAlice.get('/v1/audits?action=form')
+              .expect(200)
+              .then(({ body }) => {
+                body.map((a) => a.action).should.eql(['form.update.publish', 'form.create']);
+              }))))));
+
+    it('should have published timestamp different from create timestamp if published separately', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+            .expect(200))
+          .then(() => asAlice.get('/v1/projects/1/forms/simple2')
+            .expect(200)
+            .then(({ body }) => {
+              body.publishedAt.should.be.a.recentIsoDate();
+              body.publishedAt.should.not.eql(body.createdAt);
+              body.updatedAt.should.be.a.recentIsoDate();
+            })
+            .then(() => asAlice.get('/v1/audits?action=form')
+              .expect(200)
+              .then(({ body }) => {
+                body.map((a) => a.action).should.eql(['form.update.publish', 'form.create']);
+              }))))));
 
     describe('Enketo ID for draft', () => {
       it('should request an enketoId', testService(async (service, { env }) => {
@@ -380,8 +441,9 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2)
           .expect(200);
-        global.enketo.callCount.should.equal(1);
-        without(['token'], global.enketo.createData).should.eql({
+        // This will make a published enketo token and a draft token even though the draft is not used
+        global.enketo.callCount.should.equal(2);
+        omit(['token'], global.enketo.createData).should.eql({
           openRosaUrl: `${env.domain}/v1/projects/1`,
           xmlFormId: 'simple2'
         });
@@ -392,6 +454,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       it('should return with success even if request to Enketo fails', testService(async (service) => {
         const asAlice = await service.login('alice');
         global.enketo.state = 'error';
+        global.enketo.autoReset = false;
         const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2)
@@ -403,10 +466,23 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
       it('should wait for Enketo only briefly @slow', testService(async (service) => {
         const asAlice = await service.login('alice');
         global.enketo.wait = (done) => { setTimeout(done, 600); };
+        global.enketo.autoReset = false;
         const { body } = await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2)
           .expect(200);
+        should.not.exist(body.enketoId);
+        should.not.exist(body.enketoOnceId);
+      }));
+
+      it('should wait for published Enketo only briefly @slow', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simple2)
+          .expect(200);
+        global.enketo.wait = (done) => { setTimeout(done, 600); };
+        const { body } = await asAlice.post('/v1/projects/1/forms/simple2/draft/publish');
         should.not.exist(body.enketoId);
         should.not.exist(body.enketoOnceId);
       }));
@@ -416,18 +492,22 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
 
         // First request to Enketo, from the endpoint
         global.enketo.state = 'error';
+        global.enketo.autoReset = false;
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2)
           .expect(200);
 
+        // reset enketo mock to its default behavior
+        // also resets callCount
+        global.enketo.reset();
+
         // Second request, from the worker
-        global.enketo.callCount.should.equal(1);
         await exhaust(container);
-        global.enketo.callCount.should.equal(2);
+        global.enketo.callCount.should.equal(1);
         const { body } = await asAlice.get('/v1/projects/1/forms/simple2')
           .expect(200);
-        without(['token'], global.enketo.createData).should.eql({
+        omit(['token'], global.enketo.createData).should.eql({
           openRosaUrl: `${container.env.domain}/v1/projects/1`,
           xmlFormId: 'simple2'
         });
@@ -441,9 +521,9 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .set('Content-Type', 'application/xml')
           .send(testData.forms.simple2)
           .expect(200);
-        global.enketo.callCount.should.equal(1);
+        global.enketo.callCount.should.equal(2);
         await exhaust(container);
-        global.enketo.callCount.should.equal(1);
+        global.enketo.callCount.should.equal(2);
       }));
     });
 
@@ -514,50 +594,54 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         });
     }));
 
-    it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice');
+    describe('with structureChanged warning', () => {
+      const withChangedStructure = xml => xml.replace(/age/g, 'address');
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft')
-        .send(testData.forms.simple.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .then(({ body }) => {
-          body.code.should.be.eql(400.16);
-          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
-        });
-    }));
+      it('should reject', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-    it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(withChangedStructure(testData.forms.simple))
+          .set('Content-Type', 'application/xml')
+          .then(({ body }) => {
+            body.code.should.be.eql(400.16);
+            body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
+          });
+      }));
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
-        .send(testData.forms.simple.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+      it('should accept if ignoreWarnings set', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
-        .expect(200);
-    }));
+        await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+          .send(withChangedStructure(testData.forms.simple))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-    it('should reject with xls and structure changed warnings', testService(async (service) => {
-      const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
+          .expect(200);
+      }));
 
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.simple2.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+      it('should reject with xls', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      global.xlsformTest = 'warning'; // set up the mock service to warn.
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(withChangedStructure(testData.forms.simple2))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/simple2/draft')
-        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
-        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        .expect(400)
-        .then(({ body }) => {
-          body.code.should.be.eql(400.16);
-          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
-          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
-        });
-    }));
+        global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+        await asAlice.post('/v1/projects/1/forms/simple2/draft')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.16);
+            body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+            body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
+          });
+      }));
+    });
 
     it('should reject form with missing meta group', testService(async (service) => {
       const asAlice = await service.login('alice');
@@ -691,7 +775,36 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .expect(304)));
       }));
 
-      it('should return the xlsx file originally provided', testService((service) => {
+      it('should return s3 redirect after xlsx file uploaded to s3', testService((service, { Blobs }) => {
+        global.s3.enableMock();
+        const input = readFileSync(appRoot + '/test/data/simple.xlsx');
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(input)
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(304))
+            .then(() => Blobs.s3UploadPending()
+              .then(() => {
+                global.s3.uploads.attempted.should.equal(1);
+                global.s3.uploads.successful.should.equal(1);
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .expect(307)
+              .then(({ headers }) => {
+                headers.location.should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(307)
+              .then(({ headers }) => {
+                headers.location.should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+              })));
+      }));
+
+      it('should return the xlsx file originally provided for a draft', testService((service) => {
         const input = readFileSync(appRoot + '/test/data/simple.xlsx');
         return service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
@@ -714,6 +827,39 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
               .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
               .expect(304)));
+      }));
+
+      it('should return s3 redirect after xlsx file for draft uploaded to s3', testService((service, { Blobs }) => {
+        global.s3.enableMock();
+        const input = readFileSync(appRoot + '/test/data/simple.xlsx');
+        return service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(input)
+            .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple2/draft')
+              .send(input)
+              .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(304))
+            .then(() => Blobs.s3UploadPending()
+              .then(() => {
+                global.s3.uploads.attempted.should.equal(1);
+                global.s3.uploads.successful.should.equal(1);
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+              .expect(307)
+              .then(({ headers }) => {
+                headers.location.should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/simple2/draft.xlsx')
+              .set('If-None-Match', '"30fdb0e9115ea7ca6702573f521814d1"')
+              .expect(307)
+              .then(({ headers }) => {
+                headers.location.should.equal('s3://mock/30fdb0e9115ea7ca6702573f521814d1/9ebd53024b8560ffd0b84763481ed24159ca600f/simple2.xlsx?contentType=application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+              })));
       }));
 
       it('should continue to offer the xlsx file after a copy-draft', testService((service) => {
@@ -867,6 +1013,38 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 body.excelContentType.should.equal('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
               })))));
 
+      it('should return count of public links with extended metadata', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link1' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link2' })
+          .expect(200);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200);
+        form.publicLinks.should.equal(2);
+      }));
+
+      it('should exclude deleted and revoked public links', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const { body: link1 } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link1' })
+          .expect(200);
+        const { body: link2 } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link2' })
+          .expect(200);
+        await asAlice.delete(`/v1/projects/1/forms/simple/public-links/${link1.id}`)
+          .expect(200);
+        await asAlice.delete(`/v1/sessions/${link2.token}`)
+          .expect(200);
+        const { body: form } = await asAlice.get('/v1/projects/1/forms/simple')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200);
+        form.publicLinks.should.equal(0);
+      }));
+
       it('should not return a draftToken', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -1011,22 +1189,22 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         <instance>
           <data id="sanitize">
             <meta>
-              <instanceID>
+              <instanceID/>
             </meta>
             <q1.8>
-              <17/>
+              <🌩/>
             </q1.8>
-            <4.2/>
+            <🤟/>
           </data>
         </instance>
         <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
-        <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
-        <bind nodeset="/data/4.2" type="number"/>
+        <bind nodeset="/data/q1.8/🌩" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+        <bind nodeset="/data/🤟" type="number"/>
       </model>
 
     </h:head>
     <h:body>
-      <input ref="/data/4.2">
+      <input ref="/data/🤟">
         <label>What is your age?</label>
       </input>
     </h:body>
@@ -1045,8 +1223,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMultiple: null },
                   { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMultiple: null },
                   { name: 'q1_8', path: '/q1_8', type: 'structure', binary: null, selectMultiple: null },
-                  { name: '_17', path: '/q1_8/_17', type: 'string', binary: null, selectMultiple: null },
-                  { name: '_4_2', path: '/_4_2', type: 'number', binary: null, selectMultiple: null }
+                  { name: '__', path: '/q1_8/__', type: 'string', binary: null, selectMultiple: null },
+                  { name: '__', path: '/__', type: 'number', binary: null, selectMultiple: null }
                 ]);
               })))));
     });
@@ -1085,8 +1263,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                 .expect(200)
                 .then(({ body }) => {
                   body.should.eql([
-                    { name: 'goodone.csv', type: 'file', exists: false, blobExists: false, datasetExists: false },
-                    { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false }
+                    { name: 'goodone.csv', type: 'file', exists: false, blobExists: false, datasetExists: false, hash: null },
+                    { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false, hash: null }
                   ]);
                 })))));
 
@@ -1111,8 +1289,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   delete body[0].updatedAt;
 
                   body.should.eql([
-                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false },
-                    { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false }
+                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
+                    { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false, hash: null }
                   ]);
                 })))));
 
@@ -1221,6 +1399,34 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   text.should.equal('test,csv\n1,2');
                 })))));
 
+        it('should return 307 if file has been moved to s3', testService((service, { Blobs }) => {
+          global.s3.enableMock();
+          return service.login('alice', (asAlice) =>
+            asAlice.post('/v1/projects/1/forms')
+              .send(testData.forms.withAttachments)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+                .send('test,csv\n1,2')
+                .set('Content-Type', 'text/csv')
+                .expect(200))
+              .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+                .expect(200))
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+                .expect(200)
+                .then(({ headers, text }) => {
+                  headers['content-disposition'].should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
+                  headers['content-type'].should.equal('text/csv; charset=utf-8');
+                  text.should.equal('test,csv\n1,2');
+                }))
+              .then(() => Blobs.s3UploadPending())
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+                .expect(307)
+                .then(({ headers }) => {
+                  headers.location.should.equal('s3://mock/2241de57bbec8144c8ad387e69b3a3ba/61baf7288ad1b373346a2fad6056d640746440be/goodone.csv?contentType=text/csv');
+                })));
+        }));
+
         it('should return 304 content not changed if ETag matches', testService(async (service) => {
           const asAlice = await service.login('alice');
 
@@ -1284,6 +1490,87 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
 
           etagV1.should.not.be.eql(etagV2);
         }));
+
+        it('should return latest content if previous content was uploaded to s3', testService(async (service, { Blobs }) => {
+          global.s3.enableMock();
+
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachmentV1 = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(200);
+
+          const etagV1 = attachmentV1.get('ETag');
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etagV1)
+            .expect(304);
+
+          await Blobs.s3UploadPending();
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(307);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2\n3,4')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachmentV2 = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etagV1)
+            .expect(200);
+
+          const etagV2 = attachmentV2.get('ETag');
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etagV2)
+            .expect(304);
+
+          etagV1.should.not.be.eql(etagV2);
+        }));
+
+        it('should ignore local etag if content was uploaded to s3', testService(async (service, { Blobs }) => {
+          global.s3.enableMock();
+
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
+
+          const attachment = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(200);
+
+          const etag = attachment.get('ETag');
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etag)
+            .expect(304);
+
+          await Blobs.s3UploadPending();
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .expect(307);
+
+          await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .set('If-None-Match', etag)
+            .expect(307);
+        }));
       });
     });
   });
@@ -1303,17 +1590,19 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
     it('should update allowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ state: 'closing' })
+          .send({ state: 'closing', webformsEnabled: true })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Form();
             body.state.should.equal('closing');
+            body.webformsEnabled.should.equal(true);
           })
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Form();
               body.state.should.equal('closing');
+              body.webformsEnabled.should.equal(true);
             })))));
 
     it('should reject if state is invalid', testService((service) =>
@@ -1356,7 +1645,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .then(() => Promise.all([
             Users.getByEmail('alice@getodk.org').then((o) => o.get()),
             Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')).then((o) => o.get()),
+              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', Form.WithoutDef)).then((o) => o.get()),
             Audits.getLatestByAction('form.update').then((o) => o.get())
           ])
             .then(([ alice, form, log ]) => {
@@ -1364,5 +1653,91 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               log.acteeId.should.equal(form.acteeId);
               log.details.should.eql({ data: { state: 'closing' } });
             })))));
+  });
+
+  ////////////////////////////////////////////////////////////////////////////////
+  // Get Form by EnketoId
+  ////////////////////////////////////////////////////////////////////////////////
+
+  describe('/form-links/:enketoId/form', () => {
+    it('should not return Form if it is in draft and no auth is provided', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .expect(200);
+
+      const enketoId = await asAlice.get('/v1/projects/1/forms/simple/draft')
+        .then(({ body }) => body.enketoId);
+
+      await service.get(`/v1/form-links/${enketoId}/form`)
+        .expect(401);
+    }));
+
+    it('should reject without session token', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const enketoId = await asAlice.get('/v1/projects/1/forms/simple')
+        .then(({ body }) => body.enketoId);
+
+      await service.get(`/v1/form-links/${enketoId}/form`)
+        .expect(401);
+    }));
+
+    it('should return the Form with session token queryparam', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const enketoId = await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simple2)
+        .expect(200)
+        .then(({ body }) => body.enketoId);
+
+      const token = await asAlice.post('/v1/projects/1/forms/simple2/public-links')
+        .send({ displayName: 'link1' })
+        .then(({ body }) => body.token);
+
+      await service.get(`/v1/form-links/${enketoId}/form?st=${token}`)
+        .expect(200);
+    }));
+
+    it('should allow form lookup by enketoId if form has multiple published versions', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      global.enketo.enketoId = '::firstEnketoId';
+      global.enketo.autoReset = false;
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      global.enketo.enketoId = '::secondEnketoId';
+      await asAlice.post('/v1/projects/1/forms/simple2/draft')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple2/draft/publish?version=two')
+        .expect(200);
+      const { body: { enketoId } } = await asAlice.get('/v1/projects/1/forms/simple2')
+        .expect(200);
+      should.exist(enketoId);
+      const token = await asAlice.post('/v1/projects/1/forms/simple2/public-links')
+        .send({ displayName: 'link1' })
+        .then(({ body }) => body.token);
+      await service.get(`/v1/form-links/${enketoId}/form?st=${token}`)
+        .expect(200);
+    }));
+
+    it('should return the Form by enketoOnceId', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const enketoOnceId = await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simple2)
+        .expect(200)
+        .then(({ body }) => body.enketoOnceId);
+
+      const token = await asAlice.post('/v1/projects/1/forms/simple2/public-links')
+        .send({ displayName: 'link1' })
+        .then(({ body }) => body.token);
+
+      await service.get(`/v1/form-links/${enketoOnceId}/form?st=${token}`)
+        .expect(200);
+    }));
   });
 });

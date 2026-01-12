@@ -4,6 +4,8 @@ module.exports = {
     mocha: true,
   },
   rules: {
-    'import/no-dynamic-require': 'off'
+    'func-names': 'off',
+    'import/no-dynamic-require': 'off',
+    'space-before-function-paren': 'off',
   }
 };

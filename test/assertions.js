@@ -1,8 +1,6 @@
 const should = require('should');
 const { DateTime } = require('luxon');
 
-/* eslint-disable space-before-function-paren, func-names */
-
 // debugging things.
 // eslint-disable-next-line no-console
 global.tap = (x) => { console.log(x); return x; };
@@ -99,7 +97,7 @@ should.Assertion.add('User', function() {
   this.params = { operator: 'to be a User' };
 
   this.obj.should.be.an.Actor();
-  Object.keys(this.obj).should.containDeep([ 'email' ]);
+  Object.keys(this.obj).should.containDeep([ 'email', 'lastLoginAt' ]);
   this.obj.email.should.be.a.String();
 });
 
@@ -145,10 +143,11 @@ should.Assertion.add('ExtendedSubmissionDef', function() {
 should.Assertion.add('Session', function() {
   this.params = { operator: 'to be a Session' };
 
-  Object.keys(this.obj).should.containDeep([ 'expiresAt', 'createdAt', 'token' ]);
+  Object.keys(this.obj).should.eqlInAnyOrder([ 'expiresAt', 'createdAt', 'token', 'csrf' ]);
   this.obj.expiresAt.should.be.an.isoDate();
   this.obj.createdAt.should.be.an.isoDate();
   this.obj.token.should.be.a.token();
+  this.obj.csrf.should.be.a.token();
 });
 
 should.Assertion.add('FieldKey', function() {
@@ -208,24 +207,35 @@ should.Assertion.add('ExtendedForm', function() {
   this.params = { operator: 'to be a ExtendedForm' };
 
   this.obj.should.be.a.Form();
-  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission', 'reviewStates' ]);
+  Object.keys(this.obj).should.containDeep([ 'submissions', 'lastSubmission', 'reviewStates', 'publicLinks' ]);
   this.obj.submissions.should.be.a.Number();
   Object.keys(this.obj.reviewStates).should.containDeep([ 'received', 'hasIssues', 'edited']);
   if (this.obj.lastSubmission != null) this.obj.lastSubmission.should.be.an.isoDate();
+  this.obj.publicLinks.should.be.a.Number();
 });
 
 should.Assertion.add('FormAttachment', function() {
   this.params = { operator: 'to be a Form Attachment' };
 
-  Object.keys(this.obj).should.eqlInAnyOrder([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'updatedAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'hash', 'updatedAt' ]);
   this.obj.name.should.be.a.String();
   this.obj.type.should.be.a.String();
-  const { blobExists, datasetExists, exists } = this.obj;
+  const { blobExists, datasetExists, exists, hash } = this.obj;
   blobExists.should.be.a.Boolean();
   datasetExists.should.be.a.Boolean();
   (blobExists && datasetExists).should.be.false();
   exists.should.equal(blobExists || datasetExists);
+  (hash != null).should.equal(blobExists);
+  if (hash != null) hash.should.be.an.md5Sum();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
+});
+
+should.Assertion.add('Problem', function() {
+  this.params = { operator: 'to be a Problem' };
+
+  this.obj.should.be.a.Error();
+  Object.keys(this.obj).should.containDeep([ 'problemCode', 'problemDetails' ]);
+  this.obj.problemCode.should.be.a.Number();
 });
 
 should.Assertion.add('Project', function() {
@@ -339,22 +349,49 @@ should.Assertion.add('eqlInAnyOrder', function(expectedUnsorted) {
   actualSorted.should.eql(expectedSorted);
 });
 
-should.Assertion.add('Dataset', function assertDataset() {
+should.Assertion.add('subsetOf', function(array) {
+  this.params = { operator: 'to be a subset of' };
+
+  this.obj.should.be.an.Array();
+  for (const x of this.obj) array.should.containEql(x);
+});
+
+should.Assertion.add('unique', function() {
+  this.params = { operator: 'to have unique values' };
+
+  const array = [...this.obj];
+  array.should.eql([...new Set(array)]);
+});
+
+should.Assertion.add('Dataset', function assertDataset(extraKeys = []) {
   this.params = { operator: 'to be a Dataset' };
 
-  Object.keys(this.obj).should.containDeep([ 'projectId', 'name', 'createdAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([
+    'projectId', 'name', 'approvalRequired', 'ownerOnly', 'createdAt',
+    // Optional metadata
+    'properties', 'linkedForms', 'sourceForms', 'lastUpdate',
+    ...extraKeys
+  ]);
   this.obj.projectId.should.be.a.Number();
   this.obj.name.should.be.a.String();
+  this.obj.approvalRequired.should.be.a.Boolean();
+  this.obj.ownerOnly.should.be.a.Boolean();
   this.obj.createdAt.should.be.an.isoDate();
+
+  // Optional metadata
+  if (this.obj.properties != null) this.obj.properties.should.be.an.Array();
+  if (this.obj.linkedForms != null) this.obj.linkedForms.should.be.an.Array();
+  if (this.obj.sourceForms != null) this.obj.sourceForms.should.be.an.Array();
+  if (this.obj.lastUpdate != null) this.obj.lastUpdate.should.be.an.isoDate();
 });
 
 should.Assertion.add('ExtendedDataset', function assertExtendedDataset() {
   this.params = { operator: 'to be an extended Dataset' };
 
-  this.obj.should.be.a.Dataset();
-  Object.keys(this.obj).should.containDeep([ 'entities', 'lastEntity', 'conflicts' ]);
+  this.obj.should.be.a.Dataset([ 'entities', 'lastEntity', 'conflicts' ]);
   this.obj.entities.should.be.a.Number();
   if (this.obj.lastEntity != null) this.obj.lastEntity.should.be.an.isoDate();
+  this.obj.conflicts.should.be.a.Number();
 });
 
 should.Assertion.add('Entity', function assertEntity() {
@@ -436,4 +473,16 @@ should.Assertion.add('EntitySourceSubmissionDetails', function SubmissionDetails
   this.obj.should.have.property('xmlFormId').which.is.a.String();
   this.obj.should.have.property('instanceId').which.is.a.String();
   this.obj.should.have.property('instanceName'); // can be null
+});
+
+should.Assertion.add('Symbol', function() {
+  this.params = { operator: 'to be a Symbol' };
+
+  (typeof this.obj).should.equal('symbol');
+});
+
+should.Assertion.add('skiptoken', function skiptoken(expected) {
+  this.params = { operator: 'to have a skiptoken' };
+
+  JSON.parse(Buffer.from(decodeURIComponent(new URL(this.obj).searchParams.get('$skiptoken').substr(2)), 'base64')).should.deepEqual(expected);
 });

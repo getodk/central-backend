@@ -58,6 +58,15 @@ describe('api: /datasets/:name.svc', () => {
       await exhaust(container);
     };
 
+    const createEntity = async (user, datasetName, label) => {
+      await user.post(`/v1/projects/1/datasets/${datasetName}/entities`)
+        .send({
+          uuid: uuid(),
+          label
+        })
+        .expect(200);
+    };
+
     it('should return all entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -131,6 +140,36 @@ describe('api: /datasets/:name.svc', () => {
         .expect(200);
 
       await createSubmissions(asAlice, container, 2);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$count=true')
+        .expect(200)
+        .then(({ body }) => {
+          body['@odata.count'].should.be.eql(2);
+        });
+    }));
+
+    it('should return count of entities not the entity_defs', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      const uuids = await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$count=true')
+        .expect(200)
+        .then(({ body }) => {
+          body['@odata.count'].should.be.eql(2);
+          return body.value.map(e => e.__id);
+        });
+
+      await asAlice.patch(`/v1/projects/1/datasets/people/entities/${uuids[0]}?force=true`)
+        .send({
+          label: 'changed'
+        })
+        .expect(200);
 
       await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$count=true')
         .expect(200)
@@ -279,6 +318,43 @@ describe('api: /datasets/:name.svc', () => {
 
     }));
 
+    describe('filtering deleted entities', () => {
+      const filtering = (idxOffset, description, filter) => it(description, testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await createSubmissions(asAlice, container, 5);
+
+        const uuids = await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => body.map(e => e.uuid));
+
+        // let's delete entities
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
+          .expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[2]}`)
+          .expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[4]}`)
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=' + filter)
+          .expect(200)
+          .then(({ body }) => {
+            for (const [index, value] of body.value.entries()) {
+              value.__id.should.be.eql(uuids[index*2 + idxOffset]);
+            }
+          });
+      }));
+
+      filtering(1, 'should support equality with standard notation',   '__system/deletedAt eq null'); // eslint-disable-line no-multi-spaces
+      filtering(1, 'should support equality with yoda notation',       'null eq __system/deletedAt'); // eslint-disable-line no-multi-spaces
+      filtering(0, 'should support inequality with standard notation', '__system/deletedAt ne null');
+      filtering(0, 'should support inequality with yoda notation',     'null ne __system/deletedAt'); // eslint-disable-line no-multi-spaces
+    });
+
     it('should return filtered entities', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -297,6 +373,105 @@ describe('api: /datasets/:name.svc', () => {
         .expect(200)
         .then(({ body }) => {
           body.value.length.should.be.eql(2);
+        });
+    }));
+
+    it('should allow filtering by UUID', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createSubmissions(asAlice, container, 2);
+
+      const entityUuids = await container.allFirst(sql`SELECT uuid FROM entities`);
+      entityUuids.length.should.eql(2);
+
+      for (const id of entityUuids) {
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq '${id}'`) // eslint-disable-line no-await-in-loop
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+
+            const [ val ] = body.value;
+            Object.keys(val).should.eqlInAnyOrder([ '__id', 'label', '__system', 'first_name', 'age' ]);
+            val.__id.should.eql(id);
+            val.__system.createdAt.should.be.an.isoDate();
+          });
+      }
+    }));
+
+    it('should return only searched entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createEntity(asAlice, 'people', 'John Doe');
+      await createEntity(asAlice, 'people', 'Jane Doe');
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$search=john')
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.be.eql(1);
+          body.value[0].label.should.be.eql('John Doe');
+        });
+    }));
+
+    it('should return only searched and filtered entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createEntity(asAlice, 'people', 'John Doe');
+      await createEntity(asAlice, 'people', 'Jane Doe');
+      await createEntity(asBob, 'people', 'John Doe (r)');
+      await createEntity(asBob, 'people', 'Jane Doe (r)');
+
+      const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$search=john&$filter=__system/creatorId eq ${bobId}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.be.eql(1);
+          body.value[0].label.should.be.eql('John Doe (r)');
+        });
+    }));
+
+    it('should return only searched entities with pagination', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await createEntity(asAlice, 'people', 'John Doe');
+      await createEntity(asAlice, 'people', 'Jane Doe');
+      await createEntity(asAlice, 'people', 'John Doe (r)');
+      await createEntity(asAlice, 'people', 'Jane Doe (r)');
+
+      const nextlink = await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?$top=1&$search=john`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.be.eql(1);
+          body.value[0].label.should.be.eql('John Doe (r)');
+          return body['@odata.nextLink'];
+        });
+
+      await asAlice.get(nextlink.replace('http://localhost:8989', ''))
+        .expect(200)
+        .then(({ body }) => {
+          body.value[0].label.should.be.eql('John Doe');
+          should.not.exist(body['@odata.nextLink']);
         });
     }));
 
@@ -335,23 +510,6 @@ describe('api: /datasets/:name.svc', () => {
         .expect(501)
         .then(({ body }) => {
           body.message.should.eql('The given OData filter expression references fields not supported by this server: label at 0');
-        });
-    }));
-
-    it('should NOT filter by id', testService(async (service, container) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .set('Content-Type', 'application/xml')
-        .send(testData.forms.simpleEntity)
-        .expect(200);
-
-      await createSubmissions(asAlice, container, 2);
-
-      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?$filter=__id eq \'1234\'')
-        .expect(501)
-        .then(({ body }) => {
-          body.message.should.eql('The given OData filter expression references fields not supported by this server: __id at 0');
         });
     }));
 
@@ -784,6 +942,7 @@ describe('api: /datasets/:name.svc', () => {
         <Property Name="creatorName" Type="Edm.String"/>        
         <Property Name="updates" Type="Edm.Int64"/>
         <Property Name="updatedAt" Type="Edm.DateTimeOffset"/>
+        <Property Name="deletedAt" Type="Edm.DateTimeOffset"/>
         <Property Name="version" Type="Edm.Int64"/>
         <Property Name="conflict" Type="Edm.String"/>
       </ComplexType>
@@ -830,6 +989,18 @@ describe('api: /datasets/:name.svc', () => {
           </Annotation>
           <Annotation Term="Org.OData.Capabilities.V1.ExpandRestrictions">
             <Record><PropertyValue Property="Expandable" Bool="false"/></Record>
+          </Annotation>
+          <Annotation Term="Org.OData.Capabilities.V1.SearchRestrictions">
+            <Record>
+              <PropertyValue Property="Searchable" Bool="true" />
+              <PropertyValue Property="UnsupportedExpressions">
+              <Collection>
+                <EnumMember>Org.OData.Capabilities.V1.SearchExpressions/And</EnumMember>
+                <EnumMember>Org.OData.Capabilities.V1.SearchExpressions/Not</EnumMember>
+                <EnumMember>Org.OData.Capabilities.V1.SearchExpressions/Group</EnumMember>
+              </Collection>
+            </PropertyValue>
+            </Record>
           </Annotation>
         </EntitySet>
       </EntityContainer>

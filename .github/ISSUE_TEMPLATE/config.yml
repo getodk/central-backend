@@ -1,5 +1,8 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links: 
+  - name: "Blank issue"
+    about: "Create a new issue from scratch in getodk/central"
+    url: "https://github.com/getodk/central/issues/new"
   - name: "Report an issue"
     about: "For when Central is behaving in an unexpected way"
     url: "https://forum.getodk.org/c/support/6"

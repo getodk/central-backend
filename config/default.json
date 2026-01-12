@@ -30,9 +30,16 @@
       "analytics": {
         "url": "https://data.getodk.cloud/v1/key/eOZ7S4bzyUW!g1PF6dIXsnSqktRuewzLTpmc6ipBtRq$LDfIMTUKswCexvE0UwJ9/projects/1/forms/odk-analytics/submissions",
         "formId": "odk-analytics",
-        "version": "v2024.1.0_1"
-      }
-    }
+        "version": "v2025.4.0_1"
+      },
+      "mailingListOptIn": {
+        "url": "https://data.getodk.cloud/v1/key/Dd0XJq$!skdvUmMLUO1!srDmrxePJSIiGuj3ttbzlayelMxxXMQF3hmeJ24rcT8N/projects/8/forms/mailing_list_opt_in/submissions",
+        "formId": "mailing_list_opt_in",
+        "version": "v2025.4.0_1"
+      },
+      "s3blobStore": {}
+    },
+    "sessionLifetime": 86400
   },
   "test": {
     "database": {

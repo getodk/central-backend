@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, compare, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion } = require(appRoot + '/lib/data/schema');
+const { getFormFields, sanitizeFieldsForOdata, SchemaStack, merge, compare, expectedFormAttachments, injectPublicKey, addVersionSuffix, setVersion, updateEntityForm } = require(appRoot + '/lib/data/schema');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');
 
@@ -566,7 +566,7 @@ describe('form schema', () => {
         });
       });
 
-      it('should reject binds on fields in repeats', () => { // gh cb#670
+      it('should reject binds on fields in repeats if version is <2025.1', () => { // gh cb#670
         const xml = `
           <?xml version="1.0"?>
           <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
@@ -615,7 +615,7 @@ describe('form schema', () => {
         return getFormFields(xml).should.be.rejected().then((p) => p.problemCode.should.equal(400.25));
       });
 
-      it('should reject binds on fields in nested repeats inside groups', () => { // gh cb#670
+      it('should reject binds on fields in nested repeats inside groups if version is <2025.1', () => { // gh cb#670
         const xml = `
         <?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -685,6 +685,77 @@ describe('form schema', () => {
         </h:html>`;
         return getFormFields(xml).should.be.rejected().then((p) => p.problemCode.should.equal(400.25));
       });
+    });
+
+    it('should allow binds on fields in repeats if version is >= 2025.1', () => { // gh cb#670
+      const xml = `
+        <?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+          <h:head>
+            <h:title>Repeat Children Entities</h:title>
+            <model entities:entities-version="2025.1.0" odk:xforms-version="1.0.0">
+              <instance>
+                <data id="repeat_entity" version="1">
+                  <num_children/>
+                  <children>
+                    <child jr:template="">
+                      <child_name/>
+                      <possessions>
+                        <toys jr:template="">
+                          <toy/>
+                        </toys>
+                      </possessions>
+                    </child>
+                  </children>
+                  <meta>
+                    <instanceID/>
+                    <instanceName/>
+                    <entity create="1" dataset="children" id="">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind nodeset="/data/num_children" type="int"/>
+              <bind nodeset="/data/children/child/child_name" type="string"/>
+              <bind entities:saveto="toy_name" nodeset="/data/children/child/possessions/toys/toy" type="string"/>
+              <bind jr:preload="uid" nodeset="/data/meta/instanceID" readonly="true()" type="string"/>
+              <bind calculate=" /data/num_children " nodeset="/data/meta/instanceName" type="string"/>
+              <bind calculate="1" nodeset="/data/meta/entity/@create" readonly="true()" type="string"/>
+              <bind nodeset="/data/meta/entity/@id" readonly="true()" type="string"/>
+              <setvalue event="odk-instance-first-load" readonly="true()" ref="/data/meta/entity/@id" type="string" value="uuid()"/>
+              <bind calculate="concat(&quot;Num children:&quot;,  /data/num_children )" nodeset="/data/meta/entity/label" readonly="true()" type="string"/>
+            </model>
+          </h:head>
+          <h:body>
+            <input ref="/data/num_children">
+              <label>Num Children</label>
+            </input>
+            <group ref="/data/children">
+              <label>Children</label>
+              <group ref="/data/children/child">
+                <label>Child</label>
+                <repeat nodeset="/data/children/child">
+                  <input ref="/data/children/child/child_name">
+                    <label>Child Name</label>
+                  </input>
+                  <group ref="/data/children/child/possessions">
+                    <label>Posessions</label>
+                    <group ref="/data/children/child/possessions/toys">
+                      <label>Toys</label>
+                      <repeat nodeset="/data/children/child/possessions/toys">
+                        <input ref="/data/children/child/possessions/toys/toy">
+                          <label>Toy</label>
+                        </input>
+                      </repeat>
+                    </group>
+                  </group>
+                </repeat>
+              </group>
+            </group>
+          </h:body>
+        </h:html>`;
+      return getFormFields(xml).then((schema) => schema.length.should.equal(12));
     });
   });
 
@@ -786,7 +857,7 @@ describe('form schema', () => {
         }));
 
       it('should navigate in and out of empty structures', async () => {
-        const form = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms">
+        const form = `<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
             <h:head>
               <model entities:entities-version="2023.1.0">
                 <instance>
@@ -1949,6 +2020,53 @@ describe('form schema', () => {
   </h:body>
 </h:html>`)));
 
+    const arabicWord = 'صادق';
+    [
+      /* eslint-disable no-multi-spaces, key-spacing */
+      { versionAttribute: '',                         suffix: 'test',       expected: 'test' },
+      { versionAttribute: 'version=""',               suffix: 'test',       expected: 'test' },
+      { versionAttribute: 'version="first"',          suffix: '',           expected: 'first' },
+      { versionAttribute: 'version=\'first\'',        suffix: 'test',       expected: 'firsttest' },
+      { versionAttribute: 'version="2.1"',            suffix: 'test',       expected: '2.1test' },
+      { versionAttribute: 'version = "final"',        suffix: ' (working)', expected: 'final (working)' },
+      { versionAttribute: 'version=1',                suffix: '.0',         expected: '1.0' },
+      { versionAttribute: 'version=1.0',              suffix: '.1',         expected: '1.0.1' },
+      { versionAttribute: 'version=1',                suffix: '_final',     expected: '1_final' },
+      { versionAttribute: 'version="john\'s copy"',   suffix: '_final',     expected: 'john&apos;s copy_final' },
+      { versionAttribute: 'version="final"',          suffix: ' "working"', expected: 'final &quot;working&quot;' },
+      { versionAttribute: 'version="emoji 🙃"',       suffix: ' twice 🙃',  expected: 'emoji &#x1f643; twice &#x1f643;' },
+      { versionAttribute: `version="${arabicWord}"`,  suffix: arabicWord,   expected: '&#x635;&#x627;&#x62f;&#x642;&#x635;&#x627;&#x62f;&#x642;' },
+      {
+        versionAttribute: 'version="!@#$%^&amp;*()_+=-`~[]\\{}|&quot;:&apos;&lt;&gt;?/.,"',
+        suffix: '!@#$%^&*()_+=-`~[]\\{}|":\'<>?/.,',
+        expected: '!@#$%^&amp;*()_+=-`~[]\\{}|&quot;:&apos;&lt;&gt;?/.,!@#$%^&amp;*()_+=-`~[]\\{}|&quot;:&apos;&lt;&gt;?/.,'
+      },
+      /* eslint-enable no-multi-spaces, key-spacing */
+    ].forEach(({ versionAttribute, suffix, expected }) => {
+      it(`should have ${expected} version`, () =>
+        addVersionSuffix(testData.forms.simple2.replace('version="2.1"', versionAttribute), suffix)
+          .then(result => {
+            // we always return version with "" delimiter
+            result.match(/(version="(.*)")/)[2].should.be.equal(expected);
+          })
+      );
+    });
+
+
+    it('should suffix an existing version attribute even if it uses single quote to delimit version text', () =>
+      addVersionSuffix(testData.forms.simple2.replace('version="2.1"', "version='2.1\"final\"'"), 'testtest')
+        .then(result => {
+          result.includes('version="2.1&quot;final&quot;testtest"').should.be.true();
+        })
+    );
+
+    it('should suffix an existing version attribute even if it uses single quote to delimit version text', () =>
+      addVersionSuffix(testData.forms.simple2.replace('version="2.1"', 'version=1.0'), '.1')
+        .then(result => {
+          result.includes('version="1.0.1"').should.be.true();
+        })
+    );
+
     it('should suffix an existing namespaced version attribute', () =>
       addVersionSuffix(testData.forms.simple2.replace('version', 'orx:version'), 'testtest').then((result) => result.should.equal(`<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa">
   <h:head>
@@ -2085,6 +2203,122 @@ describe('form schema', () => {
     </input>
   </h:body>
 </h:html>`)));
+
+    const arabicWord = 'صادق';
+    [
+      /* eslint-disable no-multi-spaces, key-spacing */
+      { versionAttribute: '',                         newVersion: 'test',         expected: 'test' },
+      { versionAttribute: 'version=""',               newVersion: 'test',         expected: 'test' },
+      { versionAttribute: 'version="first"',          newVersion: '',             expected: '' },
+      { versionAttribute: 'version=\'first\'',        newVersion: 'test',         expected: 'test' },
+      { versionAttribute: 'version="2.1"',            newVersion: 'test',         expected: 'test' },
+      { versionAttribute: 'version = "final"',        newVersion: '(working)',    expected: '(working)' },
+      { versionAttribute: 'version=1',                newVersion: '1.0',          expected: '1.0' },
+      { versionAttribute: 'version=1.0',              newVersion: '2.0',          expected: '2.0' },
+      { versionAttribute: 'version=1',                newVersion: 'final',        expected: 'final' },
+      { versionAttribute: 'version="john\'s copy"',   newVersion: 'jane\'s copy', expected: 'jane&apos;s copy' },
+      { versionAttribute: 'version="final"',          newVersion: '"working"',    expected: '&quot;working&quot;' },
+      { versionAttribute: 'version="emoji 🙃"',       newVersion: '🙃 🙃',        expected: '&#x1f643; &#x1f643;' },
+      { versionAttribute: `version="sadiq"`,          newVersion: arabicWord,     expected: '&#x635;&#x627;&#x62f;&#x642;' },
+      {
+        // getodk/central#1470
+        versionAttribute: 'version="!@#$%^&amp;*()_+=-`~[]\\{}|&quot;:&apos;&lt;&gt;?/.,"',
+        newVersion: 'clean',
+        expected: 'clean'
+      },
+      {
+        versionAttribute: 'version="clean"',
+        newVersion: '!@#$%^&*()_+=-`~[]\\{}|":\'<>?/.,',
+        expected: '!@#$%^&amp;*()_+=-`~[]\\{}|&quot;:&apos;&lt;&gt;?/.,'
+      },
+      /* eslint-enable no-multi-spaces, key-spacing */
+    ].forEach(({ versionAttribute, newVersion, expected }) => {
+      it(`should have ${expected} version`, () =>
+        setVersion(testData.forms.simple2.replace('version="2.1"', versionAttribute), newVersion)
+          .then(result => {
+            // we always return version with "" delimiter
+            result.match(/(version="(.*)")/)[2].should.be.equal(expected);
+          })
+      );
+    });
+  });
+
+  describe('updateEntityForm', () => {
+    it('should change version 2023->2024, add trunkVersion, and add branchId', (async () => {
+      const result = await updateEntityForm(testData.forms.updateEntity2023, '2023.1.0', '2024.1.0', '[upgrade]', true);
+      // entities-version has been updated
+      // version has suffix
+      // trunkVersion and branchId are present
+      result.should.equal(`<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="updateEntity" orx:version="1.0[upgrade]">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+    </model>
+  </h:head>
+</h:html>`);
+    }));
+
+    it('should change version 2022->2024', (async () => {
+      const result = await updateEntityForm(testData.forms.simpleEntity2022, '2022.1.0', '2024.1.0', '[upgrade]', false);
+      // entities-version has been updated
+      // version has suffix
+      // trunkVersion and branchId are NOT added
+      result.should.equal(`<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
+  <h:head>
+    <model entities:entities-version="2024.1.0">
+      <instance>
+        <data id="simpleEntity" orx:version="1.0[upgrade]">
+          <name/>
+          <age/>
+          <hometown/>
+          <meta>
+            <entity dataset="people" id="" create="">
+              <label/>
+            </entity>
+          </meta>
+        </data>
+      </instance>
+      <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
+      <bind nodeset="/data/age" type="int" entities:saveto="age"/>
+      <bind nodeset="/data/hometown" type="string"/>
+    </model>
+  </h:head>
+</h:html>`);
+    }));
+
+    // updateEntityForm takes the old version to replace as an argument
+    // these tests show it will not change a 2022.1 (create-only) form when 2023.1 is provided
+    it('should not alter a version 2022.1.0 form when the old version to replace is 2023.1.0', (async () => {
+      const result = await updateEntityForm(testData.forms.simpleEntity2022, '2023.1.0', '2024.1.0', '[upgrade]', true);
+      result.should.equal(testData.forms.simpleEntity2022);
+    }));
+
+    it('should not alter a version 2024.1.0 form when the old version to replace is 2023.1.0', (async () => {
+      const result = await updateEntityForm(testData.forms.offlineEntity, '2023.1.0', '2024.1.0', '[upgrade]', true);
+      result.should.equal(testData.forms.offlineEntity);
+    }));
+
+    // these tests show it will not change a 2023.1 (update) form when 2022.1 is provided
+    it('should not alter a version 2023.1.0 form when the old version to replace is 2022.1.0', (async () => {
+      const result = await updateEntityForm(testData.forms.updateEntity2023, '2022.1.0', '2024.1.0', '[upgrade]', true);
+      result.should.equal(testData.forms.updateEntity2023);
+    }));
+
   });
 });
 

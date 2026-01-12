@@ -18,7 +18,6 @@ describe('external/enketo', () => {
     it('should send a properly constructed request to Enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey/all')
-        // eslint-disable-next-line space-before-function-paren, func-names
         .reply(201, function(uri, requestBody) {
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');
           const expectedQueryString = querystring.stringify({ server_url: openRosaUrl, form_id: xmlFormId });
@@ -87,7 +86,6 @@ describe('external/enketo', () => {
       let run = false;
       enketoNock
         .post('/enketoPath/api/v2/instance')
-        // eslint-disable-next-line space-before-function-paren, func-names
         .reply(201, function(uri, requestBody) {
           run = true;
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');
@@ -97,7 +95,7 @@ describe('external/enketo', () => {
             instance: '<data/>',
             instance_id: 'instance',
             'instance_attachments[fileone.txt]': 'http://openRosaHost:5678/v1/projects/1/forms/wellPumps/submissions/logical/versions/instance/attachments/fileone.txt',
-            return_url: 'http://openRosaHost:5678/#/projects/1/forms/wellPumps/submissions/logical'
+            return_url: 'http://openRosaHost:5678/projects/1/forms/wellPumps/submissions/logical'
           });
           this.req.headers.authorization.should.equal(`Basic ${base64Auth}`);
           this.req.headers.cookie.should.equal('__Host-session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');

@@ -8,9 +8,10 @@ const { getById, createVersion } = require('../../../lib/model/query/entities');
 const { log } = require('../../../lib/model/query/audits');
 const Option = require('../../../lib/util/option');
 const { Entity } = require('../../../lib/model/frames');
-const { getOrNotFound } = require('../../../lib/util/promise');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+
+const NONEXISTENT_ENTITY = '00000000-0000-4000-8000-000000000000';
 
 const testDataset = (test) => testService(async (service, container) => {
   const asAlice = await service.login('alice');
@@ -35,7 +36,7 @@ const testEntities = (test) => testService(async (service, container) => {
 
   const promises = [];
 
-  ['one', 'two'].forEach(async instanceId => {
+  ['one', 'two'].forEach(instanceId => {
     promises.push(asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
       .send(testData.instances.simpleEntity[instanceId])
       .set('Content-Type', 'application/xml')
@@ -165,13 +166,13 @@ describe('Entities API', () => {
         .send({ label: 'two' })
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01' WHERE uuid = '12345678-1234-4123-8234-123456789abc'`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z' WHERE uuid = '12345678-1234-4123-8234-123456789abc'`);
 
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE label = 'two'`);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities')
         .set('X-Extended-Metadata', true)
@@ -242,17 +243,25 @@ describe('Entities API', () => {
 
   describe('GET /datasets/:name/entities/:uuid', () => {
 
+    it('should strip uuid: prefix from query param in entity requests', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/uuid:12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => body.uuid.should.equal('12345678-1234-4123-8234-123456789abc'));
+    }));
+
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/123')
+      await asAlice.get(`/v1/projects/1/datasets/nonexistent/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/123')
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
@@ -340,13 +349,13 @@ describe('Entities API', () => {
         .send({ label: 'two' })
         .expect(200);
 
-      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01' WHERE "displayName" = 'Alice'`);
-      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01' WHERE "displayName" = 'Bob'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2020-01-01T00:00:00Z' WHERE "displayName" = 'Alice'`);
+      await container.run(sql`UPDATE actors SET "createdAt" = '2021-01-01T00:00:00Z' WHERE "displayName" = 'Bob'`);
 
-      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01', "updatedAt" = '2023-01-01'`);
+      await container.run(sql`UPDATE entities SET "createdAt" = '2022-01-01T00:00:00Z', "updatedAt" = '2023-01-01T00:00:00Z'`);
 
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01' WHERE label = 'Alice (88)'`);
-      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01' WHERE label = 'two'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2022-01-01T00:00:00Z' WHERE label = 'Alice (88)'`);
+      await container.run(sql`UPDATE entity_defs SET "createdAt" = '2023-01-01T00:00:00Z' WHERE label = 'two'`);
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
         .set('X-Extended-Metadata', true)
@@ -497,7 +506,7 @@ describe('Entities API', () => {
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/123/versions')
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}/versions`)
         .expect(404);
     }));
 
@@ -616,30 +625,33 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should get version source even when there is no corresponding create/update event', testEntities(async (service, container) => {
+    it('should get version source with source details even when there is no corresponding submission event', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people.csv',
+            size: 100,
+          },
+          entities: [
+            {
+              uuid: '12345678-1234-4123-8234-111111111aaa',
+              label: 'Johnny Doe',
+              data: {
+                first_name: 'Johnny',
+                age: '22'
+              }
+            },
+          ]
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
         .expect(200)
         .then(({ body: versions }) => {
           versions[0].should.have.property('source');
-          versions[0].source.submission.instanceId.should.equal('one');
-          versions[0].source.submission.should.have.property('currentVersion');
-          versions[0].source.event.action.should.equal('submission.update');
+          versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 1, userAgent: null });
         });
-
-      // this is simulating an entity version that doesnt have a corresponding create event
-      // e.g. made through bulk create (coming soon)
-      // but that can still look up source details directly from source table
-      await container.run(sql`delete from audits where action = 'entity.create'`);
-
-      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
-        .expect(200)
-        .then(({ body: versions }) => {
-          versions[0].should.have.property('source');
-          versions[0].source.should.eql({ submission: { instanceId: 'one' } });
-        });
-
     }));
 
     describe('relevantToConflict', () => {
@@ -813,7 +825,7 @@ describe('Entities API', () => {
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/123/diffs')
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}/diffs`)
         .expect(404);
     }));
 
@@ -870,7 +882,7 @@ describe('Entities API', () => {
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities/123/audits')
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}/audits`)
         .expect(404);
     }));
 
@@ -1266,6 +1278,22 @@ describe('Entities API', () => {
           logs[0].action.should.be.eql('entity.create');
         });
     }));
+
+    it('should return delete and restore events', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body: logs }) => {
+          logs.map(l => l.action).should.be.eql(['entity.restore', 'entity.delete', 'entity.create']);
+        });
+    }));
   });
 
   describe('POST /datasets/:name/entities', () => {
@@ -1436,6 +1464,28 @@ describe('Entities API', () => {
         .expect(409);
     }));
 
+    it('should reject if entity with the same uuid is soft deleted', testEntities(async (service) => {
+      // Use testEntities here vs. testDataset to prepopulate with 2 entities
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Johnny Doe',
+          data: {
+            first_name: 'Johnny',
+            age: '22'
+          }
+        })
+        .expect(409)
+        .then(({ body }) => {
+          body.message.should.be.eql('The following UUID(s) cannot be used because they are associated with deleted Entities: (12345678-1234-4123-8234-123456789abc).');
+        });
+    }));
+
     it('should reject if data properties do not match dataset exactly', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -1499,19 +1549,19 @@ describe('Entities API', () => {
   describe('PATCH /datasets/:name/entities/:uuid', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
-      await asAlice.patch('/v1/projects/1/datasets/nonexistent/entities/123')
+      await asAlice.patch(`/v1/projects/1/datasets/nonexistent/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
-      await asAlice.patch('/v1/projects/1/datasets/people/entities/123')
+      await asAlice.patch(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
     it('should reject if the user cannot update', testEntities(async (service) => {
       const asChelsea = await service.login('chelsea');
-      await asChelsea.patch('/v1/projects/1/datasets/people/entities/123')
+      await asChelsea.patch(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}`)
         .expect(403);
     }));
 
@@ -1968,7 +2018,7 @@ describe('Entities API', () => {
 
       await exhaust(container);
 
-      const dataset = await container.Datasets.get(1, 'people', true).then(getOrNotFound);
+      const dataset = await container.Datasets.get(1, 'people', true).then((o) => o.get());
       const actorId = await container.oneFirst(sql`SELECT id FROM actors WHERE "displayName" = 'Alice'`);
 
       let secondTxWaiting = false;
@@ -1980,7 +2030,7 @@ describe('Entities API', () => {
 
         const logger = (action, actee, details) => log(containerTx1.context.auth.actor, action, actee, details);
 
-        const entity = await getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx1).then(getOrNotFound);
+        const entity = await getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx1).then((o) => o.get());
 
         entityLocked = true;
         console.log('Tx1: entity fetched');
@@ -2027,7 +2077,7 @@ describe('Entities API', () => {
 
         console.log('Tx2: looks like 1st tx has locked the row');
 
-        const promise = getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx2).then(getOrNotFound)
+        const promise = getById(dataset.id, '12345678-1234-4123-8234-123456789abc', QueryOptions.forUpdate)(containerTx2).then((o) => o.get())
           .then(async (entity) => {
             console.log('Tx2: entity fetched');
 
@@ -2071,14 +2121,14 @@ describe('Entities API', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/datasets/nonexistent/entities/123')
+      await asAlice.delete(`/v1/projects/1/datasets/nonexistent/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
     it('should return notfound if the entity does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.delete('/v1/projects/1/datasets/people/entities/123')
+      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}`)
         .expect(404);
     }));
 
@@ -2102,7 +2152,7 @@ describe('Entities API', () => {
         .then(o => o.get())
         .then(audit => {
           audit.acteeId.should.not.be.null();
-          audit.details.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
         });
 
       await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -2122,6 +2172,70 @@ describe('Entities API', () => {
 
     }));
 
+  });
+
+  describe('POST /datasets/:name/entities/:uuid/restore', () => {
+    it('should reject if the entity has not been deleted', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(404);
+    }));
+
+    it('should reject if the entity does not exist', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post(`/v1/projects/1/datasets/people/entities/${NONEXISTENT_ENTITY}/restore`)
+        .expect(404);
+    }));
+
+    it('should reject if the entity uuid is not valid', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/uuid:not-a-uuid/restore')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.11);
+          body.message.should.equal('Invalid input data type: expected (uuid) to be (valid version 4 UUID)');
+        });
+    }));
+
+    it('should reject if the user cannot restore', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      // Chelsea cannot restore
+      await asChelsea.post('/v1/projects/1/forms/simple/submissions/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(403);
+    }));
+
+    it('should soft-delete the entity and then restore it', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(404);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/restore')
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      await container.Audits.getLatestByAction('entity.restore')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.Entity();
+        });
+    }));
   });
 
   // Bulk API operations
@@ -2249,7 +2363,6 @@ describe('Entities API', () => {
           body[0].details.should.have.property('sourceId');
         });
     }));
-
 
     it('should generate uuids for entities when no uuid is provided', testDataset(async (service) => {
       const asAlice = await service.login('alice');
@@ -2499,6 +2612,76 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities')
           .then(({ body }) => {
             body.length.should.equal(1); // same as before
+          });
+
+        // Most recent event is not a bulk create event
+        await asAlice.get('/v1/audits')
+          .then(({ body }) => {
+            body[0].action.should.not.equal('entity.bulk.create');
+          });
+      }));
+
+      it('should not create any entities if there is a UUID collision with soft deleted Entity', testServiceFullTrx(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-123456789abc', // collision
+            label: 'John Doe',
+            data: {
+              first_name: 'John',
+              age: '22'
+            }
+          });
+
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0);
+          });
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('User-Agent', 'central/tests')
+          .send({
+            source: {
+              name: 'people.csv',
+              size: 100,
+            },
+            entities: [
+              {
+                uuid: '12345678-1234-4123-8234-123456789abc', // collision
+                label: 'John Doe',
+                data: {
+                  first_name: 'John',
+                  age: '22'
+                }
+              },
+              {
+                uuid: '12345678-1234-4123-8234-111111111bbb',
+                label: 'Alice',
+                data: {
+                  first_name: 'Alice',
+                  age: '44'
+                }
+              },
+            ]
+          })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.19);
+            body.message.should.equal('The following UUID(s) cannot be used because they are associated with deleted Entities: (12345678-1234-4123-8234-123456789abc).');
+          });
+
+        // Entity list is still same length as before
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(0); // same as before
           });
 
         // Most recent event is not a bulk create event
@@ -2784,6 +2967,290 @@ describe('Entities API', () => {
           });
       }));
     });
+  });
+
+  // Bulk Delete API
+  describe('POST /datasets/:name/entities/bulk-delete', () => {
+    it('should return not found if dataset is not there', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/nonexistent/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(404);
+    }));
+
+    it('should return unauthorized if user does not have rights to delete entities', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(403);
+    }));
+
+    // because the endpoint is there and we want to keep this endpoint idempotent
+    it('should return ok even if provided entities are not there', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: [NONEXISTENT_ENTITY]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
+        });
+    }));
+
+    it('should delete entities with the given UUIDs', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(2);
+        });
+
+      await container.Audits.getLatestByAction('entity.bulk.delete')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entityUuids.should.be.eql(['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.empty();
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?deleted=true')
+        .expect(200)
+        .then(({ body }) => {
+          body.map(e => e.uuid).should.be.eql(['12345678-1234-4123-8234-123456789aaa', '12345678-1234-4123-8234-123456789abc']);
+        });
+    }));
+
+    it('should return count 0 if entities are already deleted', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(2);
+        });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
+        });
+    }));
+
+    it('should log entity.delete when only one uuid is provided', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(1);
+        });
+
+      await container.Audits.getLatestByAction('entity.delete')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+        });
+    }));
+  });
+
+  // Bulk Restore API
+  describe('POST /datasets/:name/entities/bulk-restore', () => {
+    it('should return not found if dataset is not there', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/nonexistent/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(404);
+    }));
+
+    it('should return unauthorized if user does not have rights to restore entities', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(403);
+    }));
+
+    // because the endpoint is there and we want to keep this endpoint idempotent
+    it('should return ok even if provided entities are not there', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: [NONEXISTENT_ENTITY]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
+        });
+    }));
+
+    it('should restore entities with the given UUIDs', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(2);
+        });
+    }));
+
+    it('should return count 0 if entities are not deleted', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(0);
+        });
+    }));
+
+    it('should log entity.restore when only one uuid is provided', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // First delete an entity
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(200);
+
+      // Then restore it
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(1);
+        });
+
+      await container.Audits.getLatestByAction('entity.restore')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
+        });
+    }));
+
+    it('should handle mixed valid and invalid UUIDs in bulk restore', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // First delete an entity
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc']
+        })
+        .expect(200);
+
+      // Try to restore both a valid deleted entity and a nonexistent one
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', NONEXISTENT_ENTITY]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(1);
+        });
+    }));
+
+    it('should handle bulk restore with audit logging for multiple entities', testEntities(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // First delete multiple entities
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200);
+
+      // Then restore them
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.be.eql(2);
+        });
+
+      await container.Audits.getLatestByAction('entity.bulk.restore')
+        .then(o => o.get())
+        .then(audit => {
+          audit.acteeId.should.not.be.null();
+          audit.details.entityUuids.should.be.eql(['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']);
+        });
+    }));
+
+    it('should return bulk restore event for individual entity audits', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // First delete entities
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200);
+
+      // Then restore them
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789aaa']
+        })
+        .expect(200);
+
+      // Check that bulk restore events appear in individual entity audits
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
+        .expect(200)
+        .then(({ body }) => {
+          const bulkRestoreEvent = body.find(audit => audit.action === 'entity.bulk.restore');
+          bulkRestoreEvent.should.not.be.undefined();
+          bulkRestoreEvent.details.entityUuids.should.containEql('12345678-1234-4123-8234-123456789abc');
+        });
+    }));
   });
 
   // Special scenarios
@@ -3232,6 +3699,53 @@ describe('Entities API', () => {
           .expect(200)
           .then(({ body: logs }) => {
             logs[0].action.should.be.eql('entity.error');
+            logs[1].action.should.be.eql('submission.create');
+          });
+      }));
+
+      it('should create entity when both create and update are true but baseVersion is empty', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789ddd"')
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('baseVersion="1"', 'baseVersion=""'))
+          .expect(200);
+
+        await exhaust(container);
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body: people }) => {
+            // existing entity + new entity
+            people.length.should.be.eql(2);
+          });
+      }));
+
+      it('should log error when both create and update are true, baseVersion is empty but entity uuid exists', testEntityUpdates(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // This submission uses an existing entity uuid
+        // has create and update both set to true
+        // and is missing a baseVersion.
+        // This will attempt to update but fail because it finds no
+        // baseVersion to parse in the update case
+        // and will then attempt to create but fail because
+        // the entity uuid does actually exist.
+        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+          .send(testData.instances.updateEntity.one
+            .replace('update="1"', 'create="1" update="1"')
+            .replace('baseVersion="1"', 'baseVersion=""'))
+          .expect(200);
+
+        await exhaust(container);
+
+        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
+          .expect(200)
+          .then(({ body: logs }) => {
+            logs[0].action.should.be.eql('entity.error');
+            logs[0].details.problem.problemCode.should.be.eql(409.3);
+            logs[0].details.errorMessage.should.be.eql('A resource already exists with uuid value(s) of 12345678-1234-4123-8234-123456789abc.');
             logs[1].action.should.be.eql('submission.create');
           });
       }));
@@ -3766,9 +4280,12 @@ describe('Entities API', () => {
       // 250kb limit = 256000 bytes (1024 bytes per kb)
       await asAlice.post('/v1/projects/1/datasets')
         .send({ name: 'x'.repeat(256001) })
-        .expect(500)
+        .expect(400)
         .then(({ body }) => {
-          body.message.should.equal('Internal Server Error');
+          body.should.eql({
+            code: 400.36,
+            message: 'Request body too large.',
+          });
         });
     }));
 
@@ -3795,21 +4312,143 @@ describe('Entities API', () => {
           body.success.should.be.true();
         });
     }));
+  });
 
-    it('should not allow larger body on GET request', testDataset(async (service) => {
+  describe('GET /datasets/:name/entities/creators', () => {
+
+    it('should return notfound if the dataset does not exist', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
-      await asAlice.get('/v1/projects/1/datasets/people/entities?foo=bar')
-        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(256001) }] })
-        .expect(500)
-        .then(({ body }) => {
-          body.message.should.equal('Internal Server Error');
-        });
-
-      // GET on this endpoint with payload doens't really make sense
-      await asAlice.get('/v1/projects/1/datasets/people/entities?foo=bar')
-        .send({ source: { name: 'file.csv' }, entities: [{ label: 'x'.repeat(10) }] })
-        .expect(200);
+      await asAlice.get('/v1/projects/1/datasets/nonexistent/entities/creators')
+        .expect(404);
     }));
+
+    it('should reject if the user cannot read', testEntities(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(403);
+    }));
+
+    it('should return empty array if no entities exist', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([]);
+        });
+    }));
+
+    it('should return creators sorted by display name', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create entities as different users
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice Entity',
+        })
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Bob Entity',
+        })
+        .expect(200);
+
+      // Get creators
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Array();
+          body.length.should.equal(2);
+
+          // Should be sorted by displayName
+          body[0].displayName.should.equal('Alice');
+          body[0].should.be.an.Actor();
+
+          body[1].displayName.should.equal('Bob');
+          body[1].should.be.an.Actor();
+        });
+    }));
+
+    it('should not include duplicate creators', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create form and dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create multiple entities as the same user
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice Entity 1',
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Alice Entity 2',
+        })
+        .expect(200);
+
+      // Get creators
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Array();
+          body.length.should.equal(1);
+          body[0].displayName.should.equal('Alice');
+        });
+    }));
+
+    it('should only include creators of non-deleted entities', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      // Create form and dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Create entities as different users
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice Entity',
+        })
+        .expect(200);
+
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Bob Entity',
+        })
+        .expect(200);
+
+      // Delete Bob's entity
+      await asBob.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789def')
+        .expect(200);
+
+      // Get creators - should only include Alice now
+      await asAlice.get('/v1/projects/1/datasets/people/entities/creators')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.Array();
+          body.length.should.equal(1);
+          body[0].displayName.should.equal('Alice');
+        });
+    }));
+
   });
 });

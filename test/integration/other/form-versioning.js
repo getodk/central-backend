@@ -11,11 +11,11 @@ describe('form forward versioning', () => {
   it('should create a new def and update the version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
-      Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
+      Forms.getByProjectAndXmlFormId(1, 'simple', Form.AnyVersion).then(force)
     ])
       // eslint-disable-next-line no-multi-spaces
       .then(([ partial, oldForm ]) =>  Forms.createVersion(partial, oldForm, true))
-      .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true)).then(force)
+      .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', Form.AnyVersion, Form.IncludeXml)).then(force)
       .then((newForm) => {
         newForm.currentDefId.should.equal(newForm.def.id);
         /version="two"/.test(newForm.xml).should.equal(true);
@@ -25,10 +25,10 @@ describe('form forward versioning', () => {
   it('should create a new draft def and not update the current version', testService((_, { Forms }) =>
     Promise.all([
       Form.fromXml(newXml),
-      Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
+      Forms.getByProjectAndXmlFormId(1, 'simple', Form.AnyVersion).then(force)
     ])
       .then(([ partial, oldForm ]) => Forms.createVersion(partial, oldForm, false)
-        .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', true)).then(force)
+        .then(() => Forms.getByProjectAndXmlFormId(1, 'simple', Form.AnyVersion, Form.IncludeXml)).then(force)
         .then((newForm) => {
           newForm.currentDefId.should.equal(oldForm.def.id);
           /version="two"/.test(newForm.xml).should.equal(false);
@@ -54,7 +54,7 @@ describe('form forward versioning', () => {
           .expect(200))
         .then(() => Promise.all([
           Form.fromXml(newXml),
-          Forms.getByProjectAndXmlFormId(1, 'simple').then(force)
+          Forms.getByProjectAndXmlFormId(1, 'simple', Form.AnyVersion).then(force)
         ])
           .then(([ partial, form ]) => Forms.createVersion(partial, form, true))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions')
@@ -72,7 +72,8 @@ describe('form forward versioning', () => {
       Form.fromXml(testData.forms.withAttachments),
       Blob.fromFile(__filename).then(Blobs.ensure)
     ])
-      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project, true)
+      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project)
+        .then((formDraft) => Forms.publish(formDraft, true))
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
           .map((name) => FormAttachments.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
@@ -82,7 +83,7 @@ describe('form forward versioning', () => {
           // eslint-disable-next-line no-shadow
           .then((partial) => Forms.createVersion(partial, savedForm, true))
           // eslint-disable-next-line newline-per-chained-call
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments')).then(force)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef)).then(force)
           .then((finalForm) => FormAttachments.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
               savedForm.currentDefId.should.not.equal(finalForm.currentDefId);
@@ -106,7 +107,8 @@ describe('form forward versioning', () => {
       Form.fromXml(testData.forms.withAttachments),
       Blob.fromFile(__filename).then(Blobs.ensure)
     ])
-      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project, true)
+      .then(([ project, partial, blobId ]) => Forms.createNew(partial, project)
+        .then((formDraft) => Forms.publish(formDraft, true))
         .then((savedForm) => Promise.all([ 'goodone.csv', 'goodtwo.mp3' ]
           .map((name) => FormAttachments.getByFormDefIdAndName(savedForm.def.id, name)
             .then(force)
@@ -115,7 +117,7 @@ describe('form forward versioning', () => {
           .then(() => Form.fromXml(withAttachmentsNonmatching))
           .then((partial2) => Forms.createVersion(partial2, savedForm, true))
           // eslint-disable-next-line newline-per-chained-call
-          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments')).then(force)
+          .then(() => Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.WithoutDef)).then(force)
           .then((finalForm) => FormAttachments.getAllByFormDefId(finalForm.currentDefId)
             .then((attachments) => {
               attachments.length.should.equal(2);

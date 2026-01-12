@@ -12,7 +12,7 @@ const testData = require('../data/xml');
 
 // knex things.
 const config = require('config');
-const { connect } = require(appRoot + '/lib/model/migrate');
+const { knexConnect } = require(appRoot + '/lib/model/knex-migrator');
 
 // slonik connection pool
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
@@ -31,7 +31,7 @@ if (mailConfig.transport !== 'json')
 const xlsform = require(appRoot + '/test/util/xlsform');
 
 // set up our sentry mock.
-const Sentry = require(appRoot + '/lib/external/sentry').init();
+const { Sentry } = require(appRoot + '/lib/external/sentry');
 
 // set up our enketo mock.
 const { reset: resetEnketo, ...enketo } = require(appRoot + '/test/util/enketo');
@@ -41,9 +41,16 @@ before(resetEnketo);
 after(resetEnketo);
 afterEach(resetEnketo);
 
+// set up our s3 mock
+const { s3 } = require(appRoot + '/test/util/s3');
+
 // set up odk analytics mock.
-const { ODKAnalytics } = require(appRoot + '/test/util/odk-analytics-mock');
-const odkAnalytics = new ODKAnalytics();
+const { ODKReporterMock } = require(appRoot + '/test/util/odk-reporter-mock');
+const analyticsReporter = new ODKReporterMock('odk-analytics', 'test-version');
+beforeEach(() => { analyticsReporter.resetMock(); });
+
+const mailingListReporter = new ODKReporterMock('mailing_list_opt_in', 'test-version');
+beforeEach(() => { mailingListReporter.resetMock(); });
 
 // set up mock context
 const context = { query: {}, transitoryData: new Map(), headers: [] };
@@ -69,7 +76,7 @@ const populate = (container, [ head, ...tail ] = fixtures) =>
 // this hook won't run if `test-unit` is called, as this directory is skipped
 // in that case.
 const initialize = async () => {
-  const migrator = connect(config.get('test.database'));
+  const migrator = knexConnect(config.get('test.database'));
   const { log } = console;
   try {
     await migrator.raw('drop owned by current_user');
@@ -81,21 +88,22 @@ const initialize = async () => {
     await migrator.destroy();
   }
 
-  return withDefaults({ db, context, enketo, env }).transacting(populate);
+  return withDefaults({ db, context, enketo, env, s3 }).transacting(populate);
 };
 
-// eslint-disable-next-line func-names, space-before-function-paren
 before(function() {
   this.timeout(0);
   return initialize();
 });
+after(async () => {
+  await db.end();
+});
 
 let mustReinitAfter;
 beforeEach(() => {
-  // eslint-disable-next-line keyword-spacing
-  if(mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
+  if (mustReinitAfter) throw new Error(`Failed to reinitalize after previous test: '${mustReinitAfter}'.  You may need to increase your mocha timeout.`);
+  s3.resetMock();
 });
-// eslint-disable-next-line func-names, space-before-function-paren
 afterEach(async function() {
   this.timeout(0);
   if (mustReinitAfter) {
@@ -121,9 +129,12 @@ const authProxy = (token) => ({
 // eslint-disable-next-line no-shadow
 const augment = (service) => {
   // eslint-disable-next-line no-param-reassign
+  service.authenticateUser = authenticateUser.bind(null, service);
+
+  // eslint-disable-next-line no-param-reassign
   service.login = async (userOrUsers, test = undefined) => {
     const users = Array.isArray(userOrUsers) ? userOrUsers : [userOrUsers];
-    const tokens = await Promise.all(users.map(user => authenticateUser(service, user)));
+    const tokens = await Promise.all(users.map(user => service.authenticateUser(user)));
     const proxies = tokens.map((token) => new Proxy(service, authProxy(token)));
     return test != null
       ? test(...proxies)
@@ -137,56 +148,68 @@ const augment = (service) => {
 // FINAL TEST WRAPPERS
 
 
-const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, odkAnalytics, context });
+const baseContainer = withDefaults({ db, mail, env, xlsform, enketo, Sentry, analyticsReporter, mailingListReporter, context, s3 });
 
 // called to get a service context per request. we do some work to hijack the
 // transaction system so that each test runs in a single transaction that then
 // gets rolled back for a clean slate on the next test.
-const testService = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
-    const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
-    return test(augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
-  });//.catch(Promise.resolve.bind(Promise)); // TODO/SL probably restore
-});
+const testService = (test) => function() {
+  return new Promise((resolve, reject) => {
+    baseContainer.transacting((container) => {
+      const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
+      return test.call(this, augment(request(service(container))), container).then(rollback(resolve), rollback(reject));
+    });//.catch(Promise.resolve.bind(Promise)); // TODO/SL probably restore
+  });
+};
 
 // for some tests we explicitly need to make concurrent requests, in which case
 // the transaction butchering we do for testService will not work. for these cases,
 // we offer testServiceFullTrx:
-// eslint-disable-next-line space-before-function-paren, func-names
 const testServiceFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
-  return test(augment(request(service(baseContainer))), baseContainer);
+  return test.call(this, augment(request(service(baseContainer))), baseContainer);
 };
 
 // for some tests we just want a container, without any of the webservice stuffs between.
 // this is that, with the same transaction trickery as a normal test.
-const testContainer = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
-    const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
-    return test(container).then(rollback(resolve), rollback(reject));
-  });//.catch(Promise.resolve.bind(Promise));
-});
+const testContainer = (test) => function () {
+  return new Promise((resolve, reject) => {
+    baseContainer.transacting((container) => {
+      const rollback = (f) => (x) => container.run(sql`rollback`).then(() => f(x));
+      return test.call(this, container).then(rollback(resolve), rollback(reject));
+    });//.catch(Promise.resolve.bind(Promise));
+  });
+};
 
 // complete the square of options:
-// eslint-disable-next-line space-before-function-paren, func-names
 const testContainerFullTrx = (test) => function() {
   mustReinitAfter = this.test.fullTitle();
-  return test(baseContainer);
+  return test.call(this, baseContainer);
 };
 
 // called to get a container context per task. ditto all // from testService.
 // here instead our weird hijack work involves injecting our own constructed
 // container into the task context so it just picks it up and uses it.
-const testTask = (test) => () => new Promise((resolve, reject) => {
-  baseContainer.transacting((container) => {
-    task._container = container.with({ task: true });
-    const rollback = (f) => (x) => {
-      delete task._container;
-      return container.run(sql`rollback`).then(() => f(x));
-    };
-    return test(task._container).then(rollback(resolve), rollback(reject));
-  });//.catch(Promise.resolve.bind(Promise));
-});
+const testTask = (test) => function() {
+  return new Promise((resolve, reject) => {
+    baseContainer.transacting((container) => {
+      task._container = container.with({ task: true });
+      const rollback = (f) => (x) => {
+        delete task._container;
+        return container.run(sql`rollback`).then(() => f(x));
+      };
+      return test.call(this, task._container).then(rollback(resolve), rollback(reject));
+    });//.catch(Promise.resolve.bind(Promise));
+  });
+};
+
+// See testServiceFullTrx()
+// eslint-disable-next-line space-before-function-paren, func-names
+const testTaskFullTrx = (test) => function() {
+  mustReinitAfter = this.test.fullTitle();
+  task._container = baseContainer.with({ task: true });
+  return test.call(this, task._container);
+};
 
 // eslint-disable-next-line no-shadow
 const withClosedForm = (f) => async (service) => {
@@ -213,4 +236,4 @@ const withClosedForm = (f) => async (service) => {
   return f(service);
 };
 
-module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, withClosedForm };
+module.exports = { testService, testServiceFullTrx, testContainer, testContainerFullTrx, testTask, testTaskFullTrx, withClosedForm };

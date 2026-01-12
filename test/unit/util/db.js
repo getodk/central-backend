@@ -1,4 +1,5 @@
 const appRoot = require('app-root-path');
+const should = require('should');
 const { sql } = require('slonik');
 const { fieldTypes } = require('../../../lib/model/frame');
 const { Frame, table, into } = require(appRoot + '/lib/model/frame');
@@ -97,11 +98,11 @@ describe('util/db', () => {
     });
   });
 
-  describe('connectionObject', () => {
-    const { connectionObject } = util;
+  describe('knexConnection', () => {
+    const { knexConnection } = util;
 
     it('should return an object with the required options', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -116,7 +117,7 @@ describe('util/db', () => {
     });
 
     it('should include the port if one is specified', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -133,7 +134,7 @@ describe('util/db', () => {
     });
 
     it('should return the correct object if ssl is true', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -150,7 +151,7 @@ describe('util/db', () => {
     });
 
     it('should throw if ssl is false', () => {
-      const result = () => connectionObject({
+      const result = () => knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -161,7 +162,7 @@ describe('util/db', () => {
     });
 
     it('should throw if ssl is an object', () => {
-      const result = () => connectionObject({
+      const result = () => knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -172,7 +173,7 @@ describe('util/db', () => {
     });
 
     it('should allow (but ignore) maximumPoolSize', () => {
-      const result = connectionObject({
+      const result = knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -188,7 +189,7 @@ describe('util/db', () => {
     });
 
     it('should throw for an unsupported option', () => {
-      const result = () => connectionObject({
+      const result = () => knexConnection({
         host: 'localhost',
         database: 'foo',
         user: 'bar',
@@ -201,29 +202,32 @@ describe('util/db', () => {
 
   describe('unjoiner', () => {
     const { unjoiner } = util;
-    // eslint-disable-next-line no-multi-spaces
-    const T = Frame.define(table('frames'), 'x',  'y');
+
+    const T = Frame.define(table('frames'), 'x', 'y');
     const U = Frame.define(into('extra'), 'z');
+
     it('should generate fields', () => {
-      unjoiner(T, U)
-        .fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","z" as "z"`);
+      sql`${unjoiner(T, U).fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
     });
 
     it('should unjoin data', () => {
-      // eslint-disable-next-line func-call-spacing, no-spaced-func
-      unjoiner(T, U)
-      // eslint-disable-next-line no-unexpected-multiline
-      ({ 'frames!x': 3, 'frames!y': 4, z: 5 })
-        .should.eql(new T({ x: 3, y: 4 }, { extra: new U({ z: 5 }) }));
+      const unjoined = unjoiner(T, U)({ 'frames!x': 3, 'frames!y': 4, z: 5 });
+      unjoined.should.eql(new T({ x: 3, y: 4 }));
+      unjoined.aux.extra.should.eql(new U({ z: 5 }));
     });
 
     it('should optionally unjoin optional data', () => {
       const unjoin = unjoiner(T, Option.of(U));
-      unjoin.fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","z" as "z"`);
-      unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 })
-        .should.eql(new T({ x: 3, y: 4 }, { extra: Option.of(new U({ z: 5 })) }));
-      unjoin({ 'frames!x': 3, 'frames!y': 4 })
-        .should.eql(new T({ x: 3, y: 4 }, { extra: Option.none() }));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+
+      const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 });
+      unjoined1.should.eql(new T({ x: 3, y: 4 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined2.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
     });
   });
 
@@ -239,7 +243,7 @@ describe('util/db', () => {
     it('should provide the appropriate arguments when not extended', () => {
       let run = false;
       extender(T)(U)((fields, extend, options, x, y, z) => {
-        fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y"`);
+        sql`${fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y"`);
         (sql`${extend|| true}`).should.eql(sql``);
         x.should.equal(2);
         y.should.equal(3);
@@ -252,7 +256,7 @@ describe('util/db', () => {
     it('should provide the appropriate arguments when extended', () => {
       let run = false;
       extender(T)(U)((fields, extend, options, x, y, z) => {
-        fields.should.eql(sql`frames."x" as "frames!x",frames."y" as "frames!y","a" as "a","b" as "b"`);
+        sql`${fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","a" as "a","b" as "b"`);
         (sql`${extend|| true}`).should.eql(sql`${true}`);
         x.should.equal(2);
         y.should.equal(3);
@@ -275,7 +279,10 @@ describe('util/db', () => {
       function run() { return Promise.resolve({ 'frames!x': 3, 'frames!y': 4, a: 5 }); };
       run.map = (f) => (x) => f(x);
       return extender(T)(U)(noop)(run, QueryOptions.extended)
-        .then((result) => result.should.eql(new T({ x: 3, y: 4 }, { extra: new U({ a: 5 }) })));
+        .then((result) => {
+          result.should.eql(new T({ x: 3, y: 4 }));
+          result.aux.extra.should.eql(new U({ a: 5 }));
+        });
     });
   });
 
@@ -285,7 +292,7 @@ describe('util/db', () => {
 
     it('should formulate a basic response based on data', () => {
       insert(new T({ x: 2, y: 3 })).should.eql(sql`
-insert into frames ("x","y")
+insert into "frames" ("x","y")
 values (${2},${3})
 returning *`);
     });
@@ -293,7 +300,7 @@ returning *`);
     it('should deal with strange data input types', () => {
       insert(new T({ x: { test: true }, y: undefined, z: new Date('2000-01-01'), w: Object.assign(Object.create(null), { foo: 'bar' }) }))
         .should.eql(sql`
-insert into frames ("x","y","z","w")
+insert into "frames" ("x","y","z","w")
 values (${'{"test":true}'},${null},${'2000-01-01T00:00:00.000Z'},${'{"foo":"bar"}'})
 returning *`);
     });
@@ -301,7 +308,7 @@ returning *`);
     it('should automatically insert into createdAt if expected', () => {
       const U = Frame.define(table('cats'), 'createdAt', 'updatedAt');
       insert(new U()).should.eql(sql`
-insert into cats ("createdAt")
+insert into "cats" ("createdAt")
 values (${sql`clock_timestamp()`})
 returning *`);
     });
@@ -318,7 +325,7 @@ returning *`);
     it('should insert all data', () => {
       const query = insertMany([ new T({ x: 2 }), new T({ y: 3 }) ]);
       query.sql.should.be.eql(`
-  INSERT INTO dogs ("x","y")
+  INSERT INTO "dogs" ("x","y")
   SELECT * FROM unnest($1::"text"[], $2::"text"[]) AS t`);
       query.values.should.be.eql([
         [2, null],
@@ -330,10 +337,22 @@ returning *`);
       const U = Frame.define(table('dogs'), 'x', 'createdAt', fieldTypes(['timestamptz', 'timestamptz']));
       const query = insertMany([ new U({ x: new Date('2000-01-01') }), new U() ]);
       query.sql.should.be.eql(`
-  INSERT INTO dogs ("createdAt", "x")
+  INSERT INTO "dogs" ("createdAt", "x")
   SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[]) AS t`);
       query.values.should.be.eql([
         ['2000-01-01T00:00:00.000Z', null]
+      ]);
+    });
+
+    it('should insert createdAt even if last type is not timestamp', () => {
+      const U = Frame.define(table('dogs'), 'x', 'createdAt', 'age', fieldTypes(['timestamptz', 'timestamptz', 'int4']));
+      const query = insertMany([ new U({ x: new Date('2000-01-01'), age: 14 }), new U({ age: 8 }), new U() ]);
+      query.sql.should.be.eql(`
+  INSERT INTO "dogs" ("createdAt", "x","age")
+  SELECT clock_timestamp(), * FROM unnest($1::"timestamptz"[], $2::"int4"[]) AS t`);
+      query.values.should.be.eql([
+        ['2000-01-01T00:00:00.000Z', null, null],
+        [14, 8, null]
       ]);
     });
 
@@ -350,7 +369,7 @@ returning *`);
 
     it('should update the given data', () => {
       updater(new T({ id: 1, x: 2 }), new T({ y: 3 })).should.eql(sql`
-update rabbits
+update "rabbits"
 set "y"=${3}
 
 where ${sql.identifier([ 'id' ])}=${1}
@@ -360,7 +379,7 @@ returning *`);
     it('should set updatedAt if present', () => {
       const U = Frame.define(table('rabbits'), 'createdAt', 'updatedAt');
       updater(new U({ id: 1, x: 2 }), new U({ y: 3 })).should.eql(sql`
-update rabbits
+update "rabbits"
 set "y"=${3}
 ,"updatedAt"=clock_timestamp()
 where "id"=${1}
@@ -369,7 +388,7 @@ returning *`);
 
     it('should use a different id key if given', () => {
       updater(new T({ otherId: 0, x: 2 }), new T({ y: 3 }), 'otherId').should.eql(sql`
-update rabbits
+update "rabbits"
 set "y"=${3}
 
 where "otherId"=${0}
@@ -377,25 +396,26 @@ returning *`);
     });
   });
 
-  describe('equals', () => {
-    const { equals } = util;
+  describe('sqlEquals', () => {
+    const { sqlEquals } = util;
     it('should do nothing if given no conditions', () => {
-      equals({}).should.eql(sql`true`);
+      sqlEquals({}).should.eql(sql`true`);
     });
 
     it('should match k/v pairs', () => {
-      equals({ x: 2, y: 3 })
+      sqlEquals({ x: 2, y: 3 })
         .should.eql(sql.join([ sql`"x"=${2}`, sql`"y"=${3}` ], sql` and `));
     });
 
     it('should split compound keys', () => {
-      equals({ 'x.y': 2 })
+      sqlEquals({ 'x.y': 2 })
         .should.eql(sql.join([ sql`"x"."y"=${2}` ], sql` and `));
     });
   });
 
   describe('QueryOptions', () => {
     const { QueryOptions } = util;
+
     it('should cascade conditions properly', () => {
       const query = QueryOptions.extended.withCondition({ a: 1 }).withCondition({ b: 2 });
       query.condition.should.eql({ a: 1, b: 2 });
@@ -409,16 +429,18 @@ returning *`);
       (new QueryOptions({ skiptoken: 'foo' })).hasPaging().should.equal(true);
     });
 
-    it('should transfer allowed args from quarantine on allowArgs', () => {
-      (new QueryOptions({ argData: { a: 1, b: 2, c: 3, d: 4 } }))
-        .allowArgs('b', 'c', 'e')
-        .args.should.eql({ b: 2, c: 3 });
-    });
+    describe('allowArgs', () => {
+      it('should transfer allowed args from quarantine on allowArgs', () => {
+        (new QueryOptions({ argData: { a: 1, b: 2, c: 3, d: 4 } }))
+          .allowArgs('b', 'c', 'e')
+          .args.should.eql({ b: 2, c: 3 });
+      });
 
-    it('should merge with existing args on allowArgs', () => {
-      (new QueryOptions({ args: { b: 4, f: 9 }, argData: { a: 1, b: 2, c: 3, d: 4 } }))
-        .allowArgs('b', 'c', 'e')
-        .args.should.eql({ b: 2, c: 3, f: 9 });
+      it('should merge with existing args on allowArgs', () => {
+        (new QueryOptions({ args: { b: 4, f: 9 }, argData: { a: 1, b: 2, c: 3, d: 4 } }))
+          .allowArgs('b', 'c', 'e')
+          .args.should.eql({ b: 2, c: 3, f: 9 });
+      });
     });
 
     it('should create and parse cursor token', () => {
@@ -430,7 +452,7 @@ returning *`);
       QueryOptions.parseSkiptoken(token).should.be.eql(data);
     });
 
-    describe('related functions', () => {
+    describe('ifArg()', () => {
       it('should run the handler only if the arg is present', () => {
         let ran = false;
         const options = new QueryOptions({ args: { b: 42 }, argData: { c: 17 } });
@@ -452,6 +474,20 @@ returning *`);
 
       it('should return blank if the arg is not present', () => {
         QueryOptions.none.ifArg('z', () => {}).should.eql(sql``);
+      });
+    });
+
+    describe('with()', () => {
+      it('should add a custom option', () => {
+        const options = QueryOptions.none.with({ datasetMetadata: true });
+        options.datasetMetadata.should.be.true();
+      });
+
+      it('should not overwrite an existing option', () => {
+        const options = new QueryOptions({ argData: { a: 1, b: 2 } })
+          .allowArgs('a');
+        for (const prop of ['condition', 'argData', 'args'])
+          (() => options.with({ [prop]: {} })).should.throw();
       });
     });
   });

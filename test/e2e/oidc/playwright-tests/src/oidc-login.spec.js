@@ -7,6 +7,8 @@
 // including this file, may be copied, modified, propagated, or distributed
 // except according to the terms contained in the LICENSE file.
 
+const assert = require('node:assert');
+
 const { test } = require('@playwright/test');
 
 const { frontendUrl } = require('./config');
@@ -16,6 +18,7 @@ const { // eslint-disable-line object-curly-newline
   assertLoginSuccessful,
   fillLoginForm,
   initTest,
+  sleep,
 } = require('./utils'); // eslint-disable-line object-curly-newline
 
 const password = 'topsecret123'; // fake-oidc-server will accept any non-empty password
@@ -24,8 +27,8 @@ test.describe.configure({ mode: 'parallel' });
 
 test.describe('happy', () => {
   [
-    [ 'no next param',       '',                   '/',            '/#/' ],          // eslint-disable-line no-multi-spaces
-    [ 'internal next param', '?next=/some/path',   '/',            '/#/some/path' ], // eslint-disable-line no-multi-spaces
+    [ 'no next param',       '',                   '/',            '/' ],          // eslint-disable-line no-multi-spaces
+    [ 'internal next param', '?next=/some/path',   '/some/path',            '/some/path' ], // eslint-disable-line no-multi-spaces
     [ 'enketo next param',   '?next=/-/some/path', '/-/some/path', '/-/some/path' ], // eslint-disable-line no-multi-spaces
   ].forEach(([ description, initialQueryString, expectedBackendPath, expectedFrontendPath ]) => {
     test(`can log in (${description})`, async ({ browserName, page }, testInfo) => {
@@ -41,6 +44,35 @@ test.describe('happy', () => {
       await assertLocation(page, frontendUrl + expectedFrontendPath);
     });
   });
+});
+
+test('/callback should not trigger Content-Security-Policy', async ({ browserName, page }, testInfo) => {
+  // given
+  await initTest({ browserName, page }, testInfo);
+  // and
+  const cspViolations = [];
+  page.on('console', msg => {
+    if (msg.type() === 'error') {
+      const messageText = msg.text();
+
+      // This feels weak, but currently catches CSP violations on all of firefox, chromium & webkit.
+      if (messageText.match(/Content.Security.Policy/)) cspViolations.push(messageText);
+    }
+  });
+
+  // when
+  await page.goto(`${frontendUrl}/v1/oidc/login`);
+  await fillLoginForm(page, { username: 'alice', password });
+  // then
+  await assertLoginSuccessful(page, '/');
+  await assertLocation(page, frontendUrl + '/');
+
+  // when
+  // Race condition: console events seem to be asynchronous.  Not documented, but
+  // see: https://playwright.dev/docs/api/class-page#page-event-console
+  await sleep(1);
+  // then
+  assert.deepEqual(cspViolations, []);
 });
 
 test.describe('redirected errors', () => {

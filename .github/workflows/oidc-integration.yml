@@ -1,6 +1,8 @@
 name: OIDC integration tests
 
-on: push
+on:
+  push:
+  pull_request:
 
 jobs:
   oidc-integration-test:
@@ -10,7 +12,7 @@ jobs:
     services:
       # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
       postgres:
-        image: postgres:14.10
+        image: postgres:14.20
         env:
           POSTGRES_PASSWORD: odktest
         ports:
@@ -23,12 +25,12 @@ jobs:
           --health-retries 5
     steps:
     - uses: actions/checkout@v4
-    - name: Use Node.js 20
+    - name: Set node version
       uses: actions/setup-node@v4
       with:
-        node-version: 20.10.0
+        node-version: 22.21.1
         cache: 'npm'
-    - run: npm ci --legacy-peer-deps
+    - run: npm ci
     - run: FAKE_OIDC_ROOT_URL=http://localhost:9898 make fake-oidc-server-ci > fake-oidc-server.log &
     - run: node lib/bin/create-docker-databases.js
     - run: make test-oidc-integration
