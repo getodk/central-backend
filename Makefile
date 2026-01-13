@@ -102,10 +102,6 @@ debug: base
 test: lint
 	BCRYPT=insecure npx mocha --recursive
 
-.PHONY: test-ci
-test-ci: lint
-	BCRYPT=insecure npx mocha --recursive --reporter test/ci-mocha-reporter.js
-
 .PHONY: test-db-migrations
 test-db-migrations:
 	NODE_CONFIG_ENV=db-migration-test npx mocha --bail --sort --timeout=20000 \
