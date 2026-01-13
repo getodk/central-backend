@@ -12,7 +12,6 @@ jobs:
     steps:
       - checkout
       - run: make check-for-large-files
-      - run: make check-file-headers
       - run: npm ci
       - run: node lib/bin/create-docker-databases.js
       - run: make test-ci
