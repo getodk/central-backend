@@ -17,7 +17,6 @@ jobs:
             set +e
             find . -size +1000000c -not -path './.git/*' -not -name 'package-lock.json' | grep .
             [[ $? -eq 1 ]]
-      - run: make check-file-headers
       - run: npm ci
       - run: node lib/bin/create-docker-databases.js
       - run: make test-ci

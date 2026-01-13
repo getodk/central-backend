@@ -30,6 +30,7 @@ jobs:
       with:
         node-version: 22.21.1
         cache: 'npm'
+    - run: make check-file-headers
     - run: npm ci
     - run: make api-docs-lint
     - run: node lib/bin/create-docker-databases.js
