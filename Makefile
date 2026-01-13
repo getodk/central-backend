@@ -160,6 +160,10 @@ rm-docker-postgres: stop-docker-postgres
 check-file-headers:
 	git ls-files | node lib/bin/check-file-headers.js
 
+.PHONY: check-for-large-files
+check-for-large-files:
+	./test/check-for-large-files.sh
+
 .PHONY: api-docs
 api-docs:
 	(test "$(docker images -q odk-docs)" || docker build --file odk-docs.dockerfile -t odk-docs .) && \
