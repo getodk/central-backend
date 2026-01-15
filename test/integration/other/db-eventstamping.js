@@ -21,8 +21,8 @@ describe('DB: Event stamping', () => {
         .expect(200);
 
       await db.query(sql`commit;`);
-      // .one and .two were created in the same transaction, so they should receive the same event stamp
-      (await db.oneFirst(sql`select distinct(event) from submissions`)).should.equal(1);
+      // .one and .two were created in the same transaction, but should receive the different event stamps (see https://github.com/getodk/central/issues/1609)
+      (await db.oneFirst(sql`select array_agg(event order by event) from submissions`)).should.deepEqual([1, 2]);
 
       await asAlice.post('/v1/projects/1/forms/simple/submissions')
         .set('Content-Type', 'application/xml')
@@ -30,7 +30,7 @@ describe('DB: Event stamping', () => {
         .expect(200);
 
       await db.query(sql`commit;`);
-      (await db.oneFirst(sql`select event from submissions where "instanceId" = 'three'`)).should.equal(2);
+      (await db.oneFirst(sql`select event from submissions where "instanceId" = 'three'`)).should.equal(3);
 
       await asAlice.put('/v1/projects/1/forms/simple/submissions/one')
         .set('Content-Type', 'application/xml')
@@ -38,7 +38,7 @@ describe('DB: Event stamping', () => {
         .expect(200);
 
       await db.query(sql`commit;`);
-      (await db.oneFirst(sql`select event from submissions where "instanceId" = 'one'`)).should.equal(3);
+      (await db.oneFirst(sql`select event from submissions where "instanceId" = 'one'`)).should.equal(4);
 
       await asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
         .set('Content-Type', 'application/json')
@@ -46,7 +46,7 @@ describe('DB: Event stamping', () => {
         .expect(200);
 
       await db.query(sql`commit;`);
-      (await db.oneFirst(sql`select event from submissions where "instanceId" = 'one'`)).should.equal(4);
+      (await db.oneFirst(sql`select event from submissions where "instanceId" = 'one'`)).should.equal(5);
 
     } finally {
       await db.query(sql`truncate table submissions cascade`);
