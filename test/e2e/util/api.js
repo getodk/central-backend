@@ -3,17 +3,23 @@ const { extname } = require('node:path');
 const { Readable } = require('stream');
 const { finished } = require('stream/promises');
 
-async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPath }) {
+async function apiClient(suiteName, { token, serverUrl, userEmail, userPassword, logPath }) {
   const log = require('./logger')(suiteName);
 
   let bearerToken;
 
-  log.info('Creating session...');
-  const { token } = await apiPostJson('sessions', { email:userEmail, password:userPassword }, { Authorization:null });
-  // eslint-disable-next-line prefer-const
-  bearerToken = token;
+  if(token) {
+    if(userEmail || userPassword) throw new Error('userEmail/userPassword provided alongside token');
+    bearerToken = token;
+  } else {
+    log.info('Creating session...');
+    const { token } = await apiPostJson('sessions', { email:userEmail, password:userPassword }, { Authorization:null });
+    // eslint-disable-next-line prefer-const
+    bearerToken = token;
+  }
 
   return {
+    apiDelete,
     apiGet,
     apiRawHead,
     apiRawGet,
@@ -24,6 +30,11 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
     apiPost,
     apiFetch,
   };
+
+  async function apiDelete(path, headers) {
+    const res = await apiFetch('DELETE', path, undefined, headers);
+    return res.json();
+  }
 
   async function apiGet(path, headers) {
     const res = await apiFetch('GET', path, undefined, headers);
