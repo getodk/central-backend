@@ -461,13 +461,17 @@ describe('api: /projects/:id/forms (versions)', () => {
         .expect(200);
 
       const fieldsBySchema = await container.all(sql`
-      select count(*), "schemaId" from form_fields
-      where "formId"=1
-      group by "schemaId"
-      order by "schemaId" asc`);
+        WITH count_by_schema AS (
+          select count(*) as fieldcount, "schemaId" from form_fields
+          where "formId"=1
+          group by "schemaId"
+        )
+        SELECT cbs.fieldcount FROM count_by_schema cbs INNER JOIN form_defs fd USING ("schemaId")
+        ORDER BY fd."createdAt" asc  -- order = order of creation
+      `);
       fieldsBySchema.length.should.equal(2); // There should be two schemas
-      fieldsBySchema[0].count.should.equal(4); // There should be four fields for that schema
-      fieldsBySchema[1].count.should.equal(3);
+      fieldsBySchema[0].fieldcount.should.equal(4); // There should be four fields for that schema
+      fieldsBySchema[1].fieldcount.should.equal(3);
 
       const defsBySchema = await container.all(sql`
       select count(*), "schemaId" from form_defs
