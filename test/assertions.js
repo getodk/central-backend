@@ -367,7 +367,7 @@ should.Assertion.add('Dataset', function assertDataset(extraKeys = []) {
   this.params = { operator: 'to be a Dataset' };
 
   Object.keys(this.obj).should.be.a.subsetOf([
-    'projectId', 'name', 'approvalRequired', 'ownerOnly', 'createdAt',
+    'projectId', 'name', 'approvalRequired', 'ownerOnly', 'createdAt', 'deletedAt',
     // Optional metadata
     'properties', 'linkedForms', 'sourceForms', 'lastUpdate',
     ...extraKeys
