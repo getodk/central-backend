@@ -1395,6 +1395,136 @@ describe('datasets and entities', () => {
       });
     });
 
+
+    describe('projects/:id/datasets/deleted/:datasetId/entities.csv GET', () => {
+      it('should reject if the user cannot access the deleted dataset', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.delete('/v1/projects/1/datasets/people')
+          .expect(200);
+        const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
+          .then(({ body }) => body[0].id);
+
+        const asChelsea = await service.login('chelsea');
+        await asChelsea.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+          .expect(403);
+      }));
+
+      it('should reject if the dataset is not deleted', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const datasetId = await container.oneFirst(sql`select id from datasets where "name" = 'people'`);
+        await asAlice.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+          .expect(404);
+      }));
+
+      it('should return csv export of deleted entity list', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.delete('/v1/projects/1/datasets/people')
+          .expect(200);
+
+        const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
+          .then(({ body }) => body[0].id);
+
+        const result = await asAlice.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+
+        withOutTs.should.be.eql(
+          '__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789abc,John Doe,,5,Alice,0,,1\n' +
+          '12345678-1234-4123-8234-123456789aaa,John Doe,,5,Alice,0,,1\n'
+        );
+      }));
+
+      it('should only return entities present at time of list deletion', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Add another entity
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Robert Doe'
+          })
+          .expect(200);
+
+        // Soft-delete that new entity so it won't appear in later export
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/people')
+          .expect(200);
+
+        const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
+          .then(({ body }) => body[0].id);
+
+        const result = await asAlice.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+
+        withOutTs.should.be.eql(
+          '__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789abc,John Doe,,5,Alice,0,,1\n' +
+          '12345678-1234-4123-8234-123456789aaa,John Doe,,5,Alice,0,,1\n'
+        );
+      }));
+
+      it('should only return deleted list if new list of same name exists', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Delete dataset
+        await asAlice.delete('/v1/projects/1/datasets/people')
+          .expect(200);
+
+        // Create new dataset with same name as soft-deleted one
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        // Add entity to new dataset with same name as deleted
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Robert Doe'
+          })
+          .expect(200);
+
+        const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
+          .then(({ body }) => body[0].id);
+
+        const result = await asAlice.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+
+        withOutTs.should.be.eql(
+          '__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789abc,John Doe,,5,Alice,0,,1\n' +
+          '12345678-1234-4123-8234-123456789aaa,John Doe,,5,Alice,0,,1\n'
+        );
+      }));
+
+      // Add these tests once other functionality has been added:
+      //   should reject if dataset has been purged
+      //   should return properties included at time of deletion or perhaps all properties
+    });
+
     describe('projects/:id/datasets/:name GET', () => {
 
       it('should return the metadata of the dataset', testService(async (service) => {
