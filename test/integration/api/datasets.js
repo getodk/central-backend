@@ -7014,6 +7014,25 @@ describe('datasets and entities', () => {
         });
     }));
 
+    it('should reject if there is a Form consuming the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'goodone' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/goodone')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+    }));
+
     it('should be able to recreate another dataset with the same name', testService(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -7139,7 +7158,7 @@ describe('datasets and entities', () => {
         });
     }));
 
-    it('should not entities for deleted dataset', testService(async (service, container) => {
+    it('should not create entities from a submission in a deleted dataset', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       // create dataset via form definition
@@ -7172,26 +7191,16 @@ describe('datasets and entities', () => {
 
       await exhaust(container);
 
-      // TODO: assert that entity is not created.
-    }));
-
-    it('should reject if there is a Form updating the dataset', testService(async (service) => {
-      const asAlice = await service.login('alice');
-
-      await asAlice.post('/v1/projects/1/datasets')
-        .send({ name: 'goodone' })
-        .expect(200);
-
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.withAttachments)
-        .set('Content-Type', 'application/xml')
-        .expect(200);
-
-      await asAlice.delete('/v1/projects/1/datasets/goodone')
-        .expect(409)
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .expect(200)
         .then(({ body }) => {
-          body.code.should.equal(409.21);
+          body[0].details.errorMessage.should.match(/dataset .* does not exist/);
         });
+
+      const entities = await container.oneFirst(sql`SELECT COUNT(1) FROM entities`);
+      entities.should.be.eql(0);
     }));
+
+
   });
 });
