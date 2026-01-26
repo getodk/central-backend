@@ -1428,7 +1428,8 @@ describe('datasets and entities', () => {
               name: 'people',
               projectId: 1,
               approvalRequired: false,
-              ownerOnly: false
+              ownerOnly: false,
+              deletedAt: null
             });
 
             createdAt.should.not.be.null();
@@ -1493,6 +1494,7 @@ describe('datasets and entities', () => {
               approvalRequired: false,
               ownerOnly: false,
               entities: 1,
+              deletedAt: null,
               conflicts: 0,
               linkedForms: [],
               sourceForms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }]
@@ -6914,5 +6916,291 @@ describe('datasets and entities', () => {
           entity.deleted.should.be.eql('true');
         });
     }));
+  });
+
+  describe('api: DELETE /projects/:id/dataset', () => {
+    it('should reject unless the user can delete', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.delete('/v1/projects/1/datasets/trees')
+        .expect(403);
+    }));
+
+    it('should delete the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees')
+        .expect(404);
+    }));
+
+    it('deleted dataset is not listed in the GET /datasets', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.empty();
+        });
+    }));
+
+    it('deleted dataset is listed in the GET /datasets?deleted=true', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets?deleted=true')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].id.should.be.aboveOrEqual(1);
+          body[0].name.should.be.equal('trees');
+        });
+    }));
+
+    it('should log the action in the audit log', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=dataset.delete')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          body[0].action.should.equal('dataset.delete');
+        });
+    }));
+
+    it('should reject if there is a Form updating the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+    }));
+
+    it('should reject if there is a Form consuming the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'goodone' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/goodone')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+    }));
+
+    it('should be able to recreate another dataset with the same name', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+    }));
+
+    it('should be able to recreate another dataset via Form definition with the same name of deleted dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789aaa',
+          label: 'John Doe'
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.not.be.empty();
+        });
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.empty();
+        });
+    }));
+
+    it('entities of deleted dataset should not be accessible via its name', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .expect(404);
+    }));
+
+    it('should be able to delete the dataset after unlinking the Form', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409);
+
+      const formWithoutEntity = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace(/<meta>[\s\S]*?<\/meta>/g, '')
+        .replace(/entities:saveto=".*"/g, '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft?ignoreWarnings=true')
+        .send(formWithoutEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+    }));
+
+    it('should return empty response for dataset-diff after unlinking', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // create a dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // upload a new form definition without entities (see previous test to do that) and publish it
+      const formWithoutEntity = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace(/<meta>[\s\S]*?<\/meta>/g, '')
+        .replace(/entities:saveto=".*"/g, '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft?ignoreWarnings=true')
+        .send(formWithoutEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/dataset-diff')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.empty();
+        });
+    }));
+
+    it('should not create entities from a submission in a deleted dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // create dataset via form definition
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // create a submission
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const formWithoutEntity = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace(/<meta>[\s\S]*?<\/meta>/g, '')
+        .replace(/entities:saveto=".*"/g, '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft?ignoreWarnings=true')
+        .send(formWithoutEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].details.errorMessage.should.match(/dataset .* does not exist/);
+        });
+
+      const entities = await container.oneFirst(sql`SELECT COUNT(1) FROM entities`);
+      entities.should.be.eql(0);
+    }));
+
+
   });
 });
