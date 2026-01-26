@@ -178,7 +178,8 @@ describe('Entities from Repeats', () => {
             name: 'trees',
             projectId: 1,
             approvalRequired: false,
-            ownerOnly: false
+            ownerOnly: false,
+            deletedAt: null
           });
 
           createdAt.should.not.be.null();
@@ -218,7 +219,8 @@ describe('Entities from Repeats', () => {
             name: 'households',
             projectId: 1,
             approvalRequired: false,
-            ownerOnly: false
+            ownerOnly: false,
+            deletedAt: null
           });
 
           createdAt.should.not.be.null();
@@ -249,7 +251,8 @@ describe('Entities from Repeats', () => {
             name: 'people',
             projectId: 1,
             approvalRequired: false,
-            ownerOnly: false
+            ownerOnly: false,
+            deletedAt: null
           });
 
           createdAt.should.not.be.null();
@@ -289,7 +292,8 @@ describe('Entities from Repeats', () => {
             name: 'farms',
             projectId: 1,
             approvalRequired: false,
-            ownerOnly: false
+            ownerOnly: false,
+            deletedAt: null
           });
 
           createdAt.should.not.be.null();
@@ -321,7 +325,8 @@ describe('Entities from Repeats', () => {
             name: 'farmers',
             projectId: 1,
             approvalRequired: false,
-            ownerOnly: false
+            ownerOnly: false,
+            deletedAt: null
           });
 
           createdAt.should.not.be.null();
