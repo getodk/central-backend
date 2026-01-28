@@ -1396,7 +1396,7 @@ describe('datasets and entities', () => {
     });
 
 
-    describe('projects/:id/datasets/deleted/:datasetId/entities.csv GET', () => {
+    describe('projects/:id/trash/datasets/:datasetId/entities.csv GET', () => {
       it('should reject if the user cannot access the deleted dataset', testEntities(async (service) => {
         const asAlice = await service.login('alice');
         await asAlice.delete('/v1/projects/1/datasets/people')
@@ -1405,14 +1405,14 @@ describe('datasets and entities', () => {
           .then(({ body }) => body[0].id);
 
         const asChelsea = await service.login('chelsea');
-        await asChelsea.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+        await asChelsea.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
           .expect(403);
       }));
 
       it('should reject if the dataset is not deleted', testEntities(async (service, container) => {
         const asAlice = await service.login('alice');
         const datasetId = await container.oneFirst(sql`select id from datasets where "name" = 'people'`);
-        await asAlice.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+        await asAlice.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
           .expect(404);
       }));
 
@@ -1425,7 +1425,7 @@ describe('datasets and entities', () => {
         const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
           .then(({ body }) => body[0].id);
 
-        const result = await asAlice.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+        const result = await asAlice.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
           .expect(200)
           .then(r => r.text);
 
@@ -1463,7 +1463,7 @@ describe('datasets and entities', () => {
         const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
           .then(({ body }) => body[0].id);
 
-        const result = await asAlice.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+        const result = await asAlice.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
           .expect(200)
           .then(r => r.text);
 
@@ -1503,7 +1503,7 @@ describe('datasets and entities', () => {
         const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
           .then(({ body }) => body[0].id);
 
-        const result = await asAlice.get(`/v1/projects/1/datasets/deleted/${datasetId}/entities.csv`)
+        const result = await asAlice.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
           .expect(200)
           .then(r => r.text);
 
@@ -1520,7 +1520,7 @@ describe('datasets and entities', () => {
         );
       }));
 
-      // Add these tests once other functionality has been added:
+      // TODO: Add these tests once other functionality has been added
       //   should reject if dataset has been purged
       //   should return properties included at time of deletion or perhaps all properties
     });
