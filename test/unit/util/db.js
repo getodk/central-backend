@@ -411,6 +411,11 @@ returning *`);
       sqlEquals({ 'x.y': 2 })
         .should.eql(sql.join([ sql`"x"."y"=${2}` ], sql` and `));
     });
+
+    it('should use ARRAY', () => {
+      sqlEquals({ x: [1, 2, 3] }, { x: 'int' })
+        .should.eql(sql.join([ sql`"x" = ANY(${sql.array([1, 2, 3], 'int')})` ], sql` and `));
+    });
   });
 
   describe('QueryOptions', () => {
