@@ -41,6 +41,16 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2026.1
+
+    **Added**:
+    - Three endpoints gained `ETag` HTTP response headers. These can be used to efficiently revalidate clientside caches.
+      A guide on how to use caching for better performance of data pipelines can be found [here](/using-http-caching).
+      The endpoints that have gained caching information are:
+      - The submission-related OData "[data documents](/central-api-odata-endpoints/#data-document)". The dataset-related OData endpoints are to follow in some future release.
+      - The [`submissions.csv`](/central-api-submission-management/#exporting-root-data-to-plain-csv) endpoint
+      - The [`submissions.csv.zip`](/central-api-submission-management/#exporting-form-submissions-to-csv) endpoint
+
     ## ODK Central v2025.3
 
     **Added**:
