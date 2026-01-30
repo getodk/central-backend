@@ -50,7 +50,7 @@ describe('task: fs', () => {
       tmp.dir((_, dirpath) =>
         // eslint-disable-next-line no-shadow
         tmp.file((_, filepath) => {
-          const archive = archiver('zip', { zlib: { level: 9 } });
+          const archive = archiver('zip', { zlib: { level: -1 } });
 
           archive.on('end', () => setTimeout((() =>
             decryptFromArchive(filepath, dirpath)
