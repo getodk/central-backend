@@ -10,6 +10,7 @@ const { QueryOptions } = require('../../../lib/util/db');
 const { createConflict } = require('../../util/scenarios');
 const { omit, last } = require('ramda');
 const xml2js = require('xml2js');
+const { v4: uuid } = require('uuid');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
@@ -7208,6 +7209,28 @@ describe('datasets and entities', () => {
         });
     }));
 
+    it('should not autolink Form attachment with the deleted dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'goodone' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/goodone')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+        .set('X-OpenRosa-Version', '1.0')
+        .then(({ text }) => {
+          text.should.not.match(/goodone|entityList/);
+        });
+    }));
+
     it('should be able to recreate another dataset with the same name', testService(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -7274,6 +7297,42 @@ describe('datasets and entities', () => {
       await asAlice.get('/v1/projects/1/datasets/trees/entities')
         .expect(404);
     }));
+
+    describe('subresources should not be accessible', () => {
+      const entityUuid = uuid();
+
+      const subresources = [
+        '/v1/projects/1/datasets/trees/entities',
+        '/v1/projects/1/datasets/trees/entities.geojson',
+        '/v1/projects/1/datasets/trees/entities.csv',
+        '/v1/projects/1/datasets/trees/entities/creators',
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}`,
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}/versions`,
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}/diffs`,
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}/audits`,
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}/geojson`,
+      ];
+
+      subresources.forEach(resource => {
+        it(`should return 404 for ${resource}`, testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'trees' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets/trees/entities')
+            .send({ label: 'the tree', uuid: entityUuid })
+            .expect(200);
+
+          await asAlice.delete('/v1/projects/1/datasets/trees')
+            .expect(200);
+
+          await asAlice.get(resource)
+            .expect(404);
+        }));
+      });
+    });
 
     it('should be able to delete the dataset after unlinking the Form', testService(async (service) => {
       const asAlice = await service.login('alice');
@@ -7375,7 +7434,5 @@ describe('datasets and entities', () => {
       const entities = await container.oneFirst(sql`SELECT COUNT(1) FROM entities`);
       entities.should.be.eql(0);
     }));
-
-
   });
 });
