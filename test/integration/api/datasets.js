@@ -7094,7 +7094,7 @@ describe('datasets and entities', () => {
     }));
   });
 
-  describe('api: DELETE /projects/:id/dataset', () => {
+  describe('api: DELETE /projects/:id/dataset/:name', () => {
     it('should reject unless the user can delete', testService(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -7433,6 +7433,337 @@ describe('datasets and entities', () => {
 
       const entities = await container.oneFirst(sql`SELECT COUNT(1) FROM entities`);
       entities.should.be.eql(0);
+    }));
+  });
+
+  describe('api: DELETE /projects/:id/dataset/:name/properties/:propertyName', () => {
+    it('should reject if a Form is writing to the property to be deleted', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const anotherEntityForm = testData.forms.simpleEntity
+        .replace('id="simpleEntity"', 'id="simpleEntity2"');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(anotherEntityForm)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(409);
+    }));
+
+    it('should delete the property', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+    }));
+
+
+    it('should delete the property after property is unlinked', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(409);
+
+      const formWithoutFirstName = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace('entities:saveto="first_name"', '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(formWithoutFirstName)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+    }));
+
+    it('should reject if property has a value', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+          body.message.should.match(/height/);
+          body.details.entities.length.should.equal(1);
+        });
+    }));
+
+    it('should delete property after entity property value is cleared', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(409);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+    }));
+
+    it('should log the delete property action in the audits', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=dataset')
+        .expect(200)
+        .then(({ body: audits }) => {
+          audits[0].action.should.eql('dataset.update');
+          audits[0].details.should.eql({ properties: ['height'] });
+        });
+    }));
+
+    it('should reject if user does not have rights to update dataset', testService(async service => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asChelsea.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(403);
+    }));
+
+    it('should not allow creation of entities with deleted properties', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Another Tree',
+          data: { height: '20m' }
+        })
+        .expect(400);
+    }));
+
+    it('should be able to recreate the property', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+    }));
+
+    it('should not return data of deleted property', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      const result = await asAlice.get('/v1/projects/1/datasets/trees/entities.csv')
+        .expect(200)
+        .then(r => r.text);
+
+      result.should.not.match(/height/);
+    }));
+
+    it('should not return data if geometry property is deleted', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { geometry: '1 2 3 0' } // ODK format: lat lon alt accuracy
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities.geojson')
+        .expect(200)
+        .then(({ body }) => {
+          body.features.length.should.equal(1);
+          body.features[0].geometry.type.should.equal('Point');
+          body.features[0].geometry.coordinates.should.eql([2, 1, 3]);
+        });
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { geometry: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/geometry')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities.geojson')
+        .expect(200)
+        .then(({ body }) => {
+          body.features.length.should.equal(0);
+        });
+    }));
+
+    it('should be able to recreate the property via Form', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const formWithoutFirstName = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace('entities:saveto="first_name"', '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(formWithoutFirstName)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+
+      const formWithFirstName = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="3.0"');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(formWithFirstName)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people')
+        .expect(200)
+        .then(({ body }) => {
+          const propertyNames = body.properties.map(p => p.name);
+          propertyNames.should.containEql('first_name');
+        });
     }));
   });
 });
