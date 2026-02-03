@@ -2226,6 +2226,51 @@ describe('datasets and entities', () => {
   </manifest>`);
               })))));
 
+      it('should unlink dataset from the form reflect unlinking in dataset metadata', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'goodone' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // make draft of form
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+          .expect(200);
+
+        // unlink by overwriting csv
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+          .send('test,csv\n1,2')
+          .set('Content-Type', 'text/csv')
+          .expect(200);
+
+        // draft attachments should not be linked to datasets
+        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+          .then(({ body }) => {
+            body.map(attachment => attachment.datasetExists).should.eql([false, false]);
+          });
+
+        // publish draft
+        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=2')
+          .expect(200);
+
+        // attachments should still not reference any blobs
+        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+          .then(({ body }) => {
+            body.map(attachment => attachment.datasetExists).should.eql([false, false]);
+          });
+
+        // check dataset
+        await asAlice.get('/v1/projects/1/datasets/goodone')
+          .then(({ body }) => {
+            body.linkedForms.length.should.equal(0);
+          });
+      }));
+
       it('should return error if dataset is not found', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
