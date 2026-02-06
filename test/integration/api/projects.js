@@ -378,6 +378,28 @@ describe('api: /projects', () => {
               body.appUsers.should.equal(1);
             })))));
 
+    it('should not return deleted datasets', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.datasets.should.equal(1);
+        });
+    }));
+
     it('should not return verb information unless extended meta data is requested', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/projects/1')
