@@ -5,19 +5,30 @@ const createProject = (user) => user.post('/v1/projects')
   .expect(200)
   .then(({ body: project }) => project.id);
 
-const createDataset = (user, projectId, name) =>
-  user.post(`/v1/projects/${projectId}/datasets`)
-    .send({ name });
+const createDataset = async (user, projectId, name, properties = []) => {
+  await user.post(`/v1/projects/${projectId}/datasets`)
+    .send({ name })
+    .expect(200);
 
-const createEntities = async (user, count, projectId, datasetName) => {
+  for (const property of properties) {
+    // eslint-disable-next-line no-await-in-loop
+    await user.post(`/v1/projects/${projectId}/datasets/${name}/properties`)
+      .send({ name: property })
+      .expect(200);
+  }
+};
+
+const createEntities = async (user, count, projectId, datasetName, properties = []) => {
   const uuids = [];
   for (let i = 0; i < count; i += 1) {
     const _uuid = uuid();
+    const data = Object.fromEntries(properties.map((property) => [property, 'foo']));
     // eslint-disable-next-line no-await-in-loop
     await user.post(`/v1/projects/${projectId}/datasets/${datasetName}/entities`)
       .send({
         uuid: _uuid,
-        label: 'John Doe'
+        label: 'John Doe',
+        ...(properties.length ? { data } : {})
       })
       .expect(200);
     uuids.push(_uuid);
