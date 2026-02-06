@@ -378,7 +378,7 @@ describe('api: /projects', () => {
               body.appUsers.should.equal(1);
             })))));
 
-    it('should not count deleted app users', testService(async (service) => {
+    it('should not return deleted datasets', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets')
