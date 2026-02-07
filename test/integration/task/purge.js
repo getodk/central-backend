@@ -311,7 +311,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask())
           .then((message) => {
-            message.should.equal('Forms purged: 0, Submissions purged: 0, Entities purged: 0');
+            message.should.equal('Forms purged: 0, Submissions purged: 0, Datasets Purged: 0, Entities purged: 0');
           }))));
 
     it('should purge both forms and submissions when neither mode is specified (forced)', testTask(({ Forms }) =>
@@ -319,7 +319,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask({ force: true }))
           .then((message) => {
-            message.should.equal('Forms purged: 1, Submissions purged: 0, Entities purged: 0');
+            message.should.equal('Forms purged: 1, Submissions purged: 0, Datasets Purged: 0, Entities purged: 0');
           }))));
 
     it('should accept other mode and treat as "all"', testTask(({ Forms }) =>
@@ -327,7 +327,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask({ force: true, mode: 'something_else' }))
           .then((message) => {
-            message.should.equal('Forms purged: 1, Submissions purged: 0, Entities purged: 0');
+            message.should.equal('Forms purged: 1, Submissions purged: 0, Datasets Purged: 0, Entities purged: 0');
           }))));
   });
 

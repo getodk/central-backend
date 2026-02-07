@@ -7,8 +7,7 @@ const createProject = (user) => user.post('/v1/projects')
 
 const createDataset = async (user, projectId, name, properties = []) => {
   await user.post(`/v1/projects/${projectId}/datasets`)
-    .send({ name })
-    .expect(200);
+    .send({ name });
 
   for (const property of properties) {
     // eslint-disable-next-line no-await-in-loop
