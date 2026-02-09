@@ -6843,8 +6843,8 @@ paths:
       tags:
       - Attachments
       summary: Downloading an Attachment
-      description: The `Content-Type` and `Content-Disposition` will be set appropriately
-        based on the file itself when requesting an attachment file download.
+      description: |-
+        The `Content-Type` and `Content-Disposition` will be set appropriately based on the file itself when requesting an attachment file download.
 
         This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: downloadAttachment
