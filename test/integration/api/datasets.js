@@ -7472,7 +7472,6 @@ describe('datasets and entities', () => {
         .expect(200);
     }));
 
-
     it('should delete the property after property is unlinked', testService(async service => {
       const asAlice = await service.login('alice');
 
@@ -7522,9 +7521,9 @@ describe('datasets and entities', () => {
       await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
         .expect(409)
         .then(({ body }) => {
-          body.code.should.equal(409.23);
-          body.message.should.match(/height/);
-          body.details.entities.length.should.equal(1);
+          body.code.should.equal(409.22);
+          body.details.prerequisites.nonEmptyEntities.message.should.match(/non-empty/);
+          body.details.prerequisites.nonEmptyEntities.details.entities.length.should.equal(1);
         });
     }));
 
@@ -7575,7 +7574,7 @@ describe('datasets and entities', () => {
       await asAlice.get('/v1/audits?action=dataset')
         .expect(200)
         .then(({ body: audits }) => {
-          audits[0].action.should.eql('dataset.update');
+          audits[0].action.should.eql('dataset.update.property.delete');
           audits[0].details.should.eql({ properties: ['height'] });
         });
     }));
@@ -7650,7 +7649,7 @@ describe('datasets and entities', () => {
         .expect(200);
     }));
 
-    it('should not return data of deleted property', testService(async service => {
+    it('should not return data of deleted property - entities.csv', testService(async service => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets')
@@ -7681,6 +7680,72 @@ describe('datasets and entities', () => {
         .then(r => r.text);
 
       result.should.not.match(/height/);
+    }));
+
+    it('should not return data of deleted property - single Entity endpoint', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.data.should.not.have.property('height');
+        });
+    }));
+
+    it('should not return data of deleted property in current version - versions endpoint', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body }) => {
+          body.find(v => v.current).data.should.not.have.property('height');
+        });
     }));
 
     it('should not return data if geometry property is deleted', testService(async service => {
