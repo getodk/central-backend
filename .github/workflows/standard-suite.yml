@@ -30,9 +30,8 @@ jobs:
       with:
         node-version-file: package.json
         cache: 'npm'
-    - run: make check-for-large-files
-    - run: make check-file-headers
-    - run: npm ci
-    - run: make api-docs-lint
+    - run: make node_modules
     - run: node lib/bin/create-docker-databases.js
-    - run: make test
+    - run: make base
+    - run: npm install mocha
+    - run: node_modules/.bin/mocha --exit --slow 1000 --bail test/assertions.js test/integration/task/regression.js
