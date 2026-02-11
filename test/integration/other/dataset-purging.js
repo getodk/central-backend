@@ -452,12 +452,31 @@ describe('query module dataset purge', () => {
         .set('Content-Type', 'application/xml')
         .expect(200);
 
-      const branchUuid = uuid();
       await asAlice.post('/v1/projects/1/forms/offlineEntity/submissions')
         .send(testData.instances.offlineEntity.one
           .replace('trunkVersion="1"', `trunkVersion="3"`)
           .replace('baseVersion="1"', `baseVersion="3"`)
-          .replace('branchId=""', `branchId="${branchUuid}"`)
+          .replace('branchId=""', `branchId="${uuid()}"`)
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Create another form with another dataset that also puts something in the backlog
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.offlineEntity
+          .replace('id="offlineEntity"', 'id="offlineEntity2"')
+          .replace('dataset="people"', 'dataset="patients"')
+        )
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/offlineEntity2/submissions')
+        .send(testData.instances.offlineEntity.one
+          .replace('id="offlineEntity"', 'id="offlineEntity2"')
+          .replace('dataset="people"', 'dataset="patients"')
+          .replace('trunkVersion="1"', `trunkVersion="3"`)
+          .replace('baseVersion="1"', `baseVersion="3"`)
+          .replace('branchId=""', `branchId="${uuid()}"`)
         )
         .set('Content-Type', 'application/xml')
         .expect(200);
@@ -465,7 +484,7 @@ describe('query module dataset purge', () => {
       await exhaust(container);
 
       await oneFirst(sql`select count(*) from entity_submission_backlog`)
-        .then(count => count.should.equal(1));
+        .then(count => count.should.equal(2));
 
       // unlink dataset from form
       const formWithoutEntity = testData.forms.offlineEntity
@@ -487,8 +506,9 @@ describe('query module dataset purge', () => {
       // Purge the dataset
       await Datasets.purge(true);
 
+      // Submission for non-deleted dataset should still exist
       await oneFirst(sql`select count(*) from entity_submission_backlog`)
-        .then(count => count.should.equal(0));
+        .then(count => count.should.equal(1));
     }));
   });
 });
