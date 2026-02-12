@@ -143,7 +143,7 @@ describe('query module dataset purge', () => {
   });
 
   describe('30 day time limit', () => {
-    it('should purge multiple entities deleted over 30 days ago', testService(async (service, { Datasets, all, run }) => {
+    it('should purge multiple datasets deleted over 30 days ago', testService(async (service, { Datasets, all, run }) => {
       const asAlice = await service.login('alice');
 
       await createDataset(asAlice, 1, 'people');
