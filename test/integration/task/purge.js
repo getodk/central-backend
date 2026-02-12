@@ -266,8 +266,8 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
           message.should.equal('Entities purged: 0');
         })));
 
-    it('should call entities purge if dataset name is specified', testTask(() =>
-      purgeTask({ projectId: 1, datasetName: 'people' })
+    it('should call entities purge if dataset name is specified and mode is specified as entities', testTask(() =>
+      purgeTask({ projectId: 1, mode: 'entities', datasetName: 'people' })
         .then((message) => {
           message.should.equal('Entities purged: 0');
         })));
@@ -276,7 +276,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
       purgeTask({ entityUuid: 'abc' })
         .should.be.rejectedWith(Problem, {
           problemDetails: {
-            error: 'Must specify projectId and datasetName to purge a specify entity.',
+            error: 'Must specify projectId and datasetName to purge a specific entity.',
           },
         })));
 
@@ -284,7 +284,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
       purgeTask({ entityUuid: 'abc', datasetName: 'simple' })
         .should.be.rejectedWith(Problem, {
           problemDetails: {
-            error: 'Must specify projectId and datasetName to purge a specify entity.',
+            error: 'Must specify projectId and datasetName to purge a specific entity.',
           },
         })));
 
@@ -292,15 +292,29 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
       purgeTask({ entityUuid: 'abc', projectId: 1 })
         .should.be.rejectedWith(Problem, {
           problemDetails: {
-            error: 'Must specify projectId and datasetName to purge a specify entity.',
+            error: 'Must specify projectId and datasetName to purge a specific entity.',
           },
+        })));
+  });
+
+  describe('datasets', () => {
+    it('should call dataset purge if dataset name is specified', testTask(() =>
+      purgeTask({ projectId: 1, datasetName: 'people' })
+        .then((message) => {
+          message.should.equal('Datasets purged: 0');
+        })));
+
+    it('should call dataset purge if mode is specified as datasets', testTask(() =>
+      purgeTask({ mode: 'datasets' })
+        .then((message) => {
+          message.should.equal('Datasets purged: 0');
         })));
 
     it('should complain if dataset specified without project', testTask(() =>
       purgeTask({ datasetName: 'simple' })
         .should.be.rejectedWith(Problem, {
           problemDetails: {
-            error: 'Must specify projectId to purge all entities of a dataset/entity-list.',
+            error: 'Must specify projectId and datasetName to purge a specific dataset.',
           },
         })));
   });

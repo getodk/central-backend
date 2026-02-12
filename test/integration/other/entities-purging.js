@@ -130,7 +130,7 @@ describe('query module entities purge', () => {
       entityCount.should.equal(0);
     }));
 
-    const PROVIDE_ALL = 'Must specify projectId and datasetName to purge a specify entity.';
+    const PROVIDE_ALL = 'Must specify projectId and datasetName to purge a specific entity.';
     const PROVIDE_PROJECT_ID = 'Must specify projectId to purge all entities of a dataset/entity-list.';
     const cases = [
       { description: 'when entityUuid specified without projectId and datasetName',
