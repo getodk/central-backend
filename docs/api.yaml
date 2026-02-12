@@ -5455,6 +5455,18 @@ paths:
         schema:
           type: boolean
         example: true
+      - name: limit
+        in: query
+        description: The maximum number of entries to return.
+        schema:
+          type: number
+        example: "100"
+      - name: offset
+        in: query
+        description: The zero-indexed number of entries to skip from the result.
+        schema:
+          type: number
+        example: "200"
       responses:
         "200":
           description: OK
