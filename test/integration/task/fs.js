@@ -1,3 +1,4 @@
+const { execSync } = require('node:child_process');
 const appRoot = require('app-root-path');
 const { promisify } = require('util');
 const { readdir, readFile, writeFile, createWriteStream } = require('fs');
@@ -32,6 +33,23 @@ describe('task: fs', () => {
       (await promisify(readFile)(join(dirpath, 'one'))).toString('utf8').should.equal('test file one');
       (await promisify(readFile)(join(dirpath, 'two'))).toString('utf8').should.equal('test file two');
     }));
+
+    it('should create archive that is immediately decryptable', async function() {
+      this.timeout(30_000);
+
+      // given
+      const passphrase = 'super secure';
+      const originalDir = await promisify(tmp.dir)(); // eslint-disable-line no-await-in-loop
+      const zipfile = await promisify(tmp.file)(); // eslint-disable-line no-await-in-loop
+      const keys = await generateManagedKey(passphrase); // eslint-disable-line no-await-in-loop
+      for (let i=0; i<1000; ++i) execSync(`truncate -s 1 ${originalDir}/file-${i}`); // eslint-disable-line no-plusplus
+
+      // when
+      await encryptToArchive(originalDir, zipfile, keys); // eslint-disable-line no-await-in-loop
+      // and
+      const extractedDir = await promisify(tmp.dir)(); // eslint-disable-line no-await-in-loop
+      await decryptFromArchive(zipfile, extractedDir, 'super secure'); // eslint-disable-line no-await-in-loop
+    });
 
     it('should fail gracefully given an incorrect passphrase', testTask(async () => {
       const zipfile = await generateTestArchive('super secure');
@@ -69,4 +87,3 @@ describe('task: fs', () => {
     // reality.
   });
 });
-
