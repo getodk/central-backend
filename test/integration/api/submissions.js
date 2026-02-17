@@ -5020,6 +5020,132 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
                   }))))))));
   });
 
+  describe('[version] /:rootId/versions/instanceId/attachments/:name DELETE', () => {
+    it('async await should return notfound if the attachment does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+      // this name does not exist for an attachment
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/other_file.mp4')
+        .expect(404);
+    }));
+
+    it('async await should reject if the user cannot update a submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+      await asChelsea.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/here_is_file2.jpg')
+        .expect(403);
+    }));
+
+    it('should clear the given attachment', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/here_is_file2.jpg')
+        .expect(200);
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'here_is_file2.jpg', exists: false },
+            { name: 'my_file1.mp4', exists: false }
+          ]);
+        });
+    }));
+
+    it('should clear an attachment for an old version of a submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .expect(201);
+
+      // attempt to update submission, will carry blobs forward to new submission def
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both
+          .replace('id="binaryType"', 'id="binaryType"')
+          .replace('<instanceID>both', '<deprecatedID>both</deprecatedID><instanceID>both2')),
+        { filename: 'data.xml' })
+        .expect(201);
+
+      // Clear attachment "my_file1" of old version of submission
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/my_file1.mp4')
+        .expect(200);
+
+      // Check attachments of current version
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both2/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'here_is_file2.jpg', exists: true },
+            { name: 'my_file1.mp4', exists: true }
+          ]);
+        });
+
+      // Check attachments of old version
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'here_is_file2.jpg', exists: true },
+            { name: 'my_file1.mp4', exists: false }
+          ]);
+        });
+    }));
+
+    it('should log an audit entry about the deletion', testService(async (service, { Audits }) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/here_is_file2.jpg')
+        .expect(200);
+      const log = await Audits.getLatestByAction('submission.attachment.update').then(o => o.get());
+      log.details.instanceId.should.eql('both');
+      log.details.name.should.eql('here_is_file2.jpg');
+      should.exist(log.details.oldBlobId);
+      should.not.exist(log.details.newBlobId);
+    }));
+  });
+
   describe('[draft] /:instanceId/attachments/:name DELETE', () => {
     it('should delete a draft attachment', testService((service) =>
       service.login('alice', (asAlice) =>
