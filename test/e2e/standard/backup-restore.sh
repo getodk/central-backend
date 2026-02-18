@@ -18,7 +18,7 @@ backup() {
   backupDir="$(mktemp --directory)"
   cd "$backupDir"
   
-  target="backup.zip"
+  target="backup.pgdump.enc.bin"
   creds="$(echo -n 'x@example.com:secret1234' | base64)"
   wget \
       --header "X-Forwarded-Proto: https" \
@@ -43,8 +43,12 @@ node ./lib/bin/restore.js "$backupDir/$target"
 log "  Restoring with explicit empty passphrase..."
 node ./lib/bin/restore.js "$backupDir/$target" ""
 log "  Restoring with incorrect passphrase..."
-if node ./lib/bin/restore.js "$backupDir/$target" "wrong-passphrase"; then
-  log "    Incorrect passphrase should have been rejected."
+set +e
+node ./lib/bin/restore.js "$backupDir/$target" "wrong-passphrase"
+restore_exitcode=$?
+set -e
+if [ $restore_exitcode -ne 100 ]; then
+  log "    Incorrect passphrase should have been rejected with exit code 100"
   exit 1
 fi
 
@@ -56,8 +60,12 @@ node ./lib/bin/restore.js "$backupDir/$target"
 log "  Restoring with explicit empty passphrase..."
 node ./lib/bin/restore.js "$backupDir/$target" ""
 log "  Restoring with incorrect passphrase..."
-if node ./lib/bin/restore.js "$backupDir/$target" "wrong-passphrase"; then
-  log "    Incorrect passphrase should have been rejected."
+set +e
+node ./lib/bin/restore.js "$backupDir/$target" "wrong-passphrase"
+restore_exitcode=$?
+set -e
+if [ $restore_exitcode -ne 100 ]; then
+  log "    Incorrect passphrase should have been rejected with exit code 100"
   exit 1
 fi
 
@@ -72,15 +80,35 @@ if node ./lib/bin/restore.js "$backupDir/$target"; then
   exit 1
 fi
 log "  Restoring with empty passphrase..."
-if node ./lib/bin/restore.js "$backupDir/$target" ""; then
-  log "    Empty passphrase should have been rejected."
+set +e
+node ./lib/bin/restore.js "$backupDir/$target" "wrong-passphrase"
+restore_exitcode=$?
+set -e
+if [ $restore_exitcode -ne 100 ]; then
+  log "    Empty passphrase should have been rejected with exit code 100"
   exit 1
 fi
 log "  Restoring with incorrect passphrase..."
-if node ./lib/bin/restore.js "$backupDir/$target" "wrong-passphrase"; then
-  log "    Incorrect passphrase should have been rejected."
+set +e
+node ./lib/bin/restore.js "$backupDir/$target" "wrong-passphrase"
+restore_exitcode=$?
+set -e
+if [ $restore_exitcode -ne 100 ]; then
+  log "    Incorrect passphrase should have been rejected with exit code 100"
   exit 1
 fi
+
+
+testname=broken-stream
+log "Testing with a truncated backup"
+backup text/plain ''
+truncate --size -1K "$backupDir/$target"  # lob off the last 1K
+if node ./lib/bin/restore.js "$backupDir/$target"; then
+  log "    Restore from truncated backup should fail"
+  # Ideally we would also assert that the database is unchanged (that a rollback took place).
+  exit 1
+fi
+
 
 testname=
 
