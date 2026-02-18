@@ -46,7 +46,14 @@ const withDeleteChecks = container => {
 
 const testPurgeTask = fn => testTask(container => fn(withDeleteChecks(container)));
 
-describe('task: purge deleted resources (forms, submissions and entities)', () => {
+// Note: Tests in this file just use fixture data consisting of 2 forms.
+// The tests mostly check that specifying the mode and force-purging seem to work
+// based on the text output, even if the counts of purged objects are 0.
+
+// For tests that create, delete, and purge more data, see specific files:
+// `other/form-purging.js`, `other/submission-purging.js`,  `other/dataset-purging.js`,  `other/entities-purging.js`
+
+describe('task: purge deleted resources (forms, submissions, datasets, and entities)', () => {
   describe('forms', () => {
     describe('force flag', () => {
       it('should not purge recently deleted forms by default', testPurgeTask(({ confirm, Forms }) =>
@@ -320,7 +327,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
   });
 
   describe('all', () => {
-    it('should purge both forms and submissions when neither mode is specified (not forced)', testTask(({ Forms }) =>
+    it('should purge all types of objects when mode is not specified (not forced)', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask())
@@ -328,7 +335,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
             message.should.equal('Forms purged: 0, Submissions purged: 0, Datasets purged: 0, Entities purged: 0');
           }))));
 
-    it('should purge both forms and submissions when neither mode is specified (forced)', testTask(({ Forms }) =>
+    it('should purge all types of objects when mode is not specified (forced)', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask({ force: true }))
