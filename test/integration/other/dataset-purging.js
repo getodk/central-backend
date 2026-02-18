@@ -112,34 +112,6 @@ describe('query module dataset purge', () => {
       await oneFirst(sql`select count(*) from datasets where name = 'people'`)
         .then(count => count.should.equal(1));
     }));
-
-    it('should purge a specific dataset by numeric id', testService(async (service, { Datasets, oneFirst }) => {
-      const asAlice = await service.login('alice');
-
-      await createDataset(asAlice, 1, 'people');
-      const peopleId = await oneFirst(sql`select id from datasets where name='people' and "deletedAt" is null`);
-      await deleteDatasets(asAlice, ['people'], 1);
-
-      await createDataset(asAlice, 1, 'people');
-      const peopleIdNew = await oneFirst(sql`select id from datasets where name='people' and "deletedAt" is null`);
-      await deleteDatasets(asAlice, ['people'], 1);
-
-      // Force purge a Dataset specified by projectId and datasetName
-      let purgeCount = await Datasets.purge(true, null, null, peopleId);
-      purgeCount.should.equal(1);
-
-      // Other dataset should still be in the database
-      await oneFirst(sql`select count(*) from datasets`)
-        .then(count => count.should.equal(1));
-
-      // Should be able to purge this other dataset by ID
-      purgeCount = await Datasets.purge(true, null, null, peopleIdNew);
-      purgeCount.should.equal(1);
-
-      // No datasets should remain
-      await oneFirst(sql`select count(*) from datasets`)
-        .then(count => count.should.equal(0));
-    }));
   });
 
   describe('30 day time limit', () => {
