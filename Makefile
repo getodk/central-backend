@@ -152,10 +152,6 @@ rm-docker-postgres: stop-docker-postgres
 ################################################################################
 # OTHER
 
-.PHONY: check-file-headers
-check-file-headers:
-	git ls-files | node lib/bin/check-file-headers.js
-
 .PHONY: check-for-large-files
 check-for-large-files:
 	./test/check-for-large-files.sh
