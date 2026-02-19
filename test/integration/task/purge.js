@@ -46,7 +46,14 @@ const withDeleteChecks = container => {
 
 const testPurgeTask = fn => testTask(container => fn(withDeleteChecks(container)));
 
-describe('task: purge deleted resources (forms, submissions and entities)', () => {
+// Note: Tests in this file just use fixture data consisting of 2 forms.
+// The tests mostly check that specifying the mode and force-purging seem to work
+// based on the text output, even if the counts of purged objects are 0.
+
+// For tests that create, delete, and purge more data, see specific files:
+// `other/form-purging.js`, `other/submission-purging.js`,  `other/dataset-purging.js`,  `other/entities-purging.js`
+
+describe('task: purge deleted resources (forms, submissions, datasets, and entities)', () => {
   describe('forms', () => {
     describe('force flag', () => {
       it('should not purge recently deleted forms by default', testPurgeTask(({ confirm, Forms }) =>
@@ -266,8 +273,8 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
           message.should.equal('Entities purged: 0');
         })));
 
-    it('should call entities purge if dataset name is specified', testTask(() =>
-      purgeTask({ projectId: 1, datasetName: 'people' })
+    it('should call entities purge if dataset name is specified and mode is specified as entities', testTask(() =>
+      purgeTask({ projectId: 1, mode: 'entities', datasetName: 'people' })
         .then((message) => {
           message.should.equal('Entities purged: 0');
         })));
@@ -276,7 +283,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
       purgeTask({ entityUuid: 'abc' })
         .should.be.rejectedWith(Problem, {
           problemDetails: {
-            error: 'Must specify projectId and datasetName to purge a specify entity.',
+            error: 'Must specify projectId and datasetName to purge a specific entity.',
           },
         })));
 
@@ -284,7 +291,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
       purgeTask({ entityUuid: 'abc', datasetName: 'simple' })
         .should.be.rejectedWith(Problem, {
           problemDetails: {
-            error: 'Must specify projectId and datasetName to purge a specify entity.',
+            error: 'Must specify projectId and datasetName to purge a specific entity.',
           },
         })));
 
@@ -292,34 +299,48 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
       purgeTask({ entityUuid: 'abc', projectId: 1 })
         .should.be.rejectedWith(Problem, {
           problemDetails: {
-            error: 'Must specify projectId and datasetName to purge a specify entity.',
+            error: 'Must specify projectId and datasetName to purge a specific entity.',
           },
+        })));
+  });
+
+  describe('datasets', () => {
+    it('should call dataset purge if dataset name is specified', testTask(() =>
+      purgeTask({ projectId: 1, datasetName: 'people' })
+        .then((message) => {
+          message.should.equal('Datasets purged: 0');
+        })));
+
+    it('should call dataset purge if mode is specified as datasets', testTask(() =>
+      purgeTask({ mode: 'datasets' })
+        .then((message) => {
+          message.should.equal('Datasets purged: 0');
         })));
 
     it('should complain if dataset specified without project', testTask(() =>
       purgeTask({ datasetName: 'simple' })
         .should.be.rejectedWith(Problem, {
           problemDetails: {
-            error: 'Must specify projectId to purge all entities of a dataset/entity-list.',
+            error: 'Must specify projectId and datasetName to purge a specific dataset.',
           },
         })));
   });
 
   describe('all', () => {
-    it('should purge both forms and submissions when neither mode is specified (not forced)', testTask(({ Forms }) =>
+    it('should purge all types of objects when mode is not specified (not forced)', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask())
           .then((message) => {
-            message.should.equal('Forms purged: 0, Submissions purged: 0, Entities purged: 0');
+            message.should.equal('Forms purged: 0, Submissions purged: 0, Datasets purged: 0, Entities purged: 0');
           }))));
 
-    it('should purge both forms and submissions when neither mode is specified (forced)', testTask(({ Forms }) =>
+    it('should purge all types of objects when mode is not specified (forced)', testTask(({ Forms }) =>
       Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask({ force: true }))
           .then((message) => {
-            message.should.equal('Forms purged: 1, Submissions purged: 0, Entities purged: 0');
+            message.should.equal('Forms purged: 1, Submissions purged: 0, Datasets purged: 0, Entities purged: 0');
           }))));
 
     it('should accept other mode and treat as "all"', testTask(({ Forms }) =>
@@ -327,7 +348,7 @@ describe('task: purge deleted resources (forms, submissions and entities)', () =
         .then((form) => Forms.del(form.get())
           .then(() => purgeTask({ force: true, mode: 'something_else' }))
           .then((message) => {
-            message.should.equal('Forms purged: 1, Submissions purged: 0, Entities purged: 0');
+            message.should.equal('Forms purged: 1, Submissions purged: 0, Datasets purged: 0, Entities purged: 0');
           }))));
   });
 
