@@ -6945,6 +6945,9 @@ paths:
         _(introduced: version 0.4)_
 
         Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
+
+        This endpoint clears attachments on the current version of the submission.
+        See [Clearing the Attachment of a specific Submission Version](/central-api-submission-management/#clearing-a-submission-version-s-attachment) for more control over attachments on past versions.
       operationId: clearSubmissionAttachment
       parameters:
       - name: projectId
@@ -7357,6 +7360,59 @@ paths:
             '{the MIME type of the attachment file itself}':
               example: |
                 (binary data)
+    delete:
+      tags:
+      - Submission Versions
+      summary: Clearing a Submission Version's Attachment
+      description: |-
+        This endpoint clears attachments on submission versions.
+
+        Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a DELETE to the attachment's endpoint, that is what happens.
+      operationId: clearVersionedAttachment
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: xmlFormId
+        in: path
+        description: The `xmlFormId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: simple
+      - name: instanceId
+        in: path
+        description: The `instanceId` of the Submission being referenced.
+        required: true
+        schema:
+          type: string
+        example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+      - name: versionId
+        in: path
+        description: The `instanceId` of the particular version of this submission
+          in question.
+        required: true
+        schema:
+          type: string
+        example: uuid:b1628661-65ed-4cab-8e30-19c17fef2de0
+      - name: filename
+        in: path
+        description: The name of the file as given by the Attachments listing resource.
+        required: true
+        schema:
+          type: string
+        example: file1.jpg
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/diffs:
     get:
       tags:
