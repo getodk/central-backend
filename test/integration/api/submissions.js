@@ -5020,7 +5020,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
                   }))))))));
   });
 
-  describe('[version] /:rootId/versions/instanceId/attachments/:name DELETE', () => {
+  describe('[version] /:rootId/versions/:instanceId/attachments/:name DELETE', () => {
     it('async await should return notfound if the attachment does not exist', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -5091,7 +5091,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
         .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
         .expect(201);
 
-      // attempt to update submission, will carry blobs forward to new submission def
+      // update submission, will carry blobs forward to new submission def
       await asAlice.post('/v1/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
         .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both
@@ -5100,12 +5100,21 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
         { filename: 'data.xml' })
         .expect(201);
 
-      // Clear attachment "my_file1" of old version of submission
-      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/my_file1.mp4')
+      // update submission again, will carry blobs forward to new submission def
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both
+          .replace('id="binaryType"', 'id="binaryType"')
+          .replace('<instanceID>both', '<deprecatedID>both2</deprecatedID><instanceID>both3')),
+        { filename: 'data.xml' })
+        .expect(201);
+
+      // Clear attachment "my_file1.mp4" of middle version of submission
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both2/attachments/my_file1.mp4')
         .expect(200);
 
-      // Check attachments of current version
-      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both2/attachments')
+      // Check attachments of current version (both3)
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both3/attachments')
         .expect(200)
         .then(({ body }) => {
           body.should.eql([
@@ -5114,8 +5123,8 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
           ]);
         });
 
-      // Check attachments of old version
-      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments')
+      // Check attachments middle version (both2) - this one should be deleted
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both2/attachments')
         .expect(200)
         .then(({ body }) => {
           body.should.eql([
@@ -5123,6 +5132,17 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             { name: 'my_file1.mp4', exists: false }
           ]);
         });
+
+      // Check attachments of first version (both)
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'here_is_file2.jpg', exists: true },
+            { name: 'my_file1.mp4', exists: true }
+          ]);
+        });
+
     }));
 
     it('should log an audit entry about the deletion', testService(async (service, { Audits }) => {
