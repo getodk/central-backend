@@ -166,13 +166,15 @@ describe('query module entities purge', () => {
     it('should purge multiple entities deleted over 30 days ago', testService(async (service, { Entities, all, run }) => {
       const asAlice = await service.login('alice');
 
+      // Creates and deletes 2 entities in project 1 dataset 'people'
       await createDeletedEntities(asAlice, 2);
 
       // Mark two as deleted a long time ago
       await run(sql`update entities set "deletedAt" = '1999-1-1' where "deletedAt" is not null`);
 
       // More recent delete, within 30 day window
-      const recentUuids = await createDeletedEntities(asAlice, 2);
+      const recentUuids = await createEntities(asAlice, 2, 1, 'people');
+      await deleteEntities(asAlice, recentUuids, 1, 'people');
 
       const purgeCount = await Entities.purge();
       purgeCount.should.equal(2);
