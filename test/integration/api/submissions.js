@@ -513,7 +513,7 @@ describe('api: /submission', () => {
               .expect(200)
               .then(({ headers, body }) => {
                 headers['content-type'].should.equal('video/mp4');
-                headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+                headers['content-disposition'].should.equal('inline; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
                 headers['etag'].should.equal('"75f5701abfe7de8202cecaa0ca753f29"'); // eslint-disable-line dot-notation
                 body.toString('utf8').should.equal('this is test file one');
               }))
@@ -541,7 +541,7 @@ describe('api: /submission', () => {
                 .expect(200)
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
-                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                   headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
                 }))
@@ -570,7 +570,7 @@ describe('api: /submission', () => {
                 .expect(200)
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
-                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                   headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
                 }))
