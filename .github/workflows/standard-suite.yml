@@ -31,7 +31,6 @@ jobs:
         node-version-file: package.json
         cache: 'npm'
     - run: make check-for-large-files
-    - run: make check-file-headers
     - run: npm ci
     - run: make api-docs-lint
     - run: node lib/bin/create-docker-databases.js

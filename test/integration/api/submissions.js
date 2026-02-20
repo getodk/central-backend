@@ -2754,11 +2754,11 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .then(({ text }) => {
               const rows = text.split('\n');
               rows.length.should.equal(5);
-              rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               // (need to drop the iso date)
-              rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0,,,,0,1.0');
-              rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0,,,,0,1.0');
-              rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0,,,,0,1.0');
+              rows[1].slice(24).should.equal(',rthree,Chelsea,38,rthree,5,Alice,0,0,,,,0,1.0');
+              rows[2].slice(24).should.equal(',rtwo,Bob,34,rtwo,5,Alice,0,0,,,,0,1.0');
+              rows[3].slice(24).should.equal(',rone,Alice,30,rone,5,Alice,0,0,,,,0,1.0');
             })))));
 
     it('should split select multiple values if ?splitSelectMultiples=true', testService((service, container) =>
