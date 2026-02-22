@@ -2,15 +2,64 @@ const assert = require('node:assert/strict');
 const { execSync } = require('node:child_process');
 const appRoot = require('app-root-path');
 const { promisify } = require('util');
-const { readdir, readdirSync, readFile, statSync, writeFile, createWriteStream } = require('fs');
-const { join } = require('path');
+const { readdir, readdirSync, readFile, statSync, unlinkSync, writeFile, createReadStream, createWriteStream } = require('fs');
+const { join, basename } = require('path');
 const tmp = require('tmp');
 const archiver = require('archiver');
 const { testTask } = require('../setup');
-const { generateManagedKey } = require(appRoot + '/lib/util/crypto');
-const { encryptToArchive, decryptFromArchive } = require(appRoot + '/lib/task/fs');
+const { generateManagedKey, generateLocalCipherer } = require(appRoot + '/lib/util/crypto');
+const { decryptFromLegacyArchive } = require(appRoot + '/lib/util/backup-legacy');
+const { mergeRight } = require('ramda');
+const { PartialPipe } = require(appRoot + '/lib/util/stream');
 
-describe('task: fs', () => {
+
+// The below function is only used in these tests. It's moved from erstwhile lib/task/fs.js
+// in order to create archives to do the below roundtrip tests with, as we will still support
+// *reading* the legacy archive format for some time, but in order to test reading it we will
+// need to generate test backup files.
+//
+// Given a directory containing files, a path to a tmpfile, and keyinfo data,
+// encrypts and zips the files into that tmpfile location, along with decryption
+// keyinfo.
+const encryptToArchive = (directory, tmpFilePath, keys) => {
+  const outStream = createWriteStream(tmpFilePath);
+  const zipStream = archiver('zip', { zlib: { level: -1 } });
+
+  // create a cipher-generator for use below.
+  const [ localkey, cipherer ] = generateLocalCipherer(keys);
+  const local = { key: localkey, ivs: {} };
+
+  // call up all files in the directory.
+  return promisify(readdir)(directory).then((files) => new Promise((resolve, reject) => {
+    PartialPipe.of(zipStream, outStream).pipeline(reject);
+
+    // stream each file into the zip, encrypting on the way in. clean up each
+    // plaintext file as soon as we're done with them.
+    // TODO: copypasted for now to lib/resources/backup
+    for (const file of files) {
+      const filePath = join(directory, file);
+      const [ iv, cipher ] = cipherer();
+      local.ivs[basename(file)] = iv.toString('base64');
+
+      const readStream = createReadStream(filePath);
+      zipStream.append(PartialPipe.of(readStream, cipher).pipeline(reject), { name: file });
+      readStream.on('end', () => unlinkSync(filePath)); // sync to ensure completion.
+    }
+
+    // drop our key info into the zip and lock it in.
+    // the local.ivs recordkeeping happens synchronously in the forEach loop so
+    // this is ready to serialize by the time we get here.
+    zipStream.append(JSON.stringify(mergeRight(keys, { local })), { name: 'keys.json' });
+    zipStream.finalize();
+
+    // events to promise result.
+    zipStream.on('end', resolve);
+    zipStream.on('error', reject);
+  }));
+};
+
+
+describe('legacy backups', () => {
   describe('encrypted archives', () => {
     // helper that creates a tmpdir, drops some test files into it, generates a
     // keyset with the given passphrase and runs the encryption to a tmpfile,
@@ -28,7 +77,7 @@ describe('task: fs', () => {
     it('should round-trip successfully', testTask(async () => {
       const zipfile = await generateTestArchive('super secure');
       const dirpath = await promisify(tmp.dir)();
-      await decryptFromArchive(zipfile, dirpath, 'super secure');
+      await decryptFromLegacyArchive(zipfile, dirpath, 'super secure');
       const files = await promisify(readdir)(dirpath);
       files.should.containDeep([ 'one', 'two' ]);
       (await promisify(readFile)(join(dirpath, 'one'))).toString('utf8').should.equal('test file one');
@@ -71,7 +120,7 @@ describe('task: fs', () => {
         await encryptToArchive(originalDir, zipfile, keys); // eslint-disable-line no-await-in-loop
         // and
         const extractedDir = await promisify(tmp.dir)(); // eslint-disable-line no-await-in-loop
-        await decryptFromArchive(zipfile, extractedDir, 'super secure'); // eslint-disable-line no-await-in-loop
+        await decryptFromLegacyArchive(zipfile, extractedDir, 'super secure'); // eslint-disable-line no-await-in-loop
 
         // then
         assert.deepEqual(fileSizes(extractedDir), originalSizes); // eslint-disable-line no-use-before-define
@@ -81,14 +130,14 @@ describe('task: fs', () => {
     it('should fail gracefully given an incorrect passphrase', testTask(async () => {
       const zipfile = await generateTestArchive('super secure');
       const dirpath = await promisify(tmp.dir)();
-      await decryptFromArchive(zipfile, dirpath, 'wrong').should.be.rejected();
+      await decryptFromLegacyArchive(zipfile, dirpath, 'wrong').should.be.rejected();
     }));
 
     it('should fail gracefully given a random file', testTask(async () => {
       const dirpath = await promisify(tmp.dir)();
       const filepath = await promisify(tmp.file)();
       await promisify(writeFile)(filepath, 'test file one');
-      await decryptFromArchive(filepath, dirpath).should.be.rejected();
+      await decryptFromLegacyArchive(filepath, dirpath).should.be.rejected();
     }));
 
     it('should fail gracefully given a random archive', testTask(() => new Promise((resolve) => {
@@ -98,7 +147,7 @@ describe('task: fs', () => {
           const archive = archiver('zip', { zlib: { level: -1 } });
 
           archive.on('end', () => setTimeout((() =>
-            decryptFromArchive(filepath, dirpath)
+            decryptFromLegacyArchive(filepath, dirpath)
               .should.be.rejected()
               .then(resolve))
           ), 5); // eslint-disable-line function-paren-newline
@@ -108,6 +157,7 @@ describe('task: fs', () => {
           archive.finalize();
         }));
     })));
+
   });
 });
 
