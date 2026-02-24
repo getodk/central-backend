@@ -8478,116 +8478,6 @@ paths:
                     type: user
                     updatedAt: '2018-04-18T23:42:11.406Z'
                     deletedAt: '2018-04-18T23:42:11.406Z'
-  /v1/projects/{projectId}/datasets/{name}/entities.geojson:
-    get:
-      tags:
-      - Entity Management
-      summary: Entities Geodata
-      description: |-
-        This endpoint returns the geometry-interpretable value of the `geometry` attribute of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
-        No particular ordering is implied.
-        
-        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
-        Its current behaviour should not be depended upon.
-        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
-      operationId: getEntitiesGeodata
-      parameters:
-      - name: projectId
-        in: path
-        description: The numeric ID of the Project
-        required: true
-        schema:
-          type: number
-        example: "10"
-      - name: name
-        in: path
-        description: Name of the Dataset
-        required: true
-        schema:
-          type: string
-        example: people
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                description: |
-                  Value of the `geometry` attribute (if geometry-interpretable) of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
-
-                  Each entity is represented as a GeoJSON feature.
-                type: object
-              example:
-                {
-                  "type": "FeatureCollection",
-                  "features": [
-                    {
-                      "type": "Feature",
-                      "id": "06f1b19a-a14e-4916-b850-b5a5155ea4b7",
-                      "properties": null,
-                      "geometry": {
-                        "type": "Point",
-                        "coordinates": [27.98833, 86.92528, 8848]
-                      }
-                    },
-                    {
-                      "type": "Feature",
-                      "id": "b4677e0a-8731-4b75-b8df-8e4337ff9b5e",
-                      "properties": null,
-                      "geometry": {
-                        "type": "Point",
-                        "coordinates": [11.3733, 142.5917, -10984]
-                      }
-                    }
-                  ]
-                }
-
-  /v1/projects/{projectId}/datasets/{name}/entities/creators:
-    get:
-      tags:
-      - Entity Management
-      summary: Entities Creators
-      description: |-
-        This endpoint returns a list of all Actors who have created Entities in the Dataset, sorted by display name.
-      operationId: entitiesCreators
-      parameters:
-      - name: projectId
-        in: path
-        description: The numeric ID of the Project
-        required: true
-        schema:
-          type: number
-        example: "16"
-      - name: name
-        in: path
-        description: Name of the Dataset
-        required: true
-        schema:
-          type: string
-        example: people
-      responses:        
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                description: List of Actors who created Entities
-                items:
-                  $ref: '#/components/schemas/Actor'
-              example:
-              - id: 115
-                type: user
-                displayName: Alice Johnson
-                createdAt: '2018-04-18T23:19:14.802Z'
-                updatedAt: '2018-04-18T23:42:11.406Z'
-                deletedAt: null
-              - id: 23
-                type: user
-                displayName: Bob Smith
-                createdAt: '2018-03-15T15:30:22.150Z'
-                updatedAt: '2018-03-15T15:30:22.150Z'
-                deletedAt: null
     post:
       tags:
       - Entity Management
@@ -8698,6 +8588,116 @@ paths:
             application/json; bulk:
               schema:
                 $ref: '#/components/schemas/Success'
+  /v1/projects/{projectId}/datasets/{name}/entities.geojson:
+    get:
+      tags:
+      - Entity Management
+      summary: Entities Geodata
+      description: |-
+        This endpoint returns the geometry-interpretable value of the `geometry` attribute of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
+        No particular ordering is implied.
+        
+        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
+        Its current behaviour should not be depended upon.
+        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
+      operationId: getEntitiesGeodata
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "10"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: |
+                  Value of the `geometry` attribute (if geometry-interpretable) of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
+
+                  Each entity is represented as a GeoJSON feature.
+                type: object
+              example:
+                {
+                  "type": "FeatureCollection",
+                  "features": [
+                    {
+                      "type": "Feature",
+                      "id": "06f1b19a-a14e-4916-b850-b5a5155ea4b7",
+                      "properties": null,
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [27.98833, 86.92528, 8848]
+                      }
+                    },
+                    {
+                      "type": "Feature",
+                      "id": "b4677e0a-8731-4b75-b8df-8e4337ff9b5e",
+                      "properties": null,
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [11.3733, 142.5917, -10984]
+                      }
+                    }
+                  ]
+                }
+
+  /v1/projects/{projectId}/datasets/{name}/entities/creators:
+    get:
+      tags:
+      - Entity Management
+      summary: Entities Creators
+      description: |-
+        This endpoint returns a list of all Actors who have created Entities in the Dataset, sorted by display name.
+      operationId: entitiesCreators
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      responses:        
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of Actors who created Entities
+                items:
+                  $ref: '#/components/schemas/Actor'
+              example:
+              - id: 115
+                type: user
+                displayName: Alice Johnson
+                createdAt: '2018-04-18T23:19:14.802Z'
+                updatedAt: '2018-04-18T23:42:11.406Z'
+                deletedAt: null
+              - id: 23
+                type: user
+                displayName: Bob Smith
+                createdAt: '2018-03-15T15:30:22.150Z'
+                updatedAt: '2018-03-15T15:30:22.150Z'
+                deletedAt: null
   /v1/projects/{projectId}/datasets/{name}/entities/{uuid}:
     get:
       tags:
