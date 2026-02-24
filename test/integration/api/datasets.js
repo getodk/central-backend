@@ -7830,5 +7830,62 @@ describe('datasets and entities', () => {
           propertyNames.should.containEql('first_name');
         });
     }));
+
+    it('should not have deleted property in the Entity created from the old Submission', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // create a dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // update the form to remove one saveto (basically unlink a property)
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity
+          .replace('orx:version="1.0"', 'orx:version="2.0"')
+          .replace('entities:saveto="first_name"', ''))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      // delete the property
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+
+      // update the form to add back the saveto/property
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity
+          .replace('orx:version="1.0"', 'orx:version="3.0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      // post a submission against the old form definition (version 2.0)
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one.replace('version="1.0"', 'version="2.0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // exhaust the container
+      await exhaust(container);
+
+      // assert that entity is created
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+        });
+
+      // verify the entity doesn't have 'first_name'; we check DB directly because API filters out
+      // data for deleted properties anyway.
+      const dataset = await container.Datasets.get(1, 'people').then(o => o.get());
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(o => o.get());
+      entity.aux.currentVersion.data.should.not.have.property('first_name');
+    }));
   });
 });
