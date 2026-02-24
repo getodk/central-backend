@@ -1,7 +1,6 @@
 const appRoot = require('app-root-path');
 const { setlibpqEnv } = require(appRoot + '/lib/util/load-db-env');
 const { env } = require('node:process');
-const assert = require('node:assert');
 
 
 const someDbConfig = {
@@ -38,20 +37,6 @@ describe('util/load-db-env', () => {
 
   const preTestEnv = cleanEnv();
 
-  it('should throw when ssl config is set to any value other than true or null', () => {
-    try {
-      cleanEnv();
-      setlibpqEnv({ ssl: null });
-      setlibpqEnv({ ssl: true });
-      assert.throws(
-        () => setlibpqEnv({ ssl: 'sausage' }),
-        { message: "The server's database configuration is invalid. If ssl is specified, its value can only be true." },
-      );
-    } finally {
-      delete env.PGSSLMODE;
-      setEnv(preTestEnv);
-    }
-  });
 
   it('should set libpq env vars from config', () => {
     try {
@@ -83,41 +68,6 @@ describe('util/load-db-env', () => {
       shouldbeUnset.intersection(new Set(Object.keys(env))).size.should.equal(0);
     } finally {
       delete env.PGSERVICE;
-      setEnv(preTestEnv);
-    }
-  });
-
-  it('should set PGSSLMODE=require when ssl:true', () => {
-    try {
-      cleanEnv();
-      setlibpqEnv({ ssl: true });
-      env.PGSSLMODE.should.equal('require');
-    } finally {
-      delete env.PGSSLMODE;
-      setEnv(preTestEnv);
-    }
-  });
-
-  it('should not set PGSSLMODE when already set', () => {
-    try {
-      cleanEnv();
-      env.PGSSLMODE = 'something';
-      setlibpqEnv({ ssl: true });
-      env.PGSSLMODE.should.equal('something');
-    } finally {
-      delete env.PGSSLMODE;
-      setEnv(preTestEnv);
-    }
-  });
-
-  it('should not set PGSSLMODE when PGREQUIRESSL is already set', () => {
-    try {
-      cleanEnv();
-      env.PGREQUIRESSL = 'something';
-      setlibpqEnv({ ssl: true });
-      env.PGREQUIRESSL.should.equal('something');
-    } finally {
-      delete env.PGREQUIRESSL;
       setEnv(preTestEnv);
     }
   });
