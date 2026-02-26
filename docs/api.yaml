@@ -5463,7 +5463,7 @@ paths:
         example: "100"
       - name: offset
         in: query
-        description: The zero-indexed number of entries to skip from the result.
+        description: The number of submissions to skip from the result (starting with the latest submission).
         schema:
           type: number
         example: "200"
