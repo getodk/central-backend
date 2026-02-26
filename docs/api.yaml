@@ -5457,7 +5457,7 @@ paths:
         example: true
       - name: limit
         in: query
-        description: The maximum number of entries to return.
+        description: The maximum number of submissions to return.
         schema:
           type: number
         example: "100"
