@@ -1514,6 +1514,23 @@ describe('api: /forms/:id/submissions', () => {
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one')
             .expect(200)
             .then(({ body }) => { body.reviewState.should.equal('approved'); })))));
+
+    it('should set the audit details when reviewing', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(() => asAlice.patch('/v1/projects/1/forms/simple/submissions/one')
+            .send({ reviewState: 'rejected' })
+            .expect(200))
+          .then(() => asAlice.get('/v1/audits?action=submission.update')
+            .expect(200)
+            .then(({ body }) => {
+              body[0].should.be.an.Audit();
+              body[0].details.instanceId.should.equal('one');
+              body[0].details.reviewState.should.equal('rejected');
+            })))));
   });
 
   describe('/:instanceId DELETE', () => {
