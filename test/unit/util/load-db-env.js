@@ -1,6 +1,7 @@
 const appRoot = require('app-root-path');
 const { setlibpqEnv } = require(appRoot + '/lib/util/load-db-env');
 const { env } = require('node:process');
+const assert = require('node:assert');
 
 
 const someDbConfig = {
@@ -35,40 +36,47 @@ const setEnv = (envVars) => Object.keys(envVars).forEach(k => { env[k] = envVars
 
 describe('util/load-db-env', () => {
 
-  const preTestEnv = cleanEnv();
+  let preTestEnv;
 
+  before(() => {
+    preTestEnv = cleanEnv();
+  });
+
+  beforeEach(cleanEnv);
+
+  afterEach(() => {
+    setEnv(preTestEnv);
+  });
+
+
+  it('should throw when any `ssl` config is supplied', () => {
+    [true, null, 'sausage'].forEach(el =>
+      assert.throws(
+        () => setlibpqEnv({ ssl: el }),
+        { message: `The server's database configuration is invalid. 'ssl' is unknown or is not supported.` },
+      )
+    );
+  });
 
   it('should set libpq env vars from config', () => {
-    try {
-      cleanEnv();
-      setlibpqEnv(someDbConfig);
-      Object.keys(someDbConfig).forEach(key => env[`PG${key.toUpperCase()}`].should.equal(someDbConfig[key]));
-    } finally {
-      setEnv(preTestEnv);
-    }
+    setlibpqEnv(someDbConfig);
+    Object.keys(someDbConfig).forEach(key => env[`PG${key.toUpperCase()}`].should.equal(someDbConfig[key]));
   });
 
   it('should not overwrite libpq env vars from config if already set (to some different value)', () => {
-    try {
-      cleanEnv();
-      setlibpqEnv(someDbConfig);
-      setlibpqEnv(someOtherDbConfig);
-      Object.keys(someDbConfig).forEach(key => env[`PG${key.toUpperCase()}`].should.equal(someDbConfig[key]));
-    } finally {
-      setEnv(preTestEnv);
-    }
+    setlibpqEnv(someDbConfig);
+    setlibpqEnv(someOtherDbConfig);
+    Object.keys(someDbConfig).forEach(key => env[`PG${key.toUpperCase()}`].should.equal(someDbConfig[key]));
   });
 
   it('should refrain from setting anything when PGSERVICE is in use', () => {
     try {
-      cleanEnv();
       env.PGSERVICE='someservice';
       setlibpqEnv(someDbConfig);
       const shouldbeUnset = new Set(Object.keys(someDbConfig));
       shouldbeUnset.intersection(new Set(Object.keys(env))).size.should.equal(0);
     } finally {
       delete env.PGSERVICE;
-      setEnv(preTestEnv);
     }
   });
 
