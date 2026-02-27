@@ -5455,6 +5455,18 @@ paths:
         schema:
           type: boolean
         example: true
+      - name: limit
+        in: query
+        description: The maximum number of submissions to return.
+        schema:
+          type: number
+        example: "100"
+      - name: offset
+        in: query
+        description: The number of submissions to skip from the result (starting with the latest submission).
+        schema:
+          type: number
+        example: "200"
       responses:
         "200":
           description: OK
