@@ -290,5 +290,79 @@ describe('api: /key/:key', () => {
     await service.get(`/v1/key/${fk.token}/projects/1/forms/withAttachments/attachments/goodone.csv`)
       .expect(403);
   })));
+
+  it('should be able to assign project viewer role to an app user and access submissions', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    const fk = await asAlice.post('/v1/projects/1/app-users')
+      .send({ displayName: 'hotlinker' })
+      .then(({ body }) => body);
+
+    // Assign project viewer role to app user actor id
+    await asAlice.post(`/v1/projects/1/assignments/viewer/${fk.id}`)
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/forms?publish=true')
+      .set('Content-Type', 'application/xml')
+      .send(testData.forms.binaryType)
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/submission')
+      .set('X-OpenRosa-Version', '1.0')
+      .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+      .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+      .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+      .expect(201);
+
+    // App user can access forms
+    await service.get(`/v1/key/${fk.token}/projects/1/forms`)
+      .expect(200);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/binaryType`)
+      .expect(200);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/binaryType.xml`)
+      .expect(200);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/binaryType/versions`)
+      .expect(200);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/binaryType/fields`)
+      .expect(200);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/binaryType/manifest`)
+      .set('X-OpenRosa-Version', '1.0')
+      .expect(200);
+
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/binaryType/attachments`)
+      .expect(200);
+
+    // App user can access submissions
+    await service.get(`/v1/key/${fk.token}/projects/1/forms/binaryType/submissions`)
+      .expect(200);
+
+    // App user can access submission attachments
+    await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+      .expect(200)
+      .then(({ headers, body }) => {
+        headers['content-type'].should.equal('video/mp4');
+        headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+        body.toString('utf8').should.equal('this is test file one');
+      });
+
+    await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+      .expect(200)
+      .then(({ headers, body }) => {
+        headers['content-type'].should.equal('image/jpeg');
+        headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+        body.toString('utf8').should.equal('this is test file two');
+      });
+
+    // App user should not be able to submit submission because that form writing role hasnt been assigned
+    await service.post(`/v1/key/${fk.token}/projects/1/forms/binaryType/submissions`)
+      .send(testData.instances.binaryType.one)
+      .set('Content-Type', 'text/xml')
+      .expect(403);
+  }));
 });
 
