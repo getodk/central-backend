@@ -5640,7 +5640,7 @@ paths:
         description: An [OData-style `$filter` query](/central-api-odata-endpoints/#data-document) to filter the submissions by.
         schema:
           type: string
-      - name: $limit
+      - name: limit
         in: query
         schema:
           type: number
@@ -8630,7 +8630,7 @@ paths:
         schema:
           type: string
         example: people
-      - name: $limit
+      - name: limit
         in: query
         schema:
           type: number
