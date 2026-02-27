@@ -31,7 +31,7 @@ const encryptToArchive = (directory, tmpFilePath, keys) => {
 
   // call up all files in the directory.
   return promisify(readdir)(directory).then((files) => new Promise((resolve, reject) => {
-    PartialPipe.of(zipStream, outStream).pipeline(reject);
+    PartialPipe.of(zipStream, outStream).pipelineToPromise(resolve, reject);
 
     // stream each file into the zip, encrypting on the way in. clean up each
     // plaintext file as soon as we're done with them.
@@ -52,8 +52,6 @@ const encryptToArchive = (directory, tmpFilePath, keys) => {
     zipStream.append(JSON.stringify(mergeRight(keys, { local })), { name: 'keys.json' });
     zipStream.finalize();
 
-    // events to promise result.
-    zipStream.on('end', resolve);
     zipStream.on('error', reject);
   }));
 };
@@ -98,7 +96,7 @@ describe('legacy backups', () => {
       await encryptToArchive(originalDir, zipfile, keys); // eslint-disable-line no-await-in-loop
       // and
       const extractedDir = await promisify(tmp.dir)(); // eslint-disable-line no-await-in-loop
-      await decryptFromArchive(zipfile, extractedDir, 'super secure'); // eslint-disable-line no-await-in-loop
+      await decryptFromLegacyArchive(zipfile, extractedDir, 'super secure'); // eslint-disable-line no-await-in-loop
     });
 
     it('should round-trip (getodk/central#1645) @slow', async function() {
