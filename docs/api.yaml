@@ -5651,7 +5651,7 @@ paths:
         schema:
           type: string
         example: "/some_group/some_geopoint"
-        description: Extract geoinformation from the specified field. At most one field can be specified. If no field is specified, the "default" field (the first geofield not directly or indirectly part of any repeatroup) is used.
+        description: Extract geoinformation from the specified field. At most one field can be specified. If no field is specified, the first geofield not part of any repeatroup is extracted from.
       responses:
         "200":
           description: OK
