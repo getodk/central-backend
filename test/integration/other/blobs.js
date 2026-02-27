@@ -56,14 +56,14 @@ describe('blob query module', () => {
           .expect(200)
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('video/mp4');
-            headers['content-disposition'].should.equal('inline; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+            headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
             body.toString('utf8').should.equal('this is test file one');
           }))
         .then(() => asAlice.get('/v1/projects/1/forms/binaryType2/submissions/bone/attachments/my_file2.mp4')
           .expect(200)
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('video/mp4');
-            headers['content-disposition'].should.equal('inline; filename="my_file2.mp4"; filename*=UTF-8\'\'my_file2.mp4');
+            headers['content-disposition'].should.equal('attachment; filename="my_file2.mp4"; filename*=UTF-8\'\'my_file2.mp4');
             body.toString('utf8').should.equal('this is test file one');
           })))));
 
@@ -108,14 +108,14 @@ describe('blob query module', () => {
           .expect(200)
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('video/mp4');
-            headers['content-disposition'].should.equal('inline; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+            headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
             body.toString('utf8').should.equal('this is test file one');
           }))
         .then(() => asAlice.get('/v1/projects/1/forms/binaryType2/submissions/bone/attachments/my_file2.mp4')
           .expect(200)
           .then(({ headers, body }) => {
             headers['content-type'].should.equal('audio/mp3');
-            headers['content-disposition'].should.equal('inline; filename="my_file2.mp4"; filename*=UTF-8\'\'my_file2.mp4');
+            headers['content-disposition'].should.equal('attachment; filename="my_file2.mp4"; filename*=UTF-8\'\'my_file2.mp4');
             body.toString('utf8').should.equal('this is test file one');
           })))));
 
