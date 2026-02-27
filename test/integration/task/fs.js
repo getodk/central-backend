@@ -108,10 +108,6 @@ describe('task: fs', () => {
           archive.finalize();
         }));
     })));
-
-    // TODO: there are more failure cases that the code covers but the tests do not.
-    // but they get increasingly elaborate to fake and increasingly improbable in
-    // reality.
   });
 });
 
