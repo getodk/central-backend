@@ -625,7 +625,7 @@ describe('api: submission-geodata', () => {
         body.features.length.should.equal(2);
       });
 
-    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?$limit=1`)
+    await asAlice.get(`/v1/projects/1/forms/geotest/submissions.geojson?limit=1`)
       .expect(200)
       .then(({ body }) => {
         body.features.length.should.equal(1);
@@ -809,7 +809,7 @@ describe('api: entities-geodata', () => {
   it('resultset limiter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoEntities(service, db);
 
-    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?$limit=2`)
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?limit=2`)
       .expect(200)
       .then((resp) => {
         resp.body.features.length.should.equal(2);
