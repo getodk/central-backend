@@ -7434,6 +7434,126 @@ describe('datasets and entities', () => {
       const entities = await container.oneFirst(sql`SELECT COUNT(1) FROM entities`);
       entities.should.be.eql(0);
     }));
+
+    it('should make a new draft dataset if there any draft forms with the same dataset name', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // create a draft form with a dataset
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // create another draft form with a dataset with the same name
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity.replace(/simpleEntity/g, 'simpleEntity2'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // publish first form
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      // assert a dataset is created
+      await asAlice.get('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // delete the first form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // fetch the dataset-diff of the second form, the dataset should be new
+      await asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset-diff')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].name.should.be.eql('people');
+          body[0].isNew.should.be.eql(true);
+        });
+    }));
+
+    it('should create a new dataset on Form restore', testServiceFullTrx(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // create a form that creates a dataset
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // assert a dataset is created
+      await asAlice.get('/v1/projects/1/datasets')
+        .expect(200)
+        .then(({ body }) => {
+          body.map(d => d.name).should.containEql('people');
+        });
+
+      // create an entity via submission
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // verify entity was created
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+        });
+
+      // delete the form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // get the form id for restore later
+      const formId = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200)
+        .then(({ body }) => body[0].id);
+
+      // delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // restore the form
+      await asAlice.post(`/v1/projects/1/forms/${formId}/restore`)
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.be.eql(400.44);
+          body.details[0].datasets.should.eql([
+            {
+              name: 'people',
+              isNew: true,
+              properties: [
+                { name: 'first_name', isNew: true },
+                { name: 'age', isNew: true }
+              ]
+            }
+          ]);
+        });
+
+      // restore the form with ignoreWarnings
+      await asAlice.post(`/v1/projects/1/forms/${formId}/restore?ignoreWarnings=true`)
+        .expect(200);
+
+      // assert that a new dataset is created
+      await asAlice.get('/v1/projects/1/datasets')
+        .expect(200)
+        .then(({ body }) => {
+          body.map(d => d.name).should.containEql('people');
+        });
+
+      // assert that there's no entity in the created dataset
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(0);
+        });
+    }));
   });
 
   describe('api: DELETE /projects/:id/dataset/:name/properties/:propertyName', () => {
@@ -7886,6 +8006,123 @@ describe('datasets and entities', () => {
       const dataset = await container.Datasets.get(1, 'people').then(o => o.get());
       const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(o => o.get());
       entity.aux.currentVersion.data.should.not.have.property('first_name');
+    }));
+
+    it('should re-create deleted property on restore', testServiceFullTrx(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // create a new dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // delete the form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // get the form id
+      const formId = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200)
+        .then(({ body }) => body[0].id);
+
+      // delete a dataset property
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+
+      // restore the form; expect warning
+      await asAlice.post(`/v1/projects/1/forms/${formId}/restore`)
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.44);
+          body.details[0].datasets.should.containDeep([{
+            name: 'people',
+            isNew: false,
+            properties: [{ name: 'first_name', isNew: true }]
+          }]);
+        });
+
+      // restore the form with ignoreWarnings query param
+      await asAlice.post(`/v1/projects/1/forms/${formId}/restore?ignoreWarnings=true`)
+        .expect(200);
+
+      // assert that property is recreated
+      await asAlice.get('/v1/projects/1/datasets/people')
+        .expect(200)
+        .then(({ body }) => {
+          const propertyNames = body.properties.map(p => p.name);
+          propertyNames.should.containEql('first_name');
+        });
+    }));
+
+    it('should make a new draft properties if there is any draft forms with the same property name', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // create a draft form with a dataset
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // create another draft form with a dataset with the same name
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity.replace(/simpleEntity/g, 'simpleEntity2'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // publish first form
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      // assert a dataset is created
+      await asAlice.get('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // delete the first form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // delete first_name property
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+
+      // fetch the dataset-diff of the second form, the first_name property should be new
+      await asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset-diff')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.eql([{
+            name: 'people',
+            isNew: false,
+            properties: [
+              { name: 'first_name', isNew: true, inForm: true },
+              { name: 'age', isNew: false, inForm: true },
+            ]
+          }]);
+        });
+
+      // get the form id of the deleted form
+      const formId = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200)
+        .then(({ body }) => body[0].id);
+
+      // Ideally following should be tested in a separate test but setup is a lengthy so let's just
+      // do it here. Restore the first form with ignoreWarnings flag
+      await asAlice.post(`/v1/projects/1/forms/${formId}/restore?ignoreWarnings=true`)
+        .expect(200);
+
+      // assert the first_name property should not be new for the second form
+      await asAlice.get('/v1/projects/1/forms/simpleEntity2/draft/dataset-diff')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.eql([{
+            name: 'people',
+            isNew: false,
+            properties: [
+              { name: 'first_name', isNew: false, inForm: true },
+              { name: 'age', isNew: false, inForm: true },
+            ]
+          }]);
+        });
     }));
   });
 });
