@@ -7,6 +7,8 @@ rules:
   no-invalid-media-type-examples:
     severity: warn
     allowAdditionalProperties: false
+  no-invalid-parameter-examples: warn
+  no-invalid-schema-examples: warn
   no-path-trailing-slash: warn
   no-required-schema-properties-undefined: warn
   no-schema-type-mismatch: warn
