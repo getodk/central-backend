@@ -3955,7 +3955,7 @@ describe('datasets and entities', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.25);
-            body.details.reason.should.equal('Currently, entities cannot be populated from fields in repeat groups.');
+            body.details.reason.should.equal('Cannot save properties from a repeat on an entity outside of a repeat.');
           });
       }));
 
