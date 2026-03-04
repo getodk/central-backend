@@ -7434,6 +7434,87 @@ describe('datasets and entities', () => {
       const entities = await container.oneFirst(sql`SELECT COUNT(1) FROM entities`);
       entities.should.be.eql(0);
     }));
+
+    it('should show datasetDeleted: true in submission audits when dataset is soft-deleted', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // link the form to a different dataset
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity.replace('people', 'canadians'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2')
+        .expect(200);
+
+      // soft-delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // submission audits should show datasetDeleted: true
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body }) => {
+          const entityCreate = body.find(a => a.action === 'entity.create');
+          entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          entityCreate.details.entity.datasetDeleted.should.equal(true);
+        });
+    }));
+
+    it('should show datasetDeleted: true in submission audits when dataset is purged', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // link the form to a different dataset
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity.replace('people', 'canadians'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2')
+        .expect(200);
+
+      // soft-delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // purge the dataset
+      await container.Datasets.purge(true, 1, 'people');
+
+      // submission audits should show datasetDeleted: true
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body }) => {
+          const entityCreate = body.find(a => a.action === 'entity.create');
+          entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          entityCreate.details.entity.datasetDeleted.should.equal(true);
+        });
+    }));
   });
 
   describe('api: DELETE /projects/:id/dataset/:name/properties/:propertyName', () => {
