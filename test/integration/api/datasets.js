@@ -2366,193 +2366,195 @@ describe('datasets and entities', () => {
     });
 
     describe('autolink dataset to attachments', () => {
-      it('should autolink attachments to existing dataset on form draft upload', testService(async (service) => {
-        const asAlice = await service.login('alice');
+      describe('autolinking on draft upload', () => {
+        it('should autolink attachments to existing dataset on form draft upload', testService(async (service) => {
+          const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'people' })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'trees' })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'trees' })
+            .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.consumeDatasets)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-        await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
-          .then(({ body }) => {
-            body[0].should.be.a.FormAttachment();
-            body[0].name.should.equal('people.csv');
-            body[0].datasetExists.should.be.true();
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+            .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.true();
 
-            body[1].should.be.a.FormAttachment();
-            body[1].name.should.equal('trees.csv');
-            body[1].datasetExists.should.be.true();
-          });
-      }));
+              body[1].should.be.a.FormAttachment();
+              body[1].name.should.equal('trees.csv');
+              body[1].datasetExists.should.be.true();
+            });
+        }));
 
-      it('should autolink attachments to existing dataset on form draft upload and publish', testService(async (service) => {
-        const asAlice = await service.login('alice');
+        it('should autolink attachments to existing dataset on form draft upload and publish', testService(async (service) => {
+          const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'people' })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'trees' })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'trees' })
+            .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.consumeDatasets)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-        await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
-          .then(({ body }) => {
-            body[0].should.be.a.FormAttachment();
-            body[0].name.should.equal('people.csv');
-            body[0].datasetExists.should.be.true();
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
+            .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.true();
 
-            body[1].should.be.a.FormAttachment();
-            body[1].name.should.equal('trees.csv');
-            body[1].datasetExists.should.be.true();
-          });
-      }));
+              body[1].should.be.a.FormAttachment();
+              body[1].name.should.equal('trees.csv');
+              body[1].datasetExists.should.be.true();
+            });
+        }));
 
-      it('should not link dataset on draft update if previous version has blob', testService(async (service) => {
-        const asAlice = await service.login('alice');
+        it('should NOT link dataset on draft update if previous version has blob', testService(async (service) => {
+          const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'people' })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'trees' })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'trees' })
+            .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.consumeDatasets)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-        // Should be linked to datasets at this point
-        await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
-          .then(({ body }) => {
-            body[0].should.be.a.FormAttachment();
-            body[0].name.should.equal('people.csv');
-            body[0].datasetExists.should.be.true();
+          // Should be linked to datasets at this point
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+            .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.true();
 
-            body[1].should.be.a.FormAttachment();
-            body[1].name.should.equal('trees.csv');
-            body[1].datasetExists.should.be.true();
-          });
+              body[1].should.be.a.FormAttachment();
+              body[1].name.should.equal('trees.csv');
+              body[1].datasetExists.should.be.true();
+            });
 
-        // Replace dataset link with static CSV (for people)
-        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
-          .send('test,csv\n1,2')
-          .set('Content-Type', 'text/csv')
-          .expect(200);
+          // Replace dataset link with static CSV (for people)
+          await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
+            .send('test,csv\n1,2')
+            .set('Content-Type', 'text/csv')
+            .expect(200);
 
-        // Update draft by reuploading file to draft endpoint
-        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
-          .send(testData.forms.consumeDatasets)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
+          // Update draft by reuploading file to draft endpoint
+          await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-        // Form should still be linked to static CSV for attachment that was replaced
-        await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
-          .then(({ body }) => {
-            body[0].should.be.a.FormAttachment();
-            body[0].name.should.equal('people.csv');
-            body[0].datasetExists.should.be.false();
-            body[0].blobExists.should.be.true();
+          // Form should still be linked to static CSV for attachment that was replaced
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+            .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.false();
+              body[0].blobExists.should.be.true();
 
-            body[1].should.be.a.FormAttachment();
-            body[1].name.should.equal('trees.csv');
-            body[1].datasetExists.should.be.true();
-            body[1].blobExists.should.be.false();
-          });
-      }));
+              body[1].should.be.a.FormAttachment();
+              body[1].name.should.equal('trees.csv');
+              body[1].datasetExists.should.be.true();
+              body[1].blobExists.should.be.false();
+            });
+        }));
 
-      it('should link dataset on draft update if previous version has NO blob nor attachment', testService(async (service) => {
-        const asAlice = await service.login('alice');
+        it('should link dataset on draft update if previous version has NO blob nor attachment', testService(async (service) => {
+          const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'people' })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'trees' })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'trees' })
+            .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.consumeDatasets)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-        // Should be linked to datasets at this point
-        await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
-          .then(({ body }) => {
-            body[0].should.be.a.FormAttachment();
-            body[0].name.should.equal('people.csv');
-            body[0].datasetExists.should.be.true();
+          // Should be linked to datasets at this point
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+            .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.true();
 
-            body[1].should.be.a.FormAttachment();
-            body[1].name.should.equal('trees.csv');
-            body[1].datasetExists.should.be.true();
-          });
+              body[1].should.be.a.FormAttachment();
+              body[1].name.should.equal('trees.csv');
+              body[1].datasetExists.should.be.true();
+            });
 
-        // Unlink dataset with PATCH (for trees)
-        await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/trees.csv')
-          .send({ dataset: false })
-          .expect(200);
+          // Unlink dataset with PATCH (for trees)
+          await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/trees.csv')
+            .send({ dataset: false })
+            .expect(200);
 
-        // Update draft by reuploading file to draft endpoint
-        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
-          .send(testData.forms.consumeDatasets)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
+          // Update draft by reuploading file to draft endpoint
+          await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-        // Form should still be linked to static CSV for attachment that was replaced
-        await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
-          .then(({ body }) => {
-            body[0].should.be.a.FormAttachment();
-            body[0].name.should.equal('people.csv');
-            body[0].datasetExists.should.be.true();
-            body[0].blobExists.should.be.false();
+          // Form should still be linked to static CSV for attachment that was replaced
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+            .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.true();
+              body[0].blobExists.should.be.false();
 
-            body[1].should.be.a.FormAttachment();
-            body[1].name.should.equal('trees.csv');
-            body[1].datasetExists.should.be.true();
-            body[1].blobExists.should.be.false();
-          });
-      }));
+              body[1].should.be.a.FormAttachment();
+              body[1].name.should.equal('trees.csv');
+              body[1].datasetExists.should.be.true();
+              body[1].blobExists.should.be.false();
+            });
+        }));
 
-      // Verifying autolinking happens only for attachment with "file" type
-      it('should not set datasetId of non-file type attachment', testService(async (service) => {
-        const asAlice = await service.login('alice');
+        // Verifying autolinking happens only for attachment with "file" type
+        it('should not set datasetId of non-file type attachment', testService(async (service) => {
+          const asAlice = await service.login('alice');
 
-        await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'people' })
-          .expect(200);
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.withAttachments.replace(/goodtwo.mp3/g, 'people'))
-          .set('Content-Type', 'application/xml')
-          .expect(200);
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.withAttachments.replace(/goodtwo.mp3/g, 'people'))
+            .set('Content-Type', 'application/xml')
+            .expect(200);
 
-        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
-          .then(({ body }) => {
-            const attachment = body.find(a => a.name === 'people');
-            attachment.should.be.a.FormAttachment();
-            attachment.datasetExists.should.be.false();
-          });
-      }));
+          await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+            .then(({ body }) => {
+              const attachment = body.find(a => a.name === 'people');
+              attachment.should.be.a.FormAttachment();
+              attachment.datasetExists.should.be.false();
+            });
+        }));
+      });
 
-      describe('autolink when publishing form that creates and consumes new dataset', () => {
+      describe('autolinking on publishing', () => {
         it('should autolink on upload new form and simultaneously publish', testService(async (service) => {
           const asAlice = await service.login('alice');
 
@@ -2720,7 +2722,7 @@ describe('datasets and entities', () => {
             });
         }));
 
-        it('should autolink if dataset already published but it was created after the form draft', testService(async (service) => {
+        it('should NOT autolink if dataset already published but it was created after the form draft', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/forms')
@@ -2743,10 +2745,6 @@ describe('datasets and entities', () => {
               body[0].datasetExists.should.be.false();
             });
 
-          // TODO 3/3/26 read this comment and change auto-linking
-          // we DO auto-link here but since a Central user can still see the draft, and could
-          // potentially see the new dataset now, we might want to change this behavior to NOT
-          // auto-link and have the user explicitly link it themselves.
           await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish')
             .expect(200);
 
@@ -2756,7 +2754,75 @@ describe('datasets and entities', () => {
               body[0].name.should.equal('people.csv');
               body[0].exists.should.be.true();
               body[0].blobExists.should.be.false();
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
+        it.only('should not autolink previously unlinked dataset from published form using DELETE on attachment', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'trees' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // Right after publish, attachments should be linked to datasets
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
               body[0].datasetExists.should.be.true();
+
+              body[1].name.should.equal('trees.csv');
+              body[1].datasetExists.should.be.true();
+            });
+
+          // Make draft of form
+          await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
+            .expect(200);
+
+          // unlink one dataset by sending DELETE
+          await asAlice.delete('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
+            .expect(200);
+
+          // unlink other dataset by sending PATCH
+          await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/trees.csv')
+            .send({ dataset: false })
+            .expect(200);
+
+          // verify draft attachments should not be linked to datasets
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+            .then(({ body }) => {
+              body.map(attachment => attachment.datasetExists).should.eql([false, false]);
+            });
+
+          // publish draft
+          await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish?version=2')
+            .expect(200);
+
+          // attachments should still not reference any blobs
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
+            .then(({ body }) => {
+              console.log("body", body);
+              // PROBLEM: goodone.csv still shows datasetExists = true after being published
+              body.map(attachment => attachment.datasetExists).should.eql([false, false]);
+            });
+
+          // check datasets
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .then(({ body }) => {
+              body.linkedForms.length.should.equal(0);
+            });
+          await asAlice.get('/v1/projects/1/datasets/trees')
+            .then(({ body }) => {
+              body.linkedForms.length.should.equal(0);
             });
         }));
 
