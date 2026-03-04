@@ -81,7 +81,7 @@ if node ./lib/bin/restore.js "$backupDir/$target"; then
 fi
 log "  Restoring with empty passphrase..."
 set +e
-node ./lib/bin/restore.js "$backupDir/$target" "wrong-passphrase"
+node ./lib/bin/restore.js "$backupDir/$target" ""
 restore_exitcode=$?
 set -e
 if [ $restore_exitcode -ne 100 ]; then
