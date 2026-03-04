@@ -2590,6 +2590,28 @@ describe('datasets and entities', () => {
             });
         }));
 
+        // TODO: 3/3/26 fix bug where not all things are linked
+        it.skip('should autolink all datasets that write to and consume when first publishing a draft', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.createUpdateMultipleEntities)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/createUpdateMultipleEntities/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/createUpdateMultipleEntities/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.true();
+
+              body[1].name.should.equal('trees.csv');
+              body[1].datasetExists.should.be.true();
+            });
+        }));
+
         it('should not autolink if attachment already filled in', testService(async (service) => {
           const asAlice = await service.login('alice');
 
