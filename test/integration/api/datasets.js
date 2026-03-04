@@ -2763,9 +2763,10 @@ describe('datasets and entities', () => {
             });
         }));
 
-        it.skip('should not autolink previously unlinked dataset from published form', testService(async (service) => {
+        it('should not autolink previously unlinked dataset from published form - autolinked on form publish', testService(async (service) => {
           const asAlice = await service.login('alice');
 
+          // autolink to dataset because this form publishes the dataset
           await asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.createUpdateEntity)
             .set('Content-Type', 'application/xml')
@@ -2809,7 +2810,7 @@ describe('datasets and entities', () => {
             });
         }));
 
-        it('should not autolink previously unlinked dataset from published form', testService(async (service) => {
+        it('should not autolink previously unlinked dataset from published form - linked to existing dataset', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/datasets')
@@ -2820,6 +2821,7 @@ describe('datasets and entities', () => {
             .send({ name: 'trees' })
             .expect(200);
 
+          // autolink to existing datasets when form is first uploaded
           await asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.consumeDatasets)
             .set('Content-Type', 'application/xml')
