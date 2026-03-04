@@ -3626,6 +3626,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
             entityCreate.details.entity.should.be.an.Entity();
             entityCreate.details.entity.currentVersion.should.be.an.EntityDef();
+            entityCreate.details.entity.datasetDeleted.should.equal(false);
           });
       }));
 
