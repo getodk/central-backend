@@ -2506,7 +2506,11 @@ describe('datasets and entities', () => {
               body[1].datasetExists.should.be.true();
             });
 
-          // Unlink dataset with PATCH (for trees)
+          // unlink one dataset by sending DELETE
+          await asAlice.delete('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
+            .expect(200);
+
+          // unlink other dataset by sending PATCH
           await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/trees.csv')
             .send({ dataset: false })
             .expect(200);
@@ -2517,17 +2521,17 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          // Form should still be linked to static CSV for attachment that was replaced
+          // verify draft attachments are still unlinked
           await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
-              body[0].datasetExists.should.be.true();
+              body[0].datasetExists.should.be.false();
               body[0].blobExists.should.be.false();
 
               body[1].should.be.a.FormAttachment();
               body[1].name.should.equal('trees.csv');
-              body[1].datasetExists.should.be.true();
+              body[1].datasetExists.should.be.false();
               body[1].blobExists.should.be.false();
             });
         }));
@@ -2592,8 +2596,7 @@ describe('datasets and entities', () => {
             });
         }));
 
-        // TODO: 3/3/26 fix bug where not all things are linked
-        it.skip('should autolink all datasets that write to and consume when first publishing a draft', testService(async (service) => {
+        it('should autolink all datasets that write to and consume when first publishing a draft', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/forms')
@@ -2748,17 +2751,65 @@ describe('datasets and entities', () => {
           await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish')
             .expect(200);
 
+          // attachment did not autolink because publishing this form did not
+          // create the dataset.
           await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
-              body[0].exists.should.be.true();
+              body[0].exists.should.be.false();
               body[0].blobExists.should.be.false();
               body[0].datasetExists.should.be.false();
             });
         }));
 
-        it.only('should not autolink previously unlinked dataset from published form using DELETE on attachment', testService(async (service) => {
+        it.skip('should not autolink previously unlinked dataset from published form', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.createUpdateEntity)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // Right after publish, attachments should be linked to datasets
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
+            .then(({ body }) => {
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.true();
+            });
+
+          // Make draft of form
+          await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft')
+            .expect(200);
+
+          // unlink one dataset by sending DELETE
+          await asAlice.delete('/v1/projects/1/forms/createUpdateEntity/draft/attachments/people.csv')
+            .expect(200);
+
+          // verify draft attachments should not be linked to datasets
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/draft/attachments')
+            .then(({ body }) => {
+              body[0].datasetExists.should.eql(false);
+            });
+
+          // publish draft
+          await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish?version=2')
+            .expect(200);
+
+          // attachments should still not reference any blobs
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
+            .then(({ body }) => {
+              body[0].datasetExists.should.eql(false);
+            });
+
+          // check datasets
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .then(({ body }) => {
+              body.linkedForms.length.should.equal(0);
+            });
+        }));
+
+        it('should not autolink previously unlinked dataset from published form', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/datasets')
@@ -2810,8 +2861,6 @@ describe('datasets and entities', () => {
           // attachments should still not reference any blobs
           await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
             .then(({ body }) => {
-              console.log("body", body);
-              // PROBLEM: goodone.csv still shows datasetExists = true after being published
               body.map(attachment => attachment.datasetExists).should.eql([false, false]);
             });
 
