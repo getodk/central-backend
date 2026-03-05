@@ -1399,6 +1399,63 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   text.should.equal('test,csv\n1,2');
                 })))));
 
+        it('should return image contents with appropriate attachment content-disposition headers', testService(async (service) => {
+          const xml = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
+            <h:head>
+              <h:title>Image Attachment Form</h:title>
+              <model odk:xforms-version="1.0.0">
+                <itext>
+                  <translation lang="default" default="true()">
+                    <text id="/data/logo:label">
+                      <value>Form Logo</value>
+                      <value form="image">jr://images/logo.png</value>
+                    </text>
+                  </translation>
+                </itext>
+                <instance>
+                  <data id="withImageAttachment" version="20260305120303">
+                    <logo/>
+                    <meta>
+                      <instanceID/>
+                    </meta>
+                  </data>
+                </instance>
+                <bind nodeset="/data/logo" readonly="true()" type="string"/>
+                <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+              </model>
+            </h:head>
+            <h:body>
+              <input ref="/data/logo">
+                <label ref="jr:itext('/data/logo:label')"/>
+              </input>
+            </h:body>
+          </h:html>`;
+
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(xml)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withImageAttachment/draft/attachments/logo.png')
+            .send('this is some image data')
+            .set('Content-Type', 'image/png')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withImageAttachment/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/withImageAttachment/attachments/logo.png')
+            .expect(200)
+            .then(({ headers, body }) => {
+              headers['content-disposition'].should.equal('attachment; filename="logo.png"; filename*=UTF-8\'\'logo.png');
+              headers['content-type'].should.equal('image/png');
+              body.toString('utf8').should.equal('this is some image data');
+            });
+        }));
+
         it('should return 307 if file has been moved to s3', testService((service, { Blobs }) => {
           global.s3.enableMock();
           return service.login('alice', (asAlice) =>
