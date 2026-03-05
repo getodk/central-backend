@@ -541,13 +541,67 @@ describe('api: /submission', () => {
                 .expect(200)
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
-                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                   headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
                 }))
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304)))))));
+
+    it('should return content-disposition inline for specific image attachments only', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      // Submissions with mp4 (not inline) and jpeg (inline)
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .expect(200)
+        .then(({ headers, body }) => {
+          headers['content-type'].should.equal('video/mp4');
+          headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+          body.toString('utf8').should.equal('this is test file one');
+        });
+
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+        .expect(200)
+        .then(({ headers, body }) => {
+          headers['content-type'].should.equal('image/jpeg');
+          headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+          body.toString('utf8').should.equal('this is test file two');
+        });
+
+      // Submission with image/svg (not inline)
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file',
+          Buffer.from(
+            testData.instances.binaryType.one.replace(
+              '<file1>my_file1.mp4</file1>',
+              '<file1>this_file1.svg</file1>'
+            )
+          ), { filename: 'data.xml' })
+        .attach('this_file1.svg', Buffer.from('this is svg test file one'), { filename: 'this_file1.svg' })
+        .expect(201);
+
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/bone/attachments/this_file1.svg')
+        .expect(200)
+        .then(({ headers, body }) => {
+          headers['content-type'].should.equal('image/svg+xml');
+          headers['content-disposition'].should.equal('attachment; filename="this_file1.svg"; filename*=UTF-8\'\'this_file1.svg');
+          body.toString('utf8').should.equal('this is svg test file one');
+        });
+    }));
 
     it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, { Blobs }) => {
       global.s3.enableMock();
@@ -570,7 +624,7 @@ describe('api: /submission', () => {
                 .expect(200)
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
-                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                   headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
                 }))
