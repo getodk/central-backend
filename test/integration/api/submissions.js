@@ -5021,7 +5021,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
   });
 
   describe('[version] /:rootId/versions/:instanceId/attachments/:name DELETE', () => {
-    it('async await should return notfound if the attachment does not exist', testService(async (service) => {
+    it('should return notfound if the attachment does not exist', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -5037,7 +5037,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
         .expect(404);
     }));
 
-    it('async await should reject if the user cannot update a submission', testService(async (service) => {
+    it('should reject if the user cannot update a submission', testService(async (service) => {
       const asAlice = await service.login('alice');
       const asChelsea = await service.login('chelsea');
       await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -5095,7 +5095,6 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
       await asAlice.post('/v1/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
         .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both
-          .replace('id="binaryType"', 'id="binaryType"')
           .replace('<instanceID>both', '<deprecatedID>both</deprecatedID><instanceID>both2')),
         { filename: 'data.xml' })
         .expect(201);
@@ -5104,7 +5103,6 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
       await asAlice.post('/v1/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
         .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both
-          .replace('id="binaryType"', 'id="binaryType"')
           .replace('<instanceID>both', '<deprecatedID>both2</deprecatedID><instanceID>both3')),
         { filename: 'data.xml' })
         .expect(201);
@@ -5145,7 +5143,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
 
     }));
 
-    it('should log an audit entry about the deletion', testService(async (service, { Audits }) => {
+    it('should log an audit entry about the deletion', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -5158,11 +5156,15 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
         .expect(201);
       await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/here_is_file2.jpg')
         .expect(200);
-      const log = await Audits.getLatestByAction('submission.attachment.update').then(o => o.get());
-      log.details.instanceId.should.eql('both');
-      log.details.name.should.eql('here_is_file2.jpg');
-      should.exist(log.details.oldBlobId);
-      should.not.exist(log.details.newBlobId);
+
+      await asAlice.get('/v1/audits?action=submission.attachment.update')
+        .then(({ body }) => {
+          const log = body[0];
+          log.details.instanceId.should.eql('both');
+          log.details.name.should.eql('here_is_file2.jpg');
+          should.exist(log.details.oldBlobId);
+          should.not.exist(log.details.newBlobId);
+        });
     }));
   });
 
