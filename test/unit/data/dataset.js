@@ -12,6 +12,10 @@ describe('parsing dataset from entity block', () => {
       res.should.equal(Option.none())));
 
   describe('versioning', () => {
+    it('should return version', () =>
+      getDatasets(testData.forms.simpleEntity2022).then((res) =>
+        res.get().version.should.eql('2022.1.0')));
+
     it('should validate any version that starts with 2022.1.', () =>
       getDatasets(testData.forms.simpleEntity2022
         .replace('2022.1.0', '2022.1.123'))
