@@ -7177,6 +7177,53 @@ describe('datasets and entities', () => {
         });
     }));
 
+    it('should reject if there is a draft Form updating the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity.replace('simpleEntity', 'simpleEntityClone'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+    }));
+
+    it('should reject if there is a draft Form updating the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity.replace('people', 'trees'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+    }));
+
     it('should reject if there is a Form consuming the dataset', testService(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -7185,6 +7232,25 @@ describe('datasets and entities', () => {
         .expect(200);
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/goodone')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+    }));
+
+    it('should reject if there is a draft Form consuming the dataset', testServiceFullTrx(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'goodone' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms')
         .send(testData.forms.withAttachments)
         .set('Content-Type', 'application/xml')
         .expect(200);
