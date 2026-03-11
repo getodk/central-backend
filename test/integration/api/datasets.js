@@ -7669,6 +7669,49 @@ describe('datasets and entities', () => {
         });
     }));
 
+    it('should show entityAvailable: false if a new dataset with the same name has been created', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // link the form to a different dataset
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity.replace('people', 'canadians'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2')
+        .expect(200);
+
+      // soft-delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // submission audits should show datasetDeleted: true
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body }) => {
+          const entityCreate = body.find(a => a.action === 'entity.create');
+          entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          entityCreate.details.entity.entityAvailable.should.equal(false);
+        });
+    }));
+
     it('should restrict restoring a Form that writes to a deleted dataset', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
