@@ -2497,6 +2497,26 @@ describe('datasets and entities', () => {
             });
         }));
 
+        it('should autolink multiple datasets on upload new form and simultaneously publish', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.createUpdateMultipleEntities)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/createUpdateMultipleEntities/attachments')
+            .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
+              body[0].name.should.equal('people.csv');
+              body[0].datasetExists.should.be.true();
+
+              body[1].should.be.a.FormAttachment();
+              body[1].name.should.equal('trees.csv');
+              body[1].datasetExists.should.be.true();
+            });
+        }));
+
         it('should autolink when first publishing a draft', testService(async (service) => {
           const asAlice = await service.login('alice');
 
