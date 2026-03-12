@@ -2367,8 +2367,7 @@ describe('datasets and entities', () => {
   </manifest>`);
               })))));
 
-      // TODO: fix bug from central issue 1630 where publishing re-links dataset attachment
-      it.skip('should link and unlink dataset from the draft version of a published form', testService((service) =>
+      it('should link and unlink dataset from the draft version of a published form', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
             .send(testData.forms.consumeDatasets)
@@ -2441,7 +2440,7 @@ describe('datasets and entities', () => {
                 dsAttachment.datasetExists.should.eql(false);
               })))));
 
-      it('should link dataset if previous version does not have blob or dataset linked', testService((service) =>
+      it('should not re-link dataset if previous version had dataset unlinked', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/datasets')
             .send({ name: 'people' })
@@ -2460,7 +2459,7 @@ describe('datasets and entities', () => {
             .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
               .then(({ body }) => {
                 const dsAttachment = body.find(attachment => attachment.name === 'people.csv');
-                dsAttachment.datasetExists.should.eql(true);
+                dsAttachment.datasetExists.should.eql(false);
               })))));
 
       // Verifying autolinking happens only for attachment with "file" type
@@ -2506,6 +2505,7 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(200);
 
+          // this will autolink because form publishing also publishes this dataset
           await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish')
             .expect(200);
 
@@ -2591,13 +2591,11 @@ describe('datasets and entities', () => {
             });
         }));
 
-        it('should not autolink if dataset already published because it will be attached already if dataset made before', testService(async (service) => {
+        it('should not autolink if dataset already published - it will have been attached on draft creation', testService(async (service) => {
           const asAlice = await service.login('alice');
 
-          // upload form that makes people dataset already
-          await asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
             .expect(200);
 
           await asAlice.post('/v1/projects/1/forms')
@@ -2629,18 +2627,18 @@ describe('datasets and entities', () => {
             });
         }));
 
-        it('should autolink if dataset already published but it was created after the form draft', testService(async (service) => {
+        it('should NOT autolink on form publish if dataset was already published', testService(async (service) => {
           const asAlice = await service.login('alice');
 
+          // uploading form before dataset exists
           await asAlice.post('/v1/projects/1/forms')
             .send(testData.forms.createUpdateEntity)
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          // upload form that makes people dataset already
-          await asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
+          // creating and publishing dataset via API
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
             .expect(200);
 
           // because the form was uploaded before the dataset was created, this will be null
@@ -2653,9 +2651,9 @@ describe('datasets and entities', () => {
               body[0].datasetExists.should.be.false();
             });
 
-          // we DO auto-link here but since a Central user can still see the draft, and could
-          // potentially see the new dataset now, we might want to change this behavior to NOT
-          // auto-link and have the user explicitly link it themselves.
+          // We DON'T autolink here because the form did not publish the dataset (it was
+          // already published, though after the draft form was uploaded.)
+          // If the user wanted this linked, they could have linked it in the UI
           await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish')
             .expect(200);
 
@@ -2663,9 +2661,9 @@ describe('datasets and entities', () => {
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
-              body[0].exists.should.be.true();
+              body[0].exists.should.be.false();
               body[0].blobExists.should.be.false();
-              body[0].datasetExists.should.be.true();
+              body[0].datasetExists.should.be.false();
             });
         }));
 
