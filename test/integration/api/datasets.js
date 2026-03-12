@@ -2351,6 +2351,44 @@ describe('datasets and entities', () => {
               .expect(200))
             .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish')
               .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
+              .then(({ body }) => {
+                const dsAttachment = body.find(attachment => attachment.name === 'people.csv');
+                dsAttachment.datasetExists.should.eql(false);
+              }))
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest') // just another way to check the dataset attachment
+              .set('X-OpenRosa-Version', '1.0')
+              .expect(200)
+              .then(({ text }) => {
+                text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+  </manifest>`);
+              })))));
+
+      // TODO: fix bug from central issue 1630 where publishing re-links dataset attachment
+      it('should link and unlink dataset from the draft version of a published form', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/datasets')
+              .send({ name: 'people' })
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
+              .expect(200))
+            .then(() => asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
+              .send({ dataset: true })
+              .expect(200))
+            .then(() => asAlice.delete('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish?version=2')
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
+              .then(({ body }) => {
+                const dsAttachment = body.find(attachment => attachment.name === 'people.csv');
+                dsAttachment.datasetExists.should.eql(false);
+              }))
             .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest')
               .set('X-OpenRosa-Version', '1.0')
               .expect(200)
