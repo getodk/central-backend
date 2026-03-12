@@ -2400,28 +2400,25 @@ describe('datasets and entities', () => {
     });
 
     describe('autolink dataset to attachments', () => {
-      it('should set datasetId of attachment on form draft upload', testService((service, { Forms, FormAttachments }) =>
+      it('should set datasetId of attachment on form draft upload', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
+          asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms')
               .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
-              .expect(200)
-              .then(() =>
-                Forms.getByProjectAndXmlFormId(1, 'consumeDatasets', Form.DraftVersion)
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
-                    .then(attachment => {
-                      attachment.get().datasetId.should.not.be.null();
-                    })))))));
+              .expect(200))
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+              .then(({ body }) => {
+                const dsAttachment = body.find(attachment => attachment.name === 'people.csv');
+                dsAttachment.datasetExists.should.eql(true);
+              })))));
 
-      it('should not link dataset if previous version has blob', testService((service, { Forms, FormAttachments }) =>
+      it('should not link dataset if previous version has blob', testService((service) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
+          asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms')
               .send(testData.forms.consumeDatasets)
@@ -2435,15 +2432,14 @@ describe('datasets and entities', () => {
               .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
               .expect(200))
-            .then(() =>
-              Forms.getByProjectAndXmlFormId(1, 'consumeDatasets', Form.DraftVersion)
-                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
-                  .then(attachment => {
-                    should(attachment.get().datasetId).be.null();
-                    should(attachment.get().blobId).not.be.null();
-                  }))))));
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+              .then(({ body }) => {
+                const dsAttachment = body.find(attachment => attachment.name === 'people.csv');
+                dsAttachment.blobExists.should.eql(true);
+                dsAttachment.datasetExists.should.eql(false);
+              })))));
 
-      it('should link dataset if previous version does not have blob or dataset linked', testService((service, { Forms, FormAttachments }) =>
+      it('should link dataset if previous version does not have blob or dataset linked', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/datasets')
             .send({ name: 'people' })
@@ -2459,16 +2455,14 @@ describe('datasets and entities', () => {
               .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
               .expect(200))
-            .then(() =>
-              Forms.getByProjectAndXmlFormId(1, 'consumeDatasets', Form.DraftVersion)
-                .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
-                  .then(attachment => {
-                    should(attachment.get().datasetId).not.be.null();
-                    should(attachment.get().blobId).be.null();
-                  }))))));
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+              .then(({ body }) => {
+                const dsAttachment = body.find(attachment => attachment.name === 'people.csv');
+                dsAttachment.datasetExists.should.eql(true);
+              })))));
 
       // Verifying autolinking happens only for attachment with "file" type
-      it('should not set datasetId of non-file type attachment', testService((service, { Forms, FormAttachments }) =>
+      it('should not set datasetId of non-file type attachment', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/datasets')
             .send({ name: 'people' })
@@ -2477,12 +2471,13 @@ describe('datasets and entities', () => {
               .send(testData.forms.withAttachments.replace(/goodtwo.mp3/g, 'people'))
               .set('Content-Type', 'application/xml')
               .expect(200)
-              .then(() =>
-                Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.AnyVersion)
-                  .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people')
-                    .then(attachment => {
-                      should(attachment.get().datasetId).be.null();
-                    })))))));
+              .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+                .then(({ body }) => {
+                  const dsAttachment = body.find(attachment => attachment.name === 'people');
+                  dsAttachment.exists.should.eql(false);
+                  dsAttachment.blobExists.should.eql(false);
+                  dsAttachment.datasetExists.should.eql(false);
+                }))))));
 
       describe('autolink when publishing form that creates and consumes new dataset', () => {
         // update form that consumes dataset
