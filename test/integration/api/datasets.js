@@ -2480,40 +2480,15 @@ describe('datasets and entities', () => {
                 }))))));
 
       describe('autolink when publishing form that creates and consumes new dataset', () => {
-        // update form that consumes dataset
-        const updateForm = `<?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
-          <h:head>
-            <model entities:entities-version="2024.1.0">
-              <instance>
-                <data id="updateEntity" orx:version="1.0">
-                  <person/>
-                  <name/>
-                  <age/>
-                  <hometown/>
-                  <meta>
-                    <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
-                      <label/>
-                    </entity>
-                  </meta>
-                </data>
-              </instance>
-              <instance id="people" src="jr://file-csv/people.csv"/>
-              <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
-              <bind nodeset="/data/age" type="int" entities:saveto="age"/>
-            </model>
-          </h:head>
-        </h:html>`;
-
         it('should autolink on upload new form and simultaneously publish', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(updateForm)
+            .send(testData.forms.createUpdateEntity)
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
@@ -2525,14 +2500,14 @@ describe('datasets and entities', () => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/forms')
-            .send(updateForm)
+            .send(testData.forms.createUpdateEntity)
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+          await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
@@ -2546,19 +2521,19 @@ describe('datasets and entities', () => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/forms')
-            .send(updateForm)
+            .send(testData.forms.createUpdateEntity)
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/attachments/people.csv')
+          await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/attachments/people.csv')
             .send('test,csv\n1,2')
             .set('Content-Type', 'text/csv')
             .expect(200);
 
-          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+          await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
@@ -2577,7 +2552,7 @@ describe('datasets and entities', () => {
             <h:head>
               <model entities:entities-version="2024.1.0">
                 <instance>
-                  <data id="updateEntity" orx:version="1.0">
+                  <data id="readPeopleWriteStudents" orx:version="1.0">
                     <person/>
                     <name/>
                     <age/>
@@ -2601,10 +2576,10 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+          await asAlice.post('/v1/projects/1/forms/readPeopleWriteStudents/draft/publish')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+          await asAlice.get('/v1/projects/1/forms/readPeopleWriteStudents/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
@@ -2624,11 +2599,11 @@ describe('datasets and entities', () => {
             .expect(200);
 
           await asAlice.post('/v1/projects/1/forms')
-            .send(updateForm)
+            .send(testData.forms.createUpdateEntity)
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/draft/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
@@ -2638,10 +2613,10 @@ describe('datasets and entities', () => {
               body[0].should.not.have.property('updatedAt'); // linked to dataset when created, never updated
             });
 
-          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+          await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
@@ -2656,7 +2631,7 @@ describe('datasets and entities', () => {
           const asAlice = await service.login('alice');
 
           await asAlice.post('/v1/projects/1/forms')
-            .send(updateForm)
+            .send(testData.forms.createUpdateEntity)
             .set('Content-Type', 'application/xml')
             .expect(200);
 
@@ -2667,7 +2642,7 @@ describe('datasets and entities', () => {
             .expect(200);
 
           // because the form was uploaded before the dataset was created, this will be null
-          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/draft/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
@@ -2679,10 +2654,10 @@ describe('datasets and entities', () => {
           // we DO auto-link here but since a Central user can still see the draft, and could
           // potentially see the new dataset now, we might want to change this behavior to NOT
           // auto-link and have the user explicitly link it themselves.
-          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+          await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
@@ -2720,37 +2695,15 @@ describe('datasets and entities', () => {
         it('should not autolink if form doesnt create dataset', testService(async (service) => {
           const asAlice = await service.login('alice');
 
-          const noDataset = `<?xml version="1.0"?>
-          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
-            <h:head>
-              <model entities:entities-version="2024.1.0">
-                <instance>
-                  <data id="updateEntity" orx:version="1.0">
-                    <person/>
-                    <name/>
-                    <age/>
-                    <hometown/>
-                    <meta>
-                      <instanceID/>
-                    </meta>
-                  </data>
-                </instance>
-                <instance id="people" src="jr://file-csv/people.csv"/>
-                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
-                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
-              </model>
-            </h:head>
-          </h:html>`;
-
           await asAlice.post('/v1/projects/1/forms')
-            .send(noDataset)
+            .send(testData.forms.consumeDatasets)
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+          await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.csv');
@@ -2764,39 +2717,15 @@ describe('datasets and entities', () => {
           // we probably want this to be case insensitive but that change will come later.
           const asAlice = await service.login('alice');
 
-          const caseChange = `<?xml version="1.0"?>
-          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
-            <h:head>
-              <model entities:entities-version="2024.1.0">
-                <instance>
-                  <data id="updateEntity" orx:version="1.0">
-                    <person/>
-                    <name/>
-                    <age/>
-                    <hometown/>
-                    <meta>
-                      <entity dataset="people" id="" update="" baseVersion="" trunkVersion="" branchId="">
-                        <label/>
-                      </entity>
-                    </meta>
-                  </data>
-                </instance>
-                <instance id="people" src="jr://file-csv/people.CSV"/>
-                <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
-                <bind nodeset="/data/age" type="int" entities:saveto="age"/>
-              </model>
-            </h:head>
-          </h:html>`;
-
           await asAlice.post('/v1/projects/1/forms')
-            .send(caseChange)
+            .send(testData.forms.createUpdateEntity.replace('people.csv', 'people.CSV'))
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          await asAlice.post('/v1/projects/1/forms/updateEntity/draft/publish')
+          await asAlice.post('/v1/projects/1/forms/createUpdateEntity/draft/publish')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/attachments')
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.CSV');
@@ -2809,40 +2738,16 @@ describe('datasets and entities', () => {
         it('should not autolink on draft consume-only form if .csv extention doesnt match case', testService(async (service) => {
           const asAlice = await service.login('alice');
 
-          // upload form that makes people dataset already
-          await asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
             .expect(200);
-
-          const caseChange = `<?xml version="1.0"?>
-            <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
-              <h:head>
-                <model entities:entities-version="2024.1.0">
-                  <instance>
-                    <data id="updateEntity" orx:version="1.0">
-                      <person/>
-                      <name/>
-                      <age/>
-                      <hometown/>
-                      <meta>
-                        <instanceID/>
-                      </meta>
-                    </data>
-                  </instance>
-                  <instance id="people" src="jr://file-csv/people.CSV"/>
-                  <bind nodeset="/data/name" type="string" entities:saveto="first_name"/>
-                  <bind nodeset="/data/age" type="int" entities:saveto="age"/>
-                </model>
-              </h:head>
-            </h:html>`;
 
           await asAlice.post('/v1/projects/1/forms')
-            .send(caseChange)
+            .send(testData.forms.consumeDatasets.replace('people.csv', 'people.CSV'))
             .set('Content-Type', 'application/xml')
             .expect(200);
 
-          await asAlice.get('/v1/projects/1/forms/updateEntity/draft/attachments')
+          await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
             .then(({ body }) => {
               body[0].should.be.a.FormAttachment();
               body[0].name.should.equal('people.CSV');
