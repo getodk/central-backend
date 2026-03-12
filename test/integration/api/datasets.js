@@ -2517,6 +2517,24 @@ describe('datasets and entities', () => {
             });
         }));
 
+        it('should not autolink a dataset called itemsets', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.createUpdateEntity
+              .replace(/people/g, 'itemsets')
+            )
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/createUpdateEntity/attachments')
+            .then(({ body }) => {
+              body[0].should.be.a.FormAttachment();
+              body[0].name.should.equal('itemsets.csv');
+              body[0].datasetExists.should.be.false();
+            });
+        }));
+
         it('should autolink when first publishing a draft', testService(async (service) => {
           const asAlice = await service.login('alice');
 
