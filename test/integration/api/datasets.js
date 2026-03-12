@@ -1416,8 +1416,7 @@ describe('datasets and entities', () => {
 
         // Form that consumes `people` dataset
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments
-            .replace(/goodone.csv/, 'people.csv'))
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
@@ -1438,7 +1437,7 @@ describe('datasets and entities', () => {
 
             lastUpdate.should.be.isoDate();
 
-            linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
+            linkedForms.should.be.eql([{ name: 'Consume Datasets: People & Trees', xmlFormId: 'consumeDatasets' }]);
 
             sourceForms.should.be.eql([
               { name: 'simpleEntity', xmlFormId: 'simpleEntity' },
@@ -1534,15 +1533,14 @@ describe('datasets and entities', () => {
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments
-            .replace(/goodone.csv/, 'people.csv'))
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
           .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=2.0')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish?version=2.0')
           .expect(200);
 
         await asAlice.get('/v1/projects/1/datasets/people')
@@ -1551,7 +1549,7 @@ describe('datasets and entities', () => {
 
             const { linkedForms } = body;
 
-            linkedForms.should.be.eql([{ name: 'withAttachments', xmlFormId: 'withAttachments' }]);
+            linkedForms.should.be.eql([{ name: 'Consume Datasets: People & Trees', xmlFormId: 'consumeDatasets' }]);
           });
 
       }));
@@ -1562,33 +1560,31 @@ describe('datasets and entities', () => {
         await asAlice.post('/v1/projects/1/datasets')
           .send({ name: 'people' })
           .expect(200);
-        // Create form template that consumes 'people' dataset
-        const withAttachments = testData.forms.withAttachments
-          .replace('goodone.csv', 'people.csv');
+
         // Upload first form
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(withAttachments)
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
         // Upload second form
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(withAttachments
-            .replace('id="withAttachments"', 'id="withAttachments2"'))
+          .send(testData.forms.consumeDatasets
+            .replace('id="consumeDatasets"', 'id="consumeDatasets2"'))
           .set('Content-Type', 'application/xml')
           .expect(200);
         const { body: beforeDeletion } = await asAlice.get('/v1/projects/1/datasets/people')
           .expect(200);
         beforeDeletion.linkedForms.map(form => form.xmlFormId).should.eql([
-          'withAttachments',
-          'withAttachments2'
+          'consumeDatasets',
+          'consumeDatasets2'
         ]);
         // Delete second form
-        await asAlice.delete('/v1/projects/1/forms/withAttachments2')
+        await asAlice.delete('/v1/projects/1/forms/consumeDatasets2')
           .expect(200);
         const { body: afterDeletion } = await asAlice.get('/v1/projects/1/datasets/people')
           .expect(200);
         afterDeletion.linkedForms.map(form => form.xmlFormId).should.eql([
-          'withAttachments'
+          'consumeDatasets'
         ]);
       }));
 
@@ -1596,31 +1592,30 @@ describe('datasets and entities', () => {
         const asAlice = await service.login('alice');
         // Create draft form that consumes `people` dataset
         await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.withAttachments
-            .replace('goodone.csv', 'people.csv'))
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
         // Attach static csv to draft form
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
           .send('test,csv\n1,2')
           .set('Content-Type', 'text/csv')
           .expect(200);
         // Publish form with static csv attachment
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish')
           .expect(200);
         // Create dataset with name 'people'
         await asAlice.post('/v1/projects/1/datasets')
           .send({ name: 'people' })
           .expect(200);
         // Create draft of form
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
           .expect(200);
         // Patch attachment to change from static CSV to dataset (note: form is still a draft)
-        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
+        await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
           .send({ dataset: true })
           .expect(200);
         // Verify that attachment on published form is still pulling from static csv
-        const { body: publishedAttachments } = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+        const { body: publishedAttachments } = await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
           .expect(200);
         const publishedCSV = publishedAttachments.find(attachment =>
           attachment.name === 'people.csv');
@@ -1629,7 +1624,7 @@ describe('datasets and entities', () => {
           datasetExists: false
         });
         // Verify that attachment on draft is the dataset
-        const { body: draftAttachments } = await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+        const { body: draftAttachments } = await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
           .expect(200);
         const draftCSV = draftAttachments.find(attachment =>
           attachment.name === 'people.csv');
@@ -1990,14 +1985,14 @@ describe('datasets and entities', () => {
         service.login(['alice', 'chelsea'], (asAlice, asChelsea) =>
           Promise.all([
             asAlice.post('/v1/projects/1/forms')
-              .send(testData.forms.withAttachments)
+              .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
               .expect(200),
             asAlice.post('/v1/projects/1/datasets')
-              .send({ name: 'goodone' })
+              .send({ name: 'people' })
               .expect(200)
           ])
-            .then(() => asChelsea.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .then(() => asChelsea.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send({ dataset: true })
               .expect(403)))));
 
@@ -2008,41 +2003,41 @@ describe('datasets and entities', () => {
               .expect(200)
               .then(({ body }) => body.id),
             asAlice.post('/v1/projects/1/forms')
-              .send(testData.forms.withAttachments)
+              .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
               .expect(200),
             asAlice.post('/v1/projects/1/datasets')
-              .send({ name: 'goodone' })
+              .send({ name: 'people' })
               .expect(200)
           ])
-            .then(([chelseaId]) => asAlice.post(`/v1/projects/1/forms/withAttachments/assignments/manager/${chelseaId}`)
+            .then(([chelseaId]) => asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/manager/${chelseaId}`)
               .expect(200))
-            .then(() => asChelsea.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .then(() => asChelsea.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send({ dataset: true })
               .expect(403)))));
 
       it('should link dataset to form using PATCH', testService(async (service) => {
         const asAlice = await service.login('alice');
 
-        // Upload form with attachment goodone.csv
+        // Upload form with attachment people.csv
         await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.withAttachments)
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        // Create dataset with name 'goodone'
+        // Create dataset with name 'people'
         await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'goodone' })
+          .send({ name: 'people' })
           .expect(200);
 
         // Patch attachment in first form to use dataset
-        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+        await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
           .send({ dataset: true })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.FormAttachment();
             omit(['updatedAt'], body).should.be.eql({
-              name: 'goodone.csv',
+              name: 'people.csv',
               type: 'file',
               exists: true,
               blobExists: false,
@@ -2051,15 +2046,15 @@ describe('datasets and entities', () => {
           });
 
         // Publish form with dataset as attachment
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=newversion')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish?version=newversion')
           .expect(200);
 
         // Check that attachment is dataset
-        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.a.FormAttachment();
-            body[0].name.should.equal('goodone.csv');
+            body[0].name.should.equal('people.csv');
             body[0].datasetExists.should.equal(true);
             body[0].updatedAt.should.be.a.recentIsoDate();
           });
@@ -2068,25 +2063,25 @@ describe('datasets and entities', () => {
       it('should return dataset attachment in form manifest', testService(async (service) => {
         const asAlice = await service.login('alice');
 
-        // Create dataset with name 'goodone'
+        // Create dataset with name 'people'
         await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'goodone' })
+          .send({ name: 'people' })
           .expect(200);
 
-        // Upload form to consume dataset as attachment (named goodone.csv)
+        // Upload form to consume dataset as attachment (named people.csv)
         // Dataset will get autolinked to attachment because name matches
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments)
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
         // Fetch the etag on the dataset CSV, which should match the manifest md5
-        const result = await asAlice.get('/v1/projects/1/datasets/goodone/entities.csv')
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200);
         const etag = result.get('ETag');
 
         // Fetch the form manifest
-        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+        const manifest = await asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200)
           .then(({ text }) => text);
@@ -2095,10 +2090,10 @@ describe('datasets and entities', () => {
         manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
     <mediaFile type="entityList">
-      <filename>goodone.csv</filename>
+      <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
-      <integrityUrl>${domain}/v1/projects/1/datasets/goodone/integrity</integrityUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/consumeDatasets/attachments/people.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/people/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
       }));
@@ -2106,29 +2101,29 @@ describe('datasets and entities', () => {
       it('should override blob and link dataset', testService(async (service, { Forms, FormAttachments, Audits, Datasets }) => {
         const asAlice = await service.login('alice');
 
-        // Upload draft form with attachment named 'goodone.csv'
+        // Upload draft form with attachment named 'people.csv'
         await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.withAttachments)
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        // Create dataset with name 'goodone'
+        // Create dataset with name 'people'
         await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'goodone' })
+          .send({ name: 'people' })
           .expect(200);
 
         // Attach a normal csv to the form attachment
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
           .send('test,csv\n1,2')
           .set('Content-Type', 'text/csv')
           .expect(200);
 
         // Check that attachment is currently a blob
-        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.a.FormAttachment();
-            body[0].name.should.equal('goodone.csv');
+            body[0].name.should.equal('people.csv');
             body[0].exists.should.equal(true);
             body[0].datasetExists.should.equal(false);
             body[0].blobExists.should.equal(true);
@@ -2137,19 +2132,19 @@ describe('datasets and entities', () => {
 
         // For bookkeeping later
         // Get blob id of original CSV file
-        const form = await Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion).then((o) => o.get());
-        const attachment = await FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then((o) => o.get());
+        const form = await Forms.getByProjectAndXmlFormId(1, 'consumeDatasets', Form.DraftVersion).then((o) => o.get());
+        const attachment = await FormAttachments.getByFormDefIdAndName(form.draftDefId, 'people.csv').then((o) => o.get());
 
         // Update attachment to link to dataset instead of csv file
-        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+        await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
           .send({ dataset: true });
 
         // Check that attachment is now a dataset
-        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
           .expect(200)
           .then(({ body }) => {
             body[0].should.be.a.FormAttachment();
-            body[0].name.should.equal('goodone.csv');
+            body[0].name.should.equal('people.csv');
             body[0].exists.should.equal(true);
             body[0].datasetExists.should.equal(true);
             body[0].blobExists.should.equal(false);
@@ -2157,11 +2152,11 @@ describe('datasets and entities', () => {
           });
 
         // Check bookkeeping
-        const dataset = await Datasets.get(1, 'goodone').then((o) => o.get());
+        const dataset = await Datasets.get(1, 'people').then((o) => o.get());
         const audit = await Audits.getLatestByAction('form.attachment.update').then((o) => o.get());
         audit.details.should.be.eql({
           formDefId: form.draftDefId,
-          name: 'goodone.csv',
+          name: 'people.csv',
           oldBlobId: attachment.blobId,
           newBlobId: null,
           oldDatasetId: null,
@@ -2169,12 +2164,12 @@ describe('datasets and entities', () => {
         });
 
         // Fetch the etag on the dataset CSV, which should match the manifest md5
-        const result = await asAlice.get('/v1/projects/1/datasets/goodone/entities.csv')
+        const result = await asAlice.get('/v1/projects/1/datasets/people/entities.csv')
           .expect(200);
         const etag = result.get('ETag');
 
         // Fetch the form manifest
-        const manifest = await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+        const manifest = await asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200)
           .then(({ text }) => text);
@@ -2183,10 +2178,10 @@ describe('datasets and entities', () => {
         manifest.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
     <mediaFile type="entityList">
-      <filename>goodone.csv</filename>
+      <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/goodone.csv</downloadUrl>
-      <integrityUrl>${domain}/v1/projects/1/datasets/goodone/integrity</integrityUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/consumeDatasets/attachments/people.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/projects/1/datasets/people/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
       }));
@@ -2194,13 +2189,13 @@ describe('datasets and entities', () => {
       it('should allow an attachment to have a .CSV extension', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments.replace('goodone.csv', 'goodone.CSV'))
+            .send(testData.forms.consumeDatasets.replace('people.csv', 'people.CSV'))
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-              .send(testData.forms.simpleEntity.replace('people', 'goodone'))
+            .then(() => asAlice.post('/v1/projects/1/datasets')
+              .send({ name: 'people' })
               .expect(200))
-            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.CSV')
+            .then(() => asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.CSV')
               .send({ dataset: true })
               .expect(200)
               .then(({ body }) => {
@@ -2211,29 +2206,29 @@ describe('datasets and entities', () => {
       it('should link and unlink dataset on draft form and verify dataset is NOT auto-linked when published ', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments)
+            .send(testData.forms.consumeDatasets)
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/datasets')
-              .send({ name: 'goodone' })
+              .send({ name: 'people' })
               .expect(200))
-            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .then(() => asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send({ dataset: true })
               .expect(200))
-            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .then(() => asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send({ dataset: false })
               .expect(200))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+            .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish')
               .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
               .expect(200)
               .then(({ body }) => {
                 body[0].should.be.a.FormAttachment();
-                body[0].name.should.equal('goodone.csv');
+                body[0].name.should.equal('people.csv');
                 body[0].datasetExists.should.equal(false);
                 body[0].updatedAt.should.be.a.recentIsoDate();
               }))
-            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest')
               .set('X-OpenRosa-Version', '1.0')
               .expect(200)
               .then(({ text }) => {
@@ -2246,42 +2241,42 @@ describe('datasets and entities', () => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/datasets')
-          .send({ name: 'goodone' })
+          .send({ name: 'people' })
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments)
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
         // make draft of form
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
           .expect(200);
 
         // unlink by overwriting csv
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
           .send('test,csv\n1,2')
           .set('Content-Type', 'text/csv')
           .expect(200);
 
         // draft attachments should not be linked to datasets
-        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
           .then(({ body }) => {
             body.map(attachment => attachment.datasetExists).should.eql([false, false]);
           });
 
         // publish draft
-        await asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish?version=2')
+        await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish?version=2')
           .expect(200);
 
         // attachments should still not reference any blobs
-        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
           .then(({ body }) => {
             body.map(attachment => attachment.datasetExists).should.eql([false, false]);
           });
 
         // check dataset
-        await asAlice.get('/v1/projects/1/datasets/goodone')
+        await asAlice.get('/v1/projects/1/datasets/people')
           .then(({ body }) => {
             body.linkedForms.length.should.equal(0);
           });
@@ -2290,10 +2285,10 @@ describe('datasets and entities', () => {
       it('should return error if dataset is not found', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments)
+            .send(testData.forms.consumeDatasets)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .then(() => asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send({ dataset: true })
               .expect(404)))));
 
@@ -2319,18 +2314,19 @@ describe('datasets and entities', () => {
       it('should return error if dataset is not published', testService(async (service) => {
         const asAlice = await service.login('alice');
 
+        // Consumes "people.csv" and "trees.csv" which can be linked to datasets
         await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.withAttachments)
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
         // Dataset created by form is not published until form is published
         await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.simpleEntity.replace(/people/g, 'goodone'))
+          .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+        await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
           .send({ dataset: true })
           .expect(404);
 
@@ -2342,20 +2338,20 @@ describe('datasets and entities', () => {
       it('should link and unlink dataset from the form while form is a draft and not auto-link dataset on publish', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments)
+            .send(testData.forms.consumeDatasets)
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/datasets')
-              .send({ name: 'goodone' })
+              .send({ name: 'people' })
               .expect(200))
-            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .then(() => asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send({ dataset: true })
               .expect(200))
-            .then(() => asAlice.delete('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .then(() => asAlice.delete('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .expect(200))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+            .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish')
               .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest')
               .set('X-OpenRosa-Version', '1.0')
               .expect(200)
               .then(({ text }) => {
@@ -2373,11 +2369,11 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms')
-              .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+              .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
               .expect(200)
               .then(() =>
-                Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion)
+                Forms.getByProjectAndXmlFormId(1, 'consumeDatasets', Form.DraftVersion)
                   .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                     .then(attachment => {
                       attachment.get().datasetId.should.not.be.null();
@@ -2390,19 +2386,19 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms')
-              .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+              .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
               .expect(200))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft')
-              .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+            .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
+              .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
               .expect(200))
             .then(() =>
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion)
+              Forms.getByProjectAndXmlFormId(1, 'consumeDatasets', Form.DraftVersion)
                 .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
                     should(attachment.get().datasetId).be.null();
@@ -2411,23 +2407,22 @@ describe('datasets and entities', () => {
 
       it('should link dataset if previous version does not have blob or dataset linked', testService((service, { Forms, FormAttachments }) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
+          asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms')
-              .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+              .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
               .expect(200))
-            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/people.csv')
+            .then(() => asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send({ dataset: false })
               .expect(200))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft')
-              .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+            .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
+              .send(testData.forms.consumeDatasets)
               .set('Content-Type', 'application/xml')
               .expect(200))
             .then(() =>
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion)
+              Forms.getByProjectAndXmlFormId(1, 'consumeDatasets', Form.DraftVersion)
                 .then(form => FormAttachments.getByFormDefIdAndName(form.get().def.id, 'people.csv')
                   .then(attachment => {
                     should(attachment.get().datasetId).not.be.null();
@@ -2437,9 +2432,8 @@ describe('datasets and entities', () => {
       // Verifying autolinking happens only for attachment with "file" type
       it('should not set datasetId of non-file type attachment', testService((service, { Forms, FormAttachments }) =>
         service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
+          asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms')
               .send(testData.forms.withAttachments.replace(/goodtwo.mp3/g, 'people'))
@@ -2832,21 +2826,21 @@ describe('datasets and entities', () => {
       it('should throw problem if blobId and datasetId are being set', testService((service, { Forms, FormAttachments, Datasets }) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments)
+            .send(testData.forms.consumeDatasets)
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/datasets')
-              .send({ name: 'goodone' })
+              .send({ name: 'people' })
               .expect(200))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send('test,csv\n1,2')
               .set('Content-Type', 'text/csv')
               .expect(200))
             .then(() => Promise.all([
-              Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion).then((o) => o.get()),
-              Datasets.get(1, 'goodone').then((o) => o.get())
+              Forms.getByProjectAndXmlFormId(1, 'consumeDatasets', Form.DraftVersion).then((o) => o.get()),
+              Datasets.get(1, 'people').then((o) => o.get())
             ]))
-            .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'goodone.csv').then((o) => o.get())
+            .then(([form, dataset]) => FormAttachments.getByFormDefIdAndName(form.draftDefId, 'people.csv').then((o) => o.get())
               .then((attachment) => FormAttachments.update(form, attachment, 1, dataset.id)
                 .catch(error => {
                   error.constraint.should.be.equal('check_blobId_or_datasetId_is_null');
@@ -2858,8 +2852,9 @@ describe('datasets and entities', () => {
             .send(testData.forms.withAttachments)
             .set('Content-Type', 'application/xml')
             .expect(200)
-            .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-              .send(testData.forms.simpleEntity))
+            .then(() => asAlice.post('/v1/projects/1/datasets')
+              .send({ name: 'people' })
+              .expect(200))
             .then(() => Promise.all([
               Forms.getByProjectAndXmlFormId(1, 'withAttachments', Form.DraftVersion).then((o) => o.get()),
               Datasets.get(1, 'people').then((o) => o.get())
@@ -2926,13 +2921,15 @@ describe('datasets and entities', () => {
     describe('projects/:id/forms/:formId/attachments/:name (entities dataset)', () => {
 
       const createBothForms = async (asAlice) => {
+        // Creates and publishes a "people" dataset that can be written to with submissions
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity.replace(/people/g, 'goodone'))
+          .send(testData.forms.simpleEntity)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
+        // Creates a form that can read from the "people" dataset
         await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.withAttachments)
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
       };
@@ -2940,27 +2937,27 @@ describe('datasets and entities', () => {
       it('should return entities csv', testService((service, container) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
-            .send(testData.forms.withAttachments)
+            .send(testData.forms.consumeDatasets)
             .set('Content-Type', 'application/xml')
             .expect(200)
             .then(() => asAlice.post('/v1/projects/1/forms?publish=true')
-              .send(testData.forms.simpleEntity.replace(/people/g, 'goodone'))
+              .send(testData.forms.simpleEntity)
               .set('Content-Type', 'application/xml')
               .expect(200))
             .then(() => asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-              .send(testData.instances.simpleEntity.one.replace(/people/g, 'goodone'))
+              .send(testData.instances.simpleEntity.one)
               .set('Content-Type', 'application/xml')
               .expect(200))
             .then(() => exhaust(container))
-            .then(() => asAlice.patch('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+            .then(() => asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
               .send({ dataset: true })
               .expect(200))
-            .then(() => asAlice.post('/v1/projects/1/forms/withAttachments/draft/publish')
+            .then(() => asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish')
               .expect(200))
-            .then(() => asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+            .then(() => asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
               .expect(200)
               .then(({ headers, text }) => {
-                headers['content-disposition'].should.equal('attachment; filename="goodone.csv"; filename*=UTF-8\'\'goodone.csv');
+                headers['content-disposition'].should.equal('attachment; filename="people.csv"; filename*=UTF-8\'\'people.csv');
                 headers['content-type'].should.equal('text/csv; charset=utf-8');
                 text.should.equal('name,label,__version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n');
               })))));
@@ -2971,17 +2968,17 @@ describe('datasets and entities', () => {
         await createBothForms(asAlice);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-          .send(testData.instances.simpleEntity.one.replace(/people/g, 'goodone'))
+          .send(testData.instances.simpleEntity.one)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
         await exhaust(container);
 
-        const token = await asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+        const token = await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft')
           .expect(200)
           .then(({ body }) => body.draftToken);
 
-        await service.get(`/v1/test/${token}/projects/1/forms/withAttachments/draft/attachments/goodone.csv`)
+        await service.get(`/v1/test/${token}/projects/1/forms/consumeDatasets/draft/attachments/people.csv`)
           .expect(200)
           .then(({ text }) => { text.should.equal('name,label,__version,first_name,age\n12345678-1234-4123-8234-123456789abc,Alice (88),1,Alice,88\n'); });
 
@@ -2992,27 +2989,24 @@ describe('datasets and entities', () => {
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .send(testData.forms.simpleEntity
-            .replace(/people/g, 'goodone')
             .replace(/age/g, 'the.age'))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
           .send(testData.instances.simpleEntity.one
-            .replace(/people/g, 'goodone')
             .replace(/age/g, 'the.age'))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
         await exhaust(container);
 
-
         await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.withAttachments)
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
           .expect(200)
           .then(({ text }) => {
             text.should.equal('name,label,__version,first_name,the.age\n' +
@@ -3026,7 +3020,7 @@ describe('datasets and entities', () => {
 
         await createBothForms(asAlice);
 
-        await asAlice.post('/v1/projects/1/datasets/goodone/entities')
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
           .send({
             uuid: '12345678-1234-4123-8234-111111111aaa',
             label: 'Johnny Doe',
@@ -3034,7 +3028,7 @@ describe('datasets and entities', () => {
           })
           .expect(200);
 
-        await asAlice.post('/v1/projects/1/datasets/goodone/entities')
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
           .send({
             uuid: '12345678-1234-4123-8234-111111111bbb',
             label: 'Robert Doe',
@@ -3042,9 +3036,9 @@ describe('datasets and entities', () => {
           })
           .expect(200);
 
-        await asAlice.delete('/v1/projects/1/datasets/goodone/entities/12345678-1234-4123-8234-111111111bbb');
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb');
 
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+        const result = await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
           .expect(200)
           .then(r => r.text);
 
@@ -3057,7 +3051,7 @@ describe('datasets and entities', () => {
 
         await createBothForms(asAlice);
 
-        await asAlice.post('/v1/projects/1/datasets/goodone/entities')
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
           .send({
             uuid: '12345678-1234-4123-8234-111111111aaa',
             label: 'Johnny Doe',
@@ -3065,14 +3059,14 @@ describe('datasets and entities', () => {
           })
           .expect(200);
 
-        await asAlice.patch('/v1/projects/1/datasets/goodone/entities/12345678-1234-4123-8234-111111111aaa?force=true')
+        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa?force=true')
           .send({
             data: { first_name: 'Robert', age: '' },
             label: 'Robert Doe (expired)'
           })
           .expect(200);
 
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/goodone.csv')
+        const result = await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
           .expect(200)
           .then(r => r.text);
 
@@ -3108,11 +3102,11 @@ describe('datasets and entities', () => {
         const etag = result.get('ETag');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200)
           .then(({ text }) => {
@@ -3122,7 +3116,7 @@ describe('datasets and entities', () => {
     <mediaFile type="entityList">
       <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/consumeDatasets/attachments/people.csv</downloadUrl>
       <integrityUrl>${domain}/v1/projects/1/datasets/people/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
@@ -3143,11 +3137,11 @@ describe('datasets and entities', () => {
         const etag = result.get('ETag');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200)
           .then(({ text }) => {
@@ -3157,7 +3151,7 @@ describe('datasets and entities', () => {
     <mediaFile type="approvalEntityList">
       <filename>people.csv</filename>
       <hash>md5:${etag.replace(/"/g, '')}</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/attachments/people.csv</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/consumeDatasets/attachments/people.csv</downloadUrl>
       <integrityUrl>${domain}/v1/projects/1/datasets/people/integrity</integrityUrl>
     </mediaFile>
   </manifest>`);
@@ -3185,11 +3179,11 @@ describe('datasets and entities', () => {
         await exhaust(container);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        const result = await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
           .expect(200);
 
         result.text.should.be.eql(
@@ -3199,7 +3193,7 @@ describe('datasets and entities', () => {
 
         const etag = result.get('ETag');
 
-        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
           .set('If-None-Match', etag)
           .expect(304);
 
@@ -3221,11 +3215,11 @@ describe('datasets and entities', () => {
         await exhaust(container);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        const result = await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
           .expect(200);
 
         result.text.should.be.eql(
@@ -3239,7 +3233,7 @@ describe('datasets and entities', () => {
           .send({ data: { age: '33' } })
           .expect(200);
 
-        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
           .set('If-None-Match', etag)
           .expect(200); // Not 304, content HAS been modified
       }));
@@ -3266,11 +3260,11 @@ describe('datasets and entities', () => {
         await exhaust(container);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        const result = await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        const result = await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
           .expect(200);
 
         result.text.should.be.eql(
@@ -3284,7 +3278,7 @@ describe('datasets and entities', () => {
         await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .expect(200);
 
-        await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
           .set('If-None-Match', etag)
           .expect(200); // Not 304, content HAS been modified
       }));
@@ -3293,12 +3287,12 @@ describe('datasets and entities', () => {
         const asAlice = await service.login('alice');
 
         const draftToken = await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+          .send(testData.forms.consumeDatasets)
           .set('Content-Type', 'application/xml')
           .expect(200)
           .then(({ body }) => body.draftToken);
 
-        const etag = await service.get(`/v1/test/${draftToken}/projects/1/forms/withAttachments/draft/attachments/people.csv`)
+        const etag = await service.get(`/v1/test/${draftToken}/projects/1/forms/consumeDatasets/draft/attachments/people.csv`)
           .expect(200)
           .then(result => result.get('ETag'));
 
@@ -3309,7 +3303,7 @@ describe('datasets and entities', () => {
           })
           .expect(200);
 
-        await service.get(`/v1/test/${draftToken}/projects/1/forms/withAttachments/draft/attachments/people.csv`)
+        await service.get(`/v1/test/${draftToken}/projects/1/forms/consumeDatasets/draft/attachments/people.csv`)
           .expect(200)
           .then(result => {
             const secondEtag = result.get('ETag');
@@ -4450,6 +4444,7 @@ describe('datasets and entities', () => {
               .set('Content-Type', 'text/xml')
               .expect(200);
 
+            // Bob cannot upload second version because it creates a new dataset
             await asBob.post('/v1/projects/1/forms/simpleEntity/draft')
               .send(testData.forms.simpleEntity.replace(/people/g, 'trees'))
               .set('Content-Type', 'text/xml')
@@ -6328,11 +6323,10 @@ describe('datasets and entities', () => {
       // Publish a form that uses the entity list, linking a form attachment to
       // the entity list.
       await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.withAttachments
-          .replace('goodone.csv', 'people.csv'))
+        .send(testData.forms.consumeDatasets)
         .set('Content-Type', 'application/xml')
         .expect(200);
-      await asAlice.get('/v1/projects/1/forms/withAttachments/attachments')
+      await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments')
         .expect(200)
         .then(({ body }) => {
           const csv = body.find(attachment => attachment.name === 'people.csv');
@@ -6396,7 +6390,7 @@ describe('datasets and entities', () => {
         .expect(200);
 
       // All entities are returned to Alice.
-      await asAlice.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+      await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
         .expect(200)
         .then(({ text }) => {
           parseLabels(text).should.eqlInAnyOrder(['Made by Alice', 'Made by Bob']);
@@ -6419,7 +6413,7 @@ describe('datasets and entities', () => {
       await createData(asAlice);
 
       // All entities (i.e., the one created by Alice) are returned to Bob.
-      await asBob.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+      await asBob.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
         .expect(200)
         .then(({ text }) => {
           parseLabels(text).should.eql(['Made by Alice']);
@@ -6443,7 +6437,7 @@ describe('datasets and entities', () => {
       await assignToProject(asAlice, asChelsea, 'viewer');
 
       // All entities (i.e., the one created by Alice) are returned to Chelsea.
-      await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+      await asChelsea.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
         .expect(200)
         .then(({ text }) => {
           parseLabels(text).should.eql(['Made by Alice']);
@@ -6466,14 +6460,14 @@ describe('datasets and entities', () => {
       await createData(asAlice);
 
       // Create a form draft.
-      await asAlice.post('/v1/projects/1/forms/withAttachments/draft')
+      await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft')
         .expect(200);
-      const draftToken = await asAlice.get('/v1/projects/1/forms/withAttachments/draft')
+      const draftToken = await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft')
         .expect(200)
         .then(({ body }) => body.draftToken);
 
       // All entities (i.e., the one created by Alice) are returned from /v1/test.
-      await service.get(`/v1/test/${draftToken}/projects/1/forms/withAttachments/draft/attachments/people.csv`)
+      await service.get(`/v1/test/${draftToken}/projects/1/forms/consumeDatasets/draft/attachments/people.csv`)
         .expect(200)
         .then(({ text }) => {
           parseLabels(text).should.eql(['Made by Alice']);
@@ -6493,7 +6487,7 @@ describe('datasets and entities', () => {
       await exhaust(container);
 
       // Only the entity that Chelsea created is returned.
-      await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+      await asChelsea.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
         .expect(200)
         .then(({ text }) => {
           parseLabels(text).should.eql(['Alice (88)']);
@@ -6511,7 +6505,7 @@ describe('datasets and entities', () => {
         .expect(200);
 
       // All entities (i.e., the one created by Alice) are returned to Chelsea.
-      await asChelsea.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+      await asChelsea.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
         .expect(200)
         .then(({ text }) => {
           parseLabels(text).should.eql(['Made by Alice']);
@@ -6523,12 +6517,12 @@ describe('datasets and entities', () => {
     // in a transaction, which freezes some timestamps.
     describe('OpenRosa hash', () => {
       const getHash = async (asUser) => {
-        const hash = await asUser.get('/v1/projects/1/forms/withAttachments/attachments/people.csv')
+        const hash = await asUser.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
           .expect(200)
           .then(response => response.get('ETag').replaceAll('"', ''));
 
         // Check that the hash from the REST API matches the OpenRosa manifest.
-        const { text: manifest } = await asUser.get('/v1/projects/1/forms/withAttachments/manifest')
+        const { text: manifest } = await asUser.get('/v1/projects/1/forms/consumeDatasets/manifest')
           .set('X-OpenRosa-Version', '1.0')
           .expect(200);
         manifest.replace(/\s/g, '').should.containEql(`<filename>people.csv</filename><hash>md5:${hash}</hash>`);
@@ -6858,7 +6852,7 @@ describe('datasets and entities', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+        .send(testData.forms.consumeDatasets)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -6866,7 +6860,7 @@ describe('datasets and entities', () => {
         .send({ displayName: 'test' })
         .then(({ body }) => body);
 
-      await asAlice.post(`/v1/projects/1/forms/withAttachments/assignments/app-user/${appUser.id}`);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`);
 
       await service.get(`/v1/key/${appUser.token}/projects/1/datasets/people/integrity`)
         .set('X-OpenRosa-Version', '1.0')
@@ -6881,7 +6875,7 @@ describe('datasets and entities', () => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.withAttachments.replace(/goodone/g, 'people'))
+        .send(testData.forms.consumeDatasets)
         .set('Content-Type', 'application/xml')
         .expect(200);
 
@@ -6889,9 +6883,9 @@ describe('datasets and entities', () => {
         .send({ displayName: 'test' })
         .then(({ body }) => body);
 
-      await asAlice.post(`/v1/projects/1/forms/withAttachments/assignments/app-user/${appUser.id}`);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`);
 
-      await asAlice.patch('/v1/projects/1/forms/withAttachments')
+      await asAlice.patch('/v1/projects/1/forms/consumeDatasets')
         .send({ state: 'closed' })
         .expect(200);
 
