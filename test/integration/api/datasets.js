@@ -2402,7 +2402,7 @@ describe('datasets and entities', () => {
     });
 
     describe('autolink dataset to attachments', () => {
-      it('should set datasetId of attachment on form draft upload', testService((service) =>
+      it('should link dataset to matching attachment on form draft upload', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/datasets')
             .send({ name: 'people' })
