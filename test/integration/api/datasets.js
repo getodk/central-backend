@@ -3890,12 +3890,11 @@ describe('datasets and entities', () => {
       }));
 
       it('should throw an error when a saveto is on a field inside a repeat group', testService(async (service) => {
-        // Entities made from repeat groups are not yet supported. pyxform also throws an error about this.
         const form = `<?xml version="1.0"?>
         <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
           <h:head>
             <h:title>Repeat Children Entities</h:title>
-            <model entities:entities-version="2024.1.0" odk:xforms-version="1.0.0">
+            <model entities:entities-version="2025.1.0" odk:xforms-version="1.0.0">
               <instance>
                 <data id="repeat_entity" version="2">
                   <num_children/>
@@ -3943,7 +3942,7 @@ describe('datasets and entities', () => {
           .expect(400)
           .then(({ body }) => {
             body.code.should.equal(400.25);
-            body.details.reason.should.equal('Currently, entities cannot be populated from fields in repeat groups.');
+            body.details.reason.should.equal('Cannot save properties from a repeat on an entity outside of a repeat.');
           });
       }));
 
