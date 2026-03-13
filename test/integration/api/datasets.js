@@ -7421,6 +7421,151 @@ describe('datasets and entities', () => {
       const entities = await container.oneFirst(sql`SELECT COUNT(1) FROM entities`);
       entities.should.be.eql(0);
     }));
+
+    it('should restrict restoring a Form that writes to a deleted dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // create a dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // delete the form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // purge the dataset
+      await container.Datasets.purge(true, 1, 'people');
+
+      // get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
+
+    it('should restrict restoring a Form that is linked to a deleted dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.consumeDatasets)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the form
+      await asAlice.delete('/v1/projects/1/forms/consumeDatasets')
+        .expect(200);
+
+      // Delete one of the datasets
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // Purge the dataset
+      await container.Datasets.purge(true, 1, 'people');
+
+      // Get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // Try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
+
+    it('should restrict restoring a Form that is both linked and writes to a deleted dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create the people dataset that createUpdateEntity form will both consume and write to
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'full_name' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'age' })
+        .expect(200);
+
+      // Create form that both writes to and consumes the dataset
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.createUpdateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the form
+      await asAlice.delete('/v1/projects/1/forms/createUpdateEntity')
+        .expect(200);
+
+      // Delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // Purge the dataset
+      await container.Datasets.purge(true, 1, 'people');
+
+      // Get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // Try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
+
+    it('should restrict restoring a Form that writes to a deleted property', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // Delete one of the properties that the form writes to
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+
+      // Get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // Try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
   });
 
   describe('api: DELETE /projects/:id/dataset/:name/properties/:propertyName', () => {
@@ -7874,5 +8019,397 @@ describe('datasets and entities', () => {
       const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(o => o.get());
       entity.aux.currentVersion.data.should.not.have.property('first_name');
     }));
+  });
+
+  describe('dataset query module', () => {
+    describe('getTargetDatasetsAndProperties', () => {
+      it('should return empty array if form does not write to any datasets', testService(async (service, container) => {
+        // simple form does not write to any dataset
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simple');
+        rows.should.eql([]);
+      }));
+
+      it('should return one dataset and its properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        rows.length.should.equal(2);
+        rows.every(r => r.name === 'people').should.be.true();
+        const propNames = rows.map(r => r.aux.properties.get().name);
+        propNames.should.eql(['first_name', 'age']);
+      }));
+
+      it('should return only properties the form writes to, not all dataset properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create dataset with multiple properties
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'first_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(200);
+
+        // extra property
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'last_name' })
+          .expect(200);
+
+        // simpleEntity form writes to first_name and age (not last_name)
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        rows.length.should.equal(2);
+        const propNames = rows.map(r => r.aux.properties.get().name);
+        propNames.should.eql(['first_name', 'age']);
+      }));
+
+      it('should return datasets and property info for the draft version as well', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create form as draft (not published)
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // simpleEntity writes to two properties: first_name and age
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        rows.length.should.equal(2);
+        rows.every(r => r.name === 'people').should.be.true();
+        const propNames = rows.map(r => r.aux.properties.get().name).sort();
+        propNames.should.eql(['age', 'first_name']);
+      }));
+
+      it('should return dataset even when there are no properties written to', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Form that creates entities but doesn't write to any properties
+        const formWithoutProps = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
+            <h:head>
+              <model entities:entities-version="2024.1.0">
+                <instance>
+                  <data id="noProps" orx:version="1.0">
+                    <name/>
+                    <meta>
+                      <entity dataset="things" id="" create="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+              </model>
+            </h:head>
+          </h:html>`;
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(formWithoutProps)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'noProps');
+        rows.length.should.equal(1);
+        rows[0].name.should.equal('things');
+        rows[0].aux.properties.isDefined().should.be.false();
+      }));
+
+      it('should return same dataset and properties when published and draft form write to same dataset', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Publish a form that writes to 'people' dataset
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Create a draft of the same form that also writes to 'people' dataset
+        const draftForm = testData.forms.simpleEntity
+          .replace('orx:version="1.0"', 'orx:version="2.0"');
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .send(draftForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        // Should return properties from both published and draft (same dataset)
+        rows.length.should.equal(2);
+        rows.every(r => r.name === 'people').should.be.true();
+        const propNames = rows.map(r => r.aux.properties.get().name).sort();
+        propNames.should.eql(['age', 'first_name']);
+      }));
+
+      it('should return datasets from both published and draft when they write to different datasets', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Publish a form that writes to 'people' dataset
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Create a draft that writes to a different dataset ('trees')
+        const draftForm = testData.forms.simpleEntity
+          .replace('orx:version="1.0"', 'orx:version="2.0"')
+          .replace('dataset="people"', 'dataset="trees"')
+          .replace('entities:saveto="first_name"', 'entities:saveto="species"')
+          .replace('entities:saveto="age"', 'entities:saveto="circumference"');
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .send(draftForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        // Should return properties from both datasets
+        const datasetNames = [...new Set(rows.map(r => r.name))].sort();
+        datasetNames.should.eql(['people', 'trees']);
+
+        const peopleProps = rows.filter(r => r.name === 'people').map(r => r.aux.properties.get().name).sort();
+        peopleProps.should.eql(['age', 'first_name']);
+
+        const treesProps = rows.filter(r => r.name === 'trees').map(r => r.aux.properties.get().name).sort();
+        treesProps.should.eql(['circumference', 'species']);
+
+        // abondon the draft
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity/draft')
+          .expect(200);
+
+        const rowsUpdated = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        rowsUpdated.every(r => r.name === 'people').should.be.true();
+        rowsUpdated.map(r => r.aux.properties.get().name).sort().should.eql(['age', 'first_name']);
+      }));
+    });
+
+    describe('getLinkedDatasets', () => {
+      it('should return empty array if form is not using dataset as attachment', testService(async (service, container) => {
+        const rows = await container.Datasets.getLinkedDatasets(1, 'simple');
+        rows.should.eql([]);
+      }));
+
+      it('should return one dataset and all of its properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create dataset with properties
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'goodone' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/properties')
+          .send({ name: 'first_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/properties')
+          .send({ name: 'last_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getLinkedDatasets(1, 'withAttachments');
+        rows.length.should.equal(2);
+        rows.filter(r => r.name === 'goodone').length.should.equal(2);
+        rows.map(r => r.aux.properties.get().name).should.eql(['first_name', 'last_name']);
+      }));
+
+      it('should return multiple datasets and all of their properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create two datasets with properties
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'fullname' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'location' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.consumeDatasets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getLinkedDatasets(1, 'consumeDatasets');
+        const datasetNames = [...new Set(rows.map(r => r.name))];
+        datasetNames.should.containDeep(['people', 'trees']);
+      }));
+
+      it('should return one dataset and 0 properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'goodone' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getLinkedDatasets(1, 'withAttachments');
+        rows.length.should.equal(1);
+        rows.filter(r => r.name === 'goodone').length.should.equal(1);
+        rows.filter(r => r.aux.properties.isDefined()).length.should.eql(0);
+      }));
+
+      it('should not return deleted properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create dataset with properties
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'first_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'last_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.consumeDatasets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Delete one property
+        await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+          .expect(200);
+
+        const rows = await container.Datasets.getLinkedDatasets(1, 'consumeDatasets');
+        const datasetNames = rows.map(r => r.name);
+        datasetNames.should.eql(['people', 'trees']);
+        const propertyNames = rows
+          .filter(r => r.name === 'people')
+          .map(r => r.aux.properties.get().name);
+        propertyNames.should.eql(['last_name']);
+      }));
+    });
+
+    describe('getRelatedDatasetsOfForm', () => {
+      it('should return target dataset for a form that only writes to a dataset', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // simpleEntity form writes to the 'people' dataset with properties first_name and age
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await container.Datasets.getRelatedDatasetsOfForm(1, 'simpleEntity');
+
+        // Should have target datasets (writes to) but no linked datasets (consumes)
+        result.targetDatasets.length.should.equal(1);
+        result.targetDatasets[0].name.should.equal('people');
+        result.targetDatasets[0].properties.map(p => p.name).should.eql(['first_name', 'age']);
+
+        result.linkedDatasets.should.eql([]);
+      }));
+
+      it('should return linked datasets for a form that only consumes datasets', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create datasets with properties that consumeDatasets form will consume
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'fullname' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'species' })
+          .expect(200);
+
+        // consumeDatasets form consumes people and trees datasets but doesn't write to any
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.consumeDatasets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await container.Datasets.getRelatedDatasetsOfForm(1, 'consumeDatasets');
+
+        // Should have linked datasets (consumes) but no target datasets (writes to)
+        result.targetDatasets.should.eql([]);
+
+        result.linkedDatasets.length.should.equal(2);
+        const linkedNames = result.linkedDatasets.map(d => d.name).sort();
+        linkedNames.should.eql(['people', 'trees']);
+        result.linkedDatasets.find(r => r.name === 'people').properties.map(p => p.name).should.eql(['fullname', 'age']);
+        result.linkedDatasets.find(r => r.name === 'trees').properties.map(p => p.name).should.eql(['species']);
+      }));
+
+      it('should return both target and linked datasets for a form that writes and consumes', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create the people dataset first so the form can consume it
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'full_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(200);
+
+        // createUpdateEntity form both writes to and consumes the people dataset
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.createUpdateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await container.Datasets.getRelatedDatasetsOfForm(1, 'createUpdateEntity');
+
+        // Should have both target datasets (writes to) and linked datasets (consumes)
+        result.targetDatasets.length.should.equal(1);
+        result.targetDatasets[0].name.should.equal('people');
+        result.targetDatasets[0].properties.map(p => p.name).sort().should.eql(['age', 'full_name']);
+
+        result.linkedDatasets.length.should.equal(1);
+        result.linkedDatasets[0].name.should.equal('people');
+        result.linkedDatasets[0].properties.map(p => p.name).sort().should.eql(['age', 'full_name']);
+      }));
+    });
   });
 });

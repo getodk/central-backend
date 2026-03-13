@@ -867,6 +867,166 @@ module.exports = {
   </h:body>
 </h:html>
 `,
+    createUpdateEntity: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+    <h:head>
+        <h:title>Create Update Entity</h:title>
+        <model odk:xforms-version="1.0.0" entities:entities-version="2024.1.0">
+            <instance>
+                <data id="createUpdateEntity" version="20260303144219">
+                    <create_new_person/>
+                    <existing>
+                        <person/>
+                        <update_full_name/>
+                        <update_age/>
+                    </existing>
+                    <new>
+                        <new_full_name/>
+                        <new_age/>
+                    </new>
+                    <full_name/>
+                    <age/>
+                    <meta>
+                        <instanceID/>
+                        <entity dataset="people" id="" update="1" baseVersion="" trunkVersion="" branchId="" create="1">
+                            <label/>
+                        </entity>
+                    </meta>
+                </data>
+            </instance>
+            <instance id="people" src="jr://file-csv/people.csv"/>
+            <instance id="yesno">
+                <root>
+                    <item>
+                        <name>yes</name>
+                        <label>Yes</label>
+                    </item>
+                    <item>
+                        <name>no</name>
+                        <label>No</label>
+                    </item>
+                </root>
+            </instance>
+            <bind nodeset="/data/create_new_person" type="string"/>
+            <bind nodeset="/data/existing" relevant=" /data/create_new_person  = 'no'"/>
+            <bind nodeset="/data/existing/person" type="string"/>
+            <bind nodeset="/data/existing/update_full_name" type="string"/>
+            <bind nodeset="/data/existing/update_age" type="string"/>
+            <bind nodeset="/data/new" relevant=" /data/create_new_person  = 'yes'"/>
+            <bind nodeset="/data/new/new_full_name" type="string"/>
+            <bind nodeset="/data/new/new_age" type="string"/>
+            <bind nodeset="/data/full_name" type="string" entities:saveto="full_name" calculate="if ( /data/create_new_person  = 'yes',  /data/new/new_full_name ,  /data/existing/update_full_name )"/>
+            <bind nodeset="/data/age" type="string" entities:saveto="age" calculate="if ( /data/create_new_person  = 'yes',  /data/new/new_age ,  /data/existing/update_age )"/>
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+            <bind nodeset="/data/meta/entity/@create" calculate=" /data/existing/person  = ''" type="string" readonly="true()"/>
+            <bind nodeset="/data/meta/entity/@id" type="string" readonly="true()" calculate="if ( /data/existing/person  != '',  /data/existing/person , uuid())"/>
+            <setvalue ref="/data/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
+            <bind nodeset="/data/meta/entity/@update" calculate=" /data/existing/person  != ''" type="string" readonly="true()"/>
+            <bind nodeset="/data/meta/entity/@baseVersion" calculate="instance('people')/root/item[name=if ( /data/existing/person  != '',  /data/existing/person , uuid())]/__version" type="string" readonly="true()"/>
+            <bind nodeset="/data/meta/entity/@trunkVersion" calculate="instance('people')/root/item[name=if ( /data/existing/person  != '',  /data/existing/person , uuid())]/__trunkVersion" type="string" readonly="true()"/>
+            <bind nodeset="/data/meta/entity/@branchId" calculate="instance('people')/root/item[name=if ( /data/existing/person  != '',  /data/existing/person , uuid())]/__branchId" type="string" readonly="true()"/>
+            <bind nodeset="/data/meta/entity/label" calculate="concat( /data/full_name , &quot; - &quot;,  /data/age )" type="string" readonly="true()"/>
+        </model>
+    </h:head>
+    <h:body>
+        <select1 ref="/data/create_new_person">
+            <label>Create new person?</label>
+            <itemset nodeset="instance('yesno')/root/item">
+                <value ref="name"/>
+                <label ref="label"/>
+            </itemset>
+        </select1>
+        <group ref="/data/existing">
+            <label>Update existing person</label>
+            <select1 ref="/data/existing/person">
+                <label>Select existing person to update</label>
+                <itemset nodeset="instance('people')/root/item">
+                    <value ref="name"/>
+                    <label ref="label"/>
+                </itemset>
+                <setvalue ref="/data/existing/update_full_name" event="xforms-value-changed" value="instance('people')/root/item[name= /data/existing/person ]/full_name"/>
+                <setvalue ref="/data/existing/update_age" event="xforms-value-changed" value="instance('people')/root/item[name= /data/existing/person ]/age"/>
+            </select1>
+            <input ref="/data/existing/update_full_name">
+                <label>Update the person's name</label>
+            </input>
+            <input ref="/data/existing/update_age">
+                <label>Update the person's age</label>
+            </input>
+        </group>
+        <group ref="/data/new">
+            <label>Create new person</label>
+            <input ref="/data/new/new_full_name">
+                <label>Enter the person's name</label>
+            </input>
+            <input ref="/data/new/new_age">
+                <label>Enter the person's age</label>
+            </input>
+        </group>
+    </h:body>
+</h:html>`,
+
+    consumeDatasets: `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
+    <h:head>
+        <h:title>Consume Datasets: People & Trees</h:title>
+        <model odk:xforms-version="1.0.0">
+            <instance>
+                <data id="consumeDatasets" version="20260303145747">
+                    <person/>
+                    <tree/>
+                    <person_label/>
+                    <tree_label/>
+                    <person_tree/>
+                    <meta>
+                        <instanceID/>
+                        <instanceName/>
+                    </meta>
+                </data>
+            </instance>
+            <instance id="people" src="jr://file-csv/people.csv"/>
+            <instance id="trees" src="jr://file-csv/trees.csv"/>
+            <instance id="yesno">
+                <root>
+                    <item>
+                        <name>yes</name>
+                        <label>Yes</label>
+                    </item>
+                    <item>
+                        <name>no</name>
+                        <label>No</label>
+                    </item>
+                </root>
+            </instance>
+            <bind nodeset="/data/person" type="string"/>
+            <bind nodeset="/data/tree" type="string"/>
+            <bind nodeset="/data/person_label" type="string" calculate="instance('people')/root/item[name= /data/person ]/label"/>
+            <bind nodeset="/data/tree_label" type="string" calculate="instance('trees')/root/item[name= /data/tree ]/label"/>
+            <bind nodeset="/data/person_tree" readonly="true()" type="string" calculate="concat( /data/person_label , &quot; planted &quot;,  /data/tree_label )"/>
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+            <bind nodeset="/data/meta/instanceName" type="string" calculate=" /data/person_tree "/>
+        </model>
+    </h:head>
+    <h:body>
+        <select1 ref="/data/person">
+            <label>Select person</label>
+            <itemset nodeset="instance('people')/root/item">
+                <value ref="name"/>
+                <label ref="label"/>
+            </itemset>
+        </select1>
+        <select1 ref="/data/tree">
+            <label>Select tree</label>
+            <itemset nodeset="instance('trees')/root/item">
+                <value ref="name"/>
+                <label ref="label"/>
+            </itemset>
+        </select1>
+        <input ref="/data/person_tree">
+            <label>This person planted this tree</label>
+        </input>
+    </h:body>
+</h:html>`,
 
     createUpdateEntity: `<?xml version="1.0"?>
 <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
