@@ -7197,10 +7197,35 @@ describe('datasets and entities', () => {
         .expect(409)
         .then(({ body }) => {
           body.code.should.equal(409.21);
+          body.details.sourceForms.should.eql([
+            { xmlFormId: 'simpleEntityClone', name: 'simpleEntityClone', draft: true }
+          ]);
         });
     }));
 
-    it('should reject if there is a draft Form updating the dataset', testService(async (service) => {
+    it('should reject if there is a draft Form and published Form updating the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+          body.details.sourceForms.should.eql([
+            { xmlFormId: 'simpleEntity', name: 'simpleEntity', draft: false },
+            { xmlFormId: 'simpleEntity', name: 'simpleEntity', draft: true }
+          ]);
+        });
+    }));
+
+    it('should reject if there is a draft Form and a published Form write to different datasets', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets')
@@ -7222,6 +7247,19 @@ describe('datasets and entities', () => {
         .then(({ body }) => {
           body.code.should.equal(409.21);
         });
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2')
+        .expect(200);
+
+      // able to delete people because it is no longer written to by the Form
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
     }));
 
     it('should reject if there is a Form consuming the dataset', testService(async (service) => {
@@ -7240,6 +7278,9 @@ describe('datasets and entities', () => {
         .expect(409)
         .then(({ body }) => {
           body.code.should.equal(409.21);
+          body.details.linkedForms.should.eql([
+            { xmlFormId: 'withAttachments', name: 'withAttachments', draft: false }
+          ]);
         });
     }));
 
@@ -7259,6 +7300,9 @@ describe('datasets and entities', () => {
         .expect(409)
         .then(({ body }) => {
           body.code.should.equal(409.21);
+          body.details.linkedForms.should.eql([
+            { xmlFormId: 'withAttachments', name: 'withAttachments', draft: true }
+          ]);
         });
     }));
 
