@@ -7454,6 +7454,35 @@ describe('datasets and entities', () => {
         });
     }));
 
+    it('should restrict restoring a Form that writes to a soft deleted dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // create a dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // delete the form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
+
     it('should restrict restoring a Form that is linked to a deleted dataset', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
@@ -8193,6 +8222,55 @@ describe('datasets and entities', () => {
         rowsUpdated.every(r => r.name === 'people').should.be.true();
         rowsUpdated.map(r => r.aux.properties.get().name).sort().should.eql(['age', 'first_name']);
       }));
+
+      it('should return multiple datasets from both published and draft', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.createUpdateMultipleEntities)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const draftForm = testData.forms.createUpdateMultipleEntities
+          .replace('orx:version="1.0"', 'orx:version="2.0"')
+          .replace('dataset="people"', 'dataset="animals"')
+          .replace('dataset="trees"', 'dataset="birds"');
+
+        await asAlice.post('/v1/projects/1/forms/createUpdateMultipleEntities/draft')
+          .send(draftForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'createUpdateMultipleEntities');
+        const datasetNames = [...new Set(rows.map(r => r.name))].sort();
+        datasetNames.should.eql(['animals', 'birds', 'people', 'trees']);
+
+        const peopleProps = rows.filter(r => r.name === 'people').map(r => r.aux.properties.get().name).sort();
+        peopleProps.should.eql(['age', 'full_name']);
+
+        const treesProps = rows.filter(r => r.name === 'trees').map(r => r.aux.properties.get().name).sort();
+        treesProps.should.eql(['circumference_cm', 'species']);
+
+        const animalsProps = rows.filter(r => r.name === 'animals').map(r => r.aux.properties.get().name).sort();
+        animalsProps.should.eql(['age', 'full_name']);
+
+        const birdsProps = rows.filter(r => r.name === 'birds').map(r => r.aux.properties.get().name).sort();
+        birdsProps.should.eql(['circumference_cm', 'species']);
+
+        // // abondon the draft
+        await asAlice.delete('/v1/projects/1/forms/createUpdateMultipleEntities/draft')
+          .expect(200);
+
+        const rowsUpdated = await container.Datasets.getTargetDatasetsAndProperties(1, 'createUpdateMultipleEntities');
+        const datasetNamesUpdated = [...new Set(rowsUpdated.map(r => r.name))].sort();
+        datasetNamesUpdated.should.eql(['people', 'trees']);
+
+        const peopleProps2 = rowsUpdated.filter(r => r.name === 'people').map(r => r.aux.properties.get().name).sort();
+        peopleProps2.should.eql(['age', 'full_name']);
+
+        const treesProps2 = rowsUpdated.filter(r => r.name === 'trees').map(r => r.aux.properties.get().name).sort();
+        treesProps2.should.eql(['circumference_cm', 'species']);
+      }));
     });
 
     describe('getLinkedDatasets', () => {
@@ -8409,6 +8487,24 @@ describe('datasets and entities', () => {
         result.linkedDatasets.length.should.equal(1);
         result.linkedDatasets[0].name.should.equal('people');
         result.linkedDatasets[0].properties.map(p => p.name).sort().should.eql(['age', 'full_name']);
+      }));
+
+      it('should return multiple datasets from both published and draft', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.createUpdateMultipleEntities)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const { targetDatasets, linkedDatasets } = await container.Datasets.getRelatedDatasetsOfForm(1, 'createUpdateMultipleEntities');
+        targetDatasets.map(d => d.name).sort().should.eql(['people', 'trees']);
+        targetDatasets.find(d => d.name === 'people').properties.map(p => p.name).sort().should.eql(['age', 'full_name']);
+        targetDatasets.find(d => d.name === 'trees').properties.map(p => p.name).sort().should.eql(['circumference_cm', 'species']);
+
+        linkedDatasets.map(d => d.name).sort().should.eql(['people', 'trees']);
+        linkedDatasets.find(d => d.name === 'people').properties.map(p => p.name).sort().should.eql(['age', 'full_name']);
+        linkedDatasets.find(d => d.name === 'trees').properties.map(p => p.name).sort().should.eql(['circumference_cm', 'species']);
       }));
     });
   });
