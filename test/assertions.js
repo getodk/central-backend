@@ -295,10 +295,17 @@ should.Assertion.add('Key', function() {
 should.Assertion.add('Config', function() {
   this.params = { operator: 'to be a Config' };
 
-  Object.keys(this.obj).should.containDeep([ 'key', 'value', 'setAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([ 'key', 'setAt', 'value', 'blobExists' ]);
   this.obj.key.should.be.a.String();
-  this.obj.value.should.be.an.Object();
   this.obj.setAt.should.be.an.isoDate();
+
+  if (this.obj.value != null) {
+    this.obj.value.should.be.an.Object();
+    should.not.exist(this.obj.blobExists);
+  } else {
+    this.obj.blobExists.should.be.true();
+    should.not.exist(this.obj.value);
+  }
 });
 
 should.Assertion.add('SimpleCsv', function() {
