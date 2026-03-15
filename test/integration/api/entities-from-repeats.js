@@ -172,7 +172,7 @@ describe('Entities from Repeats', () => {
 
       await asAlice.get('/v1/projects/1/datasets/trees')
         .then(({ body }) => {
-          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, ...ds } = body;
+          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, draftLinkedForms, draftSourceForms, ...ds } = body;
 
           ds.should.be.eql({
             name: 'trees',
@@ -213,7 +213,7 @@ describe('Entities from Repeats', () => {
 
       await asAlice.get('/v1/projects/1/datasets/households')
         .then(({ body }) => {
-          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, ...ds } = body;
+          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, draftLinkedForms, draftSourceForms, ...ds } = body;
 
           ds.should.be.eql({
             name: 'households',
@@ -245,7 +245,7 @@ describe('Entities from Repeats', () => {
 
       await asAlice.get('/v1/projects/1/datasets/people')
         .then(({ body }) => {
-          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, ...ds } = body;
+          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, draftLinkedForms, draftSourceForms, ...ds } = body;
 
           ds.should.be.eql({
             name: 'people',
@@ -286,7 +286,7 @@ describe('Entities from Repeats', () => {
 
       await asAlice.get('/v1/projects/1/datasets/farms')
         .then(({ body }) => {
-          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, ...ds } = body;
+          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, draftLinkedForms, draftSourceForms, ...ds } = body;
 
           ds.should.be.eql({
             name: 'farms',
@@ -319,7 +319,7 @@ describe('Entities from Repeats', () => {
 
       await asAlice.get('/v1/projects/1/datasets/farmers')
         .then(({ body }) => {
-          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, ...ds } = body;
+          const { createdAt, linkedForms, properties, sourceForms, lastUpdate, draftLinkedForms, draftSourceForms, ...ds } = body;
 
           ds.should.be.eql({
             name: 'farmers',

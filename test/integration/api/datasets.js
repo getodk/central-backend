@@ -1555,7 +1555,7 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
 
-            const { createdAt, linkedForms, properties, sourceForms, lastUpdate, ...ds } = body;
+            const { createdAt, linkedForms, properties, sourceForms, lastUpdate, draftLinkedForms, draftSourceForms, ...ds } = body;
 
             ds.should.be.eql({
               name: 'people',
@@ -1630,7 +1630,9 @@ describe('datasets and entities', () => {
               deletedAt: null,
               conflicts: 0,
               linkedForms: [],
-              sourceForms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }]
+              draftLinkedForms: [],
+              sourceForms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }],
+              draftSourceForms: []
             });
 
             lastEntity.should.be.recentIsoDate();
@@ -1721,7 +1723,7 @@ describe('datasets and entities', () => {
         ]);
       }));
 
-      it('should not return a form draft as a linked form', testService(async (service) => {
+      it('should return a form draft as a draftlinkedForm', testService(async (service) => {
         const asAlice = await service.login('alice');
         // Create draft form that consumes `people` dataset
         await asAlice.post('/v1/projects/1/forms')
@@ -1768,6 +1770,7 @@ describe('datasets and entities', () => {
         // Verify that because link to dataset is on draft form and not published form, form does not appear in linked forms
         const { body: dataset } = await asAlice.get('/v1/projects/1/datasets/people')
           .expect(200);
+        dataset.draftLinkedForms.should.be.eql([{ name: 'Consume Datasets: People & Trees', xmlFormId: 'consumeDatasets' }]);
         dataset.linkedForms.length.should.equal(0);
       }));
 
@@ -2109,6 +2112,41 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should return all source and linked Forms both draft and published', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.createUpdateMultipleEntities)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/createUpdateMultipleEntities/draft')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            // Published form should appear in both sourceForms and linkedForms
+            body.sourceForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+            body.linkedForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+
+            // Draft form should appear in both draftSourceForms and draftLinkedForms
+            body.draftSourceForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+            body.draftLinkedForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/trees')
+          .expect(200)
+          .then(({ body }) => {
+            // Published form should appear in both sourceForms and linkedForms
+            body.sourceForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+            body.linkedForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+
+            // Draft form should appear in both draftSourceForms and draftLinkedForms
+            body.draftSourceForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+            body.draftLinkedForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+          });
+      }));
     });
   });
 
@@ -7197,8 +7235,8 @@ describe('datasets and entities', () => {
         .expect(409)
         .then(({ body }) => {
           body.code.should.equal(409.21);
-          body.details.sourceForms.should.eql([
-            { xmlFormId: 'simpleEntityClone', name: 'simpleEntityClone', draft: true }
+          body.details.draftSourceForms.should.eql([
+            { xmlFormId: 'simpleEntityClone', name: 'simpleEntityClone' }
           ]);
         });
     }));
@@ -7218,10 +7256,8 @@ describe('datasets and entities', () => {
         .expect(409)
         .then(({ body }) => {
           body.code.should.equal(409.21);
-          body.details.sourceForms.should.eql([
-            { xmlFormId: 'simpleEntity', name: 'simpleEntity', draft: false },
-            { xmlFormId: 'simpleEntity', name: 'simpleEntity', draft: true }
-          ]);
+          body.details.sourceForms.should.eql([{ xmlFormId: 'simpleEntity', name: 'simpleEntity' }]);
+          body.details.draftSourceForms.should.eql([{ xmlFormId: 'simpleEntity', name: 'simpleEntity' }]);
         });
     }));
 
@@ -7279,7 +7315,7 @@ describe('datasets and entities', () => {
         .then(({ body }) => {
           body.code.should.equal(409.21);
           body.details.linkedForms.should.eql([
-            { xmlFormId: 'withAttachments', name: 'withAttachments', draft: false }
+            { xmlFormId: 'withAttachments', name: 'withAttachments' }
           ]);
         });
     }));
@@ -7300,8 +7336,8 @@ describe('datasets and entities', () => {
         .expect(409)
         .then(({ body }) => {
           body.code.should.equal(409.21);
-          body.details.linkedForms.should.eql([
-            { xmlFormId: 'withAttachments', name: 'withAttachments', draft: true }
+          body.details.draftLinkedForms.should.eql([
+            { xmlFormId: 'withAttachments', name: 'withAttachments' }
           ]);
         });
     }));
