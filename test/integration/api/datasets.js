@@ -10,6 +10,7 @@ const { QueryOptions } = require('../../../lib/util/db');
 const { createConflict } = require('../../util/scenarios');
 const { omit, last } = require('ramda');
 const xml2js = require('xml2js');
+const { v4: uuid } = require('uuid');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const Option = require(appRoot + '/lib/util/option');
@@ -1395,6 +1396,136 @@ describe('datasets and entities', () => {
       });
     });
 
+
+    describe('projects/:id/trash/datasets/:datasetId/entities.csv GET', () => {
+      it('should reject if the user cannot access the deleted dataset', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+        await asAlice.delete('/v1/projects/1/datasets/people')
+          .expect(200);
+        const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
+          .then(({ body }) => body[0].id);
+
+        const asChelsea = await service.login('chelsea');
+        await asChelsea.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
+          .expect(403);
+      }));
+
+      it('should reject if the dataset is not deleted', testEntities(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const datasetId = await container.oneFirst(sql`select id from datasets where "name" = 'people'`);
+        await asAlice.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
+          .expect(404);
+      }));
+
+      it('should return csv export of deleted entity list', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.delete('/v1/projects/1/datasets/people')
+          .expect(200);
+
+        const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
+          .then(({ body }) => body[0].id);
+
+        const result = await asAlice.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+
+        withOutTs.should.be.eql(
+          '__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789abc,John Doe,,5,Alice,0,,1\n' +
+          '12345678-1234-4123-8234-123456789aaa,John Doe,,5,Alice,0,,1\n'
+        );
+      }));
+
+      it('should only return entities present at time of list deletion', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Add another entity
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Robert Doe'
+          })
+          .expect(200);
+
+        // Soft-delete that new entity so it won't appear in later export
+        await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb')
+          .expect(200);
+
+        await asAlice.delete('/v1/projects/1/datasets/people')
+          .expect(200);
+
+        const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
+          .then(({ body }) => body[0].id);
+
+        const result = await asAlice.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+
+        withOutTs.should.be.eql(
+          '__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789abc,John Doe,,5,Alice,0,,1\n' +
+          '12345678-1234-4123-8234-123456789aaa,John Doe,,5,Alice,0,,1\n'
+        );
+      }));
+
+      it('should only return deleted list if new list of same name exists', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Delete dataset
+        await asAlice.delete('/v1/projects/1/datasets/people')
+          .expect(200);
+
+        // Create new dataset with same name as soft-deleted one
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        // Add entity to new dataset with same name as deleted
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            uuid: '12345678-1234-4123-8234-111111111bbb',
+            label: 'Robert Doe'
+          })
+          .expect(200);
+
+        const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
+          .then(({ body }) => body[0].id);
+
+        const result = await asAlice.get(`/v1/projects/1/trash/datasets/${datasetId}/entities.csv`)
+          .expect(200)
+          .then(r => r.text);
+
+        const isoRegex = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z/g;
+
+        result.match(isoRegex).should.have.length(2);
+
+        const withOutTs = result.replace(isoRegex, '');
+
+        withOutTs.should.be.eql(
+          '__id,label,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version\n' +
+          '12345678-1234-4123-8234-123456789abc,John Doe,,5,Alice,0,,1\n' +
+          '12345678-1234-4123-8234-123456789aaa,John Doe,,5,Alice,0,,1\n'
+        );
+      }));
+
+      // TODO: Add these tests once other functionality has been added
+      //   should reject if dataset has been purged
+      //   should return properties included at time of deletion or perhaps all properties
+    });
+
     describe('projects/:id/datasets/:name GET', () => {
 
       it('should return the metadata of the dataset', testService(async (service) => {
@@ -1424,13 +1555,14 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => {
 
-            const { createdAt, linkedForms, properties, sourceForms, lastUpdate, ...ds } = body;
+            const { createdAt, linkedForms, properties, sourceForms, lastUpdate, draftLinkedForms, draftSourceForms, ...ds } = body;
 
             ds.should.be.eql({
               name: 'people',
               projectId: 1,
               approvalRequired: false,
-              ownerOnly: false
+              ownerOnly: false,
+              deletedAt: null
             });
 
             createdAt.should.not.be.null();
@@ -1495,9 +1627,12 @@ describe('datasets and entities', () => {
               approvalRequired: false,
               ownerOnly: false,
               entities: 1,
+              deletedAt: null,
               conflicts: 0,
               linkedForms: [],
-              sourceForms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }]
+              draftLinkedForms: [],
+              sourceForms: [{ name: 'simpleEntity', xmlFormId: 'simpleEntity' }],
+              draftSourceForms: []
             });
 
             lastEntity.should.be.recentIsoDate();
@@ -1588,7 +1723,7 @@ describe('datasets and entities', () => {
         ]);
       }));
 
-      it('should not return a form draft as a linked form', testService(async (service) => {
+      it('should return a form draft as a draftlinkedForm', testService(async (service) => {
         const asAlice = await service.login('alice');
         // Create draft form that consumes `people` dataset
         await asAlice.post('/v1/projects/1/forms')
@@ -1632,9 +1767,10 @@ describe('datasets and entities', () => {
           blobExists: false,
           datasetExists: true
         });
-        // Verify that because link to dataset is on draft form and not published form, form does not appear in linked forms
+
         const { body: dataset } = await asAlice.get('/v1/projects/1/datasets/people')
           .expect(200);
+        dataset.draftLinkedForms.should.be.eql([{ name: 'Consume Datasets: People & Trees', xmlFormId: 'consumeDatasets' }]);
         dataset.linkedForms.length.should.equal(0);
       }));
 
@@ -1976,6 +2112,41 @@ describe('datasets and entities', () => {
 
       }));
 
+      it('should return all source and linked Forms both draft and published', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.createUpdateMultipleEntities)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/createUpdateMultipleEntities/draft')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people')
+          .expect(200)
+          .then(({ body }) => {
+            // Published form should appear in both sourceForms and linkedForms
+            body.sourceForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+            body.linkedForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+
+            // Draft form should appear in both draftSourceForms and draftLinkedForms
+            body.draftSourceForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+            body.draftLinkedForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/trees')
+          .expect(200)
+          .then(({ body }) => {
+            // Published form should appear in both sourceForms and linkedForms
+            body.sourceForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+            body.linkedForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+
+            // Draft form should appear in both draftSourceForms and draftLinkedForms
+            body.draftSourceForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+            body.draftLinkedForms.should.be.eql([{ name: 'Create Update Multiple Entities (People and Trees)', xmlFormId: 'createUpdateMultipleEntities' }]);
+          });
+      }));
     });
   });
 
@@ -6946,5 +7117,1721 @@ describe('datasets and entities', () => {
           entity.deleted.should.be.eql('true');
         });
     }));
+  });
+
+  describe('api: DELETE /projects/:id/dataset/:name', () => {
+    it('should reject unless the user can delete', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.delete('/v1/projects/1/datasets/trees')
+        .expect(403);
+    }));
+
+    it('should delete the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees')
+        .expect(404);
+    }));
+
+    it('deleted dataset is not listed in the GET /datasets', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.empty();
+        });
+    }));
+
+    it('deleted dataset is listed in the GET /datasets?deleted=true', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets?deleted=true')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].id.should.be.aboveOrEqual(1);
+          body[0].name.should.be.equal('trees');
+        });
+    }));
+
+    it('should log the action in the audit log', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=dataset.delete')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          body[0].action.should.equal('dataset.delete');
+        });
+    }));
+
+    it('should reject if there is a Form updating the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+    }));
+
+    it('should reject if there is a draft Form updating the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simpleEntity.replace('simpleEntity', 'simpleEntityClone'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+          body.details.draftSourceForms.should.eql([
+            { xmlFormId: 'simpleEntityClone', name: 'simpleEntityClone' }
+          ]);
+        });
+    }));
+
+    it('should reject if there is a draft Form and published Form updating the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+          body.details.sourceForms.should.eql([{ xmlFormId: 'simpleEntity', name: 'simpleEntity' }]);
+          body.details.draftSourceForms.should.eql([{ xmlFormId: 'simpleEntity', name: 'simpleEntity' }]);
+        });
+    }));
+
+    it('should reject if there is a draft Form and a published Form write to different datasets', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity.replace('people', 'trees'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+        });
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2')
+        .expect(200);
+
+      // able to delete people because it is no longer written to by the Form
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+    }));
+
+    it('should reject if there is a Form consuming the dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'goodone' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/goodone')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+          body.details.linkedForms.should.eql([
+            { xmlFormId: 'withAttachments', name: 'withAttachments' }
+          ]);
+        });
+    }));
+
+    it('should reject if there is a draft Form consuming the dataset', testServiceFullTrx(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'goodone' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.withAttachments)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/goodone')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.21);
+          body.details.draftLinkedForms.should.eql([
+            { xmlFormId: 'withAttachments', name: 'withAttachments' }
+          ]);
+        });
+    }));
+
+    it('should not autolink Form attachment with the deleted dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'goodone' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/goodone')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.withAttachments)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/withAttachments/manifest')
+        .set('X-OpenRosa-Version', '1.0')
+        .then(({ text }) => {
+          text.should.not.match(/goodone|entityList/);
+        });
+    }));
+
+    it('should be able to recreate another dataset with the same name', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+    }));
+
+    it('should be able to recreate another dataset via Form definition with the same name of deleted dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789aaa',
+          label: 'John Doe'
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.not.be.empty();
+        });
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.empty();
+        });
+    }));
+
+    it('entities of deleted dataset should not be accessible via its name', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .expect(404);
+    }));
+
+    describe('subresources should not be accessible', () => {
+      const entityUuid = uuid();
+
+      const subresources = [
+        '/v1/projects/1/datasets/trees/entities',
+        '/v1/projects/1/datasets/trees/entities.geojson',
+        '/v1/projects/1/datasets/trees/entities.csv',
+        '/v1/projects/1/datasets/trees/entities/creators',
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}`,
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}/versions`,
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}/diffs`,
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}/audits`,
+        `/v1/projects/1/datasets/trees/entities/${entityUuid}/geojson`,
+      ];
+
+      subresources.forEach(resource => {
+        it(`should return 404 for ${resource}`, testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'trees' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets/trees/entities')
+            .send({ label: 'the tree', uuid: entityUuid })
+            .expect(200);
+
+          await asAlice.delete('/v1/projects/1/datasets/trees')
+            .expect(200);
+
+          await asAlice.get(resource)
+            .expect(404);
+        }));
+      });
+    });
+
+    it('should be able to delete the dataset after unlinking the Form', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(409);
+
+      const formWithoutEntity = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace(/<meta>[\s\S]*?<\/meta>/g, '')
+        .replace(/entities:saveto=".*"/g, '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft?ignoreWarnings=true')
+        .send(formWithoutEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+    }));
+
+    it('should return empty response for dataset-diff after unlinking', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // create a dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // upload a new form definition without entities (see previous test to do that) and publish it
+      const formWithoutEntity = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace(/<meta>[\s\S]*?<\/meta>/g, '')
+        .replace(/entities:saveto=".*"/g, '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft?ignoreWarnings=true')
+        .send(formWithoutEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/dataset-diff')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.empty();
+        });
+    }));
+
+    it('should not create entities from a submission in a deleted dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // create dataset via form definition
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // create a submission
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const formWithoutEntity = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace(/<meta>[\s\S]*?<\/meta>/g, '')
+        .replace(/entities:saveto=".*"/g, '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft?ignoreWarnings=true')
+        .send(formWithoutEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].details.errorMessage.should.match(/dataset .* does not exist/);
+        });
+
+      const entities = await container.oneFirst(sql`SELECT COUNT(1) FROM entities`);
+      entities.should.be.eql(0);
+    }));
+
+    it('should show entityAvailable: false in submission audits when dataset is soft-deleted', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // link the form to a different dataset
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity.replace('people', 'canadians'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2')
+        .expect(200);
+
+      // soft-delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // submission audits should show datasetDeleted: true
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body }) => {
+          const entityCreate = body.find(a => a.action === 'entity.create');
+          entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          entityCreate.details.entity.entityAvailable.should.equal(false);
+        });
+    }));
+
+    it('should show entityAvailable: false in submission audits when dataset is purged', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // link the form to a different dataset
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity.replace('people', 'canadians'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2')
+        .expect(200);
+
+      // soft-delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // purge the dataset
+      await container.Datasets.purge(true, 1, 'people');
+
+      // submission audits should show entityAvailable: false
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body }) => {
+          const entityCreate = body.find(a => a.action === 'entity.create');
+          entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          entityCreate.details.entity.entityAvailable.should.equal(false);
+        });
+    }));
+
+    it('should show entityAvailable: false if entity is deleted but dataset is still there', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // delete the entity (but not the dataset)
+      await asAlice.delete('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200);
+
+      // submission audits should show entityAvailable: false
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body }) => {
+          const entityCreate = body.find(a => a.action === 'entity.create');
+          entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          entityCreate.details.entity.entityAvailable.should.equal(false);
+        });
+    }));
+
+    it('should show entityAvailable: true if entity and dataset both are there (not deleted)', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // submission audits should show entityAvailable: true
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body }) => {
+          const entityCreate = body.find(a => a.action === 'entity.create');
+          entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          entityCreate.details.entity.entityAvailable.should.equal(true);
+        });
+    }));
+
+    it('should show entityAvailable: false if a new dataset with the same name has been created', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // link the form to a different dataset
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity.replace('people', 'canadians'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish?version=2')
+        .expect(200);
+
+      // soft-delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // submission audits should show datasetDeleted: true
+      await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
+        .set('X-Extended-Metadata', true)
+        .expect(200)
+        .then(({ body }) => {
+          const entityCreate = body.find(a => a.action === 'entity.create');
+          entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
+          entityCreate.details.entity.entityAvailable.should.equal(false);
+        });
+    }));
+
+    it('should restrict restoring a Form that writes to a deleted dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // create a dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // delete the form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // purge the dataset
+      await container.Datasets.purge(true, 1, 'people');
+
+      // get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
+
+    it('should restrict restoring a Form that writes to a soft deleted dataset', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // create a dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // delete the form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
+
+    it('should restrict restoring a Form that is linked to a deleted dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.consumeDatasets)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the form
+      await asAlice.delete('/v1/projects/1/forms/consumeDatasets')
+        .expect(200);
+
+      // Delete one of the datasets
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // Purge the dataset
+      await container.Datasets.purge(true, 1, 'people');
+
+      // Get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // Try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
+
+    it('should restrict restoring a Form that is both linked and writes to a deleted dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Create the people dataset that createUpdateEntity form will both consume and write to
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'full_name' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'age' })
+        .expect(200);
+
+      // Create form that both writes to and consumes the dataset
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.createUpdateEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the form
+      await asAlice.delete('/v1/projects/1/forms/createUpdateEntity')
+        .expect(200);
+
+      // Delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // Purge the dataset
+      await container.Datasets.purge(true, 1, 'people');
+
+      // Get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // Try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
+
+    it('should restrict restoring a Form that writes to a deleted property', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // Delete one of the properties that the form writes to
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+
+      // Get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // Try restoring the form, assert that it is not successful
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.23);
+        });
+    }));
+  });
+
+  describe('api: DELETE /projects/:id/dataset/:name/properties/:propertyName', () => {
+    it('should reject if a Form is writing to the property to be deleted', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const anotherEntityForm = testData.forms.simpleEntity
+        .replace('id="simpleEntity"', 'id="simpleEntity2"');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(anotherEntityForm)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(409);
+    }));
+
+    it('should delete the property', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+    }));
+
+    it('should delete the property after property is unlinked', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(409);
+
+      const formWithoutFirstName = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace('entities:saveto="first_name"', '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(formWithoutFirstName)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+    }));
+
+    it('should reject if property has a value', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.22);
+          body.details.prerequisites.nonEmptyEntities.message.should.match(/non-empty/);
+          body.details.prerequisites.nonEmptyEntities.details.entities.length.should.equal(1);
+        });
+    }));
+
+    it('should delete property after entity property value is cleared', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(409);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+    }));
+
+    it('should log the delete property action in the audits', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=dataset')
+        .expect(200)
+        .then(({ body: audits }) => {
+          audits[0].action.should.eql('dataset.update.property.delete');
+          audits[0].details.should.eql({ properties: ['height'] });
+        });
+    }));
+
+    it('should reject if user does not have rights to update dataset', testService(async service => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asChelsea.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(403);
+    }));
+
+    it('should not allow creation of entities with deleted properties', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789def',
+          label: 'Another Tree',
+          data: { height: '20m' }
+        })
+        .expect(400);
+    }));
+
+    it('should be able to recreate the property', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+    }));
+
+    it('should not return data of deleted property - entities.csv', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      const result = await asAlice.get('/v1/projects/1/datasets/trees/entities.csv')
+        .expect(200)
+        .then(r => r.text);
+
+      result.should.not.match(/height/);
+    }));
+
+    it('should not return data of deleted property - single Entity endpoint', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.data.should.not.have.property('height');
+        });
+    }));
+
+    it('should not return data of deleted property in current version - versions endpoint', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { height: '10m' }
+        })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { height: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc/versions')
+        .expect(200)
+        .then(({ body }) => {
+          body.find(v => v.current).data.should.not.have.property('height');
+        });
+    }));
+
+    it('should not return data if geometry property is deleted', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { geometry: '1 2 3 0' } // ODK format: lat lon alt accuracy
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities.geojson')
+        .expect(200)
+        .then(({ body }) => {
+          body.features.length.should.equal(1);
+          body.features[0].geometry.type.should.equal('Point');
+          body.features[0].geometry.coordinates.should.eql([2, 1, 3]);
+        });
+
+      await asAlice.patch('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
+        .send({ data: { geometry: '' } })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/geometry')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities.geojson')
+        .expect(200)
+        .then(({ body }) => {
+          body.features.length.should.equal(0);
+        });
+    }));
+
+    it('should be able to recreate the property via Form', testService(async service => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const formWithoutFirstName = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="2.0"')
+        .replace('entities:saveto="first_name"', '');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(formWithoutFirstName)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+
+      const formWithFirstName = testData.forms.simpleEntity
+        .replace('orx:version="1.0"', 'orx:version="3.0"');
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(formWithFirstName)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people')
+        .expect(200)
+        .then(({ body }) => {
+          const propertyNames = body.properties.map(p => p.name);
+          propertyNames.should.containEql('first_name');
+        });
+    }));
+
+    it('should not have deleted property in the Entity created from the old Submission', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // create a dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // update the form to remove one saveto (basically unlink a property)
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity
+          .replace('orx:version="1.0"', 'orx:version="2.0"')
+          .replace('entities:saveto="first_name"', ''))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      // delete the property
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+        .expect(200);
+
+      // update the form to add back the saveto/property
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+        .send(testData.forms.simpleEntity
+          .replace('orx:version="1.0"', 'orx:version="3.0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
+        .expect(200);
+
+      // post a submission against the old form definition (version 2.0)
+      await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+        .send(testData.instances.simpleEntity.one.replace('version="1.0"', 'version="2.0"'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // exhaust the container
+      await exhaust(container);
+
+      // assert that entity is created
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+        });
+
+      // verify the entity doesn't have 'first_name'; we check DB directly because API filters out
+      // data for deleted properties anyway.
+      const dataset = await container.Datasets.get(1, 'people').then(o => o.get());
+      const entity = await container.Entities.getById(dataset.id, '12345678-1234-4123-8234-123456789abc').then(o => o.get());
+      entity.aux.currentVersion.data.should.not.have.property('first_name');
+    }));
+  });
+
+  describe('dataset query module', () => {
+    describe('getTargetDatasetsAndProperties', () => {
+      it('should return empty array if form does not write to any datasets', testService(async (service, container) => {
+        // simple form does not write to any dataset
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simple');
+        rows.should.eql([]);
+      }));
+
+      it('should return one dataset and its properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        rows.length.should.equal(2);
+        rows.every(r => r.name === 'people').should.be.true();
+        const propNames = rows.map(r => r.aux.properties.get().name);
+        propNames.should.eql(['first_name', 'age']);
+      }));
+
+      it('should return only properties the form writes to, not all dataset properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create dataset with multiple properties
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'first_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(200);
+
+        // extra property
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'last_name' })
+          .expect(200);
+
+        // simpleEntity form writes to first_name and age (not last_name)
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        rows.length.should.equal(2);
+        const propNames = rows.map(r => r.aux.properties.get().name);
+        propNames.should.eql(['first_name', 'age']);
+      }));
+
+      it('should return datasets and property info for the draft version as well', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create form as draft (not published)
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // simpleEntity writes to two properties: first_name and age
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        rows.length.should.equal(2);
+        rows.every(r => r.name === 'people').should.be.true();
+        const propNames = rows.map(r => r.aux.properties.get().name).sort();
+        propNames.should.eql(['age', 'first_name']);
+      }));
+
+      it('should return dataset even when there are no properties written to', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Form that creates entities but doesn't write to any properties
+        const formWithoutProps = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities" xmlns:orx="http://openrosa.org/xforms">
+            <h:head>
+              <model entities:entities-version="2024.1.0">
+                <instance>
+                  <data id="noProps" orx:version="1.0">
+                    <name/>
+                    <meta>
+                      <entity dataset="things" id="" create="">
+                        <label/>
+                      </entity>
+                    </meta>
+                  </data>
+                </instance>
+              </model>
+            </h:head>
+          </h:html>`;
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(formWithoutProps)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'noProps');
+        rows.length.should.equal(1);
+        rows[0].name.should.equal('things');
+        rows[0].aux.properties.isDefined().should.be.false();
+      }));
+
+      it('should return same dataset and properties when published and draft form write to same dataset', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Publish a form that writes to 'people' dataset
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Create a draft of the same form that also writes to 'people' dataset
+        const draftForm = testData.forms.simpleEntity
+          .replace('orx:version="1.0"', 'orx:version="2.0"');
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .send(draftForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        // Should return properties from both published and draft (same dataset)
+        rows.length.should.equal(2);
+        rows.every(r => r.name === 'people').should.be.true();
+        const propNames = rows.map(r => r.aux.properties.get().name).sort();
+        propNames.should.eql(['age', 'first_name']);
+      }));
+
+      it('should return datasets from both published and draft when they write to different datasets', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Publish a form that writes to 'people' dataset
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Create a draft that writes to a different dataset ('trees')
+        const draftForm = testData.forms.simpleEntity
+          .replace('orx:version="1.0"', 'orx:version="2.0"')
+          .replace('dataset="people"', 'dataset="trees"')
+          .replace('entities:saveto="first_name"', 'entities:saveto="species"')
+          .replace('entities:saveto="age"', 'entities:saveto="circumference"');
+
+        await asAlice.post('/v1/projects/1/forms/simpleEntity/draft')
+          .send(draftForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        // Should return properties from both datasets
+        const datasetNames = [...new Set(rows.map(r => r.name))].sort();
+        datasetNames.should.eql(['people', 'trees']);
+
+        const peopleProps = rows.filter(r => r.name === 'people').map(r => r.aux.properties.get().name).sort();
+        peopleProps.should.eql(['age', 'first_name']);
+
+        const treesProps = rows.filter(r => r.name === 'trees').map(r => r.aux.properties.get().name).sort();
+        treesProps.should.eql(['circumference', 'species']);
+
+        // abondon the draft
+        await asAlice.delete('/v1/projects/1/forms/simpleEntity/draft')
+          .expect(200);
+
+        const rowsUpdated = await container.Datasets.getTargetDatasetsAndProperties(1, 'simpleEntity');
+        rowsUpdated.every(r => r.name === 'people').should.be.true();
+        rowsUpdated.map(r => r.aux.properties.get().name).sort().should.eql(['age', 'first_name']);
+      }));
+
+      it('should return multiple datasets from both published and draft', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.createUpdateMultipleEntities)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const draftForm = testData.forms.createUpdateMultipleEntities
+          .replace('orx:version="1.0"', 'orx:version="2.0"')
+          .replace('dataset="people"', 'dataset="animals"')
+          .replace('dataset="trees"', 'dataset="birds"');
+
+        await asAlice.post('/v1/projects/1/forms/createUpdateMultipleEntities/draft')
+          .send(draftForm)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getTargetDatasetsAndProperties(1, 'createUpdateMultipleEntities');
+        const datasetNames = [...new Set(rows.map(r => r.name))].sort();
+        datasetNames.should.eql(['animals', 'birds', 'people', 'trees']);
+
+        const peopleProps = rows.filter(r => r.name === 'people').map(r => r.aux.properties.get().name).sort();
+        peopleProps.should.eql(['age', 'full_name']);
+
+        const treesProps = rows.filter(r => r.name === 'trees').map(r => r.aux.properties.get().name).sort();
+        treesProps.should.eql(['circumference_cm', 'species']);
+
+        const animalsProps = rows.filter(r => r.name === 'animals').map(r => r.aux.properties.get().name).sort();
+        animalsProps.should.eql(['age', 'full_name']);
+
+        const birdsProps = rows.filter(r => r.name === 'birds').map(r => r.aux.properties.get().name).sort();
+        birdsProps.should.eql(['circumference_cm', 'species']);
+
+        // // abondon the draft
+        await asAlice.delete('/v1/projects/1/forms/createUpdateMultipleEntities/draft')
+          .expect(200);
+
+        const rowsUpdated = await container.Datasets.getTargetDatasetsAndProperties(1, 'createUpdateMultipleEntities');
+        const datasetNamesUpdated = [...new Set(rowsUpdated.map(r => r.name))].sort();
+        datasetNamesUpdated.should.eql(['people', 'trees']);
+
+        const peopleProps2 = rowsUpdated.filter(r => r.name === 'people').map(r => r.aux.properties.get().name).sort();
+        peopleProps2.should.eql(['age', 'full_name']);
+
+        const treesProps2 = rowsUpdated.filter(r => r.name === 'trees').map(r => r.aux.properties.get().name).sort();
+        treesProps2.should.eql(['circumference_cm', 'species']);
+      }));
+    });
+
+    describe('getLinkedDatasets', () => {
+      it('should return empty array if form is not using dataset as attachment', testService(async (service, container) => {
+        const rows = await container.Datasets.getLinkedDatasets(1, 'simple');
+        rows.should.eql([]);
+      }));
+
+      it('should return one dataset and all of its properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create dataset with properties
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'goodone' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/properties')
+          .send({ name: 'first_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/goodone/properties')
+          .send({ name: 'last_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getLinkedDatasets(1, 'withAttachments');
+        rows.length.should.equal(2);
+        rows.filter(r => r.name === 'goodone').length.should.equal(2);
+        rows.map(r => r.aux.properties.get().name).should.eql(['first_name', 'last_name']);
+      }));
+
+      it('should return multiple datasets and all of their properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create two datasets with properties
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'fullname' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'location' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.consumeDatasets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getLinkedDatasets(1, 'consumeDatasets');
+        const datasetNames = [...new Set(rows.map(r => r.name))];
+        datasetNames.should.containDeep(['people', 'trees']);
+      }));
+
+      it('should return one dataset and 0 properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'goodone' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.withAttachments)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const rows = await container.Datasets.getLinkedDatasets(1, 'withAttachments');
+        rows.length.should.equal(1);
+        rows.filter(r => r.name === 'goodone').length.should.equal(1);
+        rows.filter(r => r.aux.properties.isDefined()).length.should.eql(0);
+      }));
+
+      it('should not return deleted properties', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create dataset with properties
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'first_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'last_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.consumeDatasets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // Delete one property
+        await asAlice.delete('/v1/projects/1/datasets/people/properties/first_name')
+          .expect(200);
+
+        const rows = await container.Datasets.getLinkedDatasets(1, 'consumeDatasets');
+        const datasetNames = rows.map(r => r.name);
+        datasetNames.should.eql(['people', 'trees']);
+        const propertyNames = rows
+          .filter(r => r.name === 'people')
+          .map(r => r.aux.properties.get().name);
+        propertyNames.should.eql(['last_name']);
+      }));
+    });
+
+    describe('getRelatedDatasetsOfForm', () => {
+      it('should return target dataset for a form that only writes to a dataset', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // simpleEntity form writes to the 'people' dataset with properties first_name and age
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await container.Datasets.getRelatedDatasetsOfForm(1, 'simpleEntity');
+
+        // Should have target datasets (writes to) but no linked datasets (consumes)
+        result.targetDatasets.length.should.equal(1);
+        result.targetDatasets[0].name.should.equal('people');
+        result.targetDatasets[0].properties.map(p => p.name).should.eql(['first_name', 'age']);
+
+        result.linkedDatasets.should.eql([]);
+      }));
+
+      it('should return linked datasets for a form that only consumes datasets', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create datasets with properties that consumeDatasets form will consume
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'fullname' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'species' })
+          .expect(200);
+
+        // consumeDatasets form consumes people and trees datasets but doesn't write to any
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.consumeDatasets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await container.Datasets.getRelatedDatasetsOfForm(1, 'consumeDatasets');
+
+        // Should have linked datasets (consumes) but no target datasets (writes to)
+        result.targetDatasets.should.eql([]);
+
+        result.linkedDatasets.length.should.equal(2);
+        const linkedNames = result.linkedDatasets.map(d => d.name).sort();
+        linkedNames.should.eql(['people', 'trees']);
+        result.linkedDatasets.find(r => r.name === 'people').properties.map(p => p.name).should.eql(['fullname', 'age']);
+        result.linkedDatasets.find(r => r.name === 'trees').properties.map(p => p.name).should.eql(['species']);
+      }));
+
+      it('should return both target and linked datasets for a form that writes and consumes', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        // Create the people dataset first so the form can consume it
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'full_name' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'age' })
+          .expect(200);
+
+        // createUpdateEntity form both writes to and consumes the people dataset
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.createUpdateEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const result = await container.Datasets.getRelatedDatasetsOfForm(1, 'createUpdateEntity');
+
+        // Should have both target datasets (writes to) and linked datasets (consumes)
+        result.targetDatasets.length.should.equal(1);
+        result.targetDatasets[0].name.should.equal('people');
+        result.targetDatasets[0].properties.map(p => p.name).sort().should.eql(['age', 'full_name']);
+
+        result.linkedDatasets.length.should.equal(1);
+        result.linkedDatasets[0].name.should.equal('people');
+        result.linkedDatasets[0].properties.map(p => p.name).sort().should.eql(['age', 'full_name']);
+      }));
+
+      it('should return multiple datasets from both published and draft', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.createUpdateMultipleEntities)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const { targetDatasets, linkedDatasets } = await container.Datasets.getRelatedDatasetsOfForm(1, 'createUpdateMultipleEntities');
+        targetDatasets.map(d => d.name).sort().should.eql(['people', 'trees']);
+        targetDatasets.find(d => d.name === 'people').properties.map(p => p.name).sort().should.eql(['age', 'full_name']);
+        targetDatasets.find(d => d.name === 'trees').properties.map(p => p.name).sort().should.eql(['circumference_cm', 'species']);
+
+        linkedDatasets.map(d => d.name).sort().should.eql(['people', 'trees']);
+        linkedDatasets.find(d => d.name === 'people').properties.map(p => p.name).sort().should.eql(['age', 'full_name']);
+        linkedDatasets.find(d => d.name === 'trees').properties.map(p => p.name).sort().should.eql(['circumference_cm', 'species']);
+      }));
+    });
   });
 });
