@@ -188,6 +188,10 @@ describe('Entities from Repeats', () => {
 
           linkedForms.should.be.eql([]);
 
+          draftLinkedForms.should.be.eql([]);
+
+          draftSourceForms.should.be.eql([]);
+
           sourceForms.should.be.eql([
             { name: 'Repeat Trees', xmlFormId: 'repeatEntityTrees', repeatPath: '/tree/' },
           ]);
@@ -229,6 +233,10 @@ describe('Entities from Repeats', () => {
 
           linkedForms.should.be.eql([]);
 
+          draftLinkedForms.should.be.eql([]);
+
+          draftSourceForms.should.be.eql([]);
+
           sourceForms.should.be.eql([
             { name: 'Household and people', xmlFormId: 'repeatEntityHousehold' },
           ]);
@@ -260,6 +268,10 @@ describe('Entities from Repeats', () => {
           lastUpdate.should.be.isoDate();
 
           linkedForms.should.be.eql([]);
+
+          draftLinkedForms.should.be.eql([]);
+
+          draftSourceForms.should.be.eql([]);
 
           sourceForms.should.be.eql([
             { name: 'Household and people', xmlFormId: 'repeatEntityHousehold', repeatPath: '/members/person/' },
@@ -302,6 +314,10 @@ describe('Entities from Repeats', () => {
 
           linkedForms.should.be.eql([]);
 
+          draftLinkedForms.should.be.eql([]);
+
+          draftSourceForms.should.be.eql([]);
+
           sourceForms.should.be.eql([
             { name: 'Farms and Farmers - Multi Level Entities', xmlFormId: 'multiEntityFarm' },
           ]);
@@ -334,6 +350,10 @@ describe('Entities from Repeats', () => {
           lastUpdate.should.be.isoDate();
 
           linkedForms.should.be.eql([]);
+
+          draftLinkedForms.should.be.eql([]);
+
+          draftSourceForms.should.be.eql([]);
 
           sourceForms.should.be.eql([
             { name: 'Farms and Farmers - Multi Level Entities', xmlFormId: 'multiEntityFarm' },

@@ -1767,7 +1767,7 @@ describe('datasets and entities', () => {
           blobExists: false,
           datasetExists: true
         });
-        // Verify that because link to dataset is on draft form and not published form, form does not appear in linked forms
+
         const { body: dataset } = await asAlice.get('/v1/projects/1/datasets/people')
           .expect(200);
         dataset.draftLinkedForms.should.be.eql([{ name: 'Consume Datasets: People & Trees', xmlFormId: 'consumeDatasets' }]);
