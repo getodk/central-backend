@@ -4556,8 +4556,8 @@ describe('datasets and entities', () => {
                     </meta>
                 </data>
             </instance>
-            <bind nodeset="/data/household_id" type="string" entities:saveto="hh_id"/>
-            <bind nodeset="/data/members/num_people" type="int" entities:saveto="count"/>
+            <bind nodeset="/data/household_id" type="string"/>
+            <bind nodeset="/data/members/num_people" type="int"/>
             <bind nodeset="/data/members/person/name" type="string" entities:saveto="full_name"/>
             <bind nodeset="/data/members/person/age" type="int" entities:saveto="age"/>
             
