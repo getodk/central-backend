@@ -7921,6 +7921,28 @@ describe('datasets and entities', () => {
           body.code.should.equal(409.23);
         });
     }));
+
+    it('should allow restoring a Form that used a dataset if the dataset was not changed', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create dataset via Form
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.simpleEntity)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Delete the form
+      await asAlice.delete('/v1/projects/1/forms/simpleEntity')
+        .expect(200);
+
+      // Get the deleted form's numeric ID
+      const { body: deletedForms } = await asAlice.get('/v1/projects/1/forms?deleted=true')
+        .expect(200);
+
+      // Restore the form
+      await asAlice.post(`/v1/projects/1/forms/${deletedForms[0].id}/restore`)
+        .expect(200);
+    }));
   });
 
   describe('api: DELETE /projects/:id/dataset/:name/properties/:propertyName', () => {
