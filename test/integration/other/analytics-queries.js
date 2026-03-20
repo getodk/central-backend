@@ -2498,6 +2498,65 @@ describe('analytics task queries', function () {
       const res = await container.Analytics.getProjectsWithDescriptions();
       res.should.eql([{ projectId: 1, description_length: 9 }, { projectId: projWithDesc, description_length: 13 }]);
     }));
+
+    it('should count number of datasets and properties deleted in each project', testService(async (service, { Analytics, Datasets }) => {
+      const asAlice = await service.login('alice');
+
+      // Create a dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      // Create another dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Delete the property
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      // Delete the datasets
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // Create another project
+      const newProjectId = await asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'Test Project' })
+        .expect(200)
+        .then(({ body }) => body.id);
+
+      // Create a dataset in new project to be deleted
+      await asAlice.post(`/v1/projects/${newProjectId}/datasets`)
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Delete the dataset
+      await asAlice.delete(`/v1/projects/${newProjectId}/datasets/people`)
+        .expect(200);
+
+      // Force purge dataset in new project
+      await Datasets.purge(true, newProjectId);
+
+      const res = await Analytics.countDeletedDatasetAndPropertiesByProject();
+      for (const row in res) {
+        if (row.projectId === 1) {
+          row.dataset_count.should.equal(2);
+          row.property_count.should.equal(1);
+        } else if (row.projectId === newProjectId) {
+          row.dataset_count.should.equal(1);
+          row.property_count.should.equal(0);
+        }
+      }
+    }));
   });
 
   describe('combined analytics', () => {
@@ -2833,9 +2892,27 @@ describe('analytics task queries', function () {
     }));
 
     it('should fill in all project.other queries', testService(async (service, container) => {
-      await service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/projects/1')
-          .send({ description: 'test desc' }));
+      const asAlice = await service.login('alice');
+
+      await asAlice.patch('/v1/projects/1')
+        .send({ description: 'test desc' });
+
+      // delete datasets and properties
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      // Delete the property
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      // Delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
 
       const res = await container.Analytics.previewMetrics();
 
