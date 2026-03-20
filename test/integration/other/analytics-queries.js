@@ -298,6 +298,65 @@ describe('analytics task queries', function () {
       Analytics.blobStoreExternal({ server: 'http://external.store', accessKey: 'a', bucketName: 'foo' }).should.equal(1);
     }));
 
+    describe('should check login customization settings', () => {
+      it('should check if all login customizations are set', testService(async (service, { Analytics }) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/config/login-appearance')
+          .send({ title: 'my site title', description: 'log into my site' })
+          .expect(200);
+
+        await asAlice.post('/v1/config/logo')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(200);
+
+        await asAlice.post('/v1/config/hero-image')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(200);
+
+        const res = await Analytics.checkLoginCustomization();
+        res.should.eql({
+          login_customization_title_set: 1,
+          login_customization_description_set: 1,
+          login_customization_logo_set: 1,
+          login_customization_hero_image_set: 1
+        });
+      }));
+
+      it('should check if no login customizations are set', testService(async (service, { Analytics }) => {
+        const res = await Analytics.checkLoginCustomization();
+        res.should.eql({
+          login_customization_title_set: 0,
+          login_customization_description_set: 0,
+          login_customization_logo_set: 0,
+          login_customization_hero_image_set: 0
+        });
+      }));
+
+      it('should check if login customizations are partially set set', testService(async (service, { Analytics }) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/config/login-appearance')
+          .send({ description: 'log into my site' })
+          .expect(200);
+
+        await asAlice.post('/v1/config/logo')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(200);
+
+        const res = await Analytics.checkLoginCustomization();
+        res.should.eql({
+          login_customization_title_set: 0,
+          login_customization_description_set: 1,
+          login_customization_logo_set: 1,
+          login_customization_hero_image_set: 0
+        });
+      }));
+    });
+
     describe('counting client audits', () => {
       it('should count the total number of client audit submission attachments', testService(async (service, { Analytics }) => {
         const asAlice = await service.login('alice');
@@ -2613,6 +2672,21 @@ describe('analytics task queries', function () {
         .expect(200);
 
       await exhaust(container);
+
+      // 2026.1 set login customization
+      await asAlice.post('/v1/config/login-appearance')
+        .send({ title: 'my site title', description: 'log into my site' })
+        .expect(200);
+
+      await asAlice.post('/v1/config/logo')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+
+      await asAlice.post('/v1/config/hero-image')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
 
       // ---- Add new behavior above ---
 
