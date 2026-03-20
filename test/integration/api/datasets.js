@@ -4522,6 +4522,145 @@ describe('datasets and entities', () => {
         }));
       });
 
+      describe('warnings about moved meta entity and label fields', () => {
+        it('should not warn about moved entity and label fields', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.repeatEntityHousehold)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          const repeatEntityWithoutHousehold = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+    <h:head>
+        <h:title>Household and people</h:title>
+        <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+            <instance>
+                <data id="repeatEntityHousehold" version="2">
+                    <household_id/>
+                    <members>
+                        <num_people/>
+                        <person>
+                            <name/>
+                            <age/>
+                            <meta>
+                                <entity dataset="people" create="1" id="">
+                                    <label/>
+                                </entity>
+                            </meta>
+                        </person>
+                    </members>
+                    <meta>
+                        <instanceID/>
+                    </meta>
+                </data>
+            </instance>
+            <bind nodeset="/data/household_id" type="string"/>
+            <bind nodeset="/data/members/num_people" type="int"/>
+            <bind nodeset="/data/members/person/name" type="string" entities:saveto="full_name"/>
+            <bind nodeset="/data/members/person/age" type="int" entities:saveto="age"/>
+            
+            <bind nodeset="/data/members/person/meta/entity/@id" type="string"/>
+            <setvalue event="odk-instance-first-load odk-new-repeat" ref="/data/members/person/meta/entity/@id" value="uuid()"/>
+            <bind nodeset="/data/members/person/meta/entity/label" calculate="../../../name" type="string"/>
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+        </model>
+    </h:head>
+    <h:body>
+        <input ref="/data/household_id">
+            <label>Enter the household ID</label>
+        </input>
+        <group ref="/data/members">
+            <label>Household information</label>
+            <input ref="/data/members/num_people">
+                <label>Number of people in the household</label>
+            </input>
+            <group ref="/data/members/person">
+                <label>Enter information about each person of the household</label>
+                <repeat nodeset="/data/members/person">
+                    <input ref="/data/members/person/name">
+                        <label>First name</label>
+                    </input>
+                    <input ref="/data/members/person/age">
+                        <label>Age</label>
+                    </input>
+                </repeat>
+            </group>
+        </group>
+    </h:body>
+</h:html>`;
+
+          const repeatEntityWithoutMembers = `<?xml version="1.0"?>
+<h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+    <h:head>
+        <h:title>Household and people</h:title>
+        <model odk:xforms-version="1.0.0" entities:entities-version="2025.1.0">
+            <instance>
+                <data id="repeatEntityHousehold" version="2">
+                    <household_id/>
+                    <members>
+                        <num_people/>
+                        <person>
+                            <name/>
+                            <age/>
+                        </person>
+                    </members>
+                    <meta>
+                        <instanceID/>
+                        <entity dataset="households" id="" create="1">
+                            <label/>
+                        </entity>
+                    </meta>
+                </data>
+            </instance>
+            <bind nodeset="/data/household_id" type="string" entities:saveto="hh_id"/>
+            <bind nodeset="/data/members/num_people" type="int" entities:saveto="count"/>
+            <bind nodeset="/data/members/person/name" type="string"/>
+            <bind nodeset="/data/members/person/age" type="int"/>
+            
+            <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+            <bind nodeset="/data/meta/entity/@id" type="string" readonly="true()"/>
+            <setvalue ref="/data/meta/entity/@id" event="odk-instance-first-load" type="string" readonly="true()" value="uuid()"/>
+            <bind nodeset="/data/meta/entity/label" calculate="concat(&quot;Household:&quot;,  /data/household_id )" type="string" readonly="true()"/>
+        </model>
+    </h:head>
+    <h:body>
+        <input ref="/data/household_id">
+            <label>Enter the household ID</label>
+        </input>
+        <group ref="/data/members">
+            <label>Household information</label>
+            <input ref="/data/members/num_people">
+                <label>Number of people in the household</label>
+            </input>
+            <group ref="/data/members/person">
+                <label>Enter information about each person of the household</label>
+                <repeat nodeset="/data/members/person">
+                    <input ref="/data/members/person/name">
+                        <label>First name</label>
+                    </input>
+                    <input ref="/data/members/person/age">
+                        <label>Age</label>
+                    </input>
+                </repeat>
+            </group>
+        </group>
+    </h:body>
+</h:html>`;
+
+          await asAlice.post('/v1/projects/1/forms/repeatEntityHousehold/draft')
+            .send(repeatEntityWithoutHousehold)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/repeatEntityHousehold/draft')
+            .send(repeatEntityWithoutMembers)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+        }));
+      });
+
       describe('dataset-specific verbs', () => {
         describe('dataset.create', () => {
           it('should NOT allow a new form that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
