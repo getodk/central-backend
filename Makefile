@@ -102,10 +102,6 @@ debug: base
 test: lint
 	BCRYPT=insecure npx mocha --recursive
 
-.PHONY: test-ci
-test-ci: lint
-	BCRYPT=insecure npx mocha --recursive --reporter test/ci-mocha-reporter.js
-
 .PHONY: test-db-migrations
 test-db-migrations:
 	NODE_CONFIG_ENV=db-migration-test npx mocha --bail --sort --timeout=20000 \
@@ -156,9 +152,9 @@ rm-docker-postgres: stop-docker-postgres
 ################################################################################
 # OTHER
 
-.PHONY: check-file-headers
-check-file-headers:
-	git ls-files | node lib/bin/check-file-headers.js
+.PHONY: check-for-large-files
+check-for-large-files:
+	./test/check-for-large-files.sh
 
 .PHONY: api-docs
 api-docs:

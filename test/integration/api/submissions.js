@@ -541,13 +541,67 @@ describe('api: /submission', () => {
                 .expect(200)
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
-                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                   headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
                 }))
               .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
                 .set('If-None-Match', '"25bdb03b7942881c279788575997efba"')
                 .expect(304)))))));
+
+    it('should return content-disposition inline for specific image attachments only', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      // Submissions with mp4 (not inline) and jpeg (inline)
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+        .expect(200)
+        .then(({ headers, body }) => {
+          headers['content-type'].should.equal('video/mp4');
+          headers['content-disposition'].should.equal('attachment; filename="my_file1.mp4"; filename*=UTF-8\'\'my_file1.mp4');
+          body.toString('utf8').should.equal('this is test file one');
+        });
+
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/attachments/here_is_file2.jpg')
+        .expect(200)
+        .then(({ headers, body }) => {
+          headers['content-type'].should.equal('image/jpeg');
+          headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+          body.toString('utf8').should.equal('this is test file two');
+        });
+
+      // Submission with image/svg (not inline)
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file',
+          Buffer.from(
+            testData.instances.binaryType.one.replace(
+              '<file1>my_file1.mp4</file1>',
+              '<file1>this_file1.svg</file1>'
+            )
+          ), { filename: 'data.xml' })
+        .attach('this_file1.svg', Buffer.from('this is svg test file one'), { filename: 'this_file1.svg' })
+        .expect(201);
+
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/bone/attachments/this_file1.svg')
+        .expect(200)
+        .then(({ headers, body }) => {
+          headers['content-type'].should.equal('image/svg+xml');
+          headers['content-disposition'].should.equal('attachment; filename="this_file1.svg"; filename*=UTF-8\'\'this_file1.svg');
+          body.toString('utf8').should.equal('this is svg test file one');
+        });
+    }));
 
     it('should successfully save additionally POSTed attachment binary data with s3 enabled', testService((service, { Blobs }) => {
       global.s3.enableMock();
@@ -570,7 +624,7 @@ describe('api: /submission', () => {
                 .expect(200)
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
-                  headers['content-disposition'].should.equal('attachment; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
                   headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
                 }))
@@ -2754,11 +2808,11 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .then(({ text }) => {
               const rows = text.split('\n');
               rows.length.should.equal(5);
-              rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,children-child-name,children-child-age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
+              rows[0].should.equal('SubmissionDate,meta-instanceID,name,age,KEY,SubmitterID,SubmitterName,AttachmentsPresent,AttachmentsExpected,Status,ReviewState,DeviceID,Edits,FormVersion');
               // (need to drop the iso date)
-              rows[1].slice(24).should.equal(',rthree,Chelsea,38,,,rthree,5,Alice,0,0,,,,0,1.0');
-              rows[2].slice(24).should.equal(',rtwo,Bob,34,,,rtwo,5,Alice,0,0,,,,0,1.0');
-              rows[3].slice(24).should.equal(',rone,Alice,30,,,rone,5,Alice,0,0,,,,0,1.0');
+              rows[1].slice(24).should.equal(',rthree,Chelsea,38,rthree,5,Alice,0,0,,,,0,1.0');
+              rows[2].slice(24).should.equal(',rtwo,Bob,34,rtwo,5,Alice,0,0,,,,0,1.0');
+              rows[3].slice(24).should.equal(',rone,Alice,30,rone,5,Alice,0,0,,,,0,1.0');
             })))));
 
     it('should split select multiple values if ?splitSelectMultiples=true', testService((service, container) =>
@@ -3626,6 +3680,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             entityCreate.details.entity.uuid.should.equal('12345678-1234-4123-8234-123456789abc');
             entityCreate.details.entity.should.be.an.Entity();
             entityCreate.details.entity.currentVersion.should.be.an.EntityDef();
+            entityCreate.details.entity.entityAvailable.should.equal(true);
           });
       }));
 
@@ -5018,6 +5073,154 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
                       oldBlobId: attachment.blobId
                     });
                   }))))))));
+  });
+
+  describe('[version] /:rootId/versions/:instanceId/attachments/:name DELETE', () => {
+    it('should return notfound if the attachment does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+      // this name does not exist for an attachment
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/other_file.mp4')
+        .expect(404);
+    }));
+
+    it('should reject if the user cannot update a submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asChelsea = await service.login('chelsea');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+      await asChelsea.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/here_is_file2.jpg')
+        .expect(403);
+    }));
+
+    it('should clear the given attachment', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/here_is_file2.jpg')
+        .expect(200);
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'here_is_file2.jpg', exists: false },
+            { name: 'my_file1.mp4', exists: false }
+          ]);
+        });
+    }));
+
+    it('should clear an attachment for an old version of a submission', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+        .expect(201);
+
+      // update submission, will carry blobs forward to new submission def
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both
+          .replace('<instanceID>both', '<deprecatedID>both</deprecatedID><instanceID>both2')),
+        { filename: 'data.xml' })
+        .expect(201);
+
+      // update submission again, will carry blobs forward to new submission def
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both
+          .replace('<instanceID>both', '<deprecatedID>both2</deprecatedID><instanceID>both3')),
+        { filename: 'data.xml' })
+        .expect(201);
+
+      // Clear attachment "my_file1.mp4" of middle version of submission
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both2/attachments/my_file1.mp4')
+        .expect(200);
+
+      // Check attachments of current version (both3)
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both3/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'here_is_file2.jpg', exists: true },
+            { name: 'my_file1.mp4', exists: true }
+          ]);
+        });
+
+      // Check attachments middle version (both2) - this one should be deleted
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both2/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'here_is_file2.jpg', exists: true },
+            { name: 'my_file1.mp4', exists: false }
+          ]);
+        });
+
+      // Check attachments of first version (both)
+      await asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([
+            { name: 'here_is_file2.jpg', exists: true },
+            { name: 'my_file1.mp4', exists: true }
+          ]);
+        });
+
+    }));
+
+    it('should log an audit entry about the deletion', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.binaryType)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+        .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+        .expect(201);
+      await asAlice.delete('/v1/projects/1/forms/binaryType/submissions/both/versions/both/attachments/here_is_file2.jpg')
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=submission.attachment.update')
+        .then(({ body }) => {
+          const log = body[0];
+          log.details.instanceId.should.eql('both');
+          log.details.name.should.eql('here_is_file2.jpg');
+          should.exist(log.details.oldBlobId);
+          should.not.exist(log.details.newBlobId);
+        });
+    }));
   });
 
   describe('[draft] /:instanceId/attachments/:name DELETE', () => {

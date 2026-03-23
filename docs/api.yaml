@@ -41,6 +41,16 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2026.1
+
+    **Added**:
+    - Three endpoints gained `ETag` HTTP response headers. These can be used to efficiently revalidate clientside caches.
+      A guide on how to use caching for better performance of data pipelines can be found [here](/using-http-caching).
+      The endpoints that have gained caching information are:
+      - The submission-related OData "[data documents](/central-api-odata-endpoints/#data-document)". The dataset-related OData endpoints are to follow in some future release.
+      - The [`submissions.csv`](/central-api-submission-management/#exporting-root-data-to-plain-csv) endpoint
+      - The [`submissions.csv.zip`](/central-api-submission-management/#exporting-form-submissions-to-csv) endpoint
+
     ## ODK Central v2025.3
 
     **Added**:
@@ -5445,6 +5455,18 @@ paths:
         schema:
           type: boolean
         example: true
+      - name: limit
+        in: query
+        description: The maximum number of submissions to return.
+        schema:
+          type: number
+        example: "100"
+      - name: offset
+        in: query
+        description: The number of submissions to skip from the result (starting with the latest submission).
+        schema:
+          type: number
+        example: "200"
       responses:
         "200":
           description: OK
@@ -6833,8 +6855,8 @@ paths:
       tags:
       - Attachments
       summary: Downloading an Attachment
-      description: The `Content-Type` and `Content-Disposition` will be set appropriately
-        based on the file itself when requesting an attachment file download.
+      description: |-
+        The `Content-Type` and `Content-Disposition` will be set appropriately based on the file itself when requesting an attachment file download.
 
         This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: downloadAttachment
@@ -6935,6 +6957,9 @@ paths:
         _(introduced: version 0.4)_
 
         Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
+
+        This endpoint clears attachments on the current version of the submission.
+        See [Clearing the Attachment of a specific Submission Version](/central-api-submission-management/#clearing-a-submission-version-s-attachment) for more control over attachments on past versions.
       operationId: clearSubmissionAttachment
       parameters:
       - name: projectId
@@ -7347,6 +7372,59 @@ paths:
             '{the MIME type of the attachment file itself}':
               example: |
                 (binary data)
+    delete:
+      tags:
+      - Submission Versions
+      summary: Clearing a Submission Version's Attachment
+      description: |-
+        This endpoint clears attachments on submission versions.
+
+        Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a DELETE to the attachment's endpoint, that is what happens.
+      operationId: clearVersionedAttachment
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: xmlFormId
+        in: path
+        description: The `xmlFormId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: simple
+      - name: instanceId
+        in: path
+        description: The `instanceId` of the Submission being referenced.
+        required: true
+        schema:
+          type: string
+        example: uuid:85cb9aff-005e-4edd-9739-dc9c1a829c44
+      - name: versionId
+        in: path
+        description: The `instanceId` of the particular version of this submission
+          in question.
+        required: true
+        schema:
+          type: string
+        example: uuid:b1628661-65ed-4cab-8e30-19c17fef2de0
+      - name: filename
+        in: path
+        description: The name of the file as given by the Attachments listing resource.
+        required: true
+        schema:
+          type: string
+        example: file1.jpg
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
   /v1/projects/{projectId}/forms/{xmlFormId}/submissions/{instanceId}/diffs:
     get:
       tags:
@@ -8468,116 +8546,6 @@ paths:
                     type: user
                     updatedAt: '2018-04-18T23:42:11.406Z'
                     deletedAt: '2018-04-18T23:42:11.406Z'
-  /v1/projects/{projectId}/datasets/{name}/entities.geojson:
-    get:
-      tags:
-      - Entity Management
-      summary: Entities Geodata
-      description: |-
-        This endpoint returns the geometry-interpretable value of the `geometry` attribute of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
-        No particular ordering is implied.
-        
-        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
-        Its current behaviour should not be depended upon.
-        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
-      operationId: getEntitiesGeodata
-      parameters:
-      - name: projectId
-        in: path
-        description: The numeric ID of the Project
-        required: true
-        schema:
-          type: number
-        example: "10"
-      - name: name
-        in: path
-        description: Name of the Dataset
-        required: true
-        schema:
-          type: string
-        example: people
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                description: |
-                  Value of the `geometry` attribute (if geometry-interpretable) of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
-
-                  Each entity is represented as a GeoJSON feature.
-                type: object
-              example:
-                {
-                  "type": "FeatureCollection",
-                  "features": [
-                    {
-                      "type": "Feature",
-                      "id": "06f1b19a-a14e-4916-b850-b5a5155ea4b7",
-                      "properties": null,
-                      "geometry": {
-                        "type": "Point",
-                        "coordinates": [27.98833, 86.92528, 8848]
-                      }
-                    },
-                    {
-                      "type": "Feature",
-                      "id": "b4677e0a-8731-4b75-b8df-8e4337ff9b5e",
-                      "properties": null,
-                      "geometry": {
-                        "type": "Point",
-                        "coordinates": [11.3733, 142.5917, -10984]
-                      }
-                    }
-                  ]
-                }
-
-  /v1/projects/{projectId}/datasets/{name}/entities/creators:
-    get:
-      tags:
-      - Entity Management
-      summary: Entities Creators
-      description: |-
-        This endpoint returns a list of all Actors who have created Entities in the Dataset, sorted by display name.
-      operationId: entitiesCreators
-      parameters:
-      - name: projectId
-        in: path
-        description: The numeric ID of the Project
-        required: true
-        schema:
-          type: number
-        example: "16"
-      - name: name
-        in: path
-        description: Name of the Dataset
-        required: true
-        schema:
-          type: string
-        example: people
-      responses:        
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: array
-                description: List of Actors who created Entities
-                items:
-                  $ref: '#/components/schemas/Actor'
-              example:
-              - id: 115
-                type: user
-                displayName: Alice Johnson
-                createdAt: '2018-04-18T23:19:14.802Z'
-                updatedAt: '2018-04-18T23:42:11.406Z'
-                deletedAt: null
-              - id: 23
-                type: user
-                displayName: Bob Smith
-                createdAt: '2018-03-15T15:30:22.150Z'
-                updatedAt: '2018-03-15T15:30:22.150Z'
-                deletedAt: null
     post:
       tags:
       - Entity Management
@@ -8688,6 +8656,116 @@ paths:
             application/json; bulk:
               schema:
                 $ref: '#/components/schemas/Success'
+  /v1/projects/{projectId}/datasets/{name}/entities.geojson:
+    get:
+      tags:
+      - Entity Management
+      summary: Entities Geodata
+      description: |-
+        This endpoint returns the geometry-interpretable value of the `geometry` attribute of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
+        No particular ordering is implied.
+        
+        ⚠️ The specifics of this endpoint are likely to change in future releases, and the parameters this endpoint takes are not all documented.
+        Its current behaviour should not be depended upon.
+        Use cases for this API can be discussed on [the forum](https://forum.getodk.org/).
+      operationId: getEntitiesGeodata
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "10"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                description: |
+                  Value of the `geometry` attribute (if geometry-interpretable) of Entities of an entity dataset, in [GeoJSON](https://geojson.org) format.
+
+                  Each entity is represented as a GeoJSON feature.
+                type: object
+              example:
+                {
+                  "type": "FeatureCollection",
+                  "features": [
+                    {
+                      "type": "Feature",
+                      "id": "06f1b19a-a14e-4916-b850-b5a5155ea4b7",
+                      "properties": null,
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [27.98833, 86.92528, 8848]
+                      }
+                    },
+                    {
+                      "type": "Feature",
+                      "id": "b4677e0a-8731-4b75-b8df-8e4337ff9b5e",
+                      "properties": null,
+                      "geometry": {
+                        "type": "Point",
+                        "coordinates": [11.3733, 142.5917, -10984]
+                      }
+                    }
+                  ]
+                }
+
+  /v1/projects/{projectId}/datasets/{name}/entities/creators:
+    get:
+      tags:
+      - Entity Management
+      summary: Entities Creators
+      description: |-
+        This endpoint returns a list of all Actors who have created Entities in the Dataset, sorted by display name.
+      operationId: entitiesCreators
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      responses:        
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                description: List of Actors who created Entities
+                items:
+                  $ref: '#/components/schemas/Actor'
+              example:
+              - id: 115
+                type: user
+                displayName: Alice Johnson
+                createdAt: '2018-04-18T23:19:14.802Z'
+                updatedAt: '2018-04-18T23:42:11.406Z'
+                deletedAt: null
+              - id: 23
+                type: user
+                displayName: Bob Smith
+                createdAt: '2018-03-15T15:30:22.150Z'
+                updatedAt: '2018-03-15T15:30:22.150Z'
+                deletedAt: null
   /v1/projects/{projectId}/datasets/{name}/entities/{uuid}:
     get:
       tags:
