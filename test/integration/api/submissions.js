@@ -3856,7 +3856,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
         await asAlice.get(`/v1/projects/1/forms/simple/submissions/uuid:${secondUuid}${suffix}`)
           .expect(301)
           .then(({ text }) => {
-            text.should.equal(`Moved Permanently. Redirecting to /v1/projects/1/forms/simple/submissions/uuid%3A${rootUuid}/versions/uuid%3A${secondUuid}${suffix}`);
+            text.should.equal(`Moved Permanently. Redirecting to /v1/projects/1/forms/simple/submissions/uuid%3A${rootUuid}/versions/uuid:${secondUuid}${suffix}`);
           });
       }));
     });
