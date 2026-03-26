@@ -10,18 +10,6 @@ describe('api: /config', () => {
             .send({ enabled: true })
             .expect(403))));
 
-      // At the moment, we don't have any configs that cannot be directly set --
-      // so this test won't work. However, the test is left here because there
-      // may very well be such a config in the future.
-      it.skip('should reject if the config cannot be directly set', testService((service) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/config/backups.main')
-            .send({ type: 'google' })
-            .expect(400)
-            .then(({ body }) => {
-              body.code.should.equal(400.8);
-            }))));
-
       it('should reject for an unknown config', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/config/unknown')
@@ -161,21 +149,6 @@ describe('api: /config', () => {
                 body.value.should.eql({ enabled: true });
                 body.setAt.should.be.a.recentIsoDate();
               })))));
-
-      // At the moment, we don't have any configs that transform their JSON
-      // value before returning it over the API. Because of that, this test
-      // won't work. However, the test is left here because there may very well
-      // be such a config in the future.
-      it.skip('should transform the config value', testService((service, { Configs }) =>
-        Configs.set('backups.main', { type: 'google', keys: { super: 'secret' } })
-          .then(() => service.login('alice', (asAlice) =>
-            asAlice.get('/v1/config/backups.main')
-              .expect(200)
-              .then(({ body }) => {
-                body.should.be.a.Config();
-                // No keys
-                body.value.should.eql({ type: 'google' });
-              })))));
     });
 
     describe('GET - public config', () => {
@@ -247,17 +220,6 @@ describe('api: /config', () => {
       it('should reject if the user cannot set config', testService((service) =>
         service.login('chelsea', (asChelsea) =>
           asChelsea.delete('/v1/config/analytics').expect(403))));
-
-      // At the moment, we don't have any configs that cannot be directly set --
-      // so this test won't work. However, the test is left here because there
-      // may very well be such a config in the future.
-      it.skip('should reject if the config cannot be directly set', testService((service) =>
-        service.login('alice', (asAlice) =>
-          asAlice.delete('/v1/config/backups.main')
-            .expect(400)
-            .then(({ body }) => {
-              body.code.should.equal(400.8);
-            }))));
 
       it('should reject for an unknown config', testService((service) =>
         service.login('alice', (asAlice) =>
