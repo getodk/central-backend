@@ -2,6 +2,10 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { testTask } = require('../setup');
 const { runAnalytics } = require(appRoot + '/lib/task/analytics');
+const { Config } = require(appRoot + '/lib/model/frames/config');
+
+const setConfig = (Configs, value) =>
+  Configs.set(Config.forKey('analytics').fromValue(value));
 
 describe('task: analytics', () => {
   it('should not compute analytics if not enabled', testTask(() =>
@@ -12,7 +16,7 @@ describe('task: analytics', () => {
       })));
 
   it('should not compute analytics if explicitly disabled', testTask(({ Configs }) =>
-    Configs.set('analytics', { enabled: false })
+    setConfig(Configs, { enabled: false })
       .then(() => runAnalytics()
         .then((res) => {
           res.sent.should.equal(false);
@@ -20,7 +24,7 @@ describe('task: analytics', () => {
         }))));
 
   it('should not compute analytics if analytics sent recently', testTask(({ Configs, Audits }) =>
-    Configs.set('analytics', { enabled: true })
+    setConfig(Configs, { enabled: true })
       // eslint-disable-next-line object-curly-spacing
       .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: true})
         .then(() => runAnalytics()
@@ -30,14 +34,14 @@ describe('task: analytics', () => {
           })))));
 
   it('should send analytics if enabled and time to send', testTask(({ Configs }) =>
-    Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
+    setConfig(Configs, { enabled: true, email: 'test@getodk.org' })
       .then(() => runAnalytics()
         .then((res) => {
           res.sent.should.equal(true);
         }))));
 
   it('should resend analytics if last attempt failed', testTask(({ Configs, Audits }) =>
-    Configs.set('analytics', { enabled: true })
+    setConfig(Configs, { enabled: true })
       // eslint-disable-next-line object-curly-spacing
       .then(() => Audits.log(null, 'analytics', null, {test: 'test', success: false})
         .then(() => runAnalytics()
@@ -46,7 +50,7 @@ describe('task: analytics', () => {
           })))));
 
   it('should log event and full report if analytics sent successfully', testTask(({ Configs, Audits }) =>
-    Configs.set('analytics', { email: 'test@getodk.org', organization: 'ODK', enabled: true })
+    setConfig(Configs, { email: 'test@getodk.org', organization: 'ODK', enabled: true })
       .then(() => runAnalytics())
       .then(() => Audits.getLatestByAction('analytics').then((o) => o.get())
         .then((au) => {
@@ -64,7 +68,7 @@ describe('task: analytics', () => {
         }))));
 
   it('should log request errors', testTask(({ Configs, Audits, analyticsReporter }) =>
-    Configs.set('analytics', { enabled: true, email: 'test@getodk.org' })
+    setConfig(Configs, { enabled: true, email: 'test@getodk.org' })
       // eslint-disable-next-line space-in-parens, object-curly-spacing
       .then(analyticsReporter.setError({ testError: 'foo'} ))
       .then(() => runAnalytics()
@@ -81,7 +85,7 @@ describe('task: analytics', () => {
 
   it('should check xml content of what analytics reporter sent', testTask(async ({ Configs, analyticsReporter }) => {
     // Organization is empty and wont show up in <config>. Also tested in unit/data/odk-reporter.js
-    await Configs.set('analytics', { enabled: true, email: 'test@getodk.org' });
+    await setConfig(Configs, { enabled: true, email: 'test@getodk.org' });
     await runAnalytics();
     analyticsReporter.dataSent.should.startWith('<?xml version="1.0"?>');
     analyticsReporter.dataSent.should.containEql('id="odk-analytics"');
@@ -90,7 +94,7 @@ describe('task: analytics', () => {
   }));
 
   it('should encode XML entities in user-controlled fields in analytics XML', testTask(async ({ Configs, analyticsReporter }) => {
-    await Configs.set('analytics', { enabled: true, email: 'test@getodk.org&</bad>' });
+    await setConfig(Configs, { enabled: true, email: 'test@getodk.org&</bad>' });
     await runAnalytics();
     analyticsReporter.dataSent.should.startWith('<?xml version="1.0"?>');
     analyticsReporter.dataSent.should.containEql('id="odk-analytics"');
