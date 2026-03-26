@@ -151,7 +151,7 @@ describe('api: /config', () => {
               })))));
     });
 
-    describe('GET - public config', () => {
+    describe('GET - single public config', () => {
       it('should reject if the config is not public', testService((service) =>
         service.get('/v1/config/public/analytics').expect(403)));
 

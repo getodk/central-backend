@@ -184,12 +184,12 @@ describe('Config', () => {
         });
       });
 
-      it('should return the value for analytics', () => {
+      it('should return the value as-is for analytics', () => {
         const config = Config.forKey('analytics').fromValue({ enabled: true });
         config.forApi().value.should.eql({ enabled: true });
       });
 
-      it('should return the value for login-appearance', () => {
+      it('should return the value as-is for login-appearance', () => {
         const frame = Config.forKey('login-appearance');
         const config = frame.fromValue({ title: 'foo', description: 'bar' });
         config.forApi().value.should.eql({ title: 'foo', description: 'bar' });

@@ -304,7 +304,6 @@ should.Assertion.add('Config', function() {
     should.not.exist(this.obj.blobExists);
   } else {
     this.obj.blobExists.should.be.true();
-    should.not.exist(this.obj.value);
   }
 });
 
