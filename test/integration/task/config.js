@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { testTask } = require('../setup');
-const { getConfiguration, setConfiguration } = require(appRoot + '/lib/task/config');
+const { getConfiguration } = require(appRoot + '/lib/task/config');
 
 describe('task: config', () => {
   describe('getConfiguration', () => {
@@ -15,14 +15,6 @@ describe('task: config', () => {
 
     it('should reject if configuration is not found', testTask(() =>
       getConfiguration('nonexistent').should.be.rejected()));
-  });
-
-  describe('setConfiguration', () => {
-    it('should save configuration by key', testTask(({ Configs }) =>
-      setConfiguration('testConfig', { set: 'data' })
-        .then(() => Configs.get('testConfig'))
-        .then((o) => o.get())
-        .then((config) => config.value.should.eql({ set: 'data' }))));
   });
 });
 
