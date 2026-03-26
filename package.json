@@ -14,7 +14,7 @@
     "bcrypt": "^6.0.0",
     "body-parser": "~1.20",
     "cloneable-readable": "^3.0.0",
-    "commander": "^14.0.2",
+    "commander": "^14.0.3",
     "config": "^4.1.1",
     "cookie-parser": "^1.4.6",
     "csv-parse": "^6.1.0",
@@ -48,9 +48,9 @@
     "yauzl": "^3.2.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
-    "@redocly/cli": "^2.12.2",
-    "@sinonjs/fake-timers": "^15.0.0",
+    "@playwright/test": "^1.58.2",
+    "@redocly/cli": "^2.25.1",
+    "@sinonjs/fake-timers": "^15.1.1",
     "app-root-path": "~3",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "~15",
