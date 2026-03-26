@@ -4,7 +4,7 @@
     <h:title>ODK Analytics</h:title>
     <model odk:xforms-version="1.0.0">
       <instance>
-        <data id="odk-analytics" version="v2025.4.0_1">
+        <data id="odk-analytics" version="v2026.1.0_1">
           <config>
             <email/>
             <organization/>
@@ -32,6 +32,10 @@
             <uses_external_db/>
             <uses_external_blob_store/>
             <sso_enabled/>
+            <login_customization_logo_set/>
+            <login_customization_hero_image_set/>
+            <login_customization_title_set/>
+            <login_customization_description_set/>
             <num_client_audit_attachments/>
             <num_client_audit_attachments_failures/>
             <num_client_audit_rows/>
@@ -223,6 +227,8 @@
             </datasets>
             <other>
               <description_length/>
+              <num_datasets_deleted/>
+              <num_dataset_properties_deleted/>
             </other>
           </projects>
           <projects>
@@ -391,6 +397,8 @@
             </datasets>
             <other>
               <description_length/>
+              <num_datasets_deleted/>
+              <num_dataset_properties_deleted/>
             </other>
           </projects>
           <meta>
@@ -416,6 +424,10 @@
       <bind nodeset="/data/system/uses_external_db" type="int"/>
       <bind nodeset="/data/system/uses_external_blob_store" type="int"/>
       <bind nodeset="/data/system/sso_enabled" type="int"/>
+      <bind nodeset="/data/system/login_customization_logo_set" type="int"/>
+      <bind nodeset="/data/system/login_customization_hero_image_set" type="int"/>
+      <bind nodeset="/data/system/login_customization_title_set" type="int"/>
+      <bind nodeset="/data/system/login_customization_description_set" type="int"/>
       <bind nodeset="/data/system/num_client_audit_attachments" type="int"/>
       <bind nodeset="/data/system/num_client_audit_attachments_failures" type="int"/>
       <bind nodeset="/data/system/num_client_audit_rows" type="int"/>
@@ -524,6 +536,8 @@
       <bind nodeset="/data/projects/datasets/num_entities_with_geometry/recent" type="int"/>
       <bind nodeset="/data/projects/datasets/num_entities_with_geometry/total" type="int"/>
       <bind nodeset="/data/projects/other/description_length" type="int"/>
+      <bind nodeset="/data/projects/other/num_datasets_deleted" type="int"/>
+      <bind nodeset="/data/projects/other/num_dataset_properties_deleted" type="int"/>
       <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
     </model>
   </h:head>
@@ -595,6 +609,18 @@
       </input>
       <input ref="/data/system/sso_enabled">
         <label>SSO enabled on Server</label>
+      </input>
+      <input ref="/data/system/login_customization_logo_set">
+        <label>Login customization logo set</label>
+      </input>
+      <input ref="/data/system/login_customization_hero_image_set">
+        <label>Login customization hero image set</label>
+      </input>
+      <input ref="/data/system/login_customization_title_set">
+        <label>Login customization title set</label>
+      </input>
+      <input ref="/data/system/login_customization_description_set">
+        <label>Login customization description set</label>
       </input>
       <input ref="/data/system/num_client_audit_attachments">
         <label>Number of Client Audit Attachments</label>
@@ -1047,6 +1073,12 @@
           <label>Other</label>
           <input ref="/data/projects/other/description_length">
             <label>Length of the Project description</label>
+          </input>
+          <input ref="/data/projects/other/num_datasets_deleted">
+            <label>Number of dataset delete events</label>
+          </input>
+          <input ref="/data/projects/other/num_dataset_properties_deleted">
+            <label>Number of dataset property delete events</label>
           </input>
         </group>
       </repeat>
