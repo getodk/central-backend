@@ -61,10 +61,17 @@ describe('api: /config', () => {
           await asAlice.post('/v1/config/logo')
             .set('Content-Type', 'image/jpeg')
             .send('testimage')
-            .expect(200);
-          const { body } = await asAlice.get('/v1/config/logo')
-            .expect(200);
-          body.toString('utf8').should.equal('testimage');
+            .expect(200)
+            .then(({ body }) => {
+              body.should.be.a.Config();
+              body.key.should.equal('logo');
+              body.blobExists.should.be.true();
+            });
+          await asAlice.get('/v1/config/logo')
+            .expect(200)
+            .then(({ body }) => {
+              body.toString('utf8').should.equal('testimage');
+            });
         }));
 
         it('should inline select image types', testService(async (service) => {
