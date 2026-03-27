@@ -47,6 +47,7 @@ describe('external/s3', () => {
     if (!nock.isActive()) nock.activate();
   });
   afterEach(() => {
+    nock.cleanAll();
     nock.restore();
   });
   after(async () => {
@@ -91,23 +92,15 @@ describe('external/s3', () => {
       );
     });
 
-    it('should return blob info for upstream 500 errors', async () => {
+    it('should return retry message for upstream 500 errors', async () => {
       // given
-      s3mock.get(/.*/).reply(500, amzInternalError);
+      s3mock.get(/.*/).reply(200); // get for bucket location
+      s3mock.post(/.*/).times(2).reply(500, amzInternalError);
 
       // expect
       await assert.rejects(
         () => s3.deleteObjsFor([ exampleBlob ]),
-        {
-          name: 'Error',
-          message: `The upstream S3 server had an internal problem performing 'removeObjects'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
-          problemCode: 500.5,
-          problemDetails: {
-            amzRequestId,
-            operation: 'removeObjects',
-            blobIds: [ 1 ],
-          },
-        },
+        { message: 'Request failed after 1 retries: Error: Retryable HTTP status: 500' },
       );
     });
   });
@@ -134,23 +127,15 @@ describe('external/s3', () => {
       );
     });
 
-    it('should return blob info for upstream 500 errors', async () => {
+    it('should return retry message for upstream 500 errors', async () => {
       // given
-      s3mock.get(/.*/).reply(500, amzInternalError);
+      s3mock.get(/.*/).reply(200); // get for bucket location
+      s3mock.get(/.*/).times(2).reply(500, amzInternalError);
 
       // expect
       await assert.rejects(
         () => s3.getContentFor(exampleBlob),
-        {
-          name: 'Error',
-          message: `The upstream S3 server had an internal problem performing 'getObject'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
-          problemCode: 500.5,
-          problemDetails: {
-            amzRequestId,
-            operation: 'getObject',
-            blobId: 1,
-          },
-        },
+        { message: 'Request failed after 1 retries: Error: Retryable HTTP status: 500' },
       );
     });
   });
@@ -182,23 +167,15 @@ describe('external/s3', () => {
       );
     });
 
-    it('should return blob info for upstream 500 errors', async () => {
+    it('should return retry message for upstream 500 errors', async () => {
       // given
-      s3mock.get(/.*/).reply(500, amzInternalError);
+      s3mock.get(/.*/).reply(200); // get for bucket location
+      s3mock.get(/.*/).times(2).reply(500, amzInternalError);
 
       // expect
       await assert.rejects(
         () => s3.uploadFromBlob(exampleBlob),
-        {
-          name: 'Error',
-          message: `The upstream S3 server had an internal problem performing 'putObject'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
-          problemCode: 500.5,
-          problemDetails: {
-            amzRequestId,
-            operation: 'putObject',
-            blobId: 1,
-          },
-        },
+        { message: 'Request failed after 1 retries: Error: Retryable HTTP status: 500' },
       );
     });
   });
