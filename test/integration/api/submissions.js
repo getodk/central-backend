@@ -220,6 +220,25 @@ describe('api: /submission', () => {
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
 
+    it('should prepand odk-client to the user agent string', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/submission?deviceID=imei%3A358240051111110')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'central/test')
+        .set('ODK-Client', 'test-framework')
+        .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+        .expect(201)
+        .then(({ text }) => {
+          text.should.match(/upload was successful/);
+        });
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].userAgent.should.equal('test-framework central/test');
+        });
+    }));
+
     it('should accept a submission for an old form version', testService((service, { Submissions, one }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -1209,6 +1228,26 @@ describe('api: /forms/:id/submissions', () => {
               body[0].userAgent.should.equal('central/test');
             })))));
 
+    it('should prepand odk-client to the user agent string', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions?deviceID=testtest')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .set('User-Agent', 'central/test')
+        .set('ODK-Client', 'test-framework')
+        .expect(200)
+        .then(({ body }) => {
+          body.deviceId.should.equal('testtest');
+          body.userAgent.should.equal('test-framework central/test');
+        });
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].userAgent.should.equal('test-framework central/test');
+        });
+    }));
+
     const lengthyUserAgent = 'Enketo/7.5.1 Mozilla/5.0 (iPhone; CPU iPhone OS 18_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/22E252 [FBAN/FBIOS;FBAV/512.0.0.52.99;FBBV/731098301;FBDV/iPhone15,4;FBMD/iPhone;FBSN/iOS;FBSV/18.4.1;FBSS/3;FBID/phone;FBLC/en_US;FBOP/5;FBRV/733464354;IABMV/1]';
     const lengthyDeviceId = 'Lorem Ipsum: In ea cillum aliqua voluptate est non aute aute dolor. Non amet sit deserunt amet quis qui voluptate ad dolor magna do adipisicing. Laboris mollit anim exercitation anim Lorem ullamco culpa nulla sit qui. Occaecat laboris minim ea ut laboris mollit quis. Proident pariatur Lorem adipisicing nisi enim minim.';
     it('should not fail if longer userAgent and deviceId is provided', testService((service) =>
@@ -1405,19 +1444,21 @@ describe('api: /forms/:id/submissions', () => {
           .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
           .set('user-agent', 'node1')
+          .set('ODK-Client', 'test-framework')
           .expect(200)
           .then(() => asAlice.put('/v1/projects/1/forms/simple/submissions/one')
             .set('Content-Type', 'text/xml')
             .send(withSimpleIds('one', 'two'))
             .set('user-agent', 'node2')
+            .set('ODK-Client', 'test-framework-updated')
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Submission();
               body.instanceId.should.be.eql('one');
               body.currentVersion.instanceId.should.be.eql('two');
 
-              body.userAgent.should.be.eql('node1');
-              body.currentVersion.userAgent.should.be.eql('node2');
+              body.userAgent.should.be.eql('test-framework node1');
+              body.currentVersion.userAgent.should.be.eql('test-framework-updated node2');
             }))
           .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one.xml')
             .expect(200)
