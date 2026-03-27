@@ -255,7 +255,7 @@ describe('api: /config', () => {
                 body.length.should.equal(2);
                 body[0].actorId.should.equal(5);
                 should.not.exist(body[0].acteeId);
-                body[0].details.should.eql({ key: 'analytics', value: null });
+                body[0].details.should.eql({ key: 'analytics', value: null, blobId: null });
               })))));
     });
   });
