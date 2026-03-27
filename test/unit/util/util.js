@@ -107,8 +107,8 @@ describe('util/util', () => {
     });
   });
 
-  describe('prepandString', () => {
-    const { prepandString } = util;
+  describe('prependString', () => {
+    const { prependString } = util;
 
     [
       [null, 'value', 'value'],
@@ -123,7 +123,7 @@ describe('util/util', () => {
       [undefined, undefined, undefined],
     ].forEach(([prefix, x, expected]) => {
       it(`should return '${expected}' for prefix='${prefix}' and x='${x}'`, () => {
-        should(prepandString(prefix)(x)).equal(expected);
+        should(prependString(prefix)(x)).equal(expected);
       });
     });
   });

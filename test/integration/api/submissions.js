@@ -154,7 +154,6 @@ describe('api: /submission', () => {
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
-          .set('ODK-Client', 'test-framework')
           .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
           .expect(201)
           .then(({ text }) => {
