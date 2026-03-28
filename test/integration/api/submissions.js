@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { v4: uuid } = require('uuid');
+const { v4: uuid, v4 } = require('uuid');
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
 const { testService, testServiceFullTrx } = require('../setup');
@@ -3869,6 +3869,39 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
             .then(({ text }) => {
               text.should.equal('Moved Permanently. Redirecting to /v1/projects/1/forms/simple/submissions/one/versions/two.xml');
             })))));
+
+    [
+      { suffix: '.xml' },
+      { suffix: '' },
+      { suffix: '/attachments' },
+      { suffix: '/attachments/dummy' },
+      { suffix: '?foo=bar' },
+
+    ].forEach(({ suffix }) => {
+      it(`should redirect to the versions if the referenced instanceID is not root - ${suffix}`, testService(async (service) => {
+        const rootUuid = v4();
+        const secondUuid = v4();
+        const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(testData.instances.simple.one.replace('one', `uuid:${rootUuid}`)), { filename: 'data.xml' })
+          .expect(201);
+        await asAlice.post('/v1/projects/1/submission')
+          .set('X-OpenRosa-Version', '1.0')
+          .attach('xml_submission_file', Buffer.from(withSimpleIds(`uuid:${rootUuid}`, `uuid:${secondUuid}`)), { filename: 'data.xml' })
+          .expect(201);
+        await asAlice.get(`/v1/projects/1/forms/simple/submissions/uuid%3A${secondUuid}${suffix}`)
+          .expect(301)
+          .then(({ text }) => {
+            text.should.equal(`Moved Permanently. Redirecting to /v1/projects/1/forms/simple/submissions/uuid%3A${rootUuid}/versions/uuid%3A${secondUuid}${suffix}`);
+          });
+        await asAlice.get(`/v1/projects/1/forms/simple/submissions/uuid:${secondUuid}${suffix}`)
+          .expect(301)
+          .then(({ text }) => {
+            text.should.equal(`Moved Permanently. Redirecting to /v1/projects/1/forms/simple/submissions/uuid%3A${rootUuid}/versions/uuid:${secondUuid}${suffix}`);
+          });
+      }));
+    });
   });
 
   describe('[version] /:instanceId.xml GET', () => {
