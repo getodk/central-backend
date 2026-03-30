@@ -159,13 +159,23 @@ describe('util/http', () => {
       { url: '/v1/projects/1/forms/simple/submissions/instanceId/attachments/dummy', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId/attachments/dummy' },
       { url: '/v1/projects/1/forms/simple/submissions/instanceId/attachments/dummy?foo=bar', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId/attachments/dummy?foo=bar' },
       { url: '/v1/projects/1/forms/simple/submissions/instanceId?foo=bar', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId?foo=bar' },
+
+      // .xml
       { url: '/v1/projects/1/forms/simple/submissions/instanceId.xml?foo=bar', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId.xml?foo=bar' },
       { url: '/v1/projects/1/forms/simple/submissions/instanceId.xml.xml?foo=bar', instanceId: 'instanceId.xml', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId.xml.xml?foo=bar' },
+      { url: '/v1/projects/1/forms/simple/submissions/.xml', instanceId: '.xml', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/.xml' },
+
+      // IDs that match path components
       { url: '/v1/projects/1/forms/submissions/draft/submissions/draft', instanceId: 'draft', rootId: 'rootId', expected: '/v1/projects/1/forms/submissions/draft/submissions/rootId/versions/draft' },
       { url: '/v1/projects/1/forms/draft/submissions/submissions', instanceId: 'submissions', rootId: 'rootId', expected: '/v1/projects/1/forms/draft/submissions/rootId/versions/submissions' },
+
+      // Encoded or partially encoded instance IDs
       { url: '/v1/projects/1/forms/simple/submissions/:%3A', instanceId: '::', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/:%3A' },
       { url: '/v1/projects/1/forms/simple/submissions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3', instanceId: 'uuid:adcaefa3-91d7-4770-a49a-1f5607d0f2f3', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3' },
       { url: '/v1/projects/1/forms/simple/submissions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3.xml', instanceId: 'uuid:adcaefa3-91d7-4770-a49a-1f5607d0f2f3', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3.xml' },
+
+      // Case-insensitivity
+      { url: '/v1/projects/1/forms/simple/SUBMISSIONS/instanceId.XML?foo=bar', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId.XML?foo=bar' },
     ].forEach(({ url, instanceId, rootId, expected }) => {
       it(`should return ${expected} for ${url}`, () => {
         convertToSubmissionVersion(url, instanceId, rootId).should.be.eql(expected);
