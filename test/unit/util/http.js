@@ -1,5 +1,4 @@
 const appRoot = require('app-root-path');
-const { convertToSubmissionVersion } = require('../../../lib/util/http');
 const http = require(appRoot + '/lib/util/http');
 const Option = require(appRoot + '/lib/util/option');
 
@@ -153,6 +152,8 @@ describe('util/http', () => {
   });
 
   describe('convertToSubmissionVersion', () => {
+    const { convertToSubmissionVersion } = http;
+
     [
       { url: '/v1/projects/1/forms/simple/submissions/instanceId', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId' },
       { url: '/v1/projects/1/forms/simple/submissions/instanceId/attachments', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId/attachments' },
