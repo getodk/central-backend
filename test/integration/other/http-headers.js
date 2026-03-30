@@ -14,6 +14,20 @@ describe('http-headers', () => {
         headers['cache-control'].should.eql('private, no-cache');
         headers['vary'].should.eql('Accept-Encoding, Origin'); // eslint-disable-line dot-notation
       }));
+
+      [
+        'sessions/restore',
+        'sessions/RESTORE',
+        'SESSIONS/restore',
+        'SeSsIoNs/restore',
+      ].forEach(path => {
+        it(`should not allow any caching of ${method.toUpperCase()} ${path} responses`, testService(async (service) => {
+          const asAlice = await service.login('alice');
+          const { headers } = await asAlice[method](`/v1/${path}`).expect(200);
+          headers['cache-control'].should.eql('no-store');
+          headers['vary'].should.eql('*'); // eslint-disable-line dot-notation
+        }));
+      });
     });
 
     ['delete', 'patch', 'post', 'put'].forEach(method => {
