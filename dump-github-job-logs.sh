@@ -1,11 +1,18 @@
 #!/bin/bash -eu
 log() { echo >&2 "[$(basename "$0")] $*"; }
 
-log "--- runs in progress: ---"
-gh run list --status in_progress --json headBranch,headSha,displayTitle,url --jq '.[] | "* \(.headBranch) \(.headSha[0:7]) \"\(.displayTitle)\": \(.url)"'
-log "-------------------------"
 
-runId="$(gh run list --branch "$(git branch --show-current)" --limit 1 --status completed --json databaseId --jq '.[0].databaseId')"
+if [[ $# -gt 0 ]]; then
+  runId="$1"
+  shift
+else
+  log "--- runs in progress: ---"
+  gh run list --status in_progress --json headBranch,headSha,displayTitle,url --jq '.[] | "* \(.headBranch) \(.headSha[0:7]) \"\(.displayTitle)\": \(.url)"'
+  log "-------------------------"
+
+  log "Fetching last COMPLETED run id..."
+  runId="$(gh run list --branch "$(git branch --show-current)" --limit 1 --status completed --json databaseId --jq '.[0].databaseId')"
+fi
 log "run id: $runId"
 
 logDir="gha-logs/$runId"
