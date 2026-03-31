@@ -22,7 +22,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-          -- postgres -c track_activity_query_size=16384
+          --track-activity-query-size=16384
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
