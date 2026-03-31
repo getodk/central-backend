@@ -1,6 +1,9 @@
 #!/bin/bash -eu
 log() { echo >&2 "[$(basename "$0")] $*"; }
 
+log "jobs in progress:"
+gh run list --status in_progress --json headBranch,headSha,displayTitle,url --jq '.[] | "* \(.headBranch) \(.headSha[0:7]) \"\(.displayTitle)\": \(.url)"'
+
 runId=$(gh run list --branch "$(git branch --show-current)" --limit 1 --json databaseId --jq '.[0].databaseId')
 log "run id: $runId"
 
