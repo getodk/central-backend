@@ -2,10 +2,339 @@ name: Soak Test
 
 on:
   push:
-    branches: master
 
 jobs:
-  soak-test:
+  soak-test-0:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-1:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-1:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-2:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-3:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-4:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-5:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-6:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-7:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-8:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    services:
+      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
+      postgres:
+        image: postgres:14.20
+        env:
+          POSTGRES_PASSWORD: odktest
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+  soak-test-9:
     timeout-minutes: 15
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
