@@ -11,26 +11,45 @@ const [,,...args] = process.argv;
 const jobId = args.length ? args[0] : execSync(`ls -td ${rootDir}/* | head -1`, { encoding:'utf8' }).substring(rootDir.length + 1).trim();
 log('job id:', jobId);
 
-const allQueries = {};
+const allActiveQueries = {};
 
 for(const _f of readdirSync(`./gha-logs/${jobId}`)) {
   const f = `${rootDir}/${jobId}/${_f}`;
   log('Processing:', f);
 
   const queryPrefix = 'Open queries: ';
-  readFileSync(f, 'utf8')
+  const activeQueries = readFileSync(f, 'utf8')
       .split('\n')
       .filter(it => it.includes(queryPrefix))
-      .flatMap(it => {
+      .map(it => {
         const [ prefix, json ] = it.split(queryPrefix);
-        console.log(prefix);
-        const q = JSON.parse(json);
-        return q;
-      })
-      .forEach(processQuery)
-      ;
+        return JSON.parse(json)
+            .filter(it => it.state !== 'idle')
+            .map(q => {
+              const logged_at = new Date(prefix.split(/\s+/)[3]);;
+              const query_start = new Date(q.query_start);
+              return {
+                ...q,
+                logged_at,
+                query_start,
+                duration_so_far: logged_at.valueOf() - query_start.valueOf(),
+              };
+            });
+        });
+
+  const lastQueries = activeQueries.at(-1);
+  log('  last activeQueries:', lastQueries);
+
+  activeQueries
+      .flat()
+      .forEach(processQuery);
+
+  log('  Done.');
 }
 
-function processQuery({ state, query_start, query }) {
-  console.log(state);
+console.log('allActiveQueries:', JSON.stringify(allActiveQueries, null, 2));
+
+function processQuery({ state, duration_so_far, query }) {
+  if(!allActiveQueries[query]) allActiveQueries[query] = duration_so_far;
+  allActiveQueries[query] = Math.max(allActiveQueries[query], duration_so_far);
 }
