@@ -31,7 +31,7 @@ pg_exec "ALTER SYSTEM SET track_activity_query_size = 16384"
 pgImg="$(docker ps -q --filter name=postgres)"
 
 log "[postgres]   restarting service..."
-docker restart "$pgImg" >/dev/null
+docker restart "$pgImg"
 docker exec $pgImg pg_isready --quiet
 log "[postgres]   restarted OK."
 
