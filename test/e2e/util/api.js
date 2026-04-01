@@ -105,7 +105,7 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
       const responseStatus = res.status;
       const responseText = await res.text() || res.statusText;
 
-      const err = new Error(`${responseStatus}: ${responseText}`);
+      const err = new Error(`${method} ${url} ${responseStatus}: ${responseText}`);
       err.responseStatus = responseStatus;
       err.responseText = responseText;
 
