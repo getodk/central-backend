@@ -32,7 +32,7 @@ pgImg="$(docker ps -q --filter name=postgres)"
 
 log "[postgres]   restarting service..."
 docker restart "$pgImg"
-docker exec $pgImg pg_isready --quiet
+docker exec $pgImg pg_isready
 log "[postgres]   restarted OK."
 
 log "[postgres]   track_activity_query_size: $(pg_exec 'SHOW track_activity_query_size')"
