@@ -168,6 +168,7 @@ function doSoakTest(name, throughput, throughputPeriod, testDuration, minimumSuc
         resolve();
       }, +testDuration);
     } catch(err) {
+      log('Non-OK response:', err);
       reject(err);
     }
   });
