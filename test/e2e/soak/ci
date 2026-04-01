@@ -16,7 +16,7 @@ fail_job() {
 
 pg_exec() {
   [[ $# = 1 ]] || fail_job
-  PGPASSWORD=odktest psql --quiet --tuples-only --command="$1"
+  PGPASSWORD=odktest psql --host=localhost --quiet --tuples-only --command="$1"
 }
 
 log "[postgres] Increasing query log lengths..."
