@@ -1,7 +1,7 @@
 name: Soak Test
 
 on:
-  push:
+  pull_request:
 
 jobs:
   soak-test:
