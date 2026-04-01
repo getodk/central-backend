@@ -14,7 +14,6 @@ jobs:
         image: postgres:14.20
         env:
           POSTGRES_PASSWORD: odktest
-          PGOPTIONS: "-c track_activity_query_size=16384"
         ports:
           - 5432:5432
         # Set health checks to wait until postgres has started
@@ -23,6 +22,8 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+          --entrypoint docker-entrypoint.sh
+          postgres:14.20 postgres -c track_activity_query_size=16384
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
