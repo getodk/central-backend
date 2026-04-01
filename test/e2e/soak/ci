@@ -14,13 +14,6 @@ fail_job() {
   exit 1
 }
 
-make base
-
-echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail"
-node ./lib/bin/cli.js user-promote -u "$userEmail"
-
-make run >backend.log 2>&1 &
-
 log "Increasing postgres query log lengths..."
 pg_exec() {
   [[ $# = 1 ]] || fail_job
@@ -35,6 +28,13 @@ timeout 10 bash -c "while ! docker exec $pgImg pg_isready; do sleep 1; done"
 log "  postgres restarted OK."
 log "  track_activity_query_size: $(pg_exec 'SHOW track_activity_query_size')"
 sleep 20
+
+make base
+
+echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail"
+node ./lib/bin/cli.js user-promote -u "$userEmail"
+
+make run >backend.log 2>&1 &
 
 log 'Waiting for backend to start...'
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
