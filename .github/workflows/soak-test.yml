@@ -30,7 +30,7 @@ jobs:
       run: PGPASSWORD=odktest psql -h localhost -U postgres -c "ALTER SYSTEM SET track_activity_query_size = 16384"
     - run: docker ps
     - name: Restart Postgres
-      run: docker restart $(docker ps -q --filter "ancestor=postgres")
+      run: docker restart $(docker ps -q --filter "name=postgres")
     - name: Print Services
       run: service --status-all
     - name: show postgres track_activity_query_size
