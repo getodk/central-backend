@@ -31,7 +31,7 @@ pg_exec "ALTER SYSTEM SET track_activity_query_size = 16384"
 pgImg="$(docker ps -q --filter name=postgres)"
 log "  restarting postgres..."
 docker restart "$pgImg"
-timeout 10 bash -c "while ! docker exec -t $pgImg pg_isready; do sleep 1; done"
+timeout 10 bash -c "while ! docker exec $pgImg pg_isready; do sleep 1; done"
 log "  postgres restarted OK."
 log "  track_activity_query_size: $(pg_exec 'SHOW track_activity_query_size')"
 
