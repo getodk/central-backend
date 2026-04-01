@@ -25,7 +25,8 @@ fi
 
 mkdir -p "$logDir"
 
-gh run view "$runId" --json jobs --jq '.jobs[] | "\(.databaseId) \(.name)"' | while read -r jobId jobName; do
+log "Fetching logs for FAILED jobs..."
+gh run view "$runId" --json jobs --jq '.jobs[] | select(.conclusion=="failure") | "\(.databaseId) \(.name)"' | while read -r jobId jobName; do
   safeName="$(echo "$jobName" | sed 's/[ /]/_/g')"
   log "fetching logs for: $jobName..."
   gh run view --job "$jobId" --log > "$logDir/$safeName.log"
