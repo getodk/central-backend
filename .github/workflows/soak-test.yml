@@ -24,6 +24,8 @@ jobs:
           --health-retries 5
     steps:
     # Per https://github.com/orgs/community/discussions/126453
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
     - name: show postgres track_activity_query_size
       run: PGPASSWORD=odktest psql -h localhost -U postgres -d jubilant_test -c "SHOW track_activity_query_size"
     - name: set postgres track_activity_query_size
@@ -40,8 +42,6 @@ jobs:
       with:
         node-version-file: package.json
         cache: 'npm'
-    - run: npm ci
-    - run: node lib/bin/create-docker-databases.js
     - name: Soak Test
       timeout-minutes: 10
       run: ./test/e2e/soak/ci
