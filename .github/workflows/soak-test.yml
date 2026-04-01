@@ -24,24 +24,24 @@ jobs:
           --health-retries 5
     steps:
     # Per https://github.com/orgs/community/discussions/126453
-    - run: npm ci
-    - run: node lib/bin/create-docker-databases.js
     - name: show postgres track_activity_query_size
-      run: PGPASSWORD=odktest psql -h localhost -U postgres -d jubilant_test -c "SHOW track_activity_query_size"
+      run: PGPASSWORD=odktest psql -h localhost -U postgres -c "SHOW track_activity_query_size"
     - name: set postgres track_activity_query_size
-      run: PGPASSWORD=odktest psql -h localhost -U postgres -d jubilant_test -c "ALTER SYSTEM SET track_activity_query_size = 16384"
+      run: PGPASSWORD=odktest psql -h localhost -U postgres -c "ALTER SYSTEM SET track_activity_query_size = 16384"
     - name: Restart Postgres
       run: docker restart $(docker ps -q --filter "ancestor=postgres")
     - name: Print Services
       run: service --status-all
     - name: show postgres track_activity_query_size
-      run: PGPASSWORD=odktest psql -h localhost -U postgres -d jubilant_test -c "SHOW track_activity_query_size"
+      run: PGPASSWORD=odktest psql -h localhost -U postgres -c "SHOW track_activity_query_size"
     - uses: actions/checkout@v6
     - name: Set node version
       uses: actions/setup-node@v6
       with:
         node-version-file: package.json
         cache: 'npm'
+    - run: npm ci
+    - run: node lib/bin/create-docker-databases.js
     - name: Soak Test
       timeout-minutes: 10
       run: ./test/e2e/soak/ci
