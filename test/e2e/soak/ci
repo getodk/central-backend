@@ -25,13 +25,16 @@ pg_exec() {
 }
 
 log "[postgres] Increasing query log lengths..."
+
 log "[postgres]   track_activity_query_size: $(pg_exec 'SHOW track_activity_query_size')"
 pg_exec "ALTER SYSTEM SET track_activity_query_size = 16384"
 pgImg="$(docker ps -q --filter name=postgres)"
+
 log "[postgres]   restarting service..."
 docker restart "$pgImg" >/dev/null
 docker exec $pgImg pg_isready --quiet
 log "[postgres]   restarted OK."
+
 log "[postgres]   track_activity_query_size: $(pg_exec 'SHOW track_activity_query_size')"
 log "[postgres]   DONE."
 
