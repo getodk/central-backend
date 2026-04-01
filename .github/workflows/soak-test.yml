@@ -22,8 +22,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-          --entrypoint docker-entrypoint.sh
-          postgres:14.20 postgres -c track_activity_query_size=16384
     steps:
     # Per https://github.com/orgs/community/discussions/126453
     - name: show postgres track_activity_query_size
