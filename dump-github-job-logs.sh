@@ -7,7 +7,7 @@ if [[ $# -gt 0 ]]; then
   shift
 else
   log "--- runs in progress: ---"
-  gh run list --status in_progress --json headBranch,headSha,displayTitle,url --jq '.[] | "* \(.headBranch) \(.headSha[0:7]) \"\(.displayTitle)\": \(.url)"'
+  gh run list  --branch "$(git branch --show-current)" --status in_progress --json headBranch,headSha,displayTitle,url --jq '.[] | "* \(.headBranch) \(.headSha[0:7]) \"\(.displayTitle)\": \(.url)"'
   log "-------------------------"
 
   log "Fetching last COMPLETED run id..."
