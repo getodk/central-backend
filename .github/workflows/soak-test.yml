@@ -23,18 +23,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-    # Per https://github.com/orgs/community/discussions/126453
-    - name: show postgres track_activity_query_size
-      run: PGPASSWORD=odktest psql -h localhost -U postgres -c "SHOW track_activity_query_size"
-    - name: set postgres track_activity_query_size
-      run: PGPASSWORD=odktest psql -h localhost -U postgres -c "ALTER SYSTEM SET track_activity_query_size = 16384"
-    - run: docker ps
-    - name: Restart Postgres
-      run: docker restart $(docker ps -q --filter "name=postgres")
-    - name: Print Services
-      run: service --status-all
-    - name: show postgres track_activity_query_size
-      run: PGPASSWORD=odktest psql -h localhost -U postgres -c "SHOW track_activity_query_size"
     - uses: actions/checkout@v6
     - name: Set node version
       uses: actions/setup-node@v6
