@@ -168,7 +168,7 @@ function doSoakTest(name, throughput, throughputPeriod, testDuration, minimumSuc
         resolve();
       }, +testDuration);
     } catch(err) {
-      log('Non-OK response:', err);
+      log('Err caught:', err);
       reject(err);
     }
   });
@@ -188,7 +188,7 @@ function reportWarning(message) {
   log.report('--------------------------');
 }
 
-function randomSubmission(n, projectId, formId) {
+async function randomSubmission(n, projectId, formId) {
   const headers = {
     'Content-Type': 'multipart/form-data; boundary=foo',
     'X-OpenRosa-Version': '1.0',
@@ -205,15 +205,25 @@ ${submissionTemplate
 \r
 --foo--`;
 
-  return api.apiPostAndDump('randomSubmission', n, `projects/${projectId}/forms/${formId}/submissions`, body, headers);
+  try {
+    return await api.apiPostAndDump('randomSubmission', n, `projects/${projectId}/forms/${formId}/submissions`, body, headers);
+  } catch(err) {
+    log('Err in randomSubmission()', err);
+    throw err;
+  }
 }
 
 function randInt() {
   return Math.floor(Math.random() * 9999);
 }
 
-function exportZipWithDataAndMedia(n, projectId, formId) {
-  return api.apiGetToFile('exportZipWithDataAndMedia', n, `projects/${projectId}/forms/${formId}/submissions.csv.zip?splitSelectMultiples=true&groupPaths=true&deletedFields=true`);
+async function exportZipWithDataAndMedia(n, projectId, formId) {
+  try {
+    return await api.apiGetToFile('exportZipWithDataAndMedia', n, `projects/${projectId}/forms/${formId}/submissions.csv.zip?splitSelectMultiples=true&groupPaths=true&deletedFields=true`);
+  } catch(err) {
+    log('Err in exportZipWithDataAndMedia()', err);
+    throw err;
+  }
 }
 
 function durationForHumans(ms) {
