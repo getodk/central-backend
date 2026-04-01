@@ -30,6 +30,7 @@ log "  track_activity_query_size: $(pg_exec 'SHOW track_activity_query_size')"
 pg_exec "ALTER SYSTEM SET track_activity_query_size = 16384"
 log "  restarting postgres..."
 docker restart "$(docker ps -q --filter name=postgres)"
+sleep 5
 log "  track_activity_query_size: $(pg_exec 'SHOW track_activity_query_size')"
 
 log 'Waiting for backend to start...'
