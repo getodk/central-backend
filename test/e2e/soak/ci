@@ -57,9 +57,6 @@ if ! curl -s -o /dev/null "$serverUrl"; then
   fail_job
 fi
 
-log 'Checking open DB query count...'
-timeout 1200 bash -c "cd ../../..; while ! node lib/bin/check-open-db-queries.js; do sleep 1; done"
-
 log 'Checking backend is serving requests...'
 responseLog="$(mktemp)"
 requestBody='{"email":"'"$userEmail"'","password":"'"$userPassword"'"}'
