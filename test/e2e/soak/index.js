@@ -64,7 +64,7 @@ async function soakTest() {
   await new Promise(resolve => { setTimeout(resolve, backgroundJobPause); });
   log.info('Woke up.');
 
-  await doSoakTest('exportZipWithDataAndMedia', 10, 3_000, 300_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));
+  await doSoakTest('exportZipWithDataAndMedia', 100, 30_000, 3000_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));
 
   log.info(`Check for extra logs at ${logPath}`);
 
