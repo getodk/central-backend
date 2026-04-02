@@ -433,6 +433,34 @@ describe('/audits', () => {
         });
     }));
 
+    it('should filter by action category (config)', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/config/analytics')
+        .send({ enabled: true })
+        .expect(200);
+      await asAlice.post('/v1/config/logo')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+      const { body: audits } = await asAlice.get('/v1/audits?action=config')
+        .expect(200);
+
+      audits.length.should.equal(2);
+      for (const audit of audits) {
+        audit.actorId.should.equal(5);
+        should.not.exist(audit.acteeId);
+      }
+
+      Object.keys(audits[0].details).should.eql(['key', 'blobId']);
+      audits[0].details.key.should.equal('logo');
+      audits[0].details.blobId.should.be.a.Number();
+
+      audits[1].details.should.eql({
+        key: 'analytics',
+        value: { enabled: true }
+      });
+    }));
+
     it('should filter extended data by action', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')

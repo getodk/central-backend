@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const { v4: uuid, v4 } = require('uuid');
+const { v4: uuid } = require('uuid');
 const { sql } = require('slonik');
 const { createReadStream, readFileSync } = require('fs');
 const { testService, testServiceFullTrx } = require('../setup');
@@ -3879,8 +3879,8 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
 
     ].forEach(({ suffix }) => {
       it(`should redirect to the versions if the referenced instanceID is not root - ${suffix}`, testService(async (service) => {
-        const rootUuid = v4();
-        const secondUuid = v4();
+        const rootUuid = uuid();
+        const secondUuid = uuid();
         const asAlice = await service.login('alice');
         await asAlice.post('/v1/projects/1/submission')
           .set('X-OpenRosa-Version', '1.0')
