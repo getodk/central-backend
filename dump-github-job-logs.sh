@@ -33,6 +33,7 @@ if ! [[ $runId =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 log "run id: $runId"
+log "  web: $(gh run view "$runId" --json url --template '{{.url}}')"
 
 parentDir="gha-logs/run-$runId"
 if [[ $forceDownload = true ]] && [[ -d "$parentDir" ]]; then
@@ -44,6 +45,8 @@ attempts="$(gh run view "$runId" --json attempt --jq .attempt)"
 log "attempts: $attempts"
 
 for ((attemptIdx=1; attemptIdx<=$attempts; ++attemptIdx)); do
+  log "attempt: $attemptIdx"
+  log "  web: $(gh run view "$runId" --attempt "$attemptIdx" --json url --template '{{.url}}')"
   logDir="$parentDir/attempt-$attemptIdx"
   log "log dir: $logDir"
 
@@ -61,7 +64,7 @@ for ((attemptIdx=1; attemptIdx<=$attempts; ++attemptIdx)); do
       --jq '.jobs[] | select(.conclusion=="failure") | "\(.databaseId) \(.name)"' |
   while read -r jobId jobName; do
     safeName="$(echo "$jobName" | sed 's/[ /]/_/g')"
-    log "fetching logs for: $jobName..."
+    log "fetching logs for: $jobName ..."
     gh run view --job "$jobId" --attempt "$attemptIdx" --log > "$logDir/$safeName.log"
   done
 done
