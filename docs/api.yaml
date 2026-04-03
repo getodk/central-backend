@@ -11616,7 +11616,7 @@ paths:
 
         This endpoint will return all server configuration that is publicly accessible in a single object. This endpoint does not require authentication.
 
-        The following configuration is publicly accessible:
+        The following configurations are publicly accessible:
 
         * `login-appearance`
         * `logo`
