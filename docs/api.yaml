@@ -12902,7 +12902,7 @@ components:
       properties:
         key:
           type: string
-          example: analytics
+          example: some_type
           description: The type of system configuration.
         setAt:
           type: string
