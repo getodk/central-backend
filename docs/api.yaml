@@ -11535,7 +11535,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConfigBlob'
+                $ref: '#/components/schemas/ConfigLogo'
     delete:
       tags:
       - System Configuration
@@ -11589,7 +11589,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConfigBlob'
+                $ref: '#/components/schemas/ConfigHeroImage'
     delete:
       tags:
       - System Configuration
@@ -11639,9 +11639,9 @@ paths:
                   login-appearance:
                     $ref: '#/components/schemas/ConfigLoginAppearance'
                   logo:
-                    $ref: '#/components/schemas/ConfigBlob'
+                    $ref: '#/components/schemas/ConfigLogo'
                   hero-image:
-                    $ref: '#/components/schemas/ConfigBlob'
+                    $ref: '#/components/schemas/ConfigHeroImage'
                 description: Details about all public configuration.
   /v1/analytics/preview:
     get:
@@ -12902,7 +12902,7 @@ components:
       properties:
         key:
           type: string
-          example: some_type
+          example: analytics
           description: The type of system configuration.
         setAt:
           type: string
@@ -12932,6 +12932,8 @@ components:
           required:
             - value
           properties:
+            key:
+              example: analytics
             value:
               $ref: '#/components/schemas/ConfigAnalyticsValue'
               description: Details about the Usage Reporting configuration.
@@ -12952,6 +12954,8 @@ components:
           required:
             - value
           properties:
+            key:
+              example: login-appearance
             value:
               $ref: '#/components/schemas/ConfigLoginAppearanceValue'
               description: Details about the configuration.
@@ -12966,6 +12970,20 @@ components:
               type: boolean
               example: true
               description: Whether a file has been set for this configuration.
+    ConfigLogo:
+      allOf:
+        - $ref: '#/components/schemas/ConfigBlob'
+        - type: object
+          properties:
+            key:
+              example: logo
+    ConfigHeroImage:
+      allOf:
+        - $ref: '#/components/schemas/ConfigBlob'
+        - type: object
+          properties:
+            key:
+              example: hero-image
     Comment:
       type: object
       required:
