@@ -8539,6 +8539,86 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+  /v1/projects/{projectId}/datasets/{name}/properties/{propertyName}:
+    delete:
+      tags:
+      - Dataset Management
+      summary: Deleting a Property
+      description: |-
+        Deletes a published Property from a Dataset. The deletion is permanent, but a new property with the same name can easily be re-added.
+
+        A Property cannot be deleted if either of the following is true:
+        - Any published or draft Forms are currently writing to it (i.e. they have a `save_to` mapping to this Property). Those Forms must be updated or deleted first.
+        - Any Entities have a non-empty value for it. Those Entity values must be cleared first by updating each Entity to have an empty string for that Property.
+
+        If deletion is blocked, the 409 response includes a `details.prerequisites` object describing what needs to be resolved. For blocked Forms, it includes a list of the dependent Form IDs and names. For blocked Entities, it includes a `totalCount` and up to 3 example Entity UUIDs and labels.
+
+        A Form that reads a Dataset Property via an attachment may break after deleting the Property, so check any Forms that consume this Dataset as well.
+      operationId: deleteProperty
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      - name: propertyName
+        in: path
+        description: The name of the Property to delete
+        required: true
+        schema:
+          type: string
+        example: age
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "409.22"
+                message: Prerequisites for deleting the property "age" are not met.
+                details:
+                  prerequisites:
+                    dependentForms:
+                      message: You can't delete this property because there are Form(s) writing to it
+                      details:
+                        forms:
+                        - formName: Registration Form
+                          xmlFormId: registration
+                    nonEmptyEntities:
+                      message: You can't delete this property because there are Entity(ies) with the non-empty value for the 'age'
+                      details:
+                        totalCount: 42
+                        entities:
+                        - uuid: 54a405a0-53ce-4748-9788-d23a30cc3afa
+                          label: John Doe
+                        - uuid: 9a2a3b4c-1234-4567-89ab-cdef01234567
+                          label: Jane Smith
+                        - uuid: 1b3d5f7a-9876-4321-abcd-ef0123456789
+                          label: Bob Jones
   /v1/projects/{projectId}/datasets/{name}/entities.csv:
     get:
       tags:
