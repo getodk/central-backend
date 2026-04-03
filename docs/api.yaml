@@ -954,6 +954,8 @@ tags:
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
+    * `dataset.delete` when a Dataset is deleted.
+    * `dataset.update.property.delete` when a Dataset Property is deleted.
     * `entity.create` when an Entity is created.
     * `entity.error` when there is an error processing a Submission to create or update an Entity.
     * `entity.update.version` when an Entity is updated.
