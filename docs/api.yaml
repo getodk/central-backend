@@ -3885,7 +3885,9 @@ paths:
       description: |-
         _(introduced: version 1.4)_
 
-        Deleted forms can now be restored (as long as they have been in the Trash less than 30 days and have not been purged). However, a deleted Form with the same `xmlFormId` as an active Form cannot be restored while that other Form is active. 
+        Deleted forms can now be restored (as long as they have been in the Trash less than 30 days and have not been purged). However, a deleted Form with the same `xmlFormId` as an active Form cannot be restored while that other Form is active.
+
+        A Form also cannot be restored if a related Dataset has been deleted or if a Dataset property that the Form wrote to has been deleted since the Form was deleted. In that case, a 409 is returned.
 
         This `/restore` URL uses the numeric ID of the Form (now returned by the `/forms?deleted=true` endpoint) rather than the `xmlFormId` to unambigously restore. Note that the numeric ID of a Form is not returned by default on the [Form list](/central-api-form-management/#list-all-forms) and is only returned when listing deleted Forms.
       operationId: restoreForm
@@ -3911,6 +3913,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "409.23"
+                message: This Form cannot be restored because the related dataset(s) has been modified or deleted.
   /v1/projects/{projectId}/forms/{xmlFormId}/draft:
     get:
       tags:
@@ -8141,7 +8159,10 @@ paths:
       tags:
       - Dataset Management
       summary: Listing Datasets
-      description: The Dataset listing endpoint returns all published Datasets in a Project. If a Draft Form defines a new Dataset, that Dataset will not be included in this list until the Form is published.
+      description: |-
+        The Dataset listing endpoint returns all published Datasets in a Project. If a Draft Form defines a new Dataset, that Dataset will not be included in this list until the Form is published.
+
+        The query `?deleted=true` can be added to list deleted Datasets with their numeric IDs, which can be used to [download a deleted Dataset's Entity data](/central-api-dataset-management/#downloading-deleted-dataset-entities).
       operationId: listDatasets
       parameters:
       - name: projectId
@@ -8151,6 +8172,12 @@ paths:
         schema:
           type: number
         example: "16"
+      - name: deleted
+        in: query
+        description: If set to `true`, will return only deleted Datasets and their numeric IDs
+        schema:
+          type: boolean
+        example: "true"
       responses:
         "200":
           description: OK
