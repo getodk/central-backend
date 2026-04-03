@@ -54,6 +54,7 @@ info:
 
     **Changed**:
     - The APIs introduced in 2025.3 yielding geographical information from [submissions](/central-api-submission-management/#retrieving-submissions-geodata) and [entities](/central-api-entity-management/#entities-geodata) in GeoJSON format have changed, and are now documented.
+    - Image submission attachments (`image/png`, `image/gif`, `image/jpeg`) are now served with `Content-Disposition: inline` instead of `attachment` when [downloading a Submission Attachment](/central-api-submission-management/#downloading-an-attachment).
 
     ## ODK Central v2025.3
 
@@ -6873,7 +6874,7 @@ paths:
       - Attachments
       summary: Downloading an Attachment
       description: |-
-        The `Content-Type` and `Content-Disposition` will be set appropriately based on the file itself when requesting an attachment file download.
+        The `Content-Type` and `Content-Disposition` will be set based on the file. For image attachments (`image/png`, `image/gif`, `image/jpeg`), `Content-Disposition` will be `inline`, allowing browsers to display them directly. For all other attachment types, `Content-Disposition` will be `attachment`.
 
         This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: downloadAttachment
