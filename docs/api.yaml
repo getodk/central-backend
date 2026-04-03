@@ -50,6 +50,7 @@ info:
       - The submission-related OData "[data documents](/central-api-odata-endpoints/#data-document)". The dataset-related OData endpoints are to follow in some future release.
       - The [`submissions.csv`](/central-api-submission-management/#exporting-root-data-to-plain-csv) endpoint
       - The [`submissions.csv.zip`](/central-api-submission-management/#exporting-form-submissions-to-csv) endpoint
+    - New [Clear Submission Attachment](/central-api-submission-management/#clearing-a-submission-version-s-attachment) endpoint that works on a specific version of an Submission.
 
     **Changed**:
     - The APIs introduced in 2025.3 yielding geographical information from [submissions](/central-api-submission-management/#retrieving-submissions-geodata) and [entities](/central-api-entity-management/#entities-geodata) in GeoJSON format have changed, and are now documented.
@@ -6975,7 +6976,7 @@ paths:
         Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
 
         This endpoint clears attachments on the current version of the submission.
-        See [Clearing the Attachment of a specific Submission Version](/central-api-submission-management/#clearing-a-submission-version-s-attachment) for more control over attachments on past versions.
+        See [Clearing the Attachment of a specific Submission Version](/central-api-submission-management/#clearing-a-submission-version-s-attachment) for working with past versions.
       operationId: clearSubmissionAttachment
       parameters:
       - name: projectId
@@ -7396,6 +7397,8 @@ paths:
         This endpoint clears attachments on submission versions.
 
         Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a DELETE to the attachment's endpoint, that is what happens.
+
+        To clear an attachment only on the current version of a Submission, see [Clearing a Submission Attachment](/central-api-submission-management/#clearing-a-submission-attachment).
       operationId: clearVersionedAttachment
       parameters:
       - name: projectId
