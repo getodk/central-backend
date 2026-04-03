@@ -8454,6 +8454,43 @@ paths:
               example:
                 code: "409.21"
                 message: You can't delete this dataset because there are Form(s) dependent on it.
+  /v1/projects/{projectId}/trash/datasets/{datasetId}/entities.csv:
+    get:
+      tags:
+      - Dataset Management
+      summary: Downloading Deleted Dataset Entities
+      description: |-
+        Returns a CSV snapshot of the Entities belonging to a soft-deleted Dataset. This is useful for exporting Entity data before the Dataset is permanently purged after 30 days in the trash.
+
+        The CSV format is identical to [Download Dataset](/central-api-dataset-management/#download-dataset), except the filename will have a `-deleted` suffix (e.g. `people-deleted.csv`).
+
+        This endpoint uses the numeric Dataset ID rather than the Dataset name because the name alone is not sufficient to unambiguously identify a deleted Dataset (the same name could be reused). The numeric ID can be retrieved by [listing Datasets with `?deleted=true`](/central-api-dataset-management/#listing-datasets).
+
+        Unlike [Download Dataset](/central-api-dataset-management/#download-dataset), this endpoint does not support `$filter`, `$search`, or `ETag`.
+      operationId: downloadDeletedDatasetEntities
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: datasetId
+        in: path
+        description: The numeric ID of the deleted Dataset (returned by listing Datasets with `?deleted=true`)
+        required: true
+        schema:
+          type: number
+        example: "42"
+      responses:
+        "200":
+          description: OK
+          content:
+            text/csv:
+              example: |
+                __id,label,geometry,species,circumference_cm,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version
+                2c1ee90b-dde8-434b-9985-2eefd8465339,666cm purpleheart,-29.281608 -67.624883 0 0,purpleheart,667,2023-05-31T19:49:28.902Z,22,Alice,1,2023-05-31T19:52:34.467Z,1
   /v1/projects/{projectId}/datasets/{name}/properties:
     post:
       tags:
