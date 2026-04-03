@@ -52,7 +52,7 @@ info:
       - The [`submissions.csv.zip`](/central-api-submission-management/#exporting-form-submissions-to-csv) endpoint
 
     **Changed**:
-    - The APIs introduced in 2025.3 yielding geographical information from submissions and entities in GeoJSON format have changed, and are now documented.
+    - The APIs introduced in 2025.3 yielding geographical information from [submissions](/central-api-submission-management/#retrieving-submissions-geodata) and [entities](/central-api-entity-management/#entities-geodata) in GeoJSON format have changed, and are now documented.
 
     ## ODK Central v2025.3
 
@@ -67,13 +67,11 @@ info:
       
       The endpoints are:
       - [GET /projects/:id/datasets/:name/entities.geojson](/central-api-entity-management/#entities-geodata)
-      - [GET /projects/:id/forms/:xmlFormId/submissions.geojson](/central-api-submission-management/#submissions-geodata)
+      - [GET /projects/:id/forms/:xmlFormId/submissions.geojson](/central-api-submission-management/#retrieving-submissions-geodata)
 
     **Changed**:
     - [Download Dataset](/central-api-dataset-management/#download-dataset) API now supports $search query parameter.
     - Added `deleted` query parameter to [GET /projects/:id/forms/:xmlFormId/submissions](/central-api-submission-management/#listing-all-submissions-on-a-form) to retrieve deleted submissions.
-
-    **Changed**:
     - [GET /users](/central-api-accounts-and-users/#listing-users) and [GET /users/:actorId](/central-api-accounts-and-users/#getting-user-details) now include `lastLoginAt` field.
 
     ## ODK Central v2025.2
@@ -6110,7 +6108,7 @@ paths:
     get:
       tags:
       - Submissions
-      summary: Retrieving Submission GeoJSON
+      summary: Retrieving GeoJSON of a single Submission
       description: To retrieve the GeoJSON representation of the `Submission`, just append `.geojson` to
         the end of the request URL.
       operationId: getSubmissionGeoJson
