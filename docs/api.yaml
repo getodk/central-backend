@@ -11427,7 +11427,7 @@ paths:
       - System Configuration
       summary: Unsetting the current Usage Reporting configuration
       description: If the Usage Reporting configuration is unset, Administrators will
-        once again see a message on the the Central administration website.
+        once again see a message on the Central administration website.
       operationId: unsetTheCurrentConfiguration
       responses:
         "200":
