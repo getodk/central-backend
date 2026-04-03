@@ -35,7 +35,7 @@ info:
 
     > ⚠️  In this API and in the related [ODK XForms specification](https://getodk.github.io/xforms-spec/entities), collections of `Entities` are referred to as `Datasets`. The term "Entity List" is used for this concept in the Central frontend UI, user documentation, and all other text intended for end users who are not developers.
 
-    Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Usage Reporting configuration and retrieve Server Audit Logs.
+    Finally, **system information and configuration** is available via a set of specialized resources. For example, you may set the Usage Reporting configuration or retrieve Server Audit Logs.
 
     ## Changelog
 
@@ -301,7 +301,7 @@ info:
 
     * `GET /projects/…/forms/…/submissions/…/diffs` will return the [changes between each version](/central-api-submission-management/#getting-changes-between-versions) of a Submission.
 
-    * You can set the [Usage Reporting configuration](/central-api-system-endpoints/#usage-reporting-configuration) to choose whether the server will share anonymous usage data with the Central team. By default, no usage information will be sent at all.
+    * You can set the [Usage Reporting configuration](/central-api-system-endpoints/#system-configuration) to choose whether the server will share anonymous usage data with the Central team. By default, no usage information will be sent at all.
 
     * You can also [preview the Usage Report](/central-api-system-endpoints/#usage-report-preview) to see exactly what information would be sent in a Usage Report.
 
@@ -671,7 +671,7 @@ tags:
     * The **data documents**, linked from the Service Document, are a simple JSON representation of the Submission or Entity data, conforming to the schema we describe in our Metadata Document.
 - name: System Endpoints
   description: There are some resources available for getting or setting system information
-    and configuration. You can set the [Usage Reporting configuration](/central-api-system-endpoints/#usage-reporting-configuration)
+    and configuration. For example, you can set the [Usage Reporting configuration](/central-api-system-endpoints/#system-configuration)
     for the server, retrieve the [Server Audit Logs](/central-api-system-endpoints/#server-audit-logs),
     or perform a [Direct Backup](/central-api-system-endpoints/#direct-backup).
 - name: Encryption
@@ -888,7 +888,7 @@ tags:
     To facilitate testing, there is an alternative collection of OData endpoints that will give access to the submissions uploaded to a Draft Form. This can be useful for ensuring that changes to your form do not break downstream dashboards or applications.
 
     They are all identical to the non-Draft OData endpoints, but they will only return the Draft Form schema and Submissions.
-- name: Usage Reporting Configuration
+- name: System Configuration
   x-parent-tag: System Endpoints
   description: |-
     _(introduced: version 1.3)_
@@ -897,7 +897,7 @@ tags:
   description: |-
     _(introduced: version 1.3)_
 
-    An Administrator of Central may opt in to sending periodic reports summarizing usage. Configuration of this reporting is described [here](/central-api-system-endpoints/#usage-reporting-configuration). For added transparency, the API provides a preview of the reported metrics.
+    An Administrator of Central may opt in to sending periodic reports summarizing usage. Configuration of this reporting is described [here](/central-api-system-endpoints/#system-configuration). For added transparency, the API provides a preview of the reported metrics.
 - name: Server Audit Logs
   x-parent-tag: System Endpoints
   description: |-
@@ -11374,8 +11374,8 @@ paths:
   /v1/config/analytics:
     get:
       tags:
-      - Usage Reporting Configuration
-      summary: Getting the current configuration
+      - System Configuration
+      summary: Getting the current Usage Reporting configuration
       description: If the Usage Reporting configuration is not set, this endpoint
         will return a `404`. Once the configuration is set, this endpoint will indicate
         whether the server will share usage data with the Central team. If the server
@@ -11388,64 +11388,17 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - key
-                - setAt
-                - value
-                type: object
-                properties:
-                  key:
-                    type: string
-                    description: The type of system configuration.
-                  setAt:
-                    type: string
-                    description: ISO date format. The last time this system configuration
-                      was set.
-                  value:
-                    required:
-                    - enabled
-                    type: object
-                    properties:
-                      enabled:
-                        type: boolean
-                        description: '`true` if the server will share usage data with
-                          the Central team and `false` if not.'
-                      email:
-                        type: string
-                        description: The work email address to include with the metrics
-                          report.
-                      organization:
-                        type: string
-                        description: The organization name to include with the metrics
-                          report.
-                    description: Details about the Usage Reporting configuration.
-              example:
-                key: some_type
-                setAt: 2018-01-06T00:32:52.787Z
-                value:
-                  enabled: true
-                  email: my.email.address@getodk.org
-                  organization: Organization Name
+                $ref: '#/components/schemas/ConfigAnalytics'
         "404":
           description: Not Found
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "404.1"
-                message: Could not find the resource you were looking for.
+                $ref: '#/components/schemas/Error404'
     post:
       tags:
-      - Usage Reporting Configuration
-      summary: Setting a new configuration
+      - System Configuration
+      summary: Setting new configuration for Usage Reporting
       description: |-
         An Administrator can use this endpoint to choose whether the server will share anonymous usage data with the Central team. This configuration affects the entire server. Until the Usage Reporting configuration is set, Administrators will see a message on the Central administration website that provides further information.
 
@@ -11459,23 +11412,7 @@ paths:
         content:
           '*/*':
             schema:
-              required:
-              - enabled
-              type: object
-              properties:
-                enabled:
-                  type: boolean
-                  description: See above.
-                email:
-                  type: string
-                  description: A work email address to include with the metrics report.
-                organization:
-                  type: string
-                  description: An organization name to include with the metrics report.
-              example:
-                enabled: true
-                email: my.email.address@getodk.org
-                organization: Organization Name
+              $ref: '#/components/schemas/ConfigAnalyticsValue'
         required: false
       responses:
         "200":
@@ -11483,49 +11420,12 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - key
-                - setAt
-                - value
-                type: object
-                properties:
-                  key:
-                    type: string
-                    description: The type of system configuration.
-                  setAt:
-                    type: string
-                    description: ISO date format. The last time this system configuration
-                      was set.
-                  value:
-                    required:
-                    - enabled
-                    type: object
-                    properties:
-                      enabled:
-                        type: boolean
-                        description: '`true` if the server will share usage data with
-                          the Central team and `false` if not.'
-                      email:
-                        type: string
-                        description: The work email address to include with the metrics
-                          report.
-                      organization:
-                        type: string
-                        description: The organization name to include with the metrics
-                          report.
-                    description: Details about the Usage Reporting configuration.
-              example:
-                key: some_type
-                setAt: 2018-01-06T00:32:52.787Z
-                value:
-                  enabled: true
-                  email: my.email.address@getodk.org
-                  organization: Organization Name
+                $ref: '#/components/schemas/ConfigAnalytics'
       x-codegen-request-body-name: body
     delete:
       tags:
-      - Usage Reporting Configuration
-      summary: Unsetting the current configuration
+      - System Configuration
+      summary: Unsetting the current Usage Reporting configuration
       description: If the Usage Reporting configuration is unset, Administrators will
         once again see a message on the the Central administration website.
       operationId: unsetTheCurrentConfiguration
@@ -11536,6 +11436,213 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+  /v1/config/login-appearance:
+    get:
+      tags:
+      - System Configuration
+      summary: Getting the title and subtitle configured for the login page
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If no title or subtitle has been configured for the login page, this endpoint will return a `404`. Once a configuration is set, this endpoint will return the custom title and/or subtitle that has been configured for the login page.
+      operationId: getLoginAppearance
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigLoginAppearance'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+    post:
+      tags:
+      - System Configuration
+      summary: Setting a new title and subtitle for the login page
+      description: |-
+        _(introduced: version 2026.1)_
+
+        An Administrator can use this endpoint to set a custom title and/or subtitle to show to all users who visit the login page. If a title or subtitle is already set, the current configuration will be overwritten with the new one; the two configurations will not be merged.
+      operationId: setLoginAppearance
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/ConfigLoginAppearanceValue'
+        required: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigLoginAppearance'
+      x-codegen-request-body-name: body
+    delete:
+      tags:
+      - System Configuration
+      summary: Unsetting the title and subtitle configured for the login page
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If the configuration is unset, all users who visit the login page will once again see the default title and subtitle.
+      operationId: unsetLoginAppearance
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+  /v1/config/logo:
+    get:
+      tags:
+      - System Configuration
+      summary: Getting the logo configured for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If no logo has been configured for the server, this endpoint will return a `404`. Once a configuration is set, this endpoint will return the custom logo that has been configured.
+      operationId: getLogo
+      responses:
+        "200":
+          description: OK
+          content:
+            "{the MIME type of the logo itself}":
+              example: (binary data)
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+    post:
+      tags:
+      - System Configuration
+      summary: Setting a new logo for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        An Administrator can use this endpoint to set a custom logo for the entire server. The logo will be shown to all users who visit the login page, as well as other pages, including the reset password page and set password page. If a logo is already set, the current logo will be overwritten with the new one.
+      operationId: setLogo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigBlob'
+    delete:
+      tags:
+      - System Configuration
+      summary: Unsetting the logo configured for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If the configuration is unset, all users who visit the login page (or another page that previously showed the custom logo) will once again see the default logo.
+      operationId: unsetLogo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+  /v1/config/hero-image:
+    get:
+      tags:
+      - System Configuration
+      summary: Getting the hero image configured for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If no hero image has been configured for the server, this endpoint will return a `404`. Once a configuration is set, this endpoint will return the custom hero image that has been configured.
+      operationId: getHeroImage
+      responses:
+        "200":
+          description: OK
+          content:
+            "{the MIME type of the hero image itself}":
+              example: (binary data)
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+    post:
+      tags:
+      - System Configuration
+      summary: Setting a new hero image for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        An Administrator can use this endpoint to set a custom hero image for the entire server. The hero image will be shown to all users who visit the login page, as well as other pages, including the reset password page and set password page. If a hero image is already set, the current image will be overwritten with the new one.
+      operationId: setHeroImage
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigBlob'
+    delete:
+      tags:
+      - System Configuration
+      summary: Unsetting the hero image configured for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If the configuration is unset, users who visit the login page (or another page that previously showed the custom hero image) will no longer see the custom image. Instead, they will see either a default image or no image at all.
+      operationId: unsetHeroImage
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+  /v1/config/public:
+    get:
+      tags:
+      - System Configuration
+      summary: Getting all public configuration
+      description: |-
+        _(introduced: version 2026.1)_
+
+        This endpoint will return all server configuration that is publicly accessible in a single object. This endpoint does not require authentication.
+
+        The following configuration is publicly accessible:
+
+        * `login-appearance`
+        * `logo`
+        * `hero-image`
+
+        The following configuration is not publicly accessible and requires authentication to access:
+
+        * `analytics`
+
+        For configuration that stores binary data (e.g., `logo`), this endpoint only returns metadata about the configuration (e.g., when the configuration was last set). To retrieve the binary data, you can use the corresponding endpoint described above (e.g., /v1/config/logo). If the configuration is publicly accessible, you can access the binary data without providing authentication via /v1/config/public/:key (e.g., /v1/config/public/logo).
+      operationId: getPublicConfig
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  login-appearance:
+                    $ref: '#/components/schemas/ConfigLoginAppearance'
+                  logo:
+                    $ref: '#/components/schemas/ConfigBlob'
+                  hero-image:
+                    $ref: '#/components/schemas/ConfigBlob'
+                description: Details about all public configuration.
   /v1/analytics/preview:
     get:
       tags:
@@ -12787,6 +12894,78 @@ components:
               type: object
               properties: {}
               description: The details of the actee given by `acteeId`. Depending on the action type, this could be a number of object types, including an `Actor`, a `Project`, or a `Form`.
+    Config:
+      type: object
+      required:
+        - key
+        - setAt
+      properties:
+        key:
+          type: string
+          example: some_type
+          description: The type of system configuration.
+        setAt:
+          type: string
+          example: 2018-01-06T00:32:52.787Z
+          description: ISO date format. The last time this system configuration was set.
+    ConfigAnalyticsValue:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          example: true
+          description: '`true` if the server will share usage data with the Central team and `false` if not.'
+        email:
+          type: string
+          example: my.email.address@getodk.org
+          description: The work email address to include with the metrics report.
+        organization:
+          type: string
+          example: Organization Name
+          description: The organization name to include with the metrics report.
+    ConfigAnalytics:
+      allOf:
+        - $ref: '#/components/schemas/Config'
+        - type: object
+          required:
+            - value
+          properties:
+            value:
+              $ref: '#/components/schemas/ConfigAnalyticsValue'
+              description: Details about the Usage Reporting configuration.
+    ConfigLoginAppearanceValue:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Better Data, Better Cocoa
+          description: A custom title to show on the login page.
+        description:
+          type: string
+          description: A custom description (subtitle) to show on the login page.
+    ConfigLoginAppearance:
+      allOf:
+        - $ref: '#/components/schemas/Config'
+        - type: object
+          required:
+            - value
+          properties:
+            value:
+              $ref: '#/components/schemas/ConfigLoginAppearanceValue'
+              description: Details about the configuration.
+    ConfigBlob:
+      allOf:
+        - $ref: '#/components/schemas/Config'
+        - type: object
+          required:
+            - blobExists
+          properties:
+            blobExists:
+              type: boolean
+              example: true
+              description: Whether a file has been set for this configuration.
     Comment:
       type: object
       required:
