@@ -44,6 +44,10 @@ info:
     ## ODK Central v2026.1
 
     **Added**:
+    - Datasets can now be deleted! Deleted Datasets are soft-deleted and remain in the trash for 30 days, during which their Entity data can still be exported as a CSV snapshot. After 30 days they are permanently purged. Unlike Forms, deleted Datasets cannot be restored.
+      - [DELETE /projects/:id/datasets/:name](/central-api-dataset-management/#deleting-a-dataset) to delete a Dataset.
+      - [GET /projects/:id/trash/datasets/:datasetId/entities.csv](/central-api-dataset-management/#downloading-deleted-dataset-entities) to export the Entity data of a deleted Dataset as a CSV.
+      - [DELETE /projects/:id/datasets/:name/properties/:propertyName](/central-api-dataset-management/#deleting-a-property) to delete a Dataset property.
     - Three endpoints gained `ETag` HTTP response headers. These can be used to efficiently revalidate clientside caches.
       A guide on how to use caching for better performance of data pipelines can be found [here](/using-http-caching).
       The endpoints that have gained caching information are:
@@ -53,6 +57,8 @@ info:
     - New [Clear Submission Attachment](/central-api-submission-management/#clearing-a-submission-version-s-attachment) endpoint that works on a specific version of an Submission.
 
     **Changed**:
+    - Added `deleted` query parameter to [GET /projects/:id/datasets](/central-api-dataset-management/#listing-datasets) to list deleted Datasets with their numeric IDs.
+    - [Restoring a Form](/central-api-form-management/#restoring-a-form) now returns a 409 if a related Dataset has been deleted or a Dataset property that the Form wrote to has been deleted.
     - The APIs introduced in 2025.3 yielding geographical information from [submissions](/central-api-submission-management/#retrieving-submissions-geodata) and [entities](/central-api-entity-management/#entities-geodata) in GeoJSON format have changed, and are now documented.
     - Image submission attachments (`image/png`, `image/gif`, `image/jpeg`) are now served with `Content-Disposition: inline` instead of `attachment` when [downloading a Submission Attachment](/central-api-submission-management/#downloading-an-attachment).
 
@@ -3381,7 +3387,7 @@ paths:
       tags:
       - Individual Form
       summary: Deleting a Form
-      description: -|
+      description: |-
         When a Form is deleted, it goes into the Trash section, but it
         can now be restored from the Trash. After 30 days in the Trash, the Form and
         all of its resources and submissions will be automatically purged. If your
