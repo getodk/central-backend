@@ -8406,6 +8406,8 @@ paths:
       - Dataset Management
       summary: Deleting a Dataset
       description: |-
+        _(introduced: version 2026.1)_
+
         When a Dataset is deleted, it is soft-deleted and placed in the trash. After 30 days in the trash, the Dataset and all of its Entities will be automatically purged. Unlike Forms, deleted Datasets cannot be restored.
 
         While in the trash, the Dataset's Entity data can still be exported as a CSV snapshot using [GET /projects/:id/trash/datasets/:datasetId/entities.csv](/central-api-dataset-management/#downloading-deleted-dataset-entities).
@@ -8508,6 +8510,8 @@ paths:
       - Dataset Management
       summary: Deleting a Property
       description: |-
+        _(introduced: version 2026.1)_
+
         Deletes a published Property from a Dataset. The deletion is permanent, but a new property with the same name can easily be re-added.
 
         A Property cannot be deleted if either of the following is true:
@@ -8648,6 +8652,8 @@ paths:
       - Dataset Management
       summary: Downloading Deleted Dataset Entities
       description: |-
+        _(introduced: version 2026.1)_
+
         Returns a CSV snapshot of the Entities belonging to a soft-deleted Dataset. This is useful for exporting Entity data before the Dataset is permanently purged after 30 days in the trash.
 
         The CSV format is identical to [Download Dataset](/central-api-dataset-management/#download-dataset), except the filename will have a `-deleted` suffix (e.g. `people-deleted.csv`).
