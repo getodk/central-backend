@@ -11440,11 +11440,11 @@ paths:
     get:
       tags:
       - System Configuration
-      summary: Getting the title and subtitle configured for the login page
+      summary: Getting the title and description configured for the login page
       description: |-
         _(introduced: version 2026.1)_
 
-        If no title or subtitle has been configured for the login page, this endpoint will return a `404`. Once a configuration is set, this endpoint will return the custom title and/or subtitle that has been configured for the login page.
+        If no title or description has been configured for the login page, this endpoint will return a `404`. Once a configuration is set, this endpoint will return the custom title and/or description that has been configured for the login page.
       operationId: getLoginAppearance
       responses:
         "200":
@@ -11462,11 +11462,11 @@ paths:
     post:
       tags:
       - System Configuration
-      summary: Setting a new title and subtitle for the login page
+      summary: Setting a new title and description for the login page
       description: |-
         _(introduced: version 2026.1)_
 
-        An Administrator can use this endpoint to set a custom title and/or subtitle to show to all users who visit the login page. If a title or subtitle is already set, the current configuration will be overwritten with the new one; the two configurations will not be merged.
+        An Administrator can use this endpoint to set a custom title and/or description to show to all users who visit the login page. The description will be shown as a subtitle. If a title or description is already set, the current configuration will be overwritten with the new one; the two configurations will not be merged.
       operationId: setLoginAppearance
       requestBody:
         content:
@@ -11485,11 +11485,11 @@ paths:
     delete:
       tags:
       - System Configuration
-      summary: Unsetting the title and subtitle configured for the login page
+      summary: Unsetting the title and description configured for the login page
       description: |-
         _(introduced: version 2026.1)_
 
-        If the configuration is unset, all users who visit the login page will once again see the default title and subtitle.
+        If the configuration is unset, all users who visit the login page will once again see the default title and description.
       operationId: unsetLoginAppearance
       responses:
         "200":
@@ -12944,7 +12944,7 @@ components:
           description: A custom title to show on the login page.
         description:
           type: string
-          description: A custom description (subtitle) to show on the login page.
+          description: A custom description to show on the login page as a subtitle.
     ConfigLoginAppearance:
       allOf:
         - $ref: '#/components/schemas/Config'
