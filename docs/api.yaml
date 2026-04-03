@@ -48,6 +48,7 @@ info:
       - [DELETE /projects/:id/datasets/:name](/central-api-dataset-management/#deleting-a-dataset) to delete a Dataset.
       - [GET /projects/:id/trash/datasets/:datasetId/entities.csv](/central-api-dataset-management/#downloading-deleted-dataset-entities) to export the Entity data of a deleted Dataset as a CSV.
       - [DELETE /projects/:id/datasets/:name/properties/:propertyName](/central-api-dataset-management/#deleting-a-property) to delete a Dataset property.
+    - You can now customize the appearance of your server using new [system configuration endpoints](/central-api-system-endpoints/#system-configuration). You can configure a title and description for your login page, as well as a logo and hero image for your server.
     - Three endpoints gained `ETag` HTTP response headers. These can be used to efficiently revalidate clientside caches.
       A guide on how to use caching for better performance of data pipelines can be found [here](/using-http-caching).
       The endpoints that have gained caching information are:
