@@ -121,7 +121,7 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
         @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
       `);
 
-      const err = new Error(`${method} ${url} ${responseStatus}: ${responseText}`);
+      const err = new Error(`${method} ${url} returned ${responseStatus}: ${responseText}`);
       err.responseStatus = responseStatus;
       err.responseText = responseText;
 
