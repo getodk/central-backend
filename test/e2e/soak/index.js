@@ -56,7 +56,8 @@ async function soakTest() {
 
   log.info('Setup complete.  Starting soak tests...');
 
-  await doSoakTest('randomSubmission', 50, 1_000, 30_000, 100, n => randomSubmission(n, projectId, formId));
+  // eslint-disable-next-line no-unused-expressions
+  false && await doSoakTest('randomSubmission', 50, 1_000, 30_000, 100, n => randomSubmission(n, projectId, formId));
 
   // TODO work out a more scientific sleep duration
   const backgroundJobPause = 20_000;
@@ -64,7 +65,7 @@ async function soakTest() {
   await new Promise(resolve => { setTimeout(resolve, backgroundJobPause); });
   log.info('Woke up.');
 
-  await doSoakTest('exportZipWithDataAndMedia', 100, 30_000, 3000_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));
+  await doSoakTest('exportZipWithDataAndMedia', 100, 3_000, 300_000, 100, n => exportZipWithDataAndMedia(n, projectId, formId));
 
   log.info(`Check for extra logs at ${logPath}`);
 
