@@ -103,25 +103,9 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
     if(isRedirected(res)) return new Redirect(res);
     if(!res.ok) {
       const responseStatus = res.status;
-      const responseBody = await res.text();
-      const responseText = responseBody || res.statusText;
+      const responseText = await res.text() || res.statusText;
 
-      console.log(`
-        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-        @
-        @ non-OK response:
-        @
-        @   method: ${method}
-        @      url: ${url}
-        @   status: ${responseStatus}
-        @     body: ${responseBody}
-        @
-        @ Should this be logged clearly somewhere else?
-        @
-        @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
-      `);
-
-      const err = new Error(`${method} ${url} returned ${responseStatus}: ${responseText}`);
+      const err = new Error(`${responseStatus}: ${responseText}`);
       err.responseStatus = responseStatus;
       err.responseText = responseText;
 
