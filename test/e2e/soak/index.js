@@ -114,7 +114,10 @@ function doSoakTest({ name, throughput, throughputPeriod, testDuration, maxDrain
         const n = iterationCount++;
         const started = Date.now();
         try {
+          const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
+          log.info(`iterate(${nonce}) requesting...`);
           const size = await fn(n);
+          log.info(`iterate(${nonce}) returned: ${size} bytes`);
           const finished = Date.now();
           const time = finished - started;
           successes.push(time);
