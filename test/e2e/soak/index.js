@@ -90,7 +90,7 @@ async function soakTest() {
   process.exit(0);
 }
 
-function doSoakTest({ name, throughput, throughputPeriod, testDuration, maxDrainDuration, minimumSuccessThreshold, fn }) {
+async function doSoakTest({ name, throughput, throughputPeriod, testDuration, maxDrainDuration, minimumSuccessThreshold, fn }) {
   log.info('Starting soak test:', name);
   log.info('        throughput:', throughput, 'per period');
   log.info('  throughputPeriod:', throughputPeriod, 'ms');
