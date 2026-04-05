@@ -100,6 +100,7 @@ async function doSoakTest({ name, throughput, throughputPeriod, testDuration, ma
   const firstSize = await fn(-1);
   log.info(' 1st response size:', firstSize);
   log.info('-------------------------------');
+  let openRequests = 0;
   return new Promise((resolve, reject) => {
     try {
       const successes = [];
@@ -113,9 +114,9 @@ async function doSoakTest({ name, throughput, throughputPeriod, testDuration, ma
       const iterate = async () => {
         const n = iterationCount++;
         const started = Date.now();
+        const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         try {
-          const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
-          log.info(`iterate(${nonce}) requesting...`);
+          log.info(`iterate(${nonce}) requesting; openRequests: ${++openRequests}`);
           const size = await fn(n);
           log.info(`iterate(${nonce}) returned: ${size} bytes`);
           const finished = Date.now();
@@ -127,6 +128,8 @@ async function doSoakTest({ name, throughput, throughputPeriod, testDuration, ma
           fails.push(err.message);
           results[n] = { success:false, started, finished:Date.now(), err:{ message:err.message, stack:err.stack } };
         } finally {
+          --openRequests;
+          log.info(`iterate(${nonce}) completed; openRequests: ${--openRequests}`);
           ++completedIterations;
         }
       };
