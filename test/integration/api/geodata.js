@@ -2,7 +2,6 @@ const { testService } = require('../setup');
 const { forms: { geoTypes } } = require('../../data/xml');
 const { sql } = require('slonik');
 const { palatableGeoJSON } = require('../../formats/palatable-geojson');
-// eslint-disable-next-line import/no-extraneous-dependencies
 const should = require('should');
 
 
