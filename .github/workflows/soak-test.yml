@@ -29,6 +29,8 @@ jobs:
           --health-retries 5
     steps:
     - uses: actions/checkout@v6
+    - run: echo "$(git log -1 --oneline)" >> $GITHUB_STEP_SUMMARY
+      if: github.event_name == 'pull_request'
     - name: Set node version
       uses: actions/setup-node@v6
       with:
