@@ -96,6 +96,10 @@ function doSoakTest({ name, throughput, throughputPeriod, testDuration, maxDrain
   log.info('  throughputPeriod:', throughputPeriod, 'ms');
   log.info('      testDuration:', durationForHumans(testDuration));
   log.info('-------------------------------');
+  log.info('Checking endpoint responding ok...');
+  const firstSize = await fn(n);
+  log.info(' 1st response size:', firstSize);
+  log.info('-------------------------------');
   return new Promise((resolve, reject) => {
     try {
       const successes = [];
