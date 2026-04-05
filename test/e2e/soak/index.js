@@ -78,7 +78,7 @@ async function soakTest() {
     throughputPeriod: 3_000,
     testDuration: 300_000,
     maxDrainDuration: 300_000,
-    minimumSuccessThreshold: 0,
+    minimumSuccessThreshold: 100,
     fn: n => exportZipWithDataAndMedia(n, projectId, formId),
   });
 
