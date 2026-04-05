@@ -1,12 +1,17 @@
 name: Soak Test
+run-name: ${{ github.event.head_commit.message || format('{0} {1}', github.event.pull_request.head.sha, github.event.pull_request.title) }}
 
 on:
-  push:
-    branches: master
+  pull_request:
 
 jobs:
   soak-test:
-    timeout-minutes: 15
+    strategy:
+      fail-fast: true
+      matrix:
+        x: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+        y: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+    timeout-minutes: 20
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
@@ -24,7 +29,13 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(github) }}
+      run: echo "$GITHUB_CONTEXT"
     - uses: actions/checkout@v6
+    - run: echo "$(git log -1 --oneline)" >> $GITHUB_STEP_SUMMARY
+      if: github.event_name == 'pull_request'
     - name: Set node version
       uses: actions/setup-node@v6
       with:
@@ -33,7 +44,7 @@ jobs:
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
     - name: Soak Test
-      timeout-minutes: 10
+      timeout-minutes: 15
       run: ./test/e2e/soak/ci
     - name: Backend Logs
       if: always()
