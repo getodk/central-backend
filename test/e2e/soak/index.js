@@ -97,7 +97,7 @@ async function doSoakTest({ name, throughput, throughputPeriod, testDuration, ma
   log.info('      testDuration:', durationForHumans(testDuration));
   log.info('-------------------------------');
   log.info('Checking endpoint responding ok...');
-  const firstSize = await fn(n);
+  const firstSize = await fn(-1);
   log.info(' 1st response size:', firstSize);
   log.info('-------------------------------');
   return new Promise((resolve, reject) => {
