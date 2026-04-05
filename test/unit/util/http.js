@@ -1,4 +1,5 @@
 const appRoot = require('app-root-path');
+const should = require('should');
 const http = require(appRoot + '/lib/util/http');
 const Option = require(appRoot + '/lib/util/option');
 
@@ -174,13 +175,18 @@ describe('util/http', () => {
       { url: '/v1/projects/1/forms/simple/submissions/:%3A', instanceId: '::', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/:%3A' },
       { url: '/v1/projects/1/forms/simple/submissions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3', instanceId: 'uuid:adcaefa3-91d7-4770-a49a-1f5607d0f2f3', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3' },
       { url: '/v1/projects/1/forms/simple/submissions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3.xml', instanceId: 'uuid:adcaefa3-91d7-4770-a49a-1f5607d0f2f3', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3.xml' },
-
-      // Case-insensitivity
-      { url: '/v1/projects/1/forms/simple/SUBMISSIONS/instanceId.XML?foo=bar', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId.XML?foo=bar' },
     ].forEach(({ url, instanceId, rootId, expected }) => {
       it(`should return ${expected} for ${url}`, () => {
         convertToSubmissionVersion(url, instanceId, rootId).should.be.eql(expected);
       });
+    });
+
+    it('should not support case-insensitive URLs', () => {
+      // given
+      const url = '/v1/projects/1/forms/simple/SUBMISSIONS/instanceId.XML?foo=bar';
+
+      // expect
+      should.throws(() => convertToSubmissionVersion(url, 'instanceId', 'rootId'));
     });
   });
 });
