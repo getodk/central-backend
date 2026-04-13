@@ -40,9 +40,10 @@ describe('sentry', () => {
 
       // then
       const loggedEvents = await getLoggedEvents(); // eslint-disable-line no-use-before-define
-      assert.equal(loggedEvents.length, 1);
-      const [ e ] = loggedEvents;
-      assert.deepEqual(e.data.tags, { 'odk-task': 'test-sentry-logging' });
+      assert.deepEqual(
+        loggedEvents.map(e => e.data.tags),
+        [ { 'odk-task': 'test-sentry-logging' } ],
+      );
     });
 
     async function getLoggedEvents() { // eslint-disable-line no-use-before-define
