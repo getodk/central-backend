@@ -4,7 +4,7 @@ const { spawn } = require('node:child_process');
 const express = require('express');
 const { v4: uuid } = require('uuid');
 
-describe.only('sentry', () => {
+describe('sentry', () => {
   describe('task integration', () => {
     let mockSentry;
     beforeEach(async () => {
