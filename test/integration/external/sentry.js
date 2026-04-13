@@ -6,44 +6,12 @@ const { v4:uuid } = require('uuid');
 
 describe.only('sentry', () => {
   describe('task integration', () => {
-    let server, port;
-
-    beforeEach(() => new Promise((resolve, reject) => {
-      const events = [];
-
-      const app = express();
-      //app.use(express.json());
-      app.use(express.text({ type:() => true, limit:'5mb' }));
-      app.use((req, res, next) => {
-        const { method, path, headers, query, params, body } = req;
-        next();
-      });
-      app.get('/event-log', (req, res) => {
-        res.send(events);
-      });
-      app.all('/*', (req, res) => {
-        const parts = req.body.split('\n').filter(it => it).map(it => JSON.parse(it));
-        if(parts.length !== 3) throw new Error(`unrecognised part count: ${parts.length}`);
-
-        const [ metadata, typeContainer, data ] = parts;
-
-        const { type } = typeContainer;
-        if(!type) throw new Error('No type property found in typeContainer.');
-
-        if(type === 'event') events.push({ metadata, data });
-
-        res.send({ id:uuid().replace(/-/g, '') });
-      });
-
-      server = app.listen(0, () => {
-        port = server.address().port;
-        resolve();
-      });
-
-      server.on('error', reject);
-    }));
+    let mockSentry;
+    beforeEach(async () => {
+      mockSentry = await initMockSentry();
+    });
     afterEach(() => {
-      server?.close();
+      mockSentry?.close();
     });
 
     it('should include odk-task tag in error event', async function() {
@@ -57,7 +25,7 @@ describe.only('sentry', () => {
                 key: 'deadbeefcafe',
                 orgSubdomain: 'o123',
                 project: 123,
-                tunnel: `http://localhost:${port}/dsn`,
+                tunnel: `${mockSentry.baseUrl()}/sentry-tunnel`,
               },
             },
           },
@@ -78,7 +46,7 @@ describe.only('sentry', () => {
     });
 
     async function getLoggedEvents() { // eslint-disable-line no-use-before-define
-      const res = await fetch(`http://localhost:${port}/event-log`);
+      const res = await fetch(`${mockSentry.baseUrl()}/event-log`);
       assert.equal(res.status, 200);
       return await res.json();
     }
@@ -86,5 +54,41 @@ describe.only('sentry', () => {
 
   function sleep(ms) { // eslint-disable-line no-use-before-define
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function initMockSentry() { // eslint-disable-line no-use-before-define
+    const server = await new Promise((resolve, reject) => {
+      const events = [];
+
+      const app = express();
+      app.use(express.text({ type:() => true, limit:'5mb' }));
+      app.get('/event-log', (req, res) => {
+        res.send(events);
+      });
+      app.post('/sentry-tunnel', (req, res) => {
+        const parts = req.body.split('\n').filter(it => it).map(it => JSON.parse(it));
+        if(parts.length !== 3) throw new Error(`unrecognised part count: ${parts.length}`);
+
+        const [ metadata, typeContainer, data ] = parts;
+
+        const { type } = typeContainer;
+        if(!type) throw new Error('No type property found in typeContainer.');
+
+        if(type === 'event') events.push({ metadata, data });
+
+        res.send({ id:uuid().replace(/-/g, '') });
+      });
+
+      const server = app.listen(0, () => {
+        resolve(server);
+      });
+
+      server.on('error', reject);
+    });
+
+    return {
+      close: server.close.bind(server),
+      baseUrl: () => `http://localhost:${server.address().port}`,
+    };
   }
 });
