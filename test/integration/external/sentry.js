@@ -1,20 +1,20 @@
 const assert = require('node:assert/strict');
-const { execSync, spawn } = require('node:child_process');
+const { spawn } = require('node:child_process');
 
 const express = require('express');
-const { v4:uuid } = require('uuid');
+const { v4: uuid } = require('uuid');
 
 describe.only('sentry', () => {
   describe('task integration', () => {
     let mockSentry;
     beforeEach(async () => {
-      mockSentry = await initMockSentry();
+      mockSentry = await initMockSentry(); // eslint-disable-line no-use-before-define
     });
     afterEach(() => {
       mockSentry?.close();
     });
 
-    it('should include odk-task tag in error event', async function() {
+    it('should include odk-task tag in error event', async () => {
       // given
       const env = {
         ...process.env, // ensure NodeJS is available in child process
@@ -34,26 +34,26 @@ describe.only('sentry', () => {
 
       // when
       const child = spawn('node', ['lib/bin/test-sentry-logging', 'test error'], { env });
-      await new Promise(resolve => child.on('close', resolve));
+      await new Promise(resolve => child.on('close', resolve)); // eslint-disable-line no-promise-executor-return
       // and
-      await sleep(100);
+      await sleep(100); // eslint-disable-line no-use-before-define
 
       // then
-      const loggedEvents = await getLoggedEvents();
+      const loggedEvents = await getLoggedEvents(); // eslint-disable-line no-use-before-define
       assert.equal(loggedEvents.length, 1);
       const [ e ] = loggedEvents;
-      assert.deepEqual(e.data.tags, { 'odk-task':'test-sentry-logging' });
+      assert.deepEqual(e.data.tags, { 'odk-task': 'test-sentry-logging' });
     });
 
     async function getLoggedEvents() { // eslint-disable-line no-use-before-define
       const res = await fetch(`${mockSentry.baseUrl()}/event-log`);
       assert.equal(res.status, 200);
-      return await res.json();
+      return res.json();
     }
   });
 
   function sleep(ms) { // eslint-disable-line no-use-before-define
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise(resolve => setTimeout(resolve, ms)); // eslint-disable-line no-promise-executor-return
   }
 
   async function initMockSentry() { // eslint-disable-line no-use-before-define
@@ -61,29 +61,28 @@ describe.only('sentry', () => {
       const events = [];
 
       const app = express();
-      app.use(express.text({ type:() => true, limit:'5mb' }));
+      app.use(express.text({ type: () => true }));
       app.get('/event-log', (req, res) => {
         res.send(events);
       });
       app.post('/sentry-tunnel', (req, res) => {
         const parts = req.body.split('\n').filter(it => it).map(it => JSON.parse(it));
-        if(parts.length !== 3) throw new Error(`unrecognised part count: ${parts.length}`);
+        if (parts.length !== 3) throw new Error(`unrecognised part count: ${parts.length}`);
 
         const [ metadata, typeContainer, data ] = parts;
 
         const { type } = typeContainer;
-        if(!type) throw new Error('No type property found in typeContainer.');
+        if (!type) throw new Error('No type property found in typeContainer.');
 
-        if(type === 'event') events.push({ metadata, data });
+        if (type === 'event') events.push({ metadata, data });
 
-        res.send({ id:uuid().replace(/-/g, '') });
+        res.send({ id: uuid().replace(/-/g, '') });
       });
 
-      const server = app.listen(0, () => {
-        resolve(server);
+      const _server = app.listen(0, () => {
+        resolve(_server);
       });
-
-      server.on('error', reject);
+      _server.on('error', reject);
     });
 
     return {
