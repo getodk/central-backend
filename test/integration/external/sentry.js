@@ -9,8 +9,6 @@ describe.only('sentry', () => {
     let server, port;
 
     beforeEach(() => new Promise((resolve, reject) => {
-      const log = (...args) => console.log('[mock-sentry]', ...args);
-
       const events = [];
 
       const app = express();
@@ -18,11 +16,9 @@ describe.only('sentry', () => {
       app.use(express.text({ type:() => true, limit:'5mb' }));
       app.use((req, res, next) => {
         const { method, path, headers, query, params, body } = req;
-        log('received request:', method, path, { headers, query, params, body });
         next();
       });
       app.get('/event-log', (req, res) => {
-        log('/event-log returning:', events);
         res.send(events);
       });
       app.all('/*', (req, res) => {
@@ -51,8 +47,6 @@ describe.only('sentry', () => {
     });
 
     it('should include odk-task tag in error event', async function() {
-      //this.timeout(20_000);
-
       // given
       const env = {
         ...process.env, // ensure NodeJS is available in child process
@@ -71,18 +65,10 @@ describe.only('sentry', () => {
       };
 
       // when
-      console.log('XXX calling script...');
-      //assert.throws(() => execSync('node lib/bin/test-sentry-logging test error', { env, stdio:'inherit' }));
-      //execSync('node lib/bin/test-sentry-logging test error', { env, stdio:'inherit' });
-      const child = spawn('node', ['lib/bin/test-sentry-logging', 'test error'], { env, stdio:'inherit' });
+      const child = spawn('node', ['lib/bin/test-sentry-logging', 'test error'], { env });
       await new Promise(resolve => child.on('close', resolve));
-      console.log('XXX script returned');
-
       // and
-      //await sleep(10000);
-      console.log('sleeping...');
       await sleep(100);
-      console.log('woke up');
 
       // then
       const loggedEvents = await getLoggedEvents();
