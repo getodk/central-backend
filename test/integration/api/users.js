@@ -1,6 +1,10 @@
 const should = require('should');
+const { v4: uuid } = require('uuid');
 const { testService } = require('../setup');
 const { sleep } = require('../../util/util');
+const { password4alice, password4bob, password4chelsea, password4david } = require('../../util/passwords');
+
+const newpassword = uuid();
 
 describe('api: /users', () => {
   describe('GET', () => {
@@ -149,9 +153,9 @@ describe('api: /users', () => {
         it('should hash and store passwords if provided', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/users')
-              .send({ email: 'david@getodk.org', password: 'alongpassword' })
+              .send({ email: 'david@getodk.org', password: password4david })
               .expect(200)
-              .then(() => service.login({ email: 'david@getodk.org', password: 'alongpassword' }, (asDavid) =>
+              .then(() => service.login({ email: 'david@getodk.org', password: password4david }, (asDavid) =>
                 asDavid.get('/v1/users/current').expect(200))))));
 
         it('should not accept and hash blank passwords', testService((service, { Users }) =>
@@ -185,7 +189,7 @@ describe('api: /users', () => {
         it('should send an email to provisioned users', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/users')
-              .send({ email: 'david@getodk.org', password: 'daviddavid' })
+              .send({ email: 'david@getodk.org', password: password4david })
               .expect(200)
               .then(() => {
                 const email = global.inbox.pop();
@@ -225,7 +229,7 @@ describe('api: /users', () => {
         it('should send a message explaining a pre-assigned password if given', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.post('/v1/users')
-              .send({ email: 'david@getodk.org', password: 'daviddavid' })
+              .send({ email: 'david@getodk.org', password: password4david })
               .expect(200)
               .then(() => {
                 /Your account was created with an assigned password\./
@@ -338,7 +342,7 @@ describe('api: /users', () => {
 
           const token = /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1];
           await service.post('/v1/users/reset/verify')
-            .send({ new: 'resetpassword' })
+            .send({ new: password4bob })
             .set('Authorization', `Bearer ${token}`)
             .expect(200);
           // The session has been deleted.
@@ -365,11 +369,11 @@ describe('api: /users', () => {
             .expect(200)
             .then(() => /token=([a-z0-9!$]+)/i.exec(global.inbox.pop().html)[1])
             .then((token) => service.post('/v1/users/reset/verify')
-              .send({ new: 'resetpassword' })
+              .send({ new: password4chelsea })
               .set('Authorization', 'Bearer ' + token)
               .expect(200))
             .then(() => service.get('/v1/audits')
-              .auth('alice@getodk.org', 'resetpassword') // cheap way to work around that we just changed the pw
+              .auth('alice@getodk.org', password4chelsea) // cheap way to work around that we just changed the pw
               .set('x-forwarded-proto', 'https')
               .then(({ body }) => {
                 body[0].action.should.equal('user.update');
@@ -400,7 +404,7 @@ describe('api: /users', () => {
                 email.subject.should.equal('ODK Central account password reset');
 
                 return service.post('/v1/sessions')
-                  .send({ email: 'bob@getodk.org', password: 'password4bob' })
+                  .send({ email: 'bob@getodk.org', password: password4bob })
                   .expect(401);
               }))));
 
@@ -616,7 +620,7 @@ describe('api: /users', () => {
               } else {
                 after.body.email.should.equal('newbob@odk.org');
                 return service.post('/v1/sessions')
-                  .send({ email: 'newbob@odk.org', password: 'password4bob' })
+                  .send({ email: 'newbob@odk.org', password: password4bob })
                   .expect(200);
               }
             })))));
@@ -703,7 +707,7 @@ describe('api: /users', () => {
             asAlice.get('/v1/users/current')
               .expect(200)
               .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
-                .send({ old: 'password4alice', new: 'newpassword' })
+                .send({ old: password4alice, new: newpassword })
                 .expect(404)))));
       });
     } else {
@@ -714,13 +718,13 @@ describe('api: /users', () => {
               .expect(200)
               .then(({ body }) => service.login('chelsea', (asChelsea) =>
                 asChelsea.put(`/v1/users/${body.id}/password`)
-                  .send({ old: 'password4alice', new: 'chelsea' })
+                  .send({ old: password4alice, new: 'chelsea' })
                   .expect(403))))));
 
         it('should reject if the user does not exist', testService((service) =>
           service.login('alice', (asAlice) =>
             asAlice.put('/v1/users/9999/password')
-              .send({ old: 'password4alice', new: 'password4chelsea' })
+              .send({ old: password4alice, new: password4chelsea })
               .expect(404))));
 
         it('should reject if the old password is not correct', testService((service) =>
@@ -728,7 +732,7 @@ describe('api: /users', () => {
             asAlice.get('/v1/users/current')
               .expect(200)
               .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
-                .send({ old: 'notalice', new: 'newpassword' })
+                .send({ old: 'notalice', new: newpassword })
                 .expect(401)))));
 
         it('should change the password', testService((service) =>
@@ -736,12 +740,12 @@ describe('api: /users', () => {
             asAlice.get('/v1/users/current')
               .expect(200)
               .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
-                .send({ old: 'password4alice', new: 'newpassword' })
+                .send({ old: password4alice, new: newpassword })
                 .expect(200))
               .then(({ body }) => {
                 body.success.should.equal(true);
                 return service.post('/v1/sessions')
-                  .send({ email: 'alice@getodk.org', password: 'newpassword' })
+                  .send({ email: 'alice@getodk.org', password: newpassword })
                   .expect(200);
               }))));
 
@@ -750,17 +754,17 @@ describe('api: /users', () => {
             asAlice.get('/v1/users/current')
               .expect(200)
               .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
-                .send({ old: 'password4alice', new: '123456789' })
+                .send({ old: password4alice, new: '123456789' })
                 .expect(400))))); // 400.21
 
         it('should allow nonadministrator users to set their own password', testService((service) =>
           service.login('chelsea', (asChelsea) =>
             asChelsea.get('/v1/users/current').expect(200).then(({ body }) => body.id)
               .then((chelseaId) => asChelsea.put(`/v1/users/${chelseaId}/password`)
-                .send({ old: 'password4chelsea', new: 'newchelsea' })
+                .send({ old: password4chelsea, new: newpassword })
                 .expect(200)
                 .then(() => service.post('/v1/sessions')
-                  .send({ email: 'chelsea@getodk.org', password: 'newchelsea' })
+                  .send({ email: 'chelsea@getodk.org', password: newpassword })
                   .expect(200))))));
 
         it('should delete other sessions', testService(async (service) => {
@@ -770,7 +774,7 @@ describe('api: /users', () => {
             .expect(200);
           await anotherAlice.get('/v1/users/current').expect(200);
           await asAlice.put(`/v1/users/${id}/password`)
-            .send({ old: 'password4alice', new: 'newpassword' })
+            .send({ old: password4alice, new: newpassword })
             .expect(200);
           // The other session has been deleted.
           await anotherAlice.get('/v1/users/current').expect(401);
@@ -782,11 +786,11 @@ describe('api: /users', () => {
           const asAlice = await service.login('alice');
           const { body: { id } } = await asAlice.get('/v1/users/current')
             .expect(200);
-          const basic = Buffer.from('alice@getodk.org:password4alice').toString('base64');
+          const basic = Buffer.from(`alice@getodk.org:${password4alice}`).toString('base64');
           await service.put(`/v1/users/${id}/password`)
             .set('Authorization', `Basic ${basic}`)
             .set('X-Forwarded-Proto', 'https')
-            .send({ old: 'password4alice', new: 'newpassword' })
+            .send({ old: password4alice, new: newpassword })
             .expect(200);
           await asAlice.get('/v1/users/current').expect(401);
         }));
@@ -796,7 +800,7 @@ describe('api: /users', () => {
             asAlice.get('/v1/users/current')
               .expect(200)
               .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
-                .send({ old: 'password4alice', new: 'newpassword' })
+                .send({ old: password4alice, new: newpassword })
                 .expect(200)
                 .then(() => {
                   const email = global.inbox.pop();
@@ -810,7 +814,7 @@ describe('api: /users', () => {
             asAlice.get('/v1/users/current')
               .expect(200)
               .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
-                .send({ old: 'password4alice', new: 'newpassword' })
+                .send({ old: password4alice, new: newpassword })
                 .expect(200)
                 .then(() => Promise.all([
                   Users.getByEmail('alice@getodk.org').then((o) => o.get()),
@@ -900,7 +904,7 @@ describe('api: /users', () => {
                   }
                 } else {
                   return service.post('/v1/sessions')
-                    .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+                    .send({ email: 'chelsea@getodk.org', password: password4chelsea })
                     .expect(401);
                 }
               }))))));

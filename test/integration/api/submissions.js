@@ -11,6 +11,7 @@ const { hashPassword } = require('../../../lib/util/crypto');
 const { User, Actor } = require(appRoot + '/lib/model/frames');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { password4david } = require('../../util/passwords');
 
 // utilities used for versioning instances
 const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
@@ -4622,7 +4623,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
         .send(testData.forms.binaryType)
         .expect(200);
 
-      const password = await hashPassword('password4david');
+      const password = await hashPassword(password4david);
 
       await Users.create(new User({ email: 'david@getodk.org', password }, { actor: new Actor({ type: 'user', displayName: 'David' }) }));
 
