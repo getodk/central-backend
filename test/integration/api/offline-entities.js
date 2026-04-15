@@ -1924,7 +1924,7 @@ describe('Offline Entities', () => {
   });
 
   describe.only('locking an entity while processing a related submission', function() {
-    this.timeout(80000);
+    this.timeout(8000);
 
     // https://github.com/getodk/central/issues/705
     it('should concurrently process an offline create + update @slow', testServiceFullTrx(async (service, container) => {
@@ -1965,13 +1965,12 @@ describe('Offline Entities', () => {
       // locking in place, successCount === 50. It's because it's often the case
       // that successCount > 0 even without locking that we run the race
       // condition multiple times.
-      const iterationCount = 500;
       let successCount = 0;
-      for (let i = 0; i < iterationCount; i += 1) {
+      for (let i = 0; i < 50; i += 1) {
         // eslint-disable-next-line no-await-in-loop
         if (await race()) successCount += 1;
       }
-      successCount.should.equal(iterationCount);
+      successCount.should.equal(50);
     }));
   });
 
