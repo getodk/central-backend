@@ -35,7 +35,7 @@ info:
 
     > ⚠️  In this API and in the related [ODK XForms specification](https://getodk.github.io/xforms-spec/entities), collections of `Entities` are referred to as `Datasets`. The term "Entity List" is used for this concept in the Central frontend UI, user documentation, and all other text intended for end users who are not developers.
 
-    Finally, **system information and configuration** is available via a set of specialized resources. Currently, you may set the Usage Reporting configuration and retrieve Server Audit Logs.
+    Finally, **system information and configuration** is available via a set of specialized resources. For example, you may set the Usage Reporting configuration or retrieve Server Audit Logs.
 
     ## Changelog
 
@@ -44,15 +44,24 @@ info:
     ## ODK Central v2026.1
 
     **Added**:
+    - Datasets can now be deleted! Deleted Datasets are soft-deleted and remain in the trash for 30 days, during which their Entity data can still be exported as a CSV snapshot. After 30 days they are permanently purged. Unlike Forms, deleted Datasets cannot be restored.
+      - [DELETE /projects/:id/datasets/:name](/central-api-dataset-management/#deleting-a-dataset) to delete a Dataset.
+      - [GET /projects/:id/trash/datasets/:datasetId/entities.csv](/central-api-dataset-management/#downloading-deleted-dataset-entities) to export the Entity data of a deleted Dataset as a CSV.
+      - [DELETE /projects/:id/datasets/:name/properties/:propertyName](/central-api-dataset-management/#deleting-a-property) to delete a Dataset property.
+    - You can now customize the appearance of your server using new [system configuration endpoints](/central-api-system-endpoints/#system-configuration). You can configure a title and description for your login page, as well as a logo and hero image for your server.
     - Three endpoints gained `ETag` HTTP response headers. These can be used to efficiently revalidate clientside caches.
       A guide on how to use caching for better performance of data pipelines can be found [here](/using-http-caching).
       The endpoints that have gained caching information are:
       - The submission-related OData "[data documents](/central-api-odata-endpoints/#data-document)". The dataset-related OData endpoints are to follow in some future release.
       - The [`submissions.csv`](/central-api-submission-management/#exporting-root-data-to-plain-csv) endpoint
       - The [`submissions.csv.zip`](/central-api-submission-management/#exporting-form-submissions-to-csv) endpoint
+    - New [Clear Submission Attachment](/central-api-submission-management/#clearing-a-submission-version-s-attachment) endpoint that works on a specific version of an Submission.
 
     **Changed**:
-    - The APIs introduced in 2025.3 yielding geographical information from submissions and entities in GeoJSON format have changed, and are now documented.
+    - Added `deleted` query parameter to [GET /projects/:id/datasets](/central-api-dataset-management/#listing-datasets) to list deleted Datasets with their numeric IDs.
+    - [Restoring a Form](/central-api-form-management/#restoring-a-form) now returns a 409 if a related Dataset has been deleted or a Dataset property that the Form wrote to has been deleted.
+    - The APIs introduced in 2025.3 yielding geographical information from [submissions](/central-api-submission-management/#retrieving-submissions-geodata) and [entities](/central-api-entity-management/#entities-geodata) in GeoJSON format have changed, and are now documented.
+    - Image submission attachments (`image/png`, `image/gif`, `image/jpeg`) are now served with `Content-Disposition: inline` instead of `attachment` when [downloading a Submission Attachment](/central-api-submission-management/#downloading-an-attachment).
 
     ## ODK Central v2025.3
 
@@ -67,13 +76,11 @@ info:
       
       The endpoints are:
       - [GET /projects/:id/datasets/:name/entities.geojson](/central-api-entity-management/#entities-geodata)
-      - [GET /projects/:id/forms/:xmlFormId/submissions.geojson](/central-api-submission-management/#submissions-geodata)
+      - [GET /projects/:id/forms/:xmlFormId/submissions.geojson](/central-api-submission-management/#retrieving-submissions-geodata)
 
     **Changed**:
     - [Download Dataset](/central-api-dataset-management/#download-dataset) API now supports $search query parameter.
     - Added `deleted` query parameter to [GET /projects/:id/forms/:xmlFormId/submissions](/central-api-submission-management/#listing-all-submissions-on-a-form) to retrieve deleted submissions.
-
-    **Changed**:
     - [GET /users](/central-api-accounts-and-users/#listing-users) and [GET /users/:actorId](/central-api-accounts-and-users/#getting-user-details) now include `lastLoginAt` field.
 
     ## ODK Central v2025.2
@@ -301,7 +308,7 @@ info:
 
     * `GET /projects/…/forms/…/submissions/…/diffs` will return the [changes between each version](/central-api-submission-management/#getting-changes-between-versions) of a Submission.
 
-    * You can set the [Usage Reporting configuration](/central-api-system-endpoints/#usage-reporting-configuration) to choose whether the server will share anonymous usage data with the Central team. By default, no usage information will be sent at all.
+    * You can set the [Usage Reporting configuration](/central-api-system-endpoints/#system-configuration) to choose whether the server will share anonymous usage data with the Central team. By default, no usage information will be sent at all.
 
     * You can also [preview the Usage Report](/central-api-system-endpoints/#usage-report-preview) to see exactly what information would be sent in a Usage Report.
 
@@ -671,7 +678,7 @@ tags:
     * The **data documents**, linked from the Service Document, are a simple JSON representation of the Submission or Entity data, conforming to the schema we describe in our Metadata Document.
 - name: System Endpoints
   description: There are some resources available for getting or setting system information
-    and configuration. You can set the [Usage Reporting configuration](/central-api-system-endpoints/#usage-reporting-configuration)
+    and configuration. For example, you can set the [Usage Reporting configuration](/central-api-system-endpoints/#system-configuration)
     for the server, retrieve the [Server Audit Logs](/central-api-system-endpoints/#server-audit-logs),
     or perform a [Direct Backup](/central-api-system-endpoints/#direct-backup).
 - name: Encryption
@@ -888,7 +895,7 @@ tags:
     To facilitate testing, there is an alternative collection of OData endpoints that will give access to the submissions uploaded to a Draft Form. This can be useful for ensuring that changes to your form do not break downstream dashboards or applications.
 
     They are all identical to the non-Draft OData endpoints, but they will only return the Draft Form schema and Submissions.
-- name: Usage Reporting Configuration
+- name: System Configuration
   x-parent-tag: System Endpoints
   description: |-
     _(introduced: version 1.3)_
@@ -897,7 +904,7 @@ tags:
   description: |-
     _(introduced: version 1.3)_
 
-    An Administrator of Central may opt in to sending periodic reports summarizing usage. Configuration of this reporting is described [here](/central-api-system-endpoints/#usage-reporting-configuration). For added transparency, the API provides a preview of the reported metrics.
+    An Administrator of Central may opt in to sending periodic reports summarizing usage. Configuration of this reporting is described [here](/central-api-system-endpoints/#system-configuration). For added transparency, the API provides a preview of the reported metrics.
 - name: Server Audit Logs
   x-parent-tag: System Endpoints
   description: |-
@@ -954,6 +961,8 @@ tags:
     * `dataset.create` when a Dataset is created.
     * `dataset.update` when a Dataset is updated.
     * `dataset.update.publish` when a Dataset is published.
+    * `dataset.delete` when a Dataset is deleted.
+    * `dataset.update.property.delete` when a Dataset Property is deleted.
     * `entity.create` when an Entity is created.
     * `entity.error` when there is an error processing a Submission to create or update an Entity.
     * `entity.update.version` when an Entity is updated.
@@ -3379,7 +3388,7 @@ paths:
       tags:
       - Individual Form
       summary: Deleting a Form
-      description: -|
+      description: |-
         When a Form is deleted, it goes into the Trash section, but it
         can now be restored from the Trash. After 30 days in the Trash, the Form and
         all of its resources and submissions will be automatically purged. If your
@@ -3877,7 +3886,9 @@ paths:
       description: |-
         _(introduced: version 1.4)_
 
-        Deleted forms can now be restored (as long as they have been in the Trash less than 30 days and have not been purged). However, a deleted Form with the same `xmlFormId` as an active Form cannot be restored while that other Form is active. 
+        Deleted forms can now be restored (as long as they have been in the Trash less than 30 days and have not been purged). However, a deleted Form with the same `xmlFormId` as an active Form cannot be restored while that other Form is active.
+
+        A Form also cannot be restored if a related Dataset has been deleted or if a Dataset property that the Form wrote to has been deleted since the Form was deleted. In that case, a 409 is returned.
 
         This `/restore` URL uses the numeric ID of the Form (now returned by the `/forms?deleted=true` endpoint) rather than the `xmlFormId` to unambigously restore. Note that the numeric ID of a Form is not returned by default on the [Form list](/central-api-form-management/#list-all-forms) and is only returned when listing deleted Forms.
       operationId: restoreForm
@@ -3903,6 +3914,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "409.23"
+                message: This Form cannot be restored because the related dataset(s) has been modified or deleted.
   /v1/projects/{projectId}/forms/{xmlFormId}/draft:
     get:
       tags:
@@ -6110,7 +6137,7 @@ paths:
     get:
       tags:
       - Submissions
-      summary: Retrieving Submission GeoJSON
+      summary: Retrieving GeoJSON of a single Submission
       description: To retrieve the GeoJSON representation of the `Submission`, just append `.geojson` to
         the end of the request URL.
       operationId: getSubmissionGeoJson
@@ -6874,7 +6901,7 @@ paths:
       - Attachments
       summary: Downloading an Attachment
       description: |-
-        The `Content-Type` and `Content-Disposition` will be set appropriately based on the file itself when requesting an attachment file download.
+        The `Content-Type` and `Content-Disposition` will be set based on the file. For image attachments (`image/png`, `image/gif`, `image/jpeg`), `Content-Disposition` will be `inline`, allowing browsers to display them directly. For all other attachment types, `Content-Disposition` will be `attachment`.
 
         This endpoint supports `ETag`, which can be used to avoid downloading the same content more than once. When an API consumer calls this endpoint, it returns a value in `ETag` header, you can pass this value in the header `If-None-Match` of subsequent requests. If the file has not been changed since the previous request, you will receive `304 Not Modified` response otherwise you'll get the latest file.
       operationId: downloadAttachment
@@ -6977,7 +7004,7 @@ paths:
         Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a `DELETE` to the attachment's endpoint, that is what happens.
 
         This endpoint clears attachments on the current version of the submission.
-        See [Clearing the Attachment of a specific Submission Version](/central-api-submission-management/#clearing-a-submission-version-s-attachment) for more control over attachments on past versions.
+        See [Clearing the Attachment of a specific Submission Version](/central-api-submission-management/#clearing-a-submission-version-s-attachment) for working with past versions.
       operationId: clearSubmissionAttachment
       parameters:
       - name: projectId
@@ -7398,6 +7425,8 @@ paths:
         This endpoint clears attachments on submission versions.
 
         Because Submission Attachments are completely determined by the XML data of the submission itself, there is no direct way to entirely remove a Submission Attachment entry from the list, only to clear its uploaded content. Thus, when you issue a DELETE to the attachment's endpoint, that is what happens.
+
+        To clear an attachment only on the current version of a Submission, see [Clearing a Submission Attachment](/central-api-submission-management/#clearing-a-submission-attachment).
       operationId: clearVersionedAttachment
       parameters:
       - name: projectId
@@ -8131,7 +8160,10 @@ paths:
       tags:
       - Dataset Management
       summary: Listing Datasets
-      description: The Dataset listing endpoint returns all published Datasets in a Project. If a Draft Form defines a new Dataset, that Dataset will not be included in this list until the Form is published.
+      description: |-
+        The Dataset listing endpoint returns all published Datasets in a Project. If a Draft Form defines a new Dataset, that Dataset will not be included in this list until the Form is published.
+
+        The query `?deleted=true` can be added to list deleted Datasets with their numeric IDs, which can be used to [download a deleted Dataset's Entity data](/central-api-dataset-management/#downloading-deleted-dataset-entities).
       operationId: listDatasets
       parameters:
       - name: projectId
@@ -8141,6 +8173,12 @@ paths:
         schema:
           type: number
         example: "16"
+      - name: deleted
+        in: query
+        description: If set to `true`, will return only deleted Datasets and their numeric IDs
+        schema:
+          type: boolean
+        example: "true"
       responses:
         "200":
           description: OK
@@ -8364,6 +8402,61 @@ paths:
                   forms:
                   - xmlFormId: simple
                     name: Simple
+    delete:
+      tags:
+      - Dataset Management
+      summary: Deleting a Dataset
+      description: |-
+        _(introduced: version 2026.1)_
+
+        When a Dataset is deleted, it is soft-deleted and placed in the trash. After 30 days in the trash, the Dataset and all of its Entities will be automatically purged. Unlike Forms, deleted Datasets cannot be restored.
+
+        While in the trash, the Dataset's Entity data can still be exported as a CSV snapshot using [GET /projects/:id/trash/datasets/:datasetId/entities.csv](/central-api-dataset-management/#downloading-deleted-dataset-entities).
+
+        A Dataset cannot be deleted if any Forms are still linked to it, either as a source (a Form that creates/updates Entities in it) or as a consumer (a Form that uses it as an attachment). All such Forms must be updated first:
+        - To update a Form that writes to a Dataset, remove that dataset from the `entities` tab of the XLSForm and remove associated `save_to`s.
+        - To update a Form that reads from a Dataset, replace the attachment with a static CSV or update the Form to not use that attachment.
+
+        A Form can also be deleted as a way to unlink it from a Dataset, but then that Form [cannot be restored](/central-api-form-management/#restoring-a-form).
+      operationId: deleteDataset
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "409.21"
+                message: You can't delete this dataset because there are Form(s) dependent on it.
   /v1/projects/{projectId}/datasets/{name}/properties:
     post:
       tags:
@@ -8412,6 +8505,88 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+  /v1/projects/{projectId}/datasets/{name}/properties/{propertyName}:
+    delete:
+      tags:
+      - Dataset Management
+      summary: Deleting a Property
+      description: |-
+        _(introduced: version 2026.1)_
+
+        Deletes a published Property from a Dataset. The deletion is permanent, but a new property with the same name can easily be re-added.
+
+        A Property cannot be deleted if either of the following is true:
+        - Any published or draft Forms are currently writing to it (i.e. they have a `save_to` mapping to this Property). Those Forms must be updated or deleted first.
+        - Any Entities have a non-empty value for it. Those Entity values must be cleared first by updating each Entity to have an empty string for that Property.
+
+        If deletion is blocked, the 409 response includes a `details.prerequisites` object describing what needs to be resolved. For blocked Forms, it includes a list of the dependent Form IDs and names. For blocked Entities, it includes a `totalCount` and up to 3 example Entity UUIDs and labels.
+
+        A Form that reads a Dataset Property via an attachment may break after deleting the Property, so check any Forms that consume this Dataset as well.
+      operationId: deleteProperty
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: name
+        in: path
+        description: Name of the Dataset
+        required: true
+        schema:
+          type: string
+        example: people
+      - name: propertyName
+        in: path
+        description: The name of the Property to delete
+        required: true
+        schema:
+          type: string
+        example: age
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+        "409":
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                required:
+                - code
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+              example:
+                code: "409.22"
+                message: Prerequisites for deleting the property "age" are not met.
+                details:
+                  prerequisites:
+                    dependentForms:
+                      message: You can't delete this property because there are Form(s) writing to it
+                      details:
+                        forms:
+                        - formName: Registration Form
+                          xmlFormId: registration
+                    nonEmptyEntities:
+                      message: You can't delete this property because there are Entity(ies) with the non-empty value for the 'age'
+                      details:
+                        totalCount: 42
+                        entities:
+                        - uuid: 54a405a0-53ce-4748-9788-d23a30cc3afa
+                          label: John Doe
+                        - uuid: 9a2a3b4c-1234-4567-89ab-cdef01234567
+                          label: Jane Smith
+                        - uuid: 1b3d5f7a-9876-4321-abcd-ef0123456789
+                          label: Bob Jones
   /v1/projects/{projectId}/datasets/{name}/entities.csv:
     get:
       tags:
@@ -8472,6 +8647,45 @@ paths:
                 __id,label,geometry,species,circumference_cm,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version
                 2c1ee90b-dde8-434b-9985-2eefd8465339,666cm purpleheart,-29.281608 -67.624883 0 0,purpleheart,667,2023-05-31T19:49:28.902Z,22,Alice,1,2023-05-31T19:52:34.467Z,1
                 84ac3a03-9980-4098-93a5-b81fdc6ea749,555cm wallaba,18.921876 77.309451 0 0,wallaba,555,2023-05-31T19:49:20.152Z,22,Alice,0,,1
+  /v1/projects/{projectId}/trash/datasets/{datasetId}/entities.csv:
+    get:
+      tags:
+      - Dataset Management
+      summary: Downloading Deleted Dataset Entities
+      description: |-
+        _(introduced: version 2026.1)_
+
+        Returns a CSV snapshot of the Entities belonging to a soft-deleted Dataset. This is useful for exporting Entity data before the Dataset is permanently purged after 30 days in the trash.
+
+        The CSV format is identical to [Download Dataset](/central-api-dataset-management/#download-dataset), except the filename will have a `-deleted` suffix (e.g. `people-deleted.csv`).
+
+        This endpoint uses the numeric Dataset ID rather than the Dataset name because the name alone is not sufficient to unambiguously identify a deleted Dataset (the same name could be reused). The numeric ID can be retrieved by [listing Datasets with `?deleted=true`](/central-api-dataset-management/#listing-datasets).
+
+        Unlike [Download Dataset](/central-api-dataset-management/#download-dataset), this endpoint does not support `$filter`, `$search`, or `ETag`.
+      operationId: downloadDeletedDatasetEntities
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: datasetId
+        in: path
+        description: The numeric ID of the deleted Dataset (returned by listing Datasets with `?deleted=true`)
+        required: true
+        schema:
+          type: number
+        example: "42"
+      responses:
+        "200":
+          description: OK
+          content:
+            text/csv:
+              example: |
+                __id,label,geometry,species,circumference_cm,__createdAt,__creatorId,__creatorName,__updates,__updatedAt,__version
+                2c1ee90b-dde8-434b-9985-2eefd8465339,666cm purpleheart,-29.281608 -67.624883 0 0,purpleheart,667,2023-05-31T19:49:28.902Z,22,Alice,1,2023-05-31T19:52:34.467Z,1
   /v1/projects/{projectId}/datasets/{name}/entities:
     get:
       tags:
@@ -11370,8 +11584,8 @@ paths:
   /v1/config/analytics:
     get:
       tags:
-      - Usage Reporting Configuration
-      summary: Getting the current configuration
+      - System Configuration
+      summary: Getting the current Usage Reporting configuration
       description: If the Usage Reporting configuration is not set, this endpoint
         will return a `404`. Once the configuration is set, this endpoint will indicate
         whether the server will share usage data with the Central team. If the server
@@ -11384,64 +11598,17 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - key
-                - setAt
-                - value
-                type: object
-                properties:
-                  key:
-                    type: string
-                    description: The type of system configuration.
-                  setAt:
-                    type: string
-                    description: ISO date format. The last time this system configuration
-                      was set.
-                  value:
-                    required:
-                    - enabled
-                    type: object
-                    properties:
-                      enabled:
-                        type: boolean
-                        description: '`true` if the server will share usage data with
-                          the Central team and `false` if not.'
-                      email:
-                        type: string
-                        description: The work email address to include with the metrics
-                          report.
-                      organization:
-                        type: string
-                        description: The organization name to include with the metrics
-                          report.
-                    description: Details about the Usage Reporting configuration.
-              example:
-                key: some_type
-                setAt: 2018-01-06T00:32:52.787Z
-                value:
-                  enabled: true
-                  email: my.email.address@getodk.org
-                  organization: Organization Name
+                $ref: '#/components/schemas/ConfigAnalytics'
         "404":
           description: Not Found
           content:
             application/json:
               schema:
-                required:
-                - code
-                type: object
-                properties:
-                  code:
-                    type: string
-                  message:
-                    type: string
-              example:
-                code: "404.1"
-                message: Could not find the resource you were looking for.
+                $ref: '#/components/schemas/Error404'
     post:
       tags:
-      - Usage Reporting Configuration
-      summary: Setting a new configuration
+      - System Configuration
+      summary: Setting new configuration for Usage Reporting
       description: |-
         An Administrator can use this endpoint to choose whether the server will share anonymous usage data with the Central team. This configuration affects the entire server. Until the Usage Reporting configuration is set, Administrators will see a message on the Central administration website that provides further information.
 
@@ -11455,23 +11622,7 @@ paths:
         content:
           '*/*':
             schema:
-              required:
-              - enabled
-              type: object
-              properties:
-                enabled:
-                  type: boolean
-                  description: See above.
-                email:
-                  type: string
-                  description: A work email address to include with the metrics report.
-                organization:
-                  type: string
-                  description: An organization name to include with the metrics report.
-              example:
-                enabled: true
-                email: my.email.address@getodk.org
-                organization: Organization Name
+              $ref: '#/components/schemas/ConfigAnalyticsValue'
         required: false
       responses:
         "200":
@@ -11479,51 +11630,14 @@ paths:
           content:
             application/json:
               schema:
-                required:
-                - key
-                - setAt
-                - value
-                type: object
-                properties:
-                  key:
-                    type: string
-                    description: The type of system configuration.
-                  setAt:
-                    type: string
-                    description: ISO date format. The last time this system configuration
-                      was set.
-                  value:
-                    required:
-                    - enabled
-                    type: object
-                    properties:
-                      enabled:
-                        type: boolean
-                        description: '`true` if the server will share usage data with
-                          the Central team and `false` if not.'
-                      email:
-                        type: string
-                        description: The work email address to include with the metrics
-                          report.
-                      organization:
-                        type: string
-                        description: The organization name to include with the metrics
-                          report.
-                    description: Details about the Usage Reporting configuration.
-              example:
-                key: some_type
-                setAt: 2018-01-06T00:32:52.787Z
-                value:
-                  enabled: true
-                  email: my.email.address@getodk.org
-                  organization: Organization Name
+                $ref: '#/components/schemas/ConfigAnalytics'
       x-codegen-request-body-name: body
     delete:
       tags:
-      - Usage Reporting Configuration
-      summary: Unsetting the current configuration
+      - System Configuration
+      summary: Unsetting the current Usage Reporting configuration
       description: If the Usage Reporting configuration is unset, Administrators will
-        once again see a message on the the Central administration website.
+        once again see a message on the Central administration website.
       operationId: unsetTheCurrentConfiguration
       responses:
         "200":
@@ -11532,6 +11646,213 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Success'
+  /v1/config/login-appearance:
+    get:
+      tags:
+      - System Configuration
+      summary: Getting the title and description configured for the login page
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If no title or description has been configured for the login page, this endpoint will return a `404`. Once a configuration is set, this endpoint will return the custom title and/or description that has been configured for the login page.
+      operationId: getLoginAppearance
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigLoginAppearance'
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+    post:
+      tags:
+      - System Configuration
+      summary: Setting a new title and description for the login page
+      description: |-
+        _(introduced: version 2026.1)_
+
+        An Administrator can use this endpoint to set a custom title and/or description to show to all users who visit the login page. The description will be shown as a subtitle. If a title or description is already set, the current configuration will be overwritten with the new one; the two configurations will not be merged.
+      operationId: setLoginAppearance
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              $ref: '#/components/schemas/ConfigLoginAppearanceValue'
+        required: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigLoginAppearance'
+      x-codegen-request-body-name: body
+    delete:
+      tags:
+      - System Configuration
+      summary: Unsetting the title and description configured for the login page
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If the configuration is unset, all users who visit the login page will once again see the default title and description.
+      operationId: unsetLoginAppearance
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+  /v1/config/logo:
+    get:
+      tags:
+      - System Configuration
+      summary: Getting the logo configured for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If no logo has been configured for the server, this endpoint will return a `404`. Once a configuration is set, this endpoint will return the custom logo that has been configured.
+      operationId: getLogo
+      responses:
+        "200":
+          description: OK
+          content:
+            "{the MIME type of the logo itself}":
+              example: (binary data)
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+    post:
+      tags:
+      - System Configuration
+      summary: Setting a new logo for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        An Administrator can use this endpoint to set a custom logo for the entire server. The logo will be shown to all users who visit the login page, as well as other pages, including the reset password page and set password page. If a logo is already set, the current logo will be overwritten with the new one.
+      operationId: setLogo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigLogo'
+    delete:
+      tags:
+      - System Configuration
+      summary: Unsetting the logo configured for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If the configuration is unset, all users who visit the login page (or another page that previously showed the custom logo) will once again see the default logo.
+      operationId: unsetLogo
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+  /v1/config/hero-image:
+    get:
+      tags:
+      - System Configuration
+      summary: Getting the hero image configured for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If no hero image has been configured for the server, this endpoint will return a `404`. Once a configuration is set, this endpoint will return the custom hero image that has been configured.
+      operationId: getHeroImage
+      responses:
+        "200":
+          description: OK
+          content:
+            "{the MIME type of the hero image itself}":
+              example: (binary data)
+        "404":
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error404'
+    post:
+      tags:
+      - System Configuration
+      summary: Setting a new hero image for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        An Administrator can use this endpoint to set a custom hero image for the entire server. The hero image will be shown to all users who visit the login page, as well as other pages, including the reset password page and set password page. If a hero image is already set, the current image will be overwritten with the new one.
+      operationId: setHeroImage
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfigHeroImage'
+    delete:
+      tags:
+      - System Configuration
+      summary: Unsetting the hero image configured for the server
+      description: |-
+        _(introduced: version 2026.1)_
+
+        If the configuration is unset, users who visit the login page (or another page that previously showed the custom hero image) will no longer see the custom image. Instead, they will see either a default image or no image at all.
+      operationId: unsetHeroImage
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Success'
+  /v1/config/public:
+    get:
+      tags:
+      - System Configuration
+      summary: Getting all public configuration
+      description: |-
+        _(introduced: version 2026.1)_
+
+        This endpoint will return all server configuration that is publicly accessible in a single object. This endpoint does not require authentication.
+
+        The following configurations are publicly accessible:
+
+        * `login-appearance`
+        * `logo`
+        * `hero-image`
+
+        The following configuration is not publicly accessible and requires authentication to access:
+
+        * `analytics`
+
+        For configuration that stores binary data (e.g., `logo`), this endpoint only returns metadata about the configuration (e.g., when the configuration was last set). To retrieve the binary data, you can use the corresponding endpoint described above (e.g., /v1/config/logo). If the configuration is publicly accessible, you can access the binary data without providing authentication via /v1/config/public/:key (e.g., /v1/config/public/logo).
+      operationId: getPublicConfig
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  login-appearance:
+                    $ref: '#/components/schemas/ConfigLoginAppearance'
+                  logo:
+                    $ref: '#/components/schemas/ConfigLogo'
+                  hero-image:
+                    $ref: '#/components/schemas/ConfigHeroImage'
+                description: Details about all public configuration.
   /v1/analytics/preview:
     get:
       tags:
@@ -12783,6 +13104,96 @@ components:
               type: object
               properties: {}
               description: The details of the actee given by `acteeId`. Depending on the action type, this could be a number of object types, including an `Actor`, a `Project`, or a `Form`.
+    Config:
+      type: object
+      required:
+        - key
+        - setAt
+      properties:
+        key:
+          type: string
+          example: some_type
+          description: The type of system configuration.
+        setAt:
+          type: string
+          example: 2018-01-06T00:32:52.787Z
+          description: ISO date format. The last time this system configuration was set.
+    ConfigAnalyticsValue:
+      type: object
+      required:
+        - enabled
+      properties:
+        enabled:
+          type: boolean
+          example: true
+          description: '`true` if the server will share usage data with the Central team and `false` if not.'
+        email:
+          type: string
+          example: my.email.address@getodk.org
+          description: The work email address to include with the metrics report.
+        organization:
+          type: string
+          example: Organization Name
+          description: The organization name to include with the metrics report.
+    ConfigAnalytics:
+      allOf:
+        - $ref: '#/components/schemas/Config'
+        - type: object
+          required:
+            - value
+          properties:
+            key:
+              example: analytics
+            value:
+              $ref: '#/components/schemas/ConfigAnalyticsValue'
+              description: Details about the Usage Reporting configuration.
+    ConfigLoginAppearanceValue:
+      type: object
+      properties:
+        title:
+          type: string
+          example: Better Data, Better Cocoa
+          description: A custom title to show on the login page.
+        description:
+          type: string
+          description: A custom description to show on the login page as a subtitle.
+    ConfigLoginAppearance:
+      allOf:
+        - $ref: '#/components/schemas/Config'
+        - type: object
+          required:
+            - value
+          properties:
+            key:
+              example: login-appearance
+            value:
+              $ref: '#/components/schemas/ConfigLoginAppearanceValue'
+              description: Details about the configuration.
+    ConfigBlob:
+      allOf:
+        - $ref: '#/components/schemas/Config'
+        - type: object
+          required:
+            - blobExists
+          properties:
+            blobExists:
+              type: boolean
+              example: true
+              description: Whether a file has been set for this configuration.
+    ConfigLogo:
+      allOf:
+        - $ref: '#/components/schemas/ConfigBlob'
+        - type: object
+          properties:
+            key:
+              example: logo
+    ConfigHeroImage:
+      allOf:
+        - $ref: '#/components/schemas/ConfigBlob'
+        - type: object
+          properties:
+            key:
+              example: hero-image
     Comment:
       type: object
       required:
