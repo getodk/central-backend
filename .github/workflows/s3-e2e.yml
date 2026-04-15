@@ -1,11 +1,11 @@
-name: Soak Test
+name: S3 E2E Tests
 
 on:
   push:
-    branches: master
+  pull_request:
 
 jobs:
-  soak-test:
+  s3-e2e:
     timeout-minutes: 15
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
@@ -25,7 +25,7 @@ jobs:
           --health-retries 5
     steps:
     - uses: actions/checkout@v6
-    - run: ./test/e2e/soak/ci/prepare-postgres.sh
+    - run: make fake-s3-server-persistent
     - name: Set node version
       uses: actions/setup-node@v6
       with:
@@ -33,9 +33,7 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
-    - name: Soak Test
+    - run: sudo apt-get install wait-for-it
+    - name: E2E Test
       timeout-minutes: 10
-      run: ./test/e2e/soak/ci/run-tests.sh
-    - name: Backend Logs
-      if: always()
-      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+      run: ./test/e2e/s3/run-tests.sh

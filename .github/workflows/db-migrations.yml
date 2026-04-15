@@ -1,12 +1,28 @@
-name: Soak Test
+name: Database Migrations
 
 on:
+  pull_request:
+    paths:
+    - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
+    - lib/model/migrations/**
+    - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
   push:
-    branches: master
+    paths:
+    - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
+    - lib/model/migrations/**
+    - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
 
 jobs:
-  soak-test:
-    timeout-minutes: 15
+  db-migration-tests:
+    timeout-minutes: 2
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
@@ -25,7 +41,6 @@ jobs:
           --health-retries 5
     steps:
     - uses: actions/checkout@v6
-    - run: ./test/e2e/soak/ci/prepare-postgres.sh
     - name: Set node version
       uses: actions/setup-node@v6
       with:
@@ -33,9 +48,4 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
-    - name: Soak Test
-      timeout-minutes: 10
-      run: ./test/e2e/soak/ci/run-tests.sh
-    - name: Backend Logs
-      if: always()
-      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+    - run: make test-db-migrations
