@@ -12,9 +12,9 @@ module.exports = {
   password4david,
 
   password4: {
-    alice: password4alice,
-    bob: password4bob,
+    alice:   password4alice,   // eslint-disable-line key-spacing, no-multi-spaces
+    bob:     password4bob,     // eslint-disable-line key-spacing, no-multi-spaces
     chelsea: password4chelsea,
-    david: password4david,
+    david:   password4david,   // eslint-disable-line key-spacing, no-multi-spaces
   },
 };
