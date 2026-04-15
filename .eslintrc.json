@@ -2,6 +2,9 @@
   "extends": "airbnb-base",
   "env": { "node": true },
   "parserOptions": { "ecmaVersion": 2022 },
+  "plugins": [
+    "no-only-tests"
+  ],
   "rules": {
     "array-bracket-spacing": "off",
     "arrow-parens": "off",
