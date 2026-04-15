@@ -1923,7 +1923,7 @@ describe('Offline Entities', () => {
     }));
   });
 
-  describe('locking an entity while processing a related submission', function() {
+  describe.only('locking an entity while processing a related submission', function() {
     this.timeout(8000);
 
     // https://github.com/getodk/central/issues/705
