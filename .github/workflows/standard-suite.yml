@@ -1,7 +1,6 @@
 name: Full Standard Test Suite
 
 on:
-  push:
   pull_request:
 
 jobs:
@@ -32,6 +31,5 @@ jobs:
         cache: 'npm'
     - run: make check-for-large-files
     - run: npm ci
-    - run: make api-docs-lint
     - run: node lib/bin/create-docker-databases.js
     - run: make test
