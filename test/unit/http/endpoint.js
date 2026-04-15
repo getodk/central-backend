@@ -50,77 +50,64 @@ describe('endpoints', () => {
       });
     });
 
-    describe('in production', () => {
-      let originalEnv;
-
-      beforeEach(() => {
-        originalEnv = process.env.CI;
-        delete process.env.CI;
+    it('should adapt Problem code to http code', (done) => {
+      const response = createResponse();
+      response.on('end', () => {
+        response.statusCode.should.equal(409);
+        done();
       });
+      defaultErrorWriter(new Problem(409.1138, 'test message'), null, response);
+    });
 
-      afterEach(() => {
-        process.env.CI = originalEnv;
+    it('should set json return type', (done) => {
+      const response = createResponse();
+      response.on('end', () => {
+        response.getHeader('Content-Type').should.equal('application/json');
+        done();
       });
+      defaultErrorWriter(new Problem(409.1138, 'test message'), null, response);
+    });
 
-      it('should adapt Problem code to http code', (done) => {
-        const response = createResponse();
-        response.on('end', () => {
-          response.statusCode.should.equal(409);
-          done();
-        });
-        defaultErrorWriter(new Problem(409.1138, 'test message'), null, response);
+    it('should provide Problem details in the body', (done) => {
+      const response = createResponse();
+      response.on('end', () => {
+        response._getData().code.should.equal(409.1138);
+        response._getData().message.should.equal('test message');
+        response._getData().details.should.eql({ x: 1 });
+        done();
       });
+      defaultErrorWriter(new Problem(409.1138, 'test message', { x: 1 }), null, response);
+    });
 
-      it('should set json return type', (done) => {
-        const response = createResponse();
-        response.on('end', () => {
-          response.getHeader('Content-Type').should.equal('application/json');
-          done();
-        });
-        defaultErrorWriter(new Problem(409.1138, 'test message'), null, response);
+    it('should turn remaining errors into internal server errors', (done) => {
+      const response = createResponse();
+      const error = new Error('oops');
+      response.on('end', () => {
+        response.statusCode.should.equal(500);
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
+        done();
       });
+      defaultErrorWriter(error, null, response);
+    });
 
-      it('should provide Problem details in the body', (done) => {
-        const response = createResponse();
-        response.on('end', () => {
-          response._getData().code.should.equal(409.1138);
-          response._getData().message.should.equal('test message');
-          response._getData().details.should.eql({ x: 1 });
-          done();
-        });
-        defaultErrorWriter(new Problem(409.1138, 'test message', { x: 1 }), null, response);
+    it('should not translate 403 to 401 if user agent header is not present', (done) => {
+      const response = createResponse();
+      const request = createRequest();
+      response.on('end', () => {
+        response.statusCode.should.equal(403);
+        done();
       });
+      defaultErrorWriter(Problem.user.insufficientRights(), request, response);
+    });
 
-      it('should turn remaining errors into internal server errors', (done) => {
-        const response = createResponse();
-        const error = new Error('oops');
-        response.on('end', () => {
-          response.statusCode.should.equal(500);
-          response._getData().should.deepEqual({ message: 'Internal Server Error' });
-          done();
-        });
-        defaultErrorWriter(error, null, response);
+    it('should not throw if given a null error', (done) => {
+      const response = createResponse();
+      response.on('end', () => {
+        response.statusCode.should.equal(500);
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
+        done();
       });
-
-      it('should not translate 403 to 401 if user agent header is not present', (done) => {
-        const response = createResponse();
-        const request = createRequest();
-        response.on('end', () => {
-          response.statusCode.should.equal(403);
-          done();
-        });
-        defaultErrorWriter(Problem.user.insufficientRights(), request, response);
-      });
-
-      it('should not throw if given a null error', (done) => {
-        const response = createResponse();
-        response.on('end', () => {
-          response.statusCode.should.equal(500);
-          response._getData().should.deepEqual({ message: 'Internal Server Error' });
-          done();
-        });
-        defaultErrorWriter(null, null, response);
-      });
+      defaultErrorWriter(null, null, response);
     });
   });
 
@@ -627,7 +614,7 @@ describe('endpoints', () => {
 
         response.statusCode.should.equal(500);
         response.getHeader('Content-Type').should.equal('application/json');
-        response._getData().message.should.eql('Internal Server Error');
+        response._getData().should.deepEqual({ message: 'Internal Server Error' });
       });
 
       it('should wrap problems in openrosa xml envelopes', () => {
