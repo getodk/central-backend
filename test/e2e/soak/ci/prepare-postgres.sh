@@ -30,7 +30,7 @@ timeout 10 bash -c "while ! docker exec $pgImg pg_isready --timeout=1; do sleep 
 log "  Restarted OK."
 
 finalQuerySize="$(pg_exec 'SHOW track_activity_query_size')"
-log "  track_activity_query_size   (final): $finalQuerySize"
+log "  track_activity_query_size (final): $finalQuerySize"
 
 expectedFinalQuerySize=16kB
 if [[ $finalQuerySize != $expectedFinalQuerySize ]]; then
