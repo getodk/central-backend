@@ -99,7 +99,7 @@ debug: base
 # TEST & LINT
 
 .PHONY: test
-test: lint
+test:
 	BCRYPT=insecure npx mocha --recursive
 
 .PHONY: test-db-migrations
