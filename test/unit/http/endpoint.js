@@ -13,28 +13,27 @@ const Problem = require(appRoot + '/lib/util/problem');
 
 describe('endpoints', () => {
   describe('defaultErrorWriter', () => {
-    describe('in CI', () => {
+    describe('with ERR_500_STACKS=insecure', () => {
       let originalEnv;
 
       beforeEach(() => {
-        originalEnv = process.env.CI;
-        process.env.CI = 'true';
+        originalEnv = process.env.ERR_500_STACKS;
+        process.env.ERR_500_STACKS = 'insecure';
       });
 
       afterEach(() => {
-        process.env.CI = originalEnv;
+        process.env.ERR_500_STACKS = originalEnv;
       });
 
       it('should include stacktrace in 500 errors', (done) => {
         const response = createResponse();
         const error = new Error('oops');
-        console.log('stack', typeof error.stack, error.stack);
         response.on('end', () => {
           response.statusCode.should.equal(500);
           const responseBody = response._getData();
           Object.keys(responseBody).should.deepEqual([ 'message', 'stack' ]);
           responseBody.message.should.eql('Internal Server Error');
-          responseBody.stack.should.match(/^Error: oops\n    at Context\.<anonymous>/m);
+          responseBody.stack.should.match(/^Error: oops\n {4}at Context\.<anonymous>/m);
           done();
         });
         defaultErrorWriter(error, null, response);
