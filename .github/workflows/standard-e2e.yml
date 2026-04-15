@@ -1,11 +1,14 @@
-name: Soak Test
+name: Standard E2E Tests
 
 on:
   push:
-    branches: master
+  pull_request:
+
+env:
+  LOG_LEVEL: DEBUG
 
 jobs:
-  soak-test:
+  standard-e2e:
     timeout-minutes: 15
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
@@ -25,7 +28,6 @@ jobs:
           --health-retries 5
     steps:
     - uses: actions/checkout@v6
-    - run: ./test/e2e/soak/ci/prepare-postgres.sh
     - name: Set node version
       uses: actions/setup-node@v6
       with:
@@ -33,9 +35,21 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
-    - name: Soak Test
+
+    - name: E2E Test
       timeout-minutes: 10
-      run: ./test/e2e/soak/ci/run-tests.sh
+      run: ./test/e2e/standard/run-tests.sh
+
+    - uses: ./.github/actions/install-postgres-client
+      with:
+        postgres-version: 14
+    - name: Grant postgres superuser role
+      # As per #1368, this role is required to create the pgrowlocks extension
+      run: psql -c 'ALTER ROLE jubilant SUPERUSER' postgresql://postgres:odktest@localhost/postgres
+    - name: Backup/restore tests
+      timeout-minutes: 10
+      run: ./test/e2e/standard/backup-restore.sh
+
     - name: Backend Logs
       if: always()
-      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+      run: "! [[ -f ./server.log ]] || cat ./server.log"

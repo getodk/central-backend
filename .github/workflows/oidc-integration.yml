@@ -1,12 +1,12 @@
-name: Soak Test
+name: OIDC integration tests
 
 on:
   push:
-    branches: master
+  pull_request:
 
 jobs:
-  soak-test:
-    timeout-minutes: 15
+  oidc-integration-test:
+    timeout-minutes: 6
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
@@ -25,17 +25,15 @@ jobs:
           --health-retries 5
     steps:
     - uses: actions/checkout@v6
-    - run: ./test/e2e/soak/ci/prepare-postgres.sh
     - name: Set node version
       uses: actions/setup-node@v6
       with:
         node-version-file: package.json
         cache: 'npm'
     - run: npm ci
+    - run: FAKE_OIDC_ROOT_URL=http://localhost:9898 make fake-oidc-server-ci > fake-oidc-server.log &
     - run: node lib/bin/create-docker-databases.js
-    - name: Soak Test
-      timeout-minutes: 10
-      run: ./test/e2e/soak/ci/run-tests.sh
-    - name: Backend Logs
+    - run: make test-oidc-integration
+    - name: Fake OIDC Server Logs
       if: always()
-      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+      run: "! [[ -f ./fake-oidc-server.log ]] || cat ./fake-oidc-server.log"

@@ -1,12 +1,16 @@
-name: Soak Test
+name: OIDC e2e tests
 
 on:
   push:
-    branches: master
+  pull_request:
+
+env:
+  DEBUG: pw:api
+  ODK_PLAYWRIGHT_BROWSERS: chromium,firefox,webkit
 
 jobs:
-  soak-test:
-    timeout-minutes: 15
+  oidc-e2e-test:
+    timeout-minutes: 6
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
@@ -24,18 +28,22 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
+
+    # This one weird trick speeds up every build!
+    # see: https://github.com/getodk/central-backend/pull/1642
+    # see: https://github.com/actions/runner/issues/4030
+    - run: sudo apt-get remove --purge man-db
+
     - uses: actions/checkout@v6
-    - run: ./test/e2e/soak/ci/prepare-postgres.sh
     - name: Set node version
       uses: actions/setup-node@v6
       with:
         node-version-file: package.json
         cache: 'npm'
-    - run: npm ci
-    - run: node lib/bin/create-docker-databases.js
-    - name: Soak Test
-      timeout-minutes: 10
-      run: ./test/e2e/soak/ci/run-tests.sh
-    - name: Backend Logs
-      if: always()
-      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+    - run: make test-oidc-e2e
+    - name: Archive Playwright Test Report
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: Playwright Test Report
+        path: test/e2e/oidc/playwright-tests/results/html-report/

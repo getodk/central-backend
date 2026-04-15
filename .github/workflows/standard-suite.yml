@@ -1,12 +1,12 @@
-name: Soak Test
+name: Full Standard Test Suite
 
 on:
   push:
-    branches: master
+  pull_request:
 
 jobs:
-  soak-test:
-    timeout-minutes: 15
+  standard-tests:
+    timeout-minutes: 20
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
@@ -25,17 +25,13 @@ jobs:
           --health-retries 5
     steps:
     - uses: actions/checkout@v6
-    - run: ./test/e2e/soak/ci/prepare-postgres.sh
     - name: Set node version
       uses: actions/setup-node@v6
       with:
         node-version-file: package.json
         cache: 'npm'
+    - run: make check-for-large-files
     - run: npm ci
+    - run: make api-docs-lint
     - run: node lib/bin/create-docker-databases.js
-    - name: Soak Test
-      timeout-minutes: 10
-      run: ./test/e2e/soak/ci/run-tests.sh
-    - name: Backend Logs
-      if: always()
-      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+    - run: make test
