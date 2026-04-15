@@ -1966,7 +1966,7 @@ describe('Offline Entities', () => {
       // that successCount > 0 even without locking that we run the race
       // condition multiple times.
       let successCount = 0;
-      for (let i = 0; i < 50; i += 1) {
+      for (let i = 0; i < 500; i += 1) {
         // eslint-disable-next-line no-await-in-loop
         if (await race()) successCount += 1;
       }
