@@ -5,9 +5,7 @@ serverUrl="http://localhost:8383"
 userEmail="x@example.com"
 userPassword="secret1234"
 
-log() {
-  echo "[test/e2e/soak] $*"
-}
+log() { echo >&2 "[test/e2e/soak/$(basename "$0" .sh)] $*"; }
 
 fail_job() {
   log 'Job failed.'
