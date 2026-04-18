@@ -17,6 +17,22 @@ describe('Problem', () => {
         assert.equal(Math.floor(expectedRange / 100) * 100, expectedRange);
       });
 
+      it('should declare all Problems in numeric order', () => {
+        const declaredCodes = Object.values(problemMap).map(({ code }) => code);
+
+        const sortedCodes = [ ...declaredCodes ].sort((a, b) => {
+          const [intA, fracA] = a.toString().split('.');
+          const [intB, fracB] = b.toString().split('.');
+
+          if(intA !== intB) return intA - intB;
+          if(fracA !== fracB) return fracA - fracB;
+
+          return 0;
+        });
+
+        declaredCodes.should.eql(sortedCodes);
+      });
+
       it('should not have duplicate Problem IDs', () => {
         const duplicates = Object.entries(
           Object
