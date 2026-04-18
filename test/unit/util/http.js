@@ -181,12 +181,16 @@ describe('util/http', () => {
       });
     });
 
-    it('should not support case-insensitive URLs', () => {
-      // given
-      const url = '/v1/projects/1/forms/simple/SUBMISSIONS/instanceId.XML?foo=bar';
-
-      // expect
-      should.throws(() => convertToSubmissionVersion(url, 'instanceId', 'rootId'));
+    describe('case-insensitive URLs', () => {
+      [
+        '/v1/projects/1/forms/simple/SUBMISSIONS/instanceId.xml?foo=bar',
+        '/v1/projects/1/forms/simple/submissions/instanceId.XML?foo=bar',
+      ].forEach((url, idx) => {
+        it(`should not map example #${idx+1}`, () => {
+          // expect
+          should.throws(() => convertToSubmissionVersion(url, 'instanceId', 'rootId'));
+        });
+      });
     });
   });
 });
