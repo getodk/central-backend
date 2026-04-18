@@ -80,7 +80,7 @@ describe('external/s3', () => {
         () => s3.deleteObjsFor([ exampleBlob ]),
         {
           name: 'Error',
-          message: 'The S3 account details or permissions are incorret.',
+          message: 'The S3 account details or permissions are incorrect.',
           problemCode: 500.4,
           problemDetails: {
             amzRequestId,
@@ -123,7 +123,7 @@ describe('external/s3', () => {
         () => s3.getContentFor(exampleBlob),
         {
           name: 'Error',
-          message: 'The S3 account details or permissions are incorret.',
+          message: 'The S3 account details or permissions are incorrect.',
           problemCode: 500.4,
           problemDetails: {
             amzRequestId,
@@ -171,7 +171,7 @@ describe('external/s3', () => {
         () => s3.uploadFromBlob(exampleBlob),
         {
           name: 'Error',
-          message: 'The S3 account details or permissions are incorret.',
+          message: 'The S3 account details or permissions are incorrect.',
           problemCode: 500.4,
           problemDetails: {
             amzRequestId,
