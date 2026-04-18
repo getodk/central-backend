@@ -20,11 +20,11 @@ describe('Problem', () => {
         const declaredCodes = Object.values(problemMap).map(({ code }) => code);
 
         const sortedCodes = [ ...declaredCodes ].sort((a, b) => {
-          const [intA, fracA] = a.toString().split('.');
-          const [intB, fracB] = b.toString().split('.');
+          const [intA, frcA] = a.toString().split('.');
+          const [intB, frcB] = b.toString().split('.');
 
-          if(intA !== intB) return intA - intB;
-          if(fracA !== fracB) return fracA - fracB;
+          if (intA !== intB) return intA - intB;
+          if (frcA !== frcB) return frcA - frcB;
 
           return 0;
         });
