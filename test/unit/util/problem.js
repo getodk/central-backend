@@ -14,7 +14,7 @@ describe('Problem', () => {
 
       it('should define an expected code range', () => {
         Number.isFinite(expectedRange).should.be.true();
-        assert.equal(Math.floor(expectedRange / 100) * 100, expectedRange);
+        (Math.floor(expectedRange / 100) * 100).should.eql(expectedRange);
       });
 
       it('should declare all Problems in numeric order', () => {
@@ -47,13 +47,13 @@ describe('Problem', () => {
             ),
         ).filter(([ , names ]) => names.length > 1);
 
-        assert.deepEqual(duplicates, [], 'One or more numeric codes is shared by multiple Problems.');
+        duplicates.should.eql([], 'One or more numeric codes is shared by multiple Problems.');
       });
 
       for (const [ name, { code } ] of Object.entries(problemMap)) {
         describe(`problem: ${name}`, () => {
           it('should define a numeric code', () => {
-            assert.equal(Number.isFinite(code), true, 'Code is not a valid number.');
+            Number.isFinite(code).should.be.true('Code is not a valid number.');
           });
 
           it(`should be within ${expectedRange.toString().replace(/0/g, 'x')}`, () => {
