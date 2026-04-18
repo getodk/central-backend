@@ -20,11 +20,12 @@ jobs:
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
+          --health-interval 1s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 50
     steps:
     - uses: actions/checkout@v6
+    - run: ./test/e2e/soak/ci/prepare-postgres.sh
     - name: Set node version
       uses: actions/setup-node@v6
       with:
@@ -34,7 +35,7 @@ jobs:
     - run: node lib/bin/create-docker-databases.js
     - name: Soak Test
       timeout-minutes: 10
-      run: ./test/e2e/soak/ci
+      run: ./test/e2e/soak/ci/run-tests.sh
     - name: Backend Logs
       if: always()
       run: "! [[ -f ./backend.log ]] || cat ./backend.log"
