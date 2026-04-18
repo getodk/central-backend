@@ -13,7 +13,7 @@ describe('Problem', () => {
       const expectedRange = expectedRanges[type];
 
       it('should define an expected code range', () => {
-        assert.equal(Number.isFinite(expectedRange), true);
+        Number.isFinite(expectedRange).should.be.true();
         assert.equal(Math.floor(expectedRange / 100) * 100, expectedRange);
       });
 
