@@ -1,4 +1,3 @@
-const assert = require('node:assert/strict');
 const appRoot = require('app-root-path');
 const Problem = require(appRoot + '/lib/util/problem');
 
@@ -57,7 +56,7 @@ describe('Problem', () => {
           });
 
           it(`should be within ${expectedRange.toString().replace(/0/g, 'x')}`, () => {
-            assert.equal(Math.floor(code / 100) * 100, expectedRange);
+            (Math.floor(code / 100) * 100).should.eql(expectedRange);
           });
         });
       }
