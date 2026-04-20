@@ -19,6 +19,7 @@
     "global-require": "off",
     "implicit-arrow-linebreak": "off",
     "import/newline-after-import": "off",
+    "import/no-unresolved": ["error", { "ignore": ["^uuid$"] }], // uuid v9+ uses ES modules; eslint-plugin-import has trouble resolving it but it works fine at runtime
     "import/order": "off",
     "lines-between-class-members": "off",
     "max-classes-per-file": "off",
@@ -44,6 +45,7 @@
     "object-property-newline": "off",
     "operator-linebreak": "off",
     "padded-blocks": "off",
+    "prefer-object-has-own": "error",
     "prefer-object-spread": "off",
     "prefer-template": "off",
     "quotes": [ "error", "single", { "allowTemplateLiterals": true, "avoidEscape": true } ],

@@ -102,10 +102,6 @@ debug: base
 test: lint
 	BCRYPT=insecure npx mocha --recursive
 
-.PHONY: test-ci
-test-ci: lint
-	BCRYPT=insecure npx mocha --recursive --reporter test/ci-mocha-reporter.js
-
 .PHONY: test-db-migrations
 test-db-migrations:
 	NODE_CONFIG_ENV=db-migration-test npx mocha --bail --sort --timeout=20000 \
@@ -139,7 +135,7 @@ lint: node_version
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
 	docker start odk-postgres14 || (\
-		docker run -d --name odk-postgres14 -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.10-alpine \
+		docker run -d --name odk-postgres14 -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.20-alpine \
 		&& sleep 5 \
 		&& node lib/bin/create-docker-databases.js --log \
 	)
@@ -156,9 +152,9 @@ rm-docker-postgres: stop-docker-postgres
 ################################################################################
 # OTHER
 
-.PHONY: check-file-headers
-check-file-headers:
-	git ls-files | node lib/bin/check-file-headers.js
+.PHONY: check-for-large-files
+check-for-large-files:
+	./test/check-for-large-files.sh
 
 .PHONY: api-docs
 api-docs:

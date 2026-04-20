@@ -92,6 +92,19 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
           }))));
 
+    it('should decode html entities in the value of form version - getodk/central#1470', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2.replace('2.1', '&lt;{}&gt;'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Form();
+            body.name.should.equal('Simple 2');
+            body.version.should.equal('<{}>');
+            body.hash.should.equal('232ffd287a8eaef0103ad2386dafa44e');
+          }))));
+
     it('should reject if form id ends in .xml', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms')
@@ -581,50 +594,54 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         });
     }));
 
-    it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice');
+    describe('with structureChanged warning', () => {
+      const withChangedStructure = xml => xml.replace(/age/g, 'address');
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft')
-        .send(testData.forms.simple.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .then(({ body }) => {
-          body.code.should.be.eql(400.16);
-          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
-        });
-    }));
+      it('should reject', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-    it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(withChangedStructure(testData.forms.simple))
+          .set('Content-Type', 'application/xml')
+          .then(({ body }) => {
+            body.code.should.be.eql(400.16);
+            body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
+          });
+      }));
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
-        .send(testData.forms.simple.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+      it('should accept if ignoreWarnings set', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
-        .expect(200);
-    }));
+        await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+          .send(withChangedStructure(testData.forms.simple))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-    it('should reject with xls and structure changed warnings', testService(async (service) => {
-      const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
+          .expect(200);
+      }));
 
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.simple2.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+      it('should reject with xls', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      global.xlsformTest = 'warning'; // set up the mock service to warn.
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(withChangedStructure(testData.forms.simple2))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/simple2/draft')
-        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
-        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        .expect(400)
-        .then(({ body }) => {
-          body.code.should.be.eql(400.16);
-          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
-          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
-        });
-    }));
+        global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+        await asAlice.post('/v1/projects/1/forms/simple2/draft')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.16);
+            body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+            body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
+          });
+      }));
+    });
 
     it('should reject form with missing meta group', testService(async (service) => {
       const asAlice = await service.login('alice');
@@ -1381,6 +1398,63 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   headers['content-type'].should.equal('text/csv; charset=utf-8');
                   text.should.equal('test,csv\n1,2');
                 })))));
+
+        it('should return image contents with appropriate attachment content-disposition headers', testService(async (service) => {
+          const xml = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
+            <h:head>
+              <h:title>Image Attachment Form</h:title>
+              <model odk:xforms-version="1.0.0">
+                <itext>
+                  <translation lang="default" default="true()">
+                    <text id="/data/logo:label">
+                      <value>Form Logo</value>
+                      <value form="image">jr://images/logo.png</value>
+                    </text>
+                  </translation>
+                </itext>
+                <instance>
+                  <data id="withImageAttachment" version="20260305120303">
+                    <logo/>
+                    <meta>
+                      <instanceID/>
+                    </meta>
+                  </data>
+                </instance>
+                <bind nodeset="/data/logo" readonly="true()" type="string"/>
+                <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+              </model>
+            </h:head>
+            <h:body>
+              <input ref="/data/logo">
+                <label ref="jr:itext('/data/logo:label')"/>
+              </input>
+            </h:body>
+          </h:html>`;
+
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(xml)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withImageAttachment/draft/attachments/logo.png')
+            .send('this is some image data')
+            .set('Content-Type', 'image/png')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withImageAttachment/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/withImageAttachment/attachments/logo.png')
+            .expect(200)
+            .then(({ headers, body }) => {
+              headers['content-disposition'].should.equal('attachment; filename="logo.png"; filename*=UTF-8\'\'logo.png');
+              headers['content-type'].should.equal('image/png');
+              body.toString('utf8').should.equal('this is some image data');
+            });
+        }));
 
         it('should return 307 if file has been moved to s3', testService((service, { Blobs }) => {
           global.s3.enableMock();

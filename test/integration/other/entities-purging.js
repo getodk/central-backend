@@ -9,44 +9,7 @@ const appPath = require('app-root-path');
 const Problem = require('../../../lib/util/problem');
 const { map } = require('ramda');
 const { exhaust } = require(appPath + '/lib/worker/worker');
-
-const createProject = (user) => user.post('/v1/projects')
-  .send({ name: 'a project ' + new Date().getTime() })
-  .expect(200)
-  .then(({ body: project }) => project.id);
-
-const createEntities = async (user, count, projectId, datasetName) => {
-  const uuids = [];
-  for (let i = 0; i < count; i += 1) {
-    const _uuid = uuid();
-    // eslint-disable-next-line no-await-in-loop
-    await user.post(`/v1/projects/${projectId}/datasets/${datasetName}/entities`)
-      .send({
-        uuid: _uuid,
-        label: 'John Doe'
-      })
-      .expect(200);
-    uuids.push(_uuid);
-  }
-  return uuids;
-};
-
-const createBulkEntities = async (user, count, projectId, datasetName) => {
-  const entities = [];
-  const uuids = [];
-  for (let i = 0; i < count; i += 1) {
-    const _uuid = uuid();
-    entities.push({ uuid: _uuid, label: 'label' });
-    uuids.push(_uuid);
-  }
-  await user.post(`/v1/projects/${projectId}/datasets/${datasetName}/entities`)
-    .send({
-      entities,
-      source: { name: 'bulk.csv', size: count }
-    })
-    .expect(200);
-  return uuids;
-};
+const { createProject, createDataset, createEntities, createBulkEntities, deleteEntities } = require('../../util/entities');
 
 const createEntitiesViaSubmissions = async (user, container, count) => {
   const uuids = [];
@@ -65,18 +28,6 @@ const createEntitiesViaSubmissions = async (user, container, count) => {
   await exhaust(container);
   return uuids;
 };
-
-const deleteEntities = async (user, uuids, projectId, datasetName) => {
-  for (const _uuid of uuids) {
-    // eslint-disable-next-line no-await-in-loop
-    await user.delete(`/v1/projects/${projectId}/datasets/${datasetName}/entities/${_uuid}`)
-      .expect(200);
-  }
-};
-
-const createDataset = (user, projectId, name) =>
-  user.post(`/v1/projects/${projectId}/datasets`)
-    .send({ name });
 
 const createDeletedEntities = async (user, count, { datasetName='people', project = 1 } = {}) => {
   await createDataset(user, project, datasetName);
@@ -179,7 +130,7 @@ describe('query module entities purge', () => {
       entityCount.should.equal(0);
     }));
 
-    const PROVIDE_ALL = 'Must specify projectId and datasetName to purge a specify entity.';
+    const PROVIDE_ALL = 'Must specify projectId and datasetName to purge a specific entity.';
     const PROVIDE_PROJECT_ID = 'Must specify projectId to purge all entities of a dataset/entity-list.';
     const cases = [
       { description: 'when entityUuid specified without projectId and datasetName',
@@ -215,13 +166,15 @@ describe('query module entities purge', () => {
     it('should purge multiple entities deleted over 30 days ago', testService(async (service, { Entities, all, run }) => {
       const asAlice = await service.login('alice');
 
+      // Creates and deletes 2 entities in project 1 dataset 'people'
       await createDeletedEntities(asAlice, 2);
 
       // Mark two as deleted a long time ago
       await run(sql`update entities set "deletedAt" = '1999-1-1' where "deletedAt" is not null`);
 
       // More recent delete, within 30 day window
-      const recentUuids = await createDeletedEntities(asAlice, 2);
+      const recentUuids = await createEntities(asAlice, 2, 1, 'people');
+      await deleteEntities(asAlice, recentUuids, 1, 'people');
 
       const purgeCount = await Entities.purge();
       purgeCount.should.equal(2);

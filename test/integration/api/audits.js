@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 const { sql } = require('slonik');
 const { plain } = require('../../util/util');
 const { testService } = require('../setup');
@@ -433,6 +433,34 @@ describe('/audits', () => {
         });
     }));
 
+    it('should filter by action category (config)', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/config/analytics')
+        .send({ enabled: true })
+        .expect(200);
+      await asAlice.post('/v1/config/logo')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+      const { body: audits } = await asAlice.get('/v1/audits?action=config')
+        .expect(200);
+
+      audits.length.should.equal(2);
+      for (const audit of audits) {
+        audit.actorId.should.equal(5);
+        should.not.exist(audit.acteeId);
+      }
+
+      Object.keys(audits[0].details).should.eql(['key', 'blobId']);
+      audits[0].details.key.should.equal('logo');
+      audits[0].details.blobId.should.be.a.Number();
+
+      audits[1].details.should.eql({
+        key: 'analytics',
+        value: { enabled: true }
+      });
+    }));
+
     it('should filter extended data by action', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
@@ -863,6 +891,111 @@ describe('/audits', () => {
               datasetActee.projectId.should.equal(1);
             }));
       }));
+    });
+
+    describe('audit logs of OpenRosa submission attachment events', () => {
+      it('should get the attachment events of a (partial) submission', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.binaryType)
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body[0].details.name.should.equal('my_file1.mp4');
+              })
+            )
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body.length.should.equal(2);
+                body[0].details.name.should.equal('here_is_file2.jpg');
+                body[1].details.name.should.equal('my_file1.mp4');
+              })
+            )
+        )
+      ));
+
+      it('should handle resubmitting partial submission with all attachments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.binaryType)
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body[0].details.name.should.equal('my_file1.mp4');
+              })
+            )
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body.length.should.equal(2);
+                body[0].details.name.should.equal('here_is_file2.jpg');
+                body[1].details.name.should.equal('my_file1.mp4');
+              })
+            )
+        )
+      ));
+
+      it('should handle resubmitting partial submission with contents of attachment changed', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.binaryType)
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body[0].details.name.should.equal('my_file1.mp4');
+              })
+            )
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('file one contents have changed'), { filename: 'my_file1.mp4' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body.length.should.equal(3);
+                body[0].details.name.should.equal('here_is_file2.jpg');
+                body[1].details.name.should.equal('my_file1.mp4');
+                body[2].details.name.should.equal('my_file1.mp4');
+                body[1].details.newBlobId.should.not.equal(body[2].details.newBlobId);
+              })
+            )
+        )
+      ));
     });
   });
 });

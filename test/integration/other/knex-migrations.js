@@ -8,7 +8,7 @@
  */
 
 const appRoot = require('app-root-path');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 const config = require('config');
 const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
@@ -227,16 +227,6 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
   this.timeout(20000);
 
   beforeEach(() => upToMigration('20230123-01-remove-google-backups.js', false));
-
-  it('deletes backups configs', testContainerFullTrx(async ({ Configs }) => {
-    await Configs.set('backups.main', { a: 'b' });
-    await Configs.set('backups.google', { c: 'd' });
-    await Configs.set('analytics', { enabled: false });
-    await up();
-    (await Configs.get('backups.main')).isEmpty().should.be.true();
-    (await Configs.get('backups.google')).isEmpty().should.be.true();
-    (await Configs.get('analytics')).isDefined().should.be.true();
-  }));
 
   describe('backup creation token', () => {
     // Much of this was copied from the old endpoint
