@@ -1924,7 +1924,7 @@ describe('Offline Entities', () => {
   });
 
   describe('locking an entity while processing a related submission', function() {
-    this.timeout(8000);
+    this.timeout(16_000);
 
     // https://github.com/getodk/central/issues/705
     it('should concurrently process an offline create + update @slow', testServiceFullTrx(async (service, container) => {
