@@ -180,14 +180,23 @@ describe('api: /config', () => {
           'logo',
         ].forEach(configKey => {
           describe(configKey, () => {
-            it('should return the config', testService(async (service) => {
+            const blobConfigExists = async (service) => {
               const asAlice = await service.login('alice');
 
               await asAlice.post(`/v1/config/${configKey}`)
                 .set('Content-Type', 'image/jpeg')
                 .send('testimage')
                 .expect(200);
+            };
+
+            it('should return the config', testService(async (service) => {
+              // given
+              await blobConfigExists(service);
+
+              // when
               await service.get(`/v1/config/public/${configKey}`)
+
+                // then
                 .expect(200)
                 .then(({ body }) => {
                   body.toString('utf8').should.equal('testimage');
@@ -196,11 +205,7 @@ describe('api: /config', () => {
 
             it('should ignore incorrect etag', testService(async (service) => {
               // given
-              const asAlice = await service.login('alice');
-              await asAlice.post(`/v1/config/${configKey}`)
-                .set('Content-Type', 'image/jpeg')
-                .send('testimage')
-                .expect(200);
+              await blobConfigExists(service);
 
               // when
               await service.get(`/v1/config/public/${configKey}`)
@@ -215,17 +220,13 @@ describe('api: /config', () => {
 
             it('should 304 correct etag', testService(async (service) => {
               // given
-              const asAlice = await service.login('alice');
-              await asAlice.post(`/v1/config/${configKey}`)
-                .set('Content-Type', 'image/jpeg')
-                .send('testimage')
-                .expect(200);
+              await blobConfigExists(service);
 
               // when
               await service.get(`/v1/config/public/${configKey}`)
                 .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
 
-                // expect
+                // then
                 .expect(304)
                 .then(({ body, text, headers }) => {
                   body.should.deepEqual({});
@@ -237,11 +238,8 @@ describe('api: /config', () => {
             it('should 304 correct etag after upload to s3', testService(async (service, { Blobs }) => {
               // given
               global.s3.enableMock();
-              const asAlice = await service.login('alice');
-              await asAlice.post(`/v1/config/${configKey}`)
-                .set('Content-Type', 'image/jpeg')
-                .send('testimage')
-                .expect(200);
+              // and
+              await blobConfigExists(service);
 
               // when
               await Blobs.s3UploadPending();
@@ -249,7 +247,7 @@ describe('api: /config', () => {
               await service.get(`/v1/config/public/${configKey}`)
                 .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
 
-                // expect
+                // then
                 .expect(304)
                 .then(({ body, text, headers }) => {
                   body.should.deepEqual({});
