@@ -62,29 +62,24 @@ describe('api: /config', () => {
             });
         }));
 
-        it('should inline select image types', testService(async (service) => {
-          const asAlice = await service.login('alice');
+        [
+          'image/jpeg',
+          'image/svg+xml',
+        ].forEach(mimeType => {
+          it(`should not inline image type: ${mimeType}`, testService(async (service) => {
+            const asAlice = await service.login('alice');
 
-          await asAlice.post('/v1/config/logo')
-            .set('Content-Type', 'image/jpeg')
-            .send('testimage')
-            .expect(200);
-          await asAlice.get('/v1/config/logo')
-            .expect(200)
-            .then(({ headers }) => {
-              headers['content-disposition'].should.startWith('inline');
-            });
-
-          await asAlice.post('/v1/config/logo')
-            .set('Content-Type', 'image/svg+xml')
-            .send('testimage2')
-            .expect(200);
-          await asAlice.get('/v1/config/logo')
-            .expect(200)
-            .then(({ headers }) => {
-              headers['content-disposition'].should.startWith('attachment');
-            });
-        }));
+            await asAlice.post('/v1/config/logo')
+              .set('Content-Type', mimeType)
+              .send('testimage')
+              .expect(200);
+            await asAlice.get('/v1/config/logo')
+              .expect(200)
+              .then(({ headers }) => {
+                headers['content-disposition'].should.startWith('attachment');
+              });
+          }));
+        });
       });
 
       it('should overwrite the existing config', testService((service) =>
