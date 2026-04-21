@@ -172,17 +172,95 @@ describe('api: /config', () => {
             body.value.should.eql({ title: 'foo' });
             body.setAt.should.be.a.recentIsoDate();
           });
-
-        await asAlice.post('/v1/config/logo')
-          .set('Content-Type', 'image/jpeg')
-          .send('testimage')
-          .expect(200);
-        await service.get('/v1/config/public/logo')
-          .expect(200)
-          .then(({ body }) => {
-            body.toString('utf8').should.equal('testimage');
-          });
       }));
+
+      describe.only('blob configs', () => {
+        [
+          'hero-image',
+          'logo',
+        ].forEach(configKey => {
+          describe(configKey, () => {
+            it('should return the config', testService(async (service) => {
+              const asAlice = await service.login('alice');
+
+              await asAlice.post(`/v1/config/${configKey}`)
+                .set('Content-Type', 'image/jpeg')
+                .send('testimage')
+                .expect(200);
+              await service.get(`/v1/config/public/${configKey}`)
+                .expect(200)
+                .then(({ body, headers }) => {
+                  console.log('headers:', headers);
+                  body.toString('utf8').should.equal('testimage');
+                });
+            }));
+
+            it('should ignore incorrect etag', testService(async (service) => {
+              // given
+              const asAlice = await service.login('alice');
+              await asAlice.post(`/v1/config/${configKey}`)
+                .set('Content-Type', 'image/jpeg')
+                .send('testimage')
+                .expect(200);
+
+              // when
+              await service.get(`/v1/config/public/${configKey}`)
+                .set('If-None-Match', '"whatever"')
+
+                // expect
+                .expect(200)
+                .then(({ body, text, headers }) => {
+                  body.toString('utf8').should.equal('testimage');
+                });
+            }));
+
+            it('should 304 correct etag', testService(async (service) => {
+              // given
+              const asAlice = await service.login('alice');
+              await asAlice.post(`/v1/config/${configKey}`)
+                .set('Content-Type', 'image/jpeg')
+                .send('testimage')
+                .expect(200);
+
+              // when
+              await service.get(`/v1/config/public/${configKey}`)
+                .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
+
+                // expect
+                .expect(304)
+                .then(({ body, text, headers }) => {
+                  body.should.deepEqual({});
+                  text.should.eql('');
+                  should(headers['content-length']).be.undefined();
+                });
+            }));
+
+            it('should 304 correct etag after upload to s3', testService(async (service, { Blobs }) => {
+              // given
+              global.s3.enableMock();
+              const asAlice = await service.login('alice');
+              await asAlice.post(`/v1/config/${configKey}`)
+                .set('Content-Type', 'image/jpeg')
+                .send('testimage')
+                .expect(200);
+
+              // when
+              await Blobs.s3UploadPending();
+              // and
+              await service.get(`/v1/config/public/${configKey}`)
+                .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
+
+                // expect
+                .expect(304)
+                .then(({ body, text, headers }) => {
+                  body.should.deepEqual({});
+                  text.should.eql('');
+                  should(headers['content-length']).be.undefined();
+                });
+            }));
+          });
+        });
+      });
     });
 
     describe('GET - all public config', () => {
