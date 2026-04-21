@@ -209,7 +209,7 @@ describe('api: /config', () => {
 
                 // expect
                 .expect(200)
-                .then(({ body, text, headers }) => {
+                .then(({ body }) => {
                   body.toString('utf8').should.equal('testimage');
                 });
             }));
