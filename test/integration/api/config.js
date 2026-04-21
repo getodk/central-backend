@@ -189,7 +189,7 @@ describe('api: /config', () => {
                 .expect(200);
               await service.get(`/v1/config/public/${configKey}`)
                 .expect(200)
-                .then(({ body, headers }) => {
+                .then(({ body }) => {
                   body.toString('utf8').should.equal('testimage');
                 });
             }));
