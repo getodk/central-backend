@@ -174,7 +174,7 @@ describe('api: /config', () => {
           });
       }));
 
-      describe.only('blob configs', () => {
+      describe('blob configs', () => {
         [
           'hero-image',
           'logo',
@@ -190,7 +190,6 @@ describe('api: /config', () => {
               await service.get(`/v1/config/public/${configKey}`)
                 .expect(200)
                 .then(({ body, headers }) => {
-                  console.log('headers:', headers);
                   body.toString('utf8').should.equal('testimage');
                 });
             }));
