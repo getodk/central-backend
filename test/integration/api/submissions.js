@@ -220,6 +220,29 @@ describe('api: /submission', () => {
               .then(({ text }) => { text.should.equal(testData.instances.simple.one); })
           ])))));
 
+    it('should save device id and user agent when editing a submission using OpenRosa', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/submission?deviceID=imei%3A358240051111110')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'central/test')
+        .attach('xml_submission_file', Buffer.from(testData.instances.simple.one), { filename: 'data.xml' })
+        .expect(201);
+
+      await asAlice.post('/v1/projects/1/submission?deviceID=updated')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'central/test_updated')
+        .attach('xml_submission_file', Buffer.from(testData.instances.simple.one.replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one_v2')), { filename: 'data.xml' })
+        .expect(201);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].deviceId.should.equal('updated');
+          body[0].userAgent.should.equal('central/test_updated');
+        });
+    }));
+
     it('should prepand odk-client to the user agent string', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/submission?deviceID=imei%3A358240051111110')
