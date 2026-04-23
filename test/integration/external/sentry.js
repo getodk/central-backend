@@ -28,7 +28,7 @@ describe('sentry', () => {
                 key: 'deadbeefcafe',
                 orgSubdomain: 'o123',
                 project: 123,
-                tunnel: `${mockSentry.baseUrl()}/sentry-tunnel`,
+                __test_tunnel: `${mockSentry.baseUrl()}/sentry-tunnel`,
               },
             },
           },
