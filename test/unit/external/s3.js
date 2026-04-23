@@ -80,8 +80,8 @@ describe('external/s3', () => {
         () => s3.deleteObjsFor([ exampleBlob ]),
         {
           name: 'Error',
-          message: 'The S3 account details or permissions are incorret.',
-          problemCode: 500.4,
+          message: 'The S3 account details or permissions are incorrect.',
+          problemCode: 500.7,
           problemDetails: {
             amzRequestId,
             operation: 'removeObjects',
@@ -101,7 +101,7 @@ describe('external/s3', () => {
         {
           name: 'Error',
           message: `The upstream S3 server had an internal problem performing 'removeObjects'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
-          problemCode: 500.5,
+          problemCode: 500.9,
           problemDetails: {
             amzRequestId,
             operation: 'removeObjects',
@@ -123,8 +123,8 @@ describe('external/s3', () => {
         () => s3.getContentFor(exampleBlob),
         {
           name: 'Error',
-          message: 'The S3 account details or permissions are incorret.',
-          problemCode: 500.4,
+          message: 'The S3 account details or permissions are incorrect.',
+          problemCode: 500.7,
           problemDetails: {
             amzRequestId,
             operation: 'getObject',
@@ -144,7 +144,7 @@ describe('external/s3', () => {
         {
           name: 'Error',
           message: `The upstream S3 server had an internal problem performing 'getObject'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
-          problemCode: 500.5,
+          problemCode: 500.9,
           problemDetails: {
             amzRequestId,
             operation: 'getObject',
@@ -171,8 +171,8 @@ describe('external/s3', () => {
         () => s3.uploadFromBlob(exampleBlob),
         {
           name: 'Error',
-          message: 'The S3 account details or permissions are incorret.',
-          problemCode: 500.4,
+          message: 'The S3 account details or permissions are incorrect.',
+          problemCode: 500.7,
           problemDetails: {
             amzRequestId,
             operation: 'putObject',
@@ -192,7 +192,7 @@ describe('external/s3', () => {
         {
           name: 'Error',
           message: `The upstream S3 server had an internal problem performing 'putObject'. Amazon request ID: 'tx000000000000000000000-0000000000-000000001-xxxxx'.`,
-          problemCode: 500.5,
+          problemCode: 500.9,
           problemDetails: {
             amzRequestId,
             operation: 'putObject',

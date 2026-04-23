@@ -298,6 +298,65 @@ describe('analytics task queries', function () {
       Analytics.blobStoreExternal({ server: 'http://external.store', accessKey: 'a', bucketName: 'foo' }).should.equal(1);
     }));
 
+    describe('should check login customization settings', () => {
+      it('should check if all login customizations are set', testService(async (service, { Analytics }) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/config/login-appearance')
+          .send({ title: 'my site title', description: 'log into my site' })
+          .expect(200);
+
+        await asAlice.post('/v1/config/logo')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(200);
+
+        await asAlice.post('/v1/config/hero-image')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(200);
+
+        const res = await Analytics.checkLoginCustomization();
+        res.should.eql({
+          login_customization_title_set: 1,
+          login_customization_description_set: 1,
+          login_customization_logo_set: 1,
+          login_customization_hero_image_set: 1
+        });
+      }));
+
+      it('should check if no login customizations are set', testService(async (service, { Analytics }) => {
+        const res = await Analytics.checkLoginCustomization();
+        res.should.eql({
+          login_customization_title_set: 0,
+          login_customization_description_set: 0,
+          login_customization_logo_set: 0,
+          login_customization_hero_image_set: 0
+        });
+      }));
+
+      it('should check if login customizations are partially set set', testService(async (service, { Analytics }) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/config/login-appearance')
+          .send({ description: 'log into my site' })
+          .expect(200);
+
+        await asAlice.post('/v1/config/logo')
+          .set('Content-Type', 'image/jpeg')
+          .send('testimage')
+          .expect(200);
+
+        const res = await Analytics.checkLoginCustomization();
+        res.should.eql({
+          login_customization_title_set: 0,
+          login_customization_description_set: 1,
+          login_customization_logo_set: 1,
+          login_customization_hero_image_set: 0
+        });
+      }));
+    });
+
     describe('counting client audits', () => {
       it('should count the total number of client audit submission attachments', testService(async (service, { Analytics }) => {
         const asAlice = await service.login('alice');
@@ -2439,6 +2498,65 @@ describe('analytics task queries', function () {
       const res = await container.Analytics.getProjectsWithDescriptions();
       res.should.eql([{ projectId: 1, description_length: 9 }, { projectId: projWithDesc, description_length: 13 }]);
     }));
+
+    it('should count number of datasets and properties deleted in each project', testService(async (service, { Analytics, Datasets }) => {
+      const asAlice = await service.login('alice');
+
+      // Create a dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      // Create another dataset
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Delete the property
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      // Delete the datasets
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/people')
+        .expect(200);
+
+      // Create another project
+      const newProjectId = await asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'Test Project' })
+        .expect(200)
+        .then(({ body }) => body.id);
+
+      // Create a dataset in new project to be deleted
+      await asAlice.post(`/v1/projects/${newProjectId}/datasets`)
+        .send({ name: 'people' })
+        .expect(200);
+
+      // Delete the dataset
+      await asAlice.delete(`/v1/projects/${newProjectId}/datasets/people`)
+        .expect(200);
+
+      // Force purge dataset in new project
+      await Datasets.purge(true, newProjectId);
+
+      const res = await Analytics.countDeletedDatasetAndPropertiesByProject();
+      for (const row in res) {
+        if (row.projectId === 1) {
+          row.dataset_count.should.equal(2);
+          row.property_count.should.equal(1);
+        } else if (row.projectId === newProjectId) {
+          row.dataset_count.should.equal(1);
+          row.property_count.should.equal(0);
+        }
+      }
+    }));
   });
 
   describe('combined analytics', () => {
@@ -2614,6 +2732,21 @@ describe('analytics task queries', function () {
 
       await exhaust(container);
 
+      // 2026.1 set login customization
+      await asAlice.post('/v1/config/login-appearance')
+        .send({ title: 'my site title', description: 'log into my site' })
+        .expect(200);
+
+      await asAlice.post('/v1/config/logo')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+
+      await asAlice.post('/v1/config/hero-image')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+
       // ---- Add new behavior above ---
 
       // creating audit events in various states
@@ -2759,9 +2892,27 @@ describe('analytics task queries', function () {
     }));
 
     it('should fill in all project.other queries', testService(async (service, container) => {
-      await service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/projects/1')
-          .send({ description: 'test desc' }));
+      const asAlice = await service.login('alice');
+
+      await asAlice.patch('/v1/projects/1')
+        .send({ description: 'test desc' });
+
+      // delete datasets and properties
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'height' })
+        .expect(200);
+
+      // Delete the property
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+        .expect(200);
+
+      // Delete the dataset
+      await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
 
       const res = await container.Analytics.previewMetrics();
 

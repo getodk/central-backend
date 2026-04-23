@@ -5,9 +5,7 @@ serverUrl="http://localhost:8383"
 userEmail="x@example.com"
 userPassword="secret1234"
 
-log() {
-  echo "[test/e2e/soak] $*"
-}
+log() { echo >&2 "[test/e2e/soak/$(basename "$0" .sh)] $*"; }
 
 fail_job() {
   log 'Job failed.'
@@ -19,7 +17,7 @@ make base
 echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail"
 node ./lib/bin/cli.js user-promote -u "$userEmail"
 
-make run >backend.log 2>&1 &
+ERR_500_STACKS=insecure make run >backend.log 2>&1 &
 
 log 'Waiting for backend to start...'
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
