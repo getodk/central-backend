@@ -35,7 +35,7 @@ describe('sentry', () => {
       };
 
       // when
-      const child = spawn('node', ['lib/bin/test-sentry-logging', 'test error'], { env });
+      const child = spawn('node', ['test/bin/test-sentry-logging', 'test error'], { env });
       await new Promise(resolve => child.on('close', resolve)); // eslint-disable-line no-promise-executor-return
       // and
       await sleep(100); // eslint-disable-line no-use-before-define

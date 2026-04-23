@@ -1,4 +1,4 @@
-const { task } = require('../task/task');
+const { task } = require('../../lib/task/task');
 
 const [, , ...args] = process.argv;
 
