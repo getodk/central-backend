@@ -4,6 +4,8 @@ const { spawn } = require('node:child_process');
 const express = require('express');
 const { v4: uuid } = require('uuid');
 
+const { sleep } = require('../../util/util');
+
 describe('sentry', () => {
   describe('task integration', () => {
     let mockSentry;
@@ -52,10 +54,6 @@ describe('sentry', () => {
       return res.json();
     }
   });
-
-  function sleep(ms) { // eslint-disable-line no-use-before-define
-    return new Promise(resolve => setTimeout(resolve, ms)); // eslint-disable-line no-promise-executor-return
-  }
 
   async function initMockSentry() { // eslint-disable-line no-use-before-define
     const server = await new Promise((resolve, reject) => {
