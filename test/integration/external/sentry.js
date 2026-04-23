@@ -20,7 +20,7 @@ describe('sentry', () => {
     it('should include odk-task tag in error event', async () => {
       // given
       const env = {
-        ...process.env, // ensure NodeJS is available to child process
+        PATH: process.env.PATH, // ensure NodeJS is available to child process
         NODE_CONFIG: JSON.stringify({
           default: {
             external: {
