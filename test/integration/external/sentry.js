@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
-const { spawn } = require('node:child_process');
+const { exec } = require('node:child_process');
+const { promisify } = require('node:util');
 
 const express = require('express');
 const { v4: uuid } = require('uuid');
@@ -35,8 +36,7 @@ describe('sentry', () => {
       };
 
       // when
-      const child = spawn('node', ['test/bin/test-sentry-logging', 'test error'], { env });
-      await new Promise(resolve => child.on('close', resolve)); // eslint-disable-line no-promise-executor-return
+      await promisify(exec)('node test/bin/test-sentry-logging test error', { env });
       // and
       await sleep(100); // eslint-disable-line no-use-before-define
 
