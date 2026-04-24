@@ -7064,6 +7064,23 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.not.equal(originalHash);
       }));
 
+      it('changes hash after a dataset property is deleted', testServiceFullTrx(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Add an entity property.
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'foo' })
+          .expect(200);
+        const originalHash = await getHash(asChelsea);
+
+        // Delete the property.
+        await asAlice.delete('/v1/projects/1/datasets/people/properties/foo')
+          .expect(200);
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
       it('computes hash based on timestamps and the entity count', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
