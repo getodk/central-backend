@@ -18,7 +18,7 @@ const { execSync } = require('node:child_process');
 const migrationsDir = './lib/model/migrations';
 const holdingPen = './test/db-migrations/.holding-pen';
 
-fs.mkdirSync(holdingPen, { recursive: true });
+fs.mkdirSync(`${holdingPen}/archive`, { recursive: true });
 
 restoreMigrations(); // eslint-disable-line no-use-before-define
 const allMigrations = loadMigrationsList(); // eslint-disable-line no-use-before-define
@@ -52,7 +52,7 @@ function runIncluding(lastMigrationToRun) {
 }
 
 function getIndex(migrationName) {
-  const idx = allMigrations.indexOf(migrationName);
+  const idx = allMigrations.findIndex(f => f.endsWith(migrationName));
   log('getIndex()', migrationName, 'found at', idx);
   if (idx === -1) throw new Error(`Unknown migration: ${migrationName}`);
   return idx;
@@ -67,16 +67,16 @@ function moveMigrationsToHoldingPen() {
 }
 
 function moveAll(src, tgt) {
-  fs.readdirSync(src)
+  fs.readdirSync(src, { recursive: true })
     .filter(f => f.endsWith('.js'))
     .forEach(f => fs.renameSync(`${src}/${f}`, `${tgt}/${f}`));
 }
 
 function loadMigrationsList() {
-  const migrations = fs.readdirSync(migrationsDir)
+  const migrations = fs.readdirSync(migrationsDir, { recursive: true })
     .filter(f => f.endsWith('.js'))
     .map(f => f.replace(/\.js$/, ''))
-    .sort(); // match sorting in pg-migrator and knex's fs-migrations.js
+    .sort((a, b) => a.replace(/^.*\//, '').localeCompare(b.replace(/^.*\//, ''))); // match sorting in pg-migrator and knex's fs-migrations.js (by default: collect all files in all directories)
   log();
   log('All migrations:');
   log();
