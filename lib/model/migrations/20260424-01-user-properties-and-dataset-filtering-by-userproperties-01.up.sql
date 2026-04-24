@@ -1,56 +1,56 @@
 -- Storing some Authoritative Curated Collection of per-project user props.
-CREATE TABLE propdemo___actorpropname (
+CREATE TABLE project_actor_property_names (
     id integer NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    project_id integer NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
-    propname text NOT NULL CHECK (length(propname) > 0)
+    "projectId" integer NOT NULL REFERENCES projects (id) ON DELETE CASCADE,
+    "propertyName" text NOT NULL CHECK (length("propertyName") > 0)
 );
-CREATE UNIQUE INDEX ON propdemo___actorpropname (project_id, propname);
+CREATE UNIQUE INDEX ON project_actor_property_names ("projectId", "propertyName");
 
 
-CREATE TABLE propdemo___actorpropval (
-    id int GENERATED ALWAYS AS IDENTITY,
-    actor_id integer NOT NULL REFERENCES field_keys ("actorId") ON DELETE CASCADE,  -- We *could* FK directly to actors instead. But we can start out this way, and if necessary can easily flip the FK over to the actors table; we'd be widening possibilities.
-    actorpropname_id integer NOT NULL REFERENCES propdemo___actorpropname (id) ON DELETE CASCADE,
-    propval text NOT NULL CHECK (length(propval) > 0)
+CREATE TABLE actor_property_values (
+    id integer GENERATED ALWAYS AS IDENTITY,
+    "actorId" integer NOT NULL REFERENCES field_keys ("actorId") ON DELETE CASCADE,  -- We *could* FK directly to actors instead. But we can start out this way, and if necessary can easily flip the FK over to the actors table; we'd be widening possibilities.
+    "projectActorPropertyNameId" integer NOT NULL REFERENCES project_actor_property_names (id) ON DELETE CASCADE,
+    "propertyValue" text NOT NULL CHECK (length("propertyValue") > 0)
 );
 -- A prop is unique for an actor. You can't have two "age"s (which is intuitive) but neither can you have two "region"s which is maybe not
 -- intuitive, yet we decided against it, as if we enable multivalued properties we'll be plunged deeply into the woods with
 -- conjunctions and disjunctions when it comes to filtering semantics, user's expectations of either, arduous query predicate composition, 
 -- and forgoing the simple-fast-succinct containment operator.
 -- BTW this index double-serves as the index for the referer side of the FKs (used when CASCADE-ing).
-CREATE UNIQUE INDEX ON propdemo___actorpropval (actor_id, actorpropname_id);
+CREATE UNIQUE INDEX ON actor_property_values ("actorId", "projectActorPropertyNameId");
 
 
 -- Defines an equation rule (as in: actorprop A must equate to entityprop B)
-CREATE TABLE propdemo__property_filter (
-     dataset_id integer NOT NULL,  -- FK constraint to follow, and explained below: at first glance having this column seems odd, as the dataset_id is already implied by the dsproperty_id, but there's a reason!
-     dsproperty_id integer NOT NULL PRIMARY KEY,  -- FK constraint to follow
-     actorpropname_id integer NOT NULL REFERENCES propdemo___actorpropname (id) ON DELETE CASCADE
+CREATE TABLE dataset_property_filter (
+     "datasetId" integer NOT NULL,  -- FK constraint to follow, and explained below: at first glance having this column seems odd, as the "datasetId" is already implied by the "datasetPropertyId", but there's a reason!
+     "datasetPropertyId" integer NOT NULL PRIMARY KEY,  -- FK constraint to follow
+     "projectActorPropertyNameId" integer NOT NULL REFERENCES project_actor_property_names (id) ON DELETE CASCADE
 );
 -- The following two constraints (unique constraint and foreign key) …
-CREATE UNIQUE INDEX "propdemo__property_filter__unique_for_composite_fk_referent" ON ds_properties USING btree ("datasetId", id);
-ALTER TABLE propdemo__property_filter
-     ADD CONSTRAINT "propdemo__property_filter__composite_fk" FOREIGN KEY (dataset_id, dsproperty_id) REFERENCES ds_properties ("datasetId", id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX "dataset_property_filter__unique_for_composite_fk_referent" ON ds_properties USING btree ("datasetId", id);
+ALTER TABLE dataset_property_filter
+     ADD CONSTRAINT "dataset_property_filter__composite_fk" FOREIGN KEY ("datasetId", "datasetPropertyId") REFERENCES ds_properties ("datasetId", id) ON DELETE CASCADE;
 -- serve to add this third constraint …
-CREATE UNIQUE INDEX "propdemo__property_filter__spend_actorprop_once_per_dsprop" ON propdemo__property_filter (dsproperty_id, actorpropname_id);
--- … which is here to make a `actorprop_name` spendable only once per dataset. And thus we need the `dataset_id` in here for that.
--- But we want to avoid insertion anomalies, so we'll use (dataset_id, dsproperty_id) as a foreign key so that we can only insert 
--- the one and only `dataset_id` consistent with the `dsproperty_id` in re.
+CREATE UNIQUE INDEX "dataset_property_filter__spend_actorprop_once_per_dsprop" ON dataset_property_filter ("datasetPropertyId", "projectActorPropertyNameId");
+-- … which is here to make a `actorprop_name` spendable only once per dataset. And thus we need the `"datasetId"` in here for that.
+-- But we want to avoid insertion anomalies, so we'll use ("datasetId", "datasetPropertyId") as a foreign key so that we can only insert 
+-- the one and only `"datasetId"` consistent with the `"datasetPropertyId"` in re.
 
 
 
-CREATE VIEW propdemo___actor_dataset_filter AS (
+CREATE VIEW actor_dataset_filter AS (
     WITH filter_as_json AS (
         SELECT
-            pfilter.dataset_id,
-            actorpropval.actor_id,
-            jsonb_object_agg_strict (dsprops.name, actorpropval.propval) AS thefilter
+            pfilter."datasetId",
+            aprop."actorId",
+            jsonb_object_agg_strict (dsprops.name, aprop."propertyValue") AS thefilter
         FROM
-            propdemo__property_filter pfilter
-            INNER JOIN ds_properties dsprops ON (pfilter.dsproperty_id = dsprops.id)
-            INNER JOIN propdemo___actorpropval actorpropval USING (actorpropname_id)
+            dataset_property_filter pfilter
+            INNER JOIN ds_properties dsprops ON (pfilter."datasetPropertyId" = dsprops.id)
+            INNER JOIN actor_property_values aprop USING ("projectActorPropertyNameId")
         GROUP BY
-            (pfilter.dataset_id, actorpropval.actor_id)
+            (pfilter."datasetId", aprop."actorId")
     )
     SELECT
         *,
