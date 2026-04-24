@@ -387,5 +387,31 @@ describe('api: /sessions', () => {
           .set('Cookie', 'session=' + body.token)
           .expect(200))));
   });
+
+  describe('API Keys', () => {
+    it('should make a new api key', testService(async (service) => {
+      const key = await service.login('alice', (asAlice) =>
+        asAlice.post('/v1/sessions/1/create_api_key')
+          .send({ displayName: 'my api key' })
+          .expect(200)
+          .then(({ body }) => body.key));
+
+      // Should be able to exchange key for token
+      const token = await service.post('/v1/sessions')
+        .send({ api_key: key })
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.a.Session();
+          return body.token;
+        });
+
+      // Should be ble to use token as normal on project endpoints
+      await service.get('/v1/projects/1')
+        .set('Authorization', `Bearer ${token}`)
+        .then(({ body }) => {
+          body.name.should.equal('Default Project');
+        });
+    }));
+  });
 });
 
