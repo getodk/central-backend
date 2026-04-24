@@ -10,4 +10,16 @@ describe('http', () => {
       message: 'Could not find the resource you were looking for.',
     });
   }));
+
+  describe('case-sensitive routing', () => {
+    it(`should route to /v1/users/current`, testService(async (service) => {
+      const { status } = await service.get('/v1/users/current');
+      status.should.eql(401);
+    }));
+
+    it(`should NOT route to /v1/USERS/current`, testService(async (service) => {
+      const { status } = await service.get('/v1/USERS/current');
+      status.should.eql(404);
+    }));
+  });
 });

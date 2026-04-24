@@ -24,9 +24,9 @@ jobs:
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
+          --health-interval 1s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 50
     steps:
 
     # This one weird trick speeds up every build!
@@ -34,11 +34,11 @@ jobs:
     # see: https://github.com/actions/runner/issues/4030
     - run: sudo apt-get remove --purge man-db
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set node version
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
-        node-version: 22.21.1
+        node-version-file: package.json
         cache: 'npm'
     - run: make test-oidc-e2e
     - name: Archive Playwright Test Report

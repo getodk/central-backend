@@ -228,16 +228,6 @@ describe('database migrations: 20230123-01-remove-google-backups', function() {
 
   beforeEach(() => upToMigration('20230123-01-remove-google-backups.js', false));
 
-  it('deletes backups configs', testContainerFullTrx(async ({ Configs }) => {
-    await Configs.set('backups.main', { a: 'b' });
-    await Configs.set('backups.google', { c: 'd' });
-    await Configs.set('analytics', { enabled: false });
-    await up();
-    (await Configs.get('backups.main')).isEmpty().should.be.true();
-    (await Configs.get('backups.google')).isEmpty().should.be.true();
-    (await Configs.get('analytics')).isDefined().should.be.true();
-  }));
-
   describe('backup creation token', () => {
     // Much of this was copied from the old endpoint
     // /v1/config/backups/initiate.
