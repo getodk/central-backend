@@ -8,6 +8,7 @@ const should = require('should');
 const { sql } = require('slonik');
 const { QueryOptions } = require('../../../lib/util/db');
 const { createConflict } = require('../../util/scenarios');
+const { createDataset, createEntities } = require('../../util/entities');
 const { omit, last } = require('ramda');
 const xml2js = require('xml2js');
 const { v4: uuid } = require('uuid');
@@ -3458,6 +3459,81 @@ describe('datasets and entities', () => {
             secondEtag.should.not.be.equal(etag);
           });
       }));
+
+      describe('filter attached dataset', () => {
+        it.only('should only return the entities that the user has access to based on property filter', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // Scenario: a forestry survey app where field workers are assigned to a
+          // specific plot but coordinate with community contacts across a broader region.
+          // Two datasets are filtered by different actor properties to test that
+          // each filter rule is applied independently.
+
+          // Create a "trees" dataset with properties: species, plot_id
+          await createDataset(asAlice, 1, 'trees', ['species', 'plot_id']);
+
+          // Create 3 tree entities with plot_id = "plot-A" and 2 with plot_id = "plot-B"
+          await createEntities(asAlice, 3, 1, 'trees', [], { species: 'oak', plot_id: 'plot-A' }, 'Plot-A Tree');
+          await createEntities(asAlice, 2, 1, 'trees', [], { species: 'pine', plot_id: 'plot-B' }, 'Plot-B Tree');
+
+          // Create a "people" (community contacts) dataset with properties: first_name, region
+          await createDataset(asAlice, 1, 'people', ['first_name', 'region']);
+
+          // Create 2 contact entities with region = "north" and 3 with region = "south"
+          await createEntities(asAlice, 2, 1, 'people', [], { first_name: 'north_contact', region: 'north' }, 'North Contact');
+          await createEntities(asAlice, 3, 1, 'people', [], { first_name: 'south_contact', region: 'south' }, 'South Contact');
+
+          // Publish a survey form (consumeDatasets) that links both datasets as attachments:
+          //   trees.csv -> trees dataset, people.csv -> people dataset
+          await asAlice.post('/v1/projects/1/forms')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+          await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/trees.csv')
+            .send({ dataset: true })
+            .expect(200);
+          await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
+            .send({ dataset: true })
+            .expect(200);
+          await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish')
+            .expect(200);
+
+          // Create an app user "Survey Worker A" representing a worker assigned to
+          // plot-A in the north region.
+          const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'Survey Worker A' })
+            .expect(200);
+
+          // Assign the app user to the form so they can access its attachments.
+          await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`)
+            .expect(200);
+
+          // TODO: Set up filter rules:
+          //   trees.plot_id -> actor property plot_id
+          //   people.region -> actor property region
+          // TODO: Set actor property plot_id = "plot-A" and region = "north" on the app user
+
+          // Fetch trees.csv as the app user.
+          // Once filtering is implemented, expect only the 3 plot-A trees (not the 2 plot-B trees).
+          await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets/attachments/trees.csv`)
+            .expect(200)
+            .then(({ text }) => {
+              // Without filters, all 5 trees are returned.
+              text.should.containEql('plot-A');
+              text.should.containEql('plot-B');
+            });
+
+          // Fetch people.csv as the app user.
+          // Once filtering is implemented, expect only the 2 north contacts (not the 3 south contacts).
+          await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+            .expect(200)
+            .then(({ text }) => {
+              // Without filters, all 5 contacts are returned.
+              text.should.containEql('north');
+              text.should.containEql('south');
+            });
+        }));
+      });
     });
   });
 
