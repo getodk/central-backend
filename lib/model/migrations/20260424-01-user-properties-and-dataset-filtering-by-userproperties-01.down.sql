@@ -1,0 +1,4 @@
+DROP TABLE propdemo__property_filter CASCADE;
+DROP INDEX "propdemo__property_filter__unique_for_composite_fk_referent";
+DROP TABLE propdemo___actorpropname CASCADE;
+DROP TABLE propdemo___actorpropval;
