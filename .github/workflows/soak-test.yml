@@ -1,5 +1,4 @@
 name: Soak Test
-run-name: ${{ github.event.head_commit.message || format('{0} {1}', github.event.pull_request.head.sha, github.event.pull_request.title) }}
 
 on:
   pull_request:
@@ -34,8 +33,6 @@ jobs:
         GITHUB_CONTEXT: ${{ toJson(github) }}
       run: echo "$GITHUB_CONTEXT"
     - uses: actions/checkout@v6
-    - run: echo "$(git log -1 --oneline)" >> $GITHUB_STEP_SUMMARY
-      if: github.event_name == 'pull_request'
     - name: Set node version
       uses: actions/setup-node@v6
       with:
