@@ -65,6 +65,8 @@ describe('api: /config', () => {
         [
           'image/jpeg',
           'image/svg+xml',
+          'text/html',
+          'text/javascript',
         ].forEach(mimeType => {
           it(`should not set Content-Disposition: inline for mime type: ${mimeType}`, testService(async (service) => {
             const asAlice = await service.login('alice');
