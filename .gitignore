@@ -13,6 +13,7 @@ node_modules/
 .vscode
 /junit-reports/
 /config/development.json
+/gha-logs/
 
 # context files for AI agents
 AGENTS.md

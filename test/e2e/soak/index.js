@@ -56,7 +56,15 @@ async function soakTest() {
 
   log.info('Setup complete.  Starting soak tests...');
 
-  await doSoakTest('randomSubmission', 50, 1_000, 30_000, 100, n => randomSubmission(n, projectId, formId));
+  await doSoakTest({
+    name: 'randomSubmission',
+    throughput: 50,
+    throughputPeriod: 1_000,
+    testDuration: 30_000,
+    maxDrainDuration: 30_000,
+    minimumSuccessThreshold: 100,
+    fn: n => randomSubmission(n, projectId, formId),
+  });
 
   // TODO work out a more scientific sleep duration
   const backgroundJobPause = 20_000;
@@ -64,7 +72,15 @@ async function soakTest() {
   await new Promise(resolve => { setTimeout(resolve, backgroundJobPause); });
   log.info('Woke up.');
 
-  await doSoakTest('exportZipWithDataAndMedia', 10, 3_000, 300_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));
+  await doSoakTest({
+    name: 'exportZipWithDataAndMedia',
+    throughput: 10,
+    throughputPeriod: 3_000,
+    testDuration: 300_000,
+    maxDrainDuration: 240_000,
+    minimumSuccessThreshold: 0,
+    fn: n => exportZipWithDataAndMedia(n, projectId, formId),
+  });
 
   log.info(`Check for extra logs at ${logPath}`);
 
@@ -74,12 +90,17 @@ async function soakTest() {
   process.exit(0);
 }
 
-function doSoakTest(name, throughput, throughputPeriod, testDuration, minimumSuccessThreshold, fn) {
+async function doSoakTest({ name, throughput, throughputPeriod, testDuration, maxDrainDuration, minimumSuccessThreshold, fn }) {
   log.info('Starting soak test:', name);
   log.info('        throughput:', throughput, 'per period');
   log.info('  throughputPeriod:', throughputPeriod, 'ms');
   log.info('      testDuration:', durationForHumans(testDuration));
   log.info('-------------------------------');
+  log.info('Checking endpoint responding ok...');
+  const firstSize = await fn(-1);
+  log.info(' 1st response size:', firstSize);
+  log.info('-------------------------------');
+  let openRequests = 0;
   return new Promise((resolve, reject) => {
     try {
       const successes = [];
@@ -93,8 +114,11 @@ function doSoakTest(name, throughput, throughputPeriod, testDuration, minimumSuc
       const iterate = async () => {
         const n = iterationCount++;
         const started = Date.now();
+        const nonce = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
         try {
+          log.info(`iterate(${nonce}) requesting; openRequests: ${++openRequests}`);
           const size = await fn(n);
+          log.info(`iterate(${nonce}) returned: ${size} bytes`);
           const finished = Date.now();
           const time = finished - started;
           successes.push(time);
@@ -104,6 +128,8 @@ function doSoakTest(name, throughput, throughputPeriod, testDuration, minimumSuc
           fails.push(err.message);
           results[n] = { success:false, started, finished:Date.now(), err:{ message:err.message, stack:err.stack } };
         } finally {
+          --openRequests;
+          log.info(`iterate(${nonce}) completed; openRequests: ${--openRequests}`);
           ++completedIterations;
         }
       };
@@ -114,7 +140,6 @@ function doSoakTest(name, throughput, throughputPeriod, testDuration, minimumSuc
       setTimeout(async () => {
         clearTimeout(timerId);
 
-        const maxDrainDuration = 120_000;
         await new Promise(resolve => {
           log.info(`Waiting up to ${durationForHumans(maxDrainDuration)} for test drainage...`);
           const maxDrainTimeout = Date.now() + maxDrainDuration;
@@ -168,6 +193,7 @@ function doSoakTest(name, throughput, throughputPeriod, testDuration, minimumSuc
         resolve();
       }, +testDuration);
     } catch(err) {
+      log('Err caught:', err);
       reject(err);
     }
   });
@@ -187,7 +213,7 @@ function reportWarning(message) {
   log.report('--------------------------');
 }
 
-function randomSubmission(n, projectId, formId) {
+async function randomSubmission(n, projectId, formId) {
   const headers = {
     'Content-Type': 'multipart/form-data; boundary=foo',
     'X-OpenRosa-Version': '1.0',
@@ -204,15 +230,25 @@ ${submissionTemplate
 \r
 --foo--`;
 
-  return api.apiPostAndDump('randomSubmission', n, `projects/${projectId}/forms/${formId}/submissions`, body, headers);
+  try {
+    return await api.apiPostAndDump('randomSubmission', n, `projects/${projectId}/forms/${formId}/submissions`, body, headers);
+  } catch(err) {
+    log('Err in randomSubmission()', err);
+    throw err;
+  }
 }
 
 function randInt() {
   return Math.floor(Math.random() * 9999);
 }
 
-function exportZipWithDataAndMedia(n, projectId, formId) {
-  return api.apiGetToFile('exportZipWithDataAndMedia', n, `projects/${projectId}/forms/${formId}/submissions.csv.zip?splitSelectMultiples=true&groupPaths=true&deletedFields=true`);
+async function exportZipWithDataAndMedia(n, projectId, formId) {
+  try {
+    return await api.apiGetToFile('exportZipWithDataAndMedia', n, `projects/${projectId}/forms/${formId}/submissions.csv.zip?splitSelectMultiples=true&groupPaths=true&deletedFields=true`);
+  } catch(err) {
+    log('Err in exportZipWithDataAndMedia()', err);
+    throw err;
+  }
 }
 
 function durationForHumans(ms) {
