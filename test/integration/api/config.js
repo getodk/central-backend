@@ -78,7 +78,7 @@ describe('api: /config', () => {
             await asAlice.get('/v1/config/logo')
               .expect(200)
               .then(({ headers }) => {
-                headers['content-disposition'].should.startWith('attachment');
+                headers['content-disposition'].should.eql('attachment');
               });
           }));
         });
