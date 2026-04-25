@@ -56,7 +56,14 @@ async function soakTest() {
 
   log.info('Setup complete.  Starting soak tests...');
 
-  await doSoakTest('randomSubmission', 50, 1_000, 30_000, 100, n => randomSubmission(n, projectId, formId));
+  await doSoakTest({
+    name: 'randomSubmission',
+    throughput: 50,
+    throughputPeriod: 1_000,
+    testDuration: 30_000,
+    minimumSuccessThreshold: 100,
+    fn: n => randomSubmission(n, projectId, formId),
+  });
 
   // TODO work out a more scientific sleep duration
   const backgroundJobPause = 20_000;
@@ -64,7 +71,14 @@ async function soakTest() {
   await new Promise(resolve => { setTimeout(resolve, backgroundJobPause); });
   log.info('Woke up.');
 
-  await doSoakTest('exportZipWithDataAndMedia', 10, 3_000, 300_000, 0, n => exportZipWithDataAndMedia(n, projectId, formId));
+  await doSoakTest({
+    name: 'exportZipWithDataAndMedia',
+    throughput: 10,
+    throughputPeriod: 3_000,
+    testDuration: 300_000,
+    minimumSuccessThreshold: 0,
+    fn: n => exportZipWithDataAndMedia(n, projectId, formId),
+  });
 
   log.info(`Check for extra logs at ${logPath}`);
 
@@ -74,7 +88,7 @@ async function soakTest() {
   process.exit(0);
 }
 
-function doSoakTest(name, throughput, throughputPeriod, testDuration, minimumSuccessThreshold, fn) {
+function doSoakTest({ name, throughput, throughputPeriod, testDuration, minimumSuccessThreshold, fn }) {
   log.info('Starting soak test:', name);
   log.info('        throughput:', throughput, 'per period');
   log.info('  throughputPeriod:', throughputPeriod, 'ms');
