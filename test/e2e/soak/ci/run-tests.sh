@@ -12,30 +12,6 @@ fail_job() {
   exit 1
 }
 
-pg_exec() {
-  [[ $# = 1 ]] || fail_job
-  PGPASSWORD=odktest psql \
-      --host=localhost \
-      --username=postgres \
-      --quiet \
-      --tuples-only \
-      --command="$1"
-}
-
-log "[postgres] Increasing query log lengths..."
-
-log "[postgres]   track_activity_query_size: $(pg_exec 'SHOW track_activity_query_size')"
-pg_exec "ALTER SYSTEM SET track_activity_query_size = 16384"
-pgImg="$(docker ps -q --filter name=postgres)"
-
-log "[postgres]   restarting service..."
-docker restart "$pgImg"
-timeout 10 bash -c "while ! docker exec $pgImg pg_isready --timeout=1; do sleep 1; done"
-log "[postgres]   restarted OK."
-
-log "[postgres]   track_activity_query_size: $(pg_exec 'SHOW track_activity_query_size')"
-log "[postgres]   DONE."
-
 make base
 
 echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail"
