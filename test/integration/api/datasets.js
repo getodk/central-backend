@@ -8437,6 +8437,48 @@ describe('datasets and entities', () => {
         });
     }));
 
+    // Bug getodk/central#1769
+    it('should not return duplicate features when geometry property has been soft-deleted and re-created', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      await asAlice.delete('/v1/projects/1/datasets/trees/properties/geometry')
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'geometry' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'My Tree',
+          data: { geometry: '11.434 45.545' }
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities.geojson')
+        .expect(200)
+        .then(({ body }) => {
+          body.features.length.should.equal(1);
+          body.features[0].geometry.coordinates.should.eql([45.545, 11.434]);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/12345678-1234-4123-8234-123456789abc/geojson')
+        .expect(200)
+        .then(({ body }) => {
+          body.features.length.should.equal(1);
+          body.features[0].geometry.coordinates.should.eql([45.545, 11.434]);
+        });
+    }));
+
     it('should be able to recreate the property via Form', testService(async service => {
       const asAlice = await service.login('alice');
 

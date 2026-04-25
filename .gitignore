@@ -14,3 +14,9 @@ node_modules/
 /junit-reports/
 /config/development.json
 /gha-logs/
+
+# context files for AI agents
+AGENTS.md
+CLAUDE.md
+.github/copilot-instructions.md
+.cursor
