@@ -9,6 +9,7 @@ const { by } = require(appRoot + '/lib/model/query/auth');
 const { hashPassword } = require(appRoot + '/lib/util/crypto');
 const Problem = require(appRoot + '/lib/util/problem');
 const Option = require(appRoot + '/lib/util/option');
+const { password4alice } = require('../../util/passwords');
 
 describe('preprocessors', () => {
   // some mock helpers to simplify testing this module in isolation:
@@ -122,12 +123,12 @@ describe('preprocessors', () => {
         )).should.be.rejectedWith(Problem, { problemCode: 401.2 }));
 
       it('should set the appropriate session if valid Basic auth credentials are given @slow', () =>
-        hashPassword('password4alice').then((hashed) =>
+        hashPassword(password4alice).then((hashed) =>
           Promise.resolve(authHandler(
             { Auth, Users: mockUsers('alice@getodk.org', hashed) },
             new Context(
               createRequest({ headers: {
-                Authorization: `Basic ${Buffer.from('alice@getodk.org:password4alice', 'utf8').toString('base64')}`,
+                Authorization: `Basic ${Buffer.from(`alice@getodk.org:${password4alice}`, 'utf8').toString('base64')}`,
                 'X-Forwarded-Proto': 'https'
               } }),
               { fieldKey: Option.none() }

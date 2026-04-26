@@ -3,7 +3,7 @@ set -o pipefail
 
 serverUrl="http://localhost:8383"
 userEmail="x@example.com"
-userPassword="secret1234"
+userPassword="STR0NG-secret-1234?"
 
 log() { echo "[test/e2e/standard/run-tests] $*"; }
 

@@ -1,6 +1,7 @@
 const should = require('should');
 const { DateTime } = require('luxon');
 const { testService } = require('../setup');
+const { password4alice, password4chelsea } = require('../../util/passwords');
 
 describe('api: /sessions', () => {
   describe('POST', () => {
@@ -8,7 +9,7 @@ describe('api: /sessions', () => {
 
     it('should return a new session if the information is valid', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: password4chelsea })
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
@@ -23,7 +24,7 @@ describe('api: /sessions', () => {
         service.post('/v1/sessions')
           .set(t.header, t.value)
           .set('x-forwarded-proto', 'https')
-          .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+          .send({ email: 'chelsea@getodk.org', password: password4chelsea })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Session();
@@ -32,12 +33,12 @@ describe('api: /sessions', () => {
 
     it('should return a new session even if valid cookie is passed', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: password4chelsea })
         .expect(200)
         .then(({ body }) => service.post('/v1/sessions')
           .set('x-forwarded-proto', 'https')
           .set('Cookie', `session=${body.token}`)
-          .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+          .send({ email: 'chelsea@getodk.org', password: password4chelsea })
           .expect(200))));
 
     // These demonstrate a strange feature of bcrypt - a valid password can be
@@ -45,24 +46,33 @@ describe('api: /sessions', () => {
     // to these tests would be to check for NUL characters in supplied passwords
     // and reject them before passing the values to bcrypt.
     describe('weird bcrypt implementation details', () => {
-      [
-        [ 'repeated once',             'password4chelsea\0password4chelsea' ],                   // eslint-disable-line no-multi-spaces
-        [ 'repeated twice',            'password4chelsea\0password4chelsea\0password4chelsea' ], // eslint-disable-line no-multi-spaces
-        [ 'repeated until truncation', 'password4chelsea\0password4chelsea\0password4chelsea\0password4chelsea\0password4' ],
-      ].forEach(([ description, password ]) => {
-        it(`should treat a password ${description} as the singular version of the same`, testService((service) =>
+      const bcryptLengthCutoff = 72;
+
+      let n = 0, password;
+      do {
+        password = new Array(++n).fill(password4chelsea).join('\0');
+
+        it(`should treat a password repeated ${n}x as the singular version of the same`, testService((service) =>
           service.post('/v1/sessions')
             .send({ email: 'chelsea@getodk.org', password })
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Session();
             })));
-      });
+
+        // ensure that the final test is for a password which exceeds the bcrypt truncation length,
+        // and is chopped part-way through the password itself, e.g. "secret\x00secret\x00...\x00se"
+        if (Buffer.byteLength(password) === bcryptLengthCutoff) throw new Error(`
+          Repeated password fits exactly into the bcrypt truncation size of ${bcryptLengthCutoff} bytes.
+
+          Please validate that this test works as originally intended.
+        `);
+      } while(Buffer.byteLength(password) < bcryptLengthCutoff);
     });
 
     it('should treat email addresses case insensitively', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'cHeLsEa@getodk.OrG', password: 'password4chelsea' })
+        .send({ email: 'cHeLsEa@getodk.OrG', password: password4chelsea })
         .expect(200)
         .then(({ body }) => {
           body.should.be.a.Session();
@@ -70,7 +80,7 @@ describe('api: /sessions', () => {
 
     it('should provide a csrf token when the session returns', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: password4chelsea })
         .expect(200)
         .then(({ body }) => {
           body.csrf.should.be.a.token();
@@ -78,7 +88,7 @@ describe('api: /sessions', () => {
 
     it('should set cookie information when the session returns', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'chelsea@getodk.org', password: 'password4chelsea' })
+        .send({ email: 'chelsea@getodk.org', password: password4chelsea })
         .expect(200)
         .then(({ body, headers }) => {
           // i don't know how this becomes an array but i think superagent does it.
@@ -97,7 +107,7 @@ describe('api: /sessions', () => {
 
     it('should log the action in the audit log', testService((service) =>
       service.post('/v1/sessions')
-        .send({ email: 'alice@getodk.org', password: 'password4alice' })
+        .send({ email: 'alice@getodk.org', password: password4alice })
         .set('User-Agent', 'central/tests')
         .expect(200)
         .then(({ body }) => body.token)
@@ -326,7 +336,7 @@ describe('api: /sessions', () => {
       it('should return a 404 if basic auth provided', testService(service =>
         service.delete('/v1/sessions/current')
           .set('x-forwarded-proto', 'https')
-          .auth('alice@getodk.org', 'password4alice')
+          .auth('alice@getodk.org', password4alice)
           .expect(404)));
     }
 

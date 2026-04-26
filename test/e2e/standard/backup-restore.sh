@@ -19,7 +19,7 @@ backup() {
   cd "$backupDir"
   
   target="backup.zip"
-  creds="$(echo -n 'x@example.com:secret1234' | base64)"
+  creds="$(echo -n 'x@example.com:STR0NG-secret-1234?' | base64)"
   wget \
       --header "X-Forwarded-Proto: https" \
       --header "Content-Type: $contentType" \
