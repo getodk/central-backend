@@ -56,6 +56,10 @@ describe('task: accounts', () => {
       createUser('testuser@getodk.org', 'short')
         .catch((problem) => problem.problemCode.should.equal(400.21))));
 
+    it('should complain if the password is too long', testTask(() =>
+      createUser('testuser@getodk.org', 'longggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg')
+        .catch((problem) => problem.problemCode.should.equal(400.38))));
+
     it('should complain if the password is too weak', testTask(() =>
       createUser('testuser@getodk.org', 'hunter2!!!')
         .catch((problem) => problem.problemCode.should.equal(400.44))));
@@ -104,6 +108,11 @@ describe('task: accounts', () => {
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
         .then(() => setUserPassword('testuser@getodk.org', 'aoeu'))
         .catch((problem) => problem.problemCode.should.equal(400.21))));
+
+    it('should complain about a password that is too long', testTask(({ Users }) =>
+      Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
+        .then(() => setUserPassword('testuser@getodk.org', 'longggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg'))
+        .catch((problem) => problem.problemCode.should.equal(400.38))));
 
     it('should complain about a password that is too weak', testTask(({ Users }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
