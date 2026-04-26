@@ -46,19 +46,28 @@ describe('api: /sessions', () => {
     // to these tests would be to check for NUL characters in supplied passwords
     // and reject them before passing the values to bcrypt.
     describe('weird bcrypt implementation details', () => {
-      [
-        [ 'repeated once',             `${password4chelsea}\0${password4chelsea}` ],                      // eslint-disable-line no-multi-spaces
-        [ 'repeated twice',            `${password4chelsea}\0${password4chelsea}\0${password4chelsea}` ], // eslint-disable-line no-multi-spaces
-        [ 'repeated until truncation', `${password4chelsea}\0${password4chelsea}\0${password4chelsea}\0${password4chelsea}\0${password4chelsea}` ],
-      ].forEach(([ description, password ]) => {
-        it(`should treat a password ${description} as the singular version of the same`, testService((service) =>
+      const bcryptLengthCutoff = 72;
+
+      let n = 0, password;
+      do {
+        password = new Array(++n).fill(password4chelsea).join('\0');
+
+        it(`should treat a password repeated ${n}x as the singular version of the same`, testService((service) =>
           service.post('/v1/sessions')
             .send({ email: 'chelsea@getodk.org', password })
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Session();
             })));
-      });
+
+        // ensure that the final test is for a password which exceeds the bcrypt truncation length,
+        // and is chopped part-way through the password itself, e.g. "secret\x00secret\x00...\x00se"
+        if (Buffer.byteLength(password) === bcryptLengthCutoff) throw new Error(`
+          Repeated password fits exactly into the bcrypt truncation size of ${bcryptLengthCutoff} bytes.
+
+          Please validate that this test works as originally intended.
+        `);
+      } while(Buffer.byteLength(password) < bcryptLengthCutoff);
     });
 
     it('should treat email addresses case insensitively', testService((service) =>
