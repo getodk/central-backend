@@ -23,6 +23,25 @@ describe('util/crypto', () => {
     it('should reject given a blank plaintext', () =>
       hashPassword('').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
 
+    it('should reject given a short plaintext', () =>
+      hashPassword('2short').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
+
+    it('should reject given a short plaintext (measured in bytes)', () =>
+      // This emoji is a single char on some devices, but in UTF-8 is 11 bytes.  A
+      // single character is too short to use as a password, even if its byte length
+      // is above the password length limit.
+      hashPassword('👩‍💻').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
+
+    it('should reject given a long plaintext', () =>
+      hashPassword('longggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg').should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.'));
+
+    it('should reject given a long plaintext (measured in bytes)', () => {
+      const password = '❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️';
+      password.length.should.be.lessThan(72);
+      Buffer.byteLength(password).should.be.greaterThan(72);
+      return hashPassword(password).should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.');
+    });
+
     it('should not attempt to verify empty plaintext', (done) => {
       verifyPassword('', '$2a$12$hCRUXz/7Hx2iKPLCduvrWugC5Q/j5e3bX9KvaYvaIvg/uvFYEpzSy').then((result) => {
         result.should.equal(false);
