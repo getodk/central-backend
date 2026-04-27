@@ -62,7 +62,16 @@ describe('task: accounts', () => {
 
     it('should complain if the password is too weak', testTask(() =>
       createUser('testuser@getodk.org', 'hunter2!!!')
-        .catch((problem) => problem.problemCode.should.equal(400.44))));
+        .catch((problem) => {
+          problem.message.should.eql('This is similar to a commonly used password');
+          problem.problemCode.should.eql(400.44);
+          problem.problemDetails.should.eql({
+            warning: 'This is similar to a commonly used password',
+            suggestions: [
+              'Add another word or two. Uncommon words are better.',
+            ],
+          });
+        })));
   });
 
   describe('promoteUser', () => {
@@ -117,7 +126,16 @@ describe('task: accounts', () => {
     it('should complain about a password that is too weak', testTask(({ Users }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
         .then(() => setUserPassword('testuser@getodk.org', 'hunter2!!!'))
-        .catch((problem) => problem.problemCode.should.equal(400.44))));
+        .catch((problem) => {
+          problem.message.should.eql('This is similar to a commonly used password');
+          problem.problemCode.should.eql(400.44);
+          problem.problemDetails.should.eql({
+            warning: 'This is similar to a commonly used password',
+            suggestions: [
+              'Add another word or two. Uncommon words are better.',
+            ],
+          });
+        })));
 
     it('should delete sessions', testTask(async ({ Sessions, Users }) => {
       const user = await Users.create(User.fromApi({
