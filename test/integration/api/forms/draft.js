@@ -2110,6 +2110,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 .expect(200)
                 .then(({ headers, text }) => {
                   headers['content-type'].should.startWith('text/xml');
+                  headers['content-security-policy'].should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
                   text.should.equal('test,csv\n1,2');
                 })))));
 

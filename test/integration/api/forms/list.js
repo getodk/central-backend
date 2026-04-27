@@ -130,6 +130,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
           .then(({ text, headers }) => {
             // Collect is particular about this:
             headers['content-type'].should.equal('text/xml; charset=utf-8');
+            headers['content-security-policy'].should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
 
             const domain = config.get('default.env.domain');
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
@@ -159,6 +160,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
           .then(({ text, headers }) => {
             // Collect is particular about this:
             headers['content-type'].should.equal('text/xml; charset=utf-8');
+            headers['content-security-policy'].should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
 
             const domain = config.get('default.env.domain');
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
@@ -181,6 +183,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
           .then(({ text, headers }) => {
             // Collect is particular about this:
             headers['content-type'].should.equal('text/xml; charset=utf-8');
+            headers['content-security-policy'].should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
 
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
   <xforms xmlns="http://openrosa.org/xforms/xformsList">
@@ -201,6 +204,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
               .then(({ text, headers }) => {
                 // Collect is particular about this:
                 headers['content-type'].should.equal('text/xml; charset=utf-8');
+                headers['content-security-policy'].should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
 
                 const domain = config.get('default.env.domain');
                 text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
@@ -229,6 +233,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
               .then(({ text, headers }) => {
                 // Collect is particular about this:
                 headers['content-type'].should.equal('text/xml; charset=utf-8');
+                headers['content-security-policy'].should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
 
                 const domain = config.get('default.env.domain');
                 text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>

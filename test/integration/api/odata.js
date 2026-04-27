@@ -73,6 +73,7 @@ describe('api: /forms/:id.svc', () => {
           .expect(404)
           .then(({ headers, text }) => {
             headers['content-type'].should.equal('text/xml; charset=utf-8');
+            headers['content-security-policy'].should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
 <error code="404.1">
   <message>Could not find the resource you were looking for.</message>
@@ -95,6 +96,7 @@ describe('api: /forms/:id.svc', () => {
           .expect(403)
           .then(({ headers, text }) => {
             headers['content-type'].should.equal('text/xml; charset=utf-8');
+            headers['content-security-policy'].should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
             text.should.equal(`<?xml version="1.0" encoding="UTF-8"?>
 <error code="403.1">
   <message>The authentication you provided does not have rights to perform that action.</message>
