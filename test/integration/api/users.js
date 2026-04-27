@@ -173,11 +173,12 @@ describe('api: /users', () => {
               ])))));
 
         [
-          [ 'too short', 'short' ],
-          [ 'too long',  'loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong' ], // eslint-disable-line no-multi-spaces
-          [ 'object',    {} ], // eslint-disable-line no-multi-spaces
-          [ 'array',     [] ], // eslint-disable-line no-multi-spaces
-          [ 'number',    123 ], // eslint-disable-line no-multi-spaces
+          [ 'too short',  'short' ], // eslint-disable-line no-multi-spaces
+          [ 'too long',   'loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong' ], // eslint-disable-line no-multi-spaces
+          [ 'object',     {} ], // eslint-disable-line no-multi-spaces
+          [ 'array',      [] ], // eslint-disable-line no-multi-spaces
+          [ 'number',     123 ], // eslint-disable-line no-multi-spaces
+          [ 'too simple', 'hunter2!!!' ],
         ].forEach(([ description, password ]) => {
           it(`should not accept ${description} password`, testService((service) =>
             service.login('alice', (asAlice) =>
@@ -756,6 +757,24 @@ describe('api: /users', () => {
               .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
                 .send({ old: password4alice, new: '123456789' })
                 .expect(400))))); // 400.21
+
+        it('should disallow a password that is too simple', testService((service) =>
+          service.login('alice', (asAlice) =>
+            asAlice.get('/v1/users/current')
+              .expect(200)
+              .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
+                .send({ old: password4alice, new: 'hunter2!!!' })
+                .expect(400)
+                .then(({ body }) => {
+                  body.should.eql({
+                    code: 400.44,
+                    message: 'This is similar to a commonly used password',
+                    details: {
+                      warning: 'This is similar to a commonly used password',
+                      suggestions: [ 'Add another word or two. Uncommon words are better.' ],
+                    },
+                  });
+                })))));
 
         it('should allow nonadministrator users to set their own password', testService((service) =>
           service.login('chelsea', (asChelsea) =>

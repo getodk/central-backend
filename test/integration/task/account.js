@@ -63,13 +63,13 @@ describe('task: accounts', () => {
     it('should complain if the password is too weak', testTask(() =>
       createUser('testuser@getodk.org', 'hunter2!!!')
         .catch((problem) => {
-          problem.message.should.eql('This is similar to a commonly used password');
-          problem.problemCode.should.eql(400.44);
-          problem.problemDetails.should.eql({
-            warning: 'This is similar to a commonly used password',
-            suggestions: [
-              'Add another word or two. Uncommon words are better.',
-            ],
+          problem.should.eql({
+            code: 400.44,
+            message: 'This is similar to a commonly used password',
+            details: {
+              warning: 'This is similar to a commonly used password',
+              suggestions: [ 'Add another word or two. Uncommon words are better.' ],
+            },
           });
         })));
   });
@@ -127,13 +127,13 @@ describe('task: accounts', () => {
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
         .then(() => setUserPassword('testuser@getodk.org', 'hunter2!!!'))
         .catch((problem) => {
-          problem.message.should.eql('This is similar to a commonly used password');
-          problem.problemCode.should.eql(400.44);
-          problem.problemDetails.should.eql({
-            warning: 'This is similar to a commonly used password',
-            suggestions: [
-              'Add another word or two. Uncommon words are better.',
-            ],
+          problem.should.eql({
+            code: 400.44,
+            message: 'This is similar to a commonly used password',
+            details: {
+              warning: 'This is similar to a commonly used password',
+              suggestions: [ 'Add another word or two. Uncommon words are better.' ],
+            },
           });
         })));
 
