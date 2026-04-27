@@ -765,7 +765,7 @@ describe('api: /users', () => {
               .then(({ body }) => asAlice.put(`/v1/users/${body.id}/password`)
                 .send({ old: password4alice, new: 'hunter2!!!' })
                 .expect(400)
-                .then(({ body }) => {
+                .then(({ body }) => { // eslint-disable-line no-shadow
                   body.should.eql({
                     code: 400.44,
                     message: 'This is similar to a commonly used password',
