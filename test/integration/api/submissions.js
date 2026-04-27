@@ -584,6 +584,7 @@ describe('api: /submission', () => {
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
                   headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['content-security-policy'].should.equal(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
                   headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
                 }))
@@ -620,6 +621,7 @@ describe('api: /submission', () => {
         .then(({ headers, body }) => {
           headers['content-type'].should.equal('image/jpeg');
           headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+          headers['content-security-policy'].should.equal(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
           body.toString('utf8').should.equal('this is test file two');
         });
 
@@ -667,6 +669,7 @@ describe('api: /submission', () => {
                 .then(({ headers, body }) => {
                   headers['content-type'].should.equal('image/jpeg');
                   headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+                  headers['content-security-policy'].should.equal(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
                   headers['etag'].should.equal('"25bdb03b7942881c279788575997efba"'); // eslint-disable-line dot-notation
                   body.toString('utf8').should.equal('this is test file two');
                 }))

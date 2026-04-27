@@ -79,6 +79,7 @@ describe('api: /config', () => {
               .expect(200)
               .then(({ headers }) => {
                 headers['content-disposition'].should.startWith('attachment');
+                headers['content-security-policy'].should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; report-uri /csp-report`);
               });
           }));
         });

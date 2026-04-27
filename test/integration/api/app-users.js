@@ -355,6 +355,7 @@ describe('api: /key/:key', () => {
       .then(({ headers, body }) => {
         headers['content-type'].should.equal('image/jpeg');
         headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+        headers['content-security-policy'].should.equal(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
         body.toString('utf8').should.equal('this is test file two');
       });
 
@@ -437,6 +438,7 @@ describe('api: /key/:key', () => {
       .then(({ headers, body }) => {
         headers['content-type'].should.equal('image/jpeg');
         headers['content-disposition'].should.equal('inline; filename="here_is_file2.jpg"; filename*=UTF-8\'\'here_is_file2.jpg');
+        headers['content-security-policy'].should.equal(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
         body.toString('utf8').should.equal('this is test file two');
       });
 
