@@ -29,7 +29,7 @@ describe('util/crypto', () => {
         [ '2026-04-27', 'Dates are often easy to guess' ],
         [ 'aaaaaaaaaaaaaaaaaaa', 'Repeats like "aaa" are easy to guess' ],
         [ 'batteryhorse', 'Add another word or two. Uncommon words are better.' ],
-        [ 'christopher',  'Names and surnames by themselves are easy to guess' ],
+        [ 'christopher', 'Names and surnames by themselves are easy to guess' ],
         [ 'tumtumtumtum', 'Repeats like "abcabcabc" are only slightly harder to guess than "abc"' ],
       ].forEach(([ password, expectedMessage ]) => {
         it(`should reject password '${password}' with message '${expectedMessage}'`, () =>
