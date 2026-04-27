@@ -62,14 +62,13 @@ describe('task: accounts', () => {
 
     it('should complain if the password is too weak', testTask(() =>
       createUser('testuser@getodk.org', 'hunter2!!!')
-        .catch((problem) => {
-          problem.should.eql({
-            code: 400.44,
-            message: 'This is similar to a commonly used password',
-            details: {
-              warning: 'This is similar to a commonly used password',
-              suggestions: [ 'Add another word or two. Uncommon words are better.' ],
-            },
+        .catch((err) => {
+          err.should.be.a.Problem();
+          err.problemCode.should.eql(400.44);
+          err.message.should.eql('This is similar to a commonly used password');
+          err.problemDetails.should.eql({
+            warning: 'This is similar to a commonly used password',
+            suggestions: [ 'Add another word or two. Uncommon words are better.' ],
           });
         })));
   });
@@ -126,14 +125,13 @@ describe('task: accounts', () => {
     it('should complain about a password that is too weak', testTask(({ Users }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
         .then(() => setUserPassword('testuser@getodk.org', 'hunter2!!!'))
-        .catch((problem) => {
-          problem.should.eql({
-            code: 400.44,
-            message: 'This is similar to a commonly used password',
-            details: {
-              warning: 'This is similar to a commonly used password',
-              suggestions: [ 'Add another word or two. Uncommon words are better.' ],
-            },
+        .catch((err) => {
+          err.should.be.a.Problem();
+          err.problemCode.should.eql(400.44);
+          err.message.should.eql('This is similar to a commonly used password');
+          err.problemDetails.should.eql({
+            warning: 'This is similar to a commonly used password',
+            suggestions: [ 'Add another word or two. Uncommon words are better.' ],
           });
         })));
 
