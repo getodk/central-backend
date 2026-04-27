@@ -23,6 +23,17 @@ describe('util/crypto', () => {
     it('should reject given a blank plaintext', () =>
       hashPassword('').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
 
+    describe('password strength checks', () => {
+      [
+        [ 'batteryhorse', 'Add another word or two. Uncommon words are better.' ],
+        [ '2026-04-27', 'Dates are often easy to guess' ],
+        [ 'aaaaaaaaaaaaaaaaaaa', 'Repeats like "aaa" are easy to guess' ],
+      ].forEach(([ password, expectedMessage ]) => {
+        it(`should reject password '${password}' with message '${expectedMessage}'`, () =>
+          hashPassword(password).should.be.rejectedWith(expectedMessage));
+      });
+    });
+
     it('should not attempt to verify empty plaintext', (done) => {
       verifyPassword('', '$2a$12$hCRUXz/7Hx2iKPLCduvrWugC5Q/j5e3bX9KvaYvaIvg/uvFYEpzSy').then((result) => {
         result.should.equal(false);
