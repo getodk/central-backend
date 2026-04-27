@@ -48,26 +48,32 @@ describe('api: /sessions', () => {
     describe('weird bcrypt implementation details', () => {
       const bcryptLengthCutoff = 72;
 
-      let n = 0, password;
-      do {
-        password = new Array(++n).fill(password4chelsea).join('\0');
+      const repeatN = n => new Array(n).fill(password4chelsea).join('\0');
 
-        it(`should treat a password repeated ${n}x as the singular version of the same`, testService((service) =>
+      const passwords = [
+        repeatN(1),
+        repeatN(2),
+        repeatN(3),
+        repeatN(4),
+      ];
+
+      // ensure that the final test is for a password which exceeds the bcrypt truncation length,
+      // and is chopped part-way through the password itself, e.g. "secret\x00secret\x00...\x00se"
+      if (Buffer.byteLength(passwords.at(-1)) <= bcryptLengthCutoff) throw new Error(`
+        Repeated password is too short, or fits exactly into the
+        bcrypt truncation size of ${bcryptLengthCutoff} bytes.
+
+        Please validate that this test works as originally intended.
+      `);
+
+      passwords.forEach((password, idx) =>
+        it(`should treat a password repeated ${idx+1}x as the singular version of the same`, testService((service) =>
           service.post('/v1/sessions')
             .send({ email: 'chelsea@getodk.org', password })
             .expect(200)
             .then(({ body }) => {
               body.should.be.a.Session();
-            })));
-
-        // ensure that the final test is for a password which exceeds the bcrypt truncation length,
-        // and is chopped part-way through the password itself, e.g. "secret\x00secret\x00...\x00se"
-        if (Buffer.byteLength(password) === bcryptLengthCutoff) throw new Error(`
-          Repeated password fits exactly into the bcrypt truncation size of ${bcryptLengthCutoff} bytes.
-
-          Please validate that this test works as originally intended.
-        `);
-      } while(Buffer.byteLength(password) < bcryptLengthCutoff);
+            }))));
     });
 
     it('should treat email addresses case insensitively', testService((service) =>
