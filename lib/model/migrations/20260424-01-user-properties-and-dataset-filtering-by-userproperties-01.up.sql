@@ -17,6 +17,8 @@ CREATE TABLE actor_property_values (
 -- to keep filtering semantics simple (no conjunction/disjunction complexity).
 -- This index also serves as the index for the FK referent side (used when CASCADE-ing).
 CREATE UNIQUE INDEX ON actor_property_values ("actorId", "actorPropertyId");
+-- Index to support FK lookup on actorPropertyId (CASCADE deletes from actor_properties).
+CREATE INDEX ON actor_property_values ("actorPropertyId");
 
 
 -- Maps a dataset property to an actor property, defining a filter rule:
@@ -33,6 +35,10 @@ ALTER TABLE dataset_access_filters
     ADD CONSTRAINT "dataset_access_filters__composite_fk" FOREIGN KEY ("datasetId", "datasetPropertyId") REFERENCES ds_properties ("datasetId", id) ON DELETE CASCADE;
 -- Ensures each actor property is used at most once per dataset.
 CREATE UNIQUE INDEX "dataset_access_filters__spend_actorprop_once_per_dsprop" ON dataset_access_filters ("datasetPropertyId", "actorPropertyId");
+-- Index to support FK lookup on actorPropertyId (CASCADE deletes from actor_properties).
+CREATE INDEX ON dataset_access_filters ("actorPropertyId");
+-- Index to support FK lookup on (datasetId, datasetPropertyId) (CASCADE deletes from ds_properties).
+CREATE INDEX ON dataset_access_filters ("datasetId", "datasetPropertyId");
 
 
 CREATE VIEW actor_dataset_filter AS (
