@@ -3637,7 +3637,6 @@ describe('datasets and entities', () => {
           await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets/attachments/trees.csv`)
             .expect(200)
             .then(({ text }) => {
-              console.log(text)
               const rows = text.trim().split('\n');
               rows.length.should.equal(3); // 1 header + 2 north oak trees
               text.should.containEql('north');
