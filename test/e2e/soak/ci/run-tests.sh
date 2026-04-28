@@ -17,7 +17,7 @@ make base
 echo "$userPassword" | node ./lib/bin/cli.js user-create  -u "$userEmail"
 node ./lib/bin/cli.js user-promote -u "$userEmail"
 
-make run >backend.log 2>&1 &
+ERR_500_STACKS=insecure make run >backend.log 2>&1 &
 
 log 'Waiting for backend to start...'
 timeout 30 bash -c "while ! curl -s -o /dev/null $serverUrl; do sleep 1; done"
