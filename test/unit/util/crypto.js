@@ -7,8 +7,8 @@ const streamTest = require('streamtest').v2;
 const crypto = require(appRoot + '/lib/util/crypto');
 
 describe('util/crypto', () => {
-  describe('hashPassword/verifyPassword', () => {
-    const { hashPassword, verifyPassword } = crypto;
+  describe('hashPassword()', () => {
+    const { hashPassword } = crypto;
 
     // we do not actually verify the hashing itself, as:
     // 1. it is entirely performed by bcrypt, which has is own tests.
@@ -17,11 +17,18 @@ describe('util/crypto', () => {
     it('should always return a Promise', () => {
       hashPassword('').should.be.a.Promise();
       hashPassword('password').should.be.a.Promise();
-      hashPassword('password', 'hashhash').should.be.a.Promise();
     });
 
     it('should reject given a blank plaintext', () =>
       hashPassword('').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
+  });
+
+  describe('verifyPassword()', () => {
+    const { verifyPassword } = crypto;
+
+    it('should always return a Promise', () => {
+      verifyPassword('password', 'hashhash').should.be.a.Promise();
+    });
 
     describe('password strength checks', () => {
       [
