@@ -6,7 +6,7 @@ const streamTest = require('streamtest').v2;
 const { always } = require('ramda');
 
 const appRoot = require('app-root-path');
-const { endpointBase, defaultErrorWriter, Context, defaultResultWriter, openRosaPreprocessor, openRosaBefore, openRosaResultWriter, openRosaErrorWriter, odataPreprocessor, odataBefore } = require(appRoot + '/lib/http/endpoint');
+const { endpointBase, defaultErrorWriter, Context, defaultResultWriter, openRosaPreprocessor, openRosaBefore, openRosaResultWriter, openRosaErrorWriter, odataPreprocessor, odataBefore, odataXmlErrorWriter } = require(appRoot + '/lib/http/endpoint');
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
 const { noop } = require(appRoot + '/lib/util/util');
 const Problem = require(appRoot + '/lib/util/problem');
@@ -594,12 +594,13 @@ describe('endpoints', () => {
     describe('resultWriter', () => {
       const { createdMessage } = require(appRoot + '/lib/formats/openrosa');
 
-      it('should send the appropriate content with the appropriate header', () => {
+      it('should send the appropriate content with the appropriate headers', () => {
         const response = createResponse();
         openRosaResultWriter(createdMessage({}), null, response);
 
         response.statusCode.should.equal(201);
         response.getHeader('Content-Type').should.equal('text/xml');
+        response.getHeader('Content-Security-Policy').should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
         response._getData().trim().should.equal('<OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">\n    <message nature=""></message>\n  </OpenRosaResponse>');
       });
     });
@@ -623,6 +624,7 @@ describe('endpoints', () => {
 
         response.statusCode.should.equal(404);
         response.getHeader('Content-Type').should.equal('text/xml');
+        response.getHeader('Content-Security-Policy').should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
         response._getData().trim().should.equal('<OpenRosaResponse xmlns="http://openrosa.org/http/response" items="0">\n    <message nature="error">Could not find the resource you were looking for.</message>\n  </OpenRosaResponse>');
       });
     });
@@ -696,6 +698,41 @@ describe('endpoints', () => {
         odataBefore(response);
 
         response.get('OData-Version').should.equal('4.0');
+      });
+    });
+
+    describe('odataXmlErrorWriter', () => {
+      it('should set appropriate response headers for null error', (done) => {
+        const response = createResponse();
+        response.on('end', () => {
+          response.statusCode.should.equal(500);
+          response.getHeader('Content-Type').should.eql('application/json'); // this is surprising
+          should(response.getHeader('Content-Security-Policy')).be.undefined;
+          done();
+        });
+        odataXmlErrorWriter(null, null, response);
+      });
+
+      it('should set appropriate response headers for Error', (done) => {
+        const response = createResponse();
+        response.on('end', () => {
+          response.statusCode.should.equal(500);
+          response.getHeader('Content-Type').should.eql('application/json'); // this is surprising
+          should(response.getHeader('Content-Security-Policy')).be.undefined;
+          done();
+        });
+        odataXmlErrorWriter(new Error('standard JS error'), null, response);
+      });
+
+      it('should set appropriate response headers for Problem', (done) => {
+        const response = createResponse();
+        response.on('end', () => {
+          response.statusCode.should.equal(403);
+          response.getHeader('Content-Type').should.eql('text/xml');
+          response.getHeader('Content-Security-Policy').should.eql(`default-src 'report-sample' 'none'; form-action 'none'; frame-ancestors 'none'; img-src: 'self'; report-uri /csp-report`);
+          done();
+        });
+        odataXmlErrorWriter(Problem.user.insufficientRights(), null, response);
       });
     });
   });
