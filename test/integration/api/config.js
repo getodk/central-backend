@@ -262,6 +262,23 @@ describe('api: /config', () => {
                   });
               }));
 
+              it('should ignore incorrect etag', testService(async (service, { Blobs }) => {
+                // given
+                global.s3.enableMock();
+                await blobConfigExists(service);
+                // when
+                await service.get(`/v1/config/public/${configKey}`)
+                  .set('If-None-Match', '"whatever"')
+
+                // then
+                  .expect(200)
+                  .then(({ body, headers }) => {
+                    headers['content-type'].should.eql('image/custom-format');
+                    headers['content-disposition'].should.eql('attachment');
+                    body.toString('utf8').should.equal('testimage');
+                  });
+              }));
+
               describe('after upload to S3', () => {
                 it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
                   // given
