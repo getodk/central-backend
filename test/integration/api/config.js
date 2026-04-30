@@ -186,6 +186,10 @@ describe('api: /config', () => {
                 .expect(200);
             };
 
+            it('should return notfound if the config is not set', testService((service) =>
+              service.login('alice', (asAlice) =>
+                asAlice.get(`/v1/config/${configKey}`).expect(404))));
+
             it('should return the config with expected headers', testService(async (service) => {
               // given
               await blobConfigExists(service);
@@ -240,6 +244,10 @@ describe('api: /config', () => {
               beforeEach(() => {
                 global.s3.enableMock();
               });
+
+              it('should return notfound if the config is not set', testService((service) =>
+                service.login('alice', (asAlice) =>
+                  asAlice.get(`/v1/config/${configKey}`).expect(404))));
 
               it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
                 // given
