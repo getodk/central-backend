@@ -181,12 +181,12 @@ describe('api: /config', () => {
               const asAlice = await service.login('alice');
 
               await asAlice.post(`/v1/config/${configKey}`)
-                .set('Content-Type', 'image/jpeg')
+                .set('Content-Type', 'image/custom-format')
                 .send('testimage')
                 .expect(200);
             };
 
-            it('should return the config', testService(async (service) => {
+            it('should return the config with expected headers', testService(async (service) => {
               // given
               await blobConfigExists(service);
 
@@ -195,7 +195,9 @@ describe('api: /config', () => {
 
                 // then
                 .expect(200)
-                .then(({ body }) => {
+                .then(({ body, headers }) => {
+                  headers['content-type'].should.eql('image/custom-format');
+                  headers['content-disposition'].should.eql('attachment');
                   body.toString('utf8').should.equal('testimage');
                 });
             }));
