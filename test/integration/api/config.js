@@ -193,7 +193,7 @@ describe('api: /config', () => {
               // when
               await service.get(`/v1/config/public/${configKey}`)
 
-                // then
+              // then
                 .expect(200)
                 .then(({ body, headers }) => {
                   headers['content-type'].should.eql('image/custom-format');
@@ -210,9 +210,11 @@ describe('api: /config', () => {
               await service.get(`/v1/config/public/${configKey}`)
                 .set('If-None-Match', '"whatever"')
 
-                // expect
+              // then
                 .expect(200)
-                .then(({ body }) => {
+                .then(({ body, headers }) => {
+                  headers['content-type'].should.eql('image/custom-format');
+                  headers['content-disposition'].should.eql('attachment');
                   body.toString('utf8').should.equal('testimage');
                 });
             }));
@@ -225,7 +227,7 @@ describe('api: /config', () => {
               await service.get(`/v1/config/public/${configKey}`)
                 .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
 
-                // then
+              // then
                 .expect(304)
                 .then(({ body, text, headers }) => {
                   body.should.deepEqual({});
@@ -234,26 +236,82 @@ describe('api: /config', () => {
                 });
             }));
 
-            it('should 304 correct etag after upload to s3', testService(async (service, { Blobs }) => {
-              // given
-              global.s3.enableMock();
-              // and
-              await blobConfigExists(service);
+            describe('with S3 enabled', () => {
+              beforeEach(() => {
+                global.s3.enableMock();
+              });
 
-              // when
-              await Blobs.s3UploadPending();
-              // and
-              await service.get(`/v1/config/public/${configKey}`)
-                .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
+              it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
+                // given
+                await blobConfigExists(service);
+
+                // when
+                await service.get(`/v1/config/public/${configKey}`)
 
                 // then
-                .expect(304)
-                .then(({ body, text, headers }) => {
-                  body.should.deepEqual({});
-                  text.should.eql('');
-                  should(headers['content-length']).be.undefined();
-                });
-            }));
+                  .expect(200)
+                  .then(({ body, headers }) => {
+                    headers['content-type'].should.eql('image/custom-format');
+                    headers['content-disposition'].should.eql('attachment');
+                    body.toString('utf8').should.equal('testimage');
+                  });
+              }));
+
+              describe('after upload to S3', () => {
+                it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
+                  // given
+                  await blobConfigExists(service);
+                  await Blobs.s3UploadPending();
+
+                  // when
+                  await service.get(`/v1/config/public/${configKey}`)
+
+                  // then
+                    .expect(200)
+                    .then(({ body, headers }) => {
+                      headers['content-type'].should.eql('image/custom-format');
+                      headers['content-disposition'].should.eql('attachment');
+                      body.toString('utf8').should.equal('testimage');
+                    });
+                }));
+
+                it('should ignore incorrect etag', testService(async (service, { Blobs }) => {
+                  // given
+                  global.s3.enableMock();
+                  await blobConfigExists(service);
+                  await Blobs.s3UploadPending();
+                  // when
+                  await service.get(`/v1/config/public/${configKey}`)
+                    .set('If-None-Match', '"whatever"')
+
+                  // then
+                    .expect(200)
+                    .then(({ body, headers }) => {
+                      headers['content-type'].should.eql('image/custom-format');
+                      headers['content-disposition'].should.eql('attachment');
+                      body.toString('utf8').should.equal('testimage');
+                    });
+                }));
+
+                it('should 304 correct etag', testService(async (service, { Blobs }) => {
+                  // given
+                  global.s3.enableMock();
+                  await blobConfigExists(service);
+                  await Blobs.s3UploadPending();
+                  // when
+                  await service.get(`/v1/config/public/${configKey}`)
+                    .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
+
+                  // then
+                    .expect(304)
+                    .then(({ body, text, headers }) => {
+                      body.should.deepEqual({});
+                      text.should.eql('');
+                      should(headers['content-length']).be.undefined();
+                    });
+                }));
+              });
+            });
           });
         });
       });
