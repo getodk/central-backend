@@ -79,6 +79,11 @@ class S3mock {
     return content;
   }
 
+  async pipeContent(blob) {
+    const content = this.getContentFor(blob);
+    // TODO pipe
+  }
+
   async urlForBlob(filename, { md5, sha, contentType }) {
     if (!this.enabled) throw new Error('S3 mock has not been enabled, so this function should not be called.');
 
