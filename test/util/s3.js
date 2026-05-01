@@ -1,3 +1,7 @@
+const { Readable } = require('node:stream');
+
+const { PartialPipe } = require('../../lib/util/stream');
+
 const keyFrom = (id, sha) => {
   if (!id || !sha) throw new Error('Missing required arg: ' + JSON.stringify({ id, sha }));
   return sha+id;
@@ -80,8 +84,8 @@ class S3mock {
   }
 
   async pipeContent(blob) {
-    const content = this.getContentFor(blob);
-    // TODO pipe
+    const content = await this.getContentFor(blob);
+    return PartialPipe.of(Readable.from(content));
   }
 
   async urlForBlob(filename, { md5, sha, contentType }) {
