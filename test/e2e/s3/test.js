@@ -116,6 +116,10 @@ describe('s3 support', () => {
     });
 
     it('should serve config blobs transparently', async () => {
+      const apiPath = 'config/public/logo';
+      const goodEtag = 'TODO-goodEtag';
+      const badEtag = 'TODO-badEtag';
+
       const assertResponseFor = async (path, requestHeaders, expectedStatus, expectedResponseHeaders) => {
         // when
         const res = await api.apiGet(path, { headers:requestHeaders });
@@ -128,13 +132,11 @@ describe('s3 support', () => {
       };
 
       const assertLogoServedCorrectly = async () => {
-        const apiPath = 'config/public/logo';
-
-        await assertResponseFor(apiPath,                    {},                             200, { 'Cache-Control':'no-store',     'ETag':goodEtag });
-        await assertResponseFor(apiPath,                    { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'no-store',     'ETag':goodEtag });
-        await assertResponseFor(apiPath,                    { 'If-Not-Modified':goodEtag }, 304, { 'Cache-Control': undefined,     'ETag':undefined });
-        await assertResponseFor(apiPath + '?ts=1234567890', {},                             200, { 'Cache-Control':'max-age:1234', 'ETag':goodEtag });
-        await assertResponseFor(apiPath + '?ts=1234567890', { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'max-age:1234', 'ETag':goodEtag });
+        await assertResponseFor(apiPath,                    {},                             200, { 'Cache-Control':'no-store',     ETag:goodEtag });
+        await assertResponseFor(apiPath,                    { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'no-store',     ETag:goodEtag });
+        await assertResponseFor(apiPath,                    { 'If-Not-Modified':goodEtag }, 304, { 'Cache-Control': undefined,     ETag:undefined });
+        await assertResponseFor(apiPath + '?ts=1234567890', {},                             200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
+        await assertResponseFor(apiPath + '?ts=1234567890', { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
         await assertResponseFor(apiPath + '?ts=1234567890', { 'If-Not-Modified':goodEtag }, 304);
       };
 
