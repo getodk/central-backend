@@ -122,9 +122,9 @@ describe('s3 support', () => {
 
       {
         // when
-        const res = await api.apiRawHead(apiPath);
+        const err = await badResponse(() => api.apiRawHead(apiPath));
         // then
-        res.status.should.eql(404);
+        err.responseStatus.should.eql(404);
       }
 
       {
@@ -530,5 +530,14 @@ function bigFileExists(attDir, sizeMb, idx) {
     do {
       fs.appendFileSync(bigFile, randomBytes(batchSize));
     } while((remaining-=batchSize) > 0); // eslint-disable-line no-cond-assign
+  }
+}
+
+async function badResponse(fn) {
+  try {
+    await fn();
+    throw new Error('No error was thrown by provided function');
+  } catch(err) {
+    return err;
   }
 }
