@@ -234,10 +234,10 @@ describe('api: /config', () => {
               await service.get(`/v1/config/public/${configKey}?ts=123`)
 
               // then
-              .expect(200)
-              .then(({ headers }) => {
-                headers['cache-control'].should.eql('max-age=31536000');
-              });
+                .expect(200)
+                .then(({ headers }) => {
+                  headers['cache-control'].should.eql('max-age=31536000');
+                });
             }));
 
             it('should ignore incorrect etag', testService(async (service) => {
