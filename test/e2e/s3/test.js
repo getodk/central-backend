@@ -142,8 +142,6 @@ describe('s3 support', () => {
       await assertLogoServedCorrectly();
 
 
-      // helper functions
-
       async function assertResponseFor(path, requestHeaders, expectedStatus, expectedResponseHeaders) {
         // when
         const res = await api.apiGet(path, { headers:requestHeaders });
