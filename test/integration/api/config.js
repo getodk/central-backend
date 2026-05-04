@@ -245,7 +245,7 @@ describe('api: /config', () => {
                 service.login('alice', (asAlice) =>
                   asAlice.get(`/v1/config/${configKey}`).expect(404))));
 
-              it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
+              it('should transparently serve 200 with expected content & headers', testService(async (service) => {
                 // given
                 global.s3.enableMock();
                 await blobConfigExists(service);
@@ -262,7 +262,7 @@ describe('api: /config', () => {
                   });
               }));
 
-              it('should ignore incorrect etag', testService(async (service, { Blobs }) => {
+              it('should ignore incorrect etag', testService(async (service) => {
                 // given
                 global.s3.enableMock();
                 await blobConfigExists(service);
