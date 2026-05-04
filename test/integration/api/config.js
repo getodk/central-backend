@@ -177,7 +177,7 @@ describe('api: /config', () => {
       ].forEach(configKey => {
         const blobConfigPath = `/v1/config/public/${configKey}`;
 
-        describe(`GET ${blobConfigPath}`, () => {
+        describe(`GET ${blobConfigPath} (blob)`, () => {
           const blobConfigExists = async (service) => {
             const asAlice = await service.login('alice');
 
@@ -189,7 +189,7 @@ describe('api: /config', () => {
 
           it('should return notfound if the config is not set', testService((service) =>
             service.login('alice', (asAlice) =>
-              asAlice.get(path).expect(404))));
+              asAlice.get(blobConfigPath).expect(404))));
 
           it('should return the config with expected headers', testService(async (service) => {
             // given
@@ -311,6 +311,24 @@ describe('api: /config', () => {
                   headers['content-type'].should.eql('image/custom-format');
                   headers['content-disposition'].should.eql('attachment');
                   body.toString('utf8').should.equal('testimage');
+                });
+            }));
+
+            it('should 304 correct etag', testService(async (service, { Blobs }) => {
+              // given
+              global.s3.enableMock();
+              await blobConfigExists(service);
+              await Blobs.s3UploadPending();
+              // when
+              await service.get(blobConfigPath)
+                .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
+
+              // then
+                .expect(304)
+                .then(({ body, text, headers }) => {
+                  body.should.deepEqual({});
+                  text.should.eql('');
+                  should(headers['content-length']).be.undefined();
                 });
             }));
 
