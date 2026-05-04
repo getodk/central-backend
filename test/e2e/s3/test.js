@@ -115,6 +115,51 @@ describe('s3 support', () => {
       }
     });
 
+    it('should serve config blobs transparently', async () => {
+      const assertResponseFor = async (path, requestHeaders, expectedStatus, expectedResponseHeaders) => {
+        // when
+        const res = await api.apiGet(path, { headers:requestHeaders });
+
+        // then
+        res.status.should.eql(expectedStatus);
+        // and
+        Object.entries(expectedResponseHeaders)
+            .every(([ key, expectedValue ]) => res.headers[key].should.eql(expectedValue));
+      };
+
+      const assertLogoServedCorrectly = async () => {
+        const apiPath = 'config/public/logo';
+
+        await assertResponseFor(apiPath,                    {},                             200, { 'Cache-Control':'no-store',     'ETag':goodEtag });
+        await assertResponseFor(apiPath,                    { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'no-store',     'ETag':goodEtag });
+        await assertResponseFor(apiPath,                    { 'If-Not-Modified':goodEtag }, 304, { 'Cache-Control': undefined,     'ETag':undefined });
+        await assertResponseFor(apiPath + '?ts=1234567890', {},                             200, { 'Cache-Control':'max-age:1234', 'ETag':goodEtag });
+        await assertResponseFor(apiPath + '?ts=1234567890', { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'max-age:1234', 'ETag':goodEtag });
+        await assertResponseFor(apiPath + '?ts=1234567890', { 'If-Not-Modified':goodEtag }, 304);
+      };
+
+      {
+        // when
+        const res = await api.apiRawHead(apiPath);
+        // then
+        res.status.should.eql(404);
+      }
+
+      {
+        // when
+        const res = await api.postFile(apiPath, './example-logo.svg');
+        // then
+        res.status.should.eql(200);
+      }
+
+      // expect
+      await assertLogoServedCorrectly();
+      // when
+      await cli('upload-pending');
+      // expect
+      await assertLogoServedCorrectly();
+    });
+
     it('should continue to serve blobs while upload-pending is running', async function() {
       this.timeout(TIMEOUT);
 
