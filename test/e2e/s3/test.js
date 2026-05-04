@@ -119,7 +119,7 @@ describe('s3 support', () => {
     });
 
     it('should serve config blobs transparently', async () => {
-      const  getPath = 'config/public/logo';
+      const getPath = 'config/public/logo';
       const postPath = 'config/logo';
       const goodEtag = '"6576191991d3ace3c931e8a5e19af5b7"';
       const badEtag = 'whatever';
