@@ -216,7 +216,7 @@ describe('api: /config', () => {
                 await blobConfigExists(service);
 
                 // when
-                await service.get(`/v1/config/public/${configKey}`)
+                await service.get(`/v1/config/public/${configKey}${queryString}`)
 
                 // then
                   .expect(200)
@@ -231,7 +231,7 @@ describe('api: /config', () => {
               await blobConfigExists(service);
 
               // when
-              await service.get(`/v1/config/public/${configKey}`)
+              await service.get(`/v1/config/public/${configKey}?ts=123`)
 
               // then
               .expect(200)
