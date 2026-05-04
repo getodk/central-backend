@@ -177,12 +177,16 @@ describe('api: /config', () => {
       ].forEach(configKey => {
         const blobConfigPath = `/v1/config/public/${configKey}`;
 
-        const assertStandardResponse = ({ status, body, headers }) => {
+        const assertStandardResponse = (res) => {
+          const { status, body, headers } = res;
+
           status.should.eql(200);
           headers['content-type'].should.eql('image/custom-format');
           headers['content-disposition'].should.eql('attachment');
           headers['etag'].should.eql('"f513290389192c42721fc73d4f31ab1d"');
           body.toString('utf8').should.equal('testimage');
+
+          return res;
         };
 
         describe(`GET ${blobConfigPath} (blob)`, () => {
@@ -221,8 +225,7 @@ describe('api: /config', () => {
               // when
               await service.get(`${blobConfigPath}${queryString}`)
 
-              // then
-                .expect(200)
+                .then(assertStandardResponse)
                 .then(({ headers }) => {
                   headers['cache-control'].should.eql('no-cache');
                 });
@@ -236,8 +239,7 @@ describe('api: /config', () => {
             // when
             await service.get(`${blobConfigPath}?ts=123`)
 
-            // then
-              .expect(200)
+              .then(assertStandardResponse)
               .then(({ headers }) => {
                 headers['cache-control'].should.eql('max-age=31536000');
               });
@@ -284,13 +286,7 @@ describe('api: /config', () => {
               // when
               await service.get(blobConfigPath)
 
-              // then
-                .expect(200)
-                .then(({ body, headers }) => {
-                  headers['content-type'].should.eql('image/custom-format');
-                  headers['content-disposition'].should.eql('attachment');
-                  body.toString('utf8').should.equal('testimage');
-                });
+                .then(assertStandardResponse);
             }));
 
             it('should ignore incorrect etag', testService(async (service) => {
