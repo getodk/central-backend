@@ -177,6 +177,14 @@ describe('api: /config', () => {
       ].forEach(configKey => {
         const blobConfigPath = `/v1/config/public/${configKey}`;
 
+        const assertStandardResponse = ({ status, body, headers }) => {
+          status.should.eql(200);
+          headers['content-type'].should.eql('image/custom-format');
+          headers['content-disposition'].should.eql('attachment');
+          headers['etag'].should.eql('"f513290389192c42721fc73d4f31ab1d"');
+          body.toString('utf8').should.equal('testimage');
+        };
+
         describe(`GET ${blobConfigPath} (blob)`, () => {
           const blobConfigExists = async (service) => {
             const asAlice = await service.login('alice');
@@ -198,13 +206,7 @@ describe('api: /config', () => {
             // when
             await service.get(blobConfigPath)
 
-            // then
-              .expect(200)
-              .then(({ body, headers }) => {
-                headers['content-type'].should.eql('image/custom-format');
-                headers['content-disposition'].should.eql('attachment');
-                body.toString('utf8').should.equal('testimage');
-              });
+              .then(assertStandardResponse);
           }));
 
           [
@@ -249,13 +251,7 @@ describe('api: /config', () => {
             await service.get(blobConfigPath)
               .set('If-None-Match', '"whatever"')
 
-            // then
-              .expect(200)
-              .then(({ body, headers }) => {
-                headers['content-type'].should.eql('image/custom-format');
-                headers['content-disposition'].should.eql('attachment');
-                body.toString('utf8').should.equal('testimage');
-              });
+              .then(assertStandardResponse);
           }));
 
           it('should 304 correct etag', testService(async (service) => {
@@ -305,13 +301,7 @@ describe('api: /config', () => {
               await service.get(blobConfigPath)
                 .set('If-None-Match', '"whatever"')
 
-              // then
-                .expect(200)
-                .then(({ body, headers }) => {
-                  headers['content-type'].should.eql('image/custom-format');
-                  headers['content-disposition'].should.eql('attachment');
-                  body.toString('utf8').should.equal('testimage');
-                });
+                .then(assertStandardResponse);
             }));
 
             it('should 304 correct etag', testService(async (service, { Blobs }) => {
@@ -342,13 +332,7 @@ describe('api: /config', () => {
                 // when
                 await service.get(blobConfigPath)
 
-                // then
-                  .expect(200)
-                  .then(({ body, headers }) => {
-                    headers['content-type'].should.eql('image/custom-format');
-                    headers['content-disposition'].should.eql('attachment');
-                    body.toString('utf8').should.equal('testimage');
-                  });
+                  .then(assertStandardResponse);
               }));
 
               it('should ignore incorrect etag', testService(async (service, { Blobs }) => {
@@ -360,13 +344,7 @@ describe('api: /config', () => {
                 await service.get(blobConfigPath)
                   .set('If-None-Match', '"whatever"')
 
-                // then
-                  .expect(200)
-                  .then(({ body, headers }) => {
-                    headers['content-type'].should.eql('image/custom-format');
-                    headers['content-disposition'].should.eql('attachment');
-                    body.toString('utf8').should.equal('testimage');
-                  });
+                  .then(assertStandardResponse);
               }));
 
               it('should 304 correct etag', testService(async (service, { Blobs }) => {
