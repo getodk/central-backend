@@ -124,25 +124,17 @@ describe('s3 support', () => {
       const goodEtag = 'TODO-goodEtag';
       const badEtag = 'TODO-badEtag';
 
-      {
-        // when
-        const err = await badResponse(() => api.apiRawHead(getPath));
-        // then
-        err.responseStatus.should.eql(404);
-      }
-
-      {
-        // when
-        const res = await api.apiPostFile(postPath, './example-logo.svg');
-        // then
-        res.status.should.eql(200);
-      }
-
       // expect
+      await badResponse(404, () => api.apiRawHead(getPath));
+
+      // when
+      await api.apiPostFile(postPath, './example-logo.svg');
+      // then
       await assertLogoServedCorrectly();
+
       // when
       await cli('upload-pending');
-      // expect
+      // then
       await assertLogoServedCorrectly();
 
 
@@ -537,11 +529,11 @@ function bigFileExists(attDir, sizeMb, idx) {
   }
 }
 
-async function badResponse(fn) {
+async function badResponse(expectedStatus, fn) {
   try {
     await fn();
     throw new Error('No error was thrown by provided function');
   } catch(err) {
-    return err;
+    err.responseStatus.should.eql(expectedStatus);
   }
 }

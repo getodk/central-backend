@@ -79,7 +79,13 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
 
   async function apiPost(path, body, headers) {
     const res = await apiFetch('POST', path, body, headers);
-    return res.json();
+    const [ contentType ] = res.headers.get('content-type').split(';', 1);
+
+    switch(contentType) {
+      case 'application/json': return res.json();
+      case 'image/svg':        return res.text();
+      default: throw new Error(`No handling for response Content-Type '${contentType}'`);
+    }
   }
 
   async function apiFetch(method, path, body, extraHeaders) {
