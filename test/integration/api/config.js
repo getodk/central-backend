@@ -188,7 +188,7 @@ describe('api: /config', () => {
 
             it('should return notfound if the config is not set', testService((service) =>
               service.login('alice', (asAlice) =>
-                asAlice.get(`/v1/config/${configKey}`).expect(404))));
+                asAlice.get(`/v1/config/public/${configKey}`).expect(404))));
 
             it('should return the config with expected headers', testService(async (service) => {
               // given
@@ -243,7 +243,7 @@ describe('api: /config', () => {
             describe('with S3 enabled', () => {
               it('should return notfound if the config is not set', testService((service) =>
                 service.login('alice', (asAlice) =>
-                  asAlice.get(`/v1/config/${configKey}`).expect(404))));
+                  asAlice.get(`/v1/config/public/${configKey}`).expect(404))));
 
               it('should transparently serve 200 with expected content & headers', testService(async (service) => {
                 // given
