@@ -206,6 +206,40 @@ describe('api: /config', () => {
                 });
             }));
 
+            [
+              '',
+              '?irrelevant=123',
+              '?ts=',
+            ].forEach(queryString => {
+              it(`should set revalidate cache headers for query string: '${queryString}'`, testService(async (service) => {
+                // given
+                await blobConfigExists(service);
+
+                // when
+                await service.get(`/v1/config/public/${configKey}`)
+
+                // then
+                  .expect(200)
+                  .then(({ headers }) => {
+                    headers['cache-control'].should.eql('no-cache');
+                  });
+              }));
+            });
+
+            it('should set immutable cache headers if request includes valid ts query param', testService(async (service) => {
+                // given
+                await blobConfigExists(service);
+
+                // when
+                await service.get(`/v1/config/public/${configKey}`)
+
+                // then
+                .expect(200)
+                .then(({ headers }) => {
+                  headers['cache-control'].should.eql('max-age=31536000');
+                });
+            }));
+
             it('should ignore incorrect etag', testService(async (service) => {
               // given
               await blobConfigExists(service);
