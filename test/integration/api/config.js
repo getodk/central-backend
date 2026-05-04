@@ -171,31 +171,122 @@ describe('api: /config', () => {
           });
       }));
 
-      describe('blob configs', () => {
-        [
-          'hero-image',
-          'logo',
-        ].forEach(configKey => {
-          describe(configKey, () => {
-            const blobConfigExists = async (service) => {
-              const asAlice = await service.login('alice');
+      [
+        'hero-image',
+        'logo',
+      ].forEach(configKey => {
+        const blobConfigPath = `/v1/config/public/${configKey}`;
 
-              await asAlice.post(`/v1/config/${configKey}`)
-                .set('Content-Type', 'image/custom-format')
-                .send('testimage')
-                .expect(200);
-            };
+        describe(`GET ${blobConfigPath}`, () => {
+          const blobConfigExists = async (service) => {
+            const asAlice = await service.login('alice');
 
-            it('should return notfound if the config is not set', testService((service) =>
-              service.login('alice', (asAlice) =>
-                asAlice.get(`/v1/config/public/${configKey}`).expect(404))));
+            await asAlice.post(`/v1/config/${configKey}`)
+              .set('Content-Type', 'image/custom-format')
+              .send('testimage')
+              .expect(200);
+          };
 
-            it('should return the config with expected headers', testService(async (service) => {
+          it('should return notfound if the config is not set', testService((service) =>
+            service.login('alice', (asAlice) =>
+              asAlice.get(path).expect(404))));
+
+          it('should return the config with expected headers', testService(async (service) => {
+            // given
+            await blobConfigExists(service);
+
+            // when
+            await service.get(blobConfigPath)
+
+            // then
+              .expect(200)
+              .then(({ body, headers }) => {
+                headers['content-type'].should.eql('image/custom-format');
+                headers['content-disposition'].should.eql('attachment');
+                body.toString('utf8').should.equal('testimage');
+              });
+          }));
+
+          [
+            '',
+            '?irrelevant=123',
+            '?ts=',
+          ].forEach(queryString => {
+            it(`should set revalidate cache headers for query string: '${queryString}'`, testService(async (service) => {
               // given
               await blobConfigExists(service);
 
               // when
-              await service.get(`/v1/config/public/${configKey}`)
+              await service.get(`${blobConfigPath}${queryString}`)
+
+              // then
+                .expect(200)
+                .then(({ headers }) => {
+                  headers['cache-control'].should.eql('no-cache');
+                });
+            }));
+          });
+
+          it('should set immutable cache headers if request includes valid ts query param', testService(async (service) => {
+            // given
+            await blobConfigExists(service);
+
+            // when
+            await service.get(`${blobConfigPath}?ts=123`)
+
+            // then
+              .expect(200)
+              .then(({ headers }) => {
+                headers['cache-control'].should.eql('max-age=31536000');
+              });
+          }));
+
+          it('should ignore incorrect etag', testService(async (service) => {
+            // given
+            await blobConfigExists(service);
+
+            // when
+            await service.get(blobConfigPath)
+              .set('If-None-Match', '"whatever"')
+
+            // then
+              .expect(200)
+              .then(({ body, headers }) => {
+                headers['content-type'].should.eql('image/custom-format');
+                headers['content-disposition'].should.eql('attachment');
+                body.toString('utf8').should.equal('testimage');
+              });
+          }));
+
+          it('should 304 correct etag', testService(async (service) => {
+            // given
+            await blobConfigExists(service);
+
+            // when
+            await service.get(blobConfigPath)
+              .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
+
+            // then
+              .expect(304)
+              .then(({ body, text, headers }) => {
+                body.should.deepEqual({});
+                text.should.eql('');
+                should(headers['content-length']).be.undefined();
+              });
+          }));
+
+          describe('with S3 enabled', () => {
+            it('should return notfound if the config is not set', testService((service) =>
+              service.login('alice', (asAlice) =>
+                asAlice.get(blobConfigPath).expect(404))));
+
+            it('should transparently serve 200 with expected content & headers', testService(async (service) => {
+              // given
+              global.s3.enableMock();
+              await blobConfigExists(service);
+
+              // when
+              await service.get(blobConfigPath)
 
               // then
                 .expect(200)
@@ -206,46 +297,12 @@ describe('api: /config', () => {
                 });
             }));
 
-            [
-              '',
-              '?irrelevant=123',
-              '?ts=',
-            ].forEach(queryString => {
-              it(`should set revalidate cache headers for query string: '${queryString}'`, testService(async (service) => {
-                // given
-                await blobConfigExists(service);
-
-                // when
-                await service.get(`/v1/config/public/${configKey}${queryString}`)
-
-                // then
-                  .expect(200)
-                  .then(({ headers }) => {
-                    headers['cache-control'].should.eql('no-cache');
-                  });
-              }));
-            });
-
-            it('should set immutable cache headers if request includes valid ts query param', testService(async (service) => {
-              // given
-              await blobConfigExists(service);
-
-              // when
-              await service.get(`/v1/config/public/${configKey}?ts=123`)
-
-              // then
-                .expect(200)
-                .then(({ headers }) => {
-                  headers['cache-control'].should.eql('max-age=31536000');
-                });
-            }));
-
             it('should ignore incorrect etag', testService(async (service) => {
               // given
+              global.s3.enableMock();
               await blobConfigExists(service);
-
               // when
-              await service.get(`/v1/config/public/${configKey}`)
+              await service.get(blobConfigPath)
                 .set('If-None-Match', '"whatever"')
 
               // then
@@ -257,35 +314,15 @@ describe('api: /config', () => {
                 });
             }));
 
-            it('should 304 correct etag', testService(async (service) => {
-              // given
-              await blobConfigExists(service);
-
-              // when
-              await service.get(`/v1/config/public/${configKey}`)
-                .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
-
-              // then
-                .expect(304)
-                .then(({ body, text, headers }) => {
-                  body.should.deepEqual({});
-                  text.should.eql('');
-                  should(headers['content-length']).be.undefined();
-                });
-            }));
-
-            describe('with S3 enabled', () => {
-              it('should return notfound if the config is not set', testService((service) =>
-                service.login('alice', (asAlice) =>
-                  asAlice.get(`/v1/config/public/${configKey}`).expect(404))));
-
-              it('should transparently serve 200 with expected content & headers', testService(async (service) => {
+            describe('after upload to S3', () => {
+              it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
                 // given
                 global.s3.enableMock();
                 await blobConfigExists(service);
+                await Blobs.s3UploadPending();
 
                 // when
-                await service.get(`/v1/config/public/${configKey}`)
+                await service.get(blobConfigPath)
 
                 // then
                   .expect(200)
@@ -296,12 +333,13 @@ describe('api: /config', () => {
                   });
               }));
 
-              it('should ignore incorrect etag', testService(async (service) => {
+              it('should ignore incorrect etag', testService(async (service, { Blobs }) => {
                 // given
                 global.s3.enableMock();
                 await blobConfigExists(service);
+                await Blobs.s3UploadPending();
                 // when
-                await service.get(`/v1/config/public/${configKey}`)
+                await service.get(blobConfigPath)
                   .set('If-None-Match', '"whatever"')
 
                 // then
@@ -313,61 +351,23 @@ describe('api: /config', () => {
                   });
               }));
 
-              describe('after upload to S3', () => {
-                it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
-                  // given
-                  global.s3.enableMock();
-                  await blobConfigExists(service);
-                  await Blobs.s3UploadPending();
+              it('should 304 correct etag', testService(async (service, { Blobs }) => {
+                // given
+                global.s3.enableMock();
+                await blobConfigExists(service);
+                await Blobs.s3UploadPending();
+                // when
+                await service.get(blobConfigPath)
+                  .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
 
-                  // when
-                  await service.get(`/v1/config/public/${configKey}`)
-
-                  // then
-                    .expect(200)
-                    .then(({ body, headers }) => {
-                      headers['content-type'].should.eql('image/custom-format');
-                      headers['content-disposition'].should.eql('attachment');
-                      body.toString('utf8').should.equal('testimage');
-                    });
-                }));
-
-                it('should ignore incorrect etag', testService(async (service, { Blobs }) => {
-                  // given
-                  global.s3.enableMock();
-                  await blobConfigExists(service);
-                  await Blobs.s3UploadPending();
-                  // when
-                  await service.get(`/v1/config/public/${configKey}`)
-                    .set('If-None-Match', '"whatever"')
-
-                  // then
-                    .expect(200)
-                    .then(({ body, headers }) => {
-                      headers['content-type'].should.eql('image/custom-format');
-                      headers['content-disposition'].should.eql('attachment');
-                      body.toString('utf8').should.equal('testimage');
-                    });
-                }));
-
-                it('should 304 correct etag', testService(async (service, { Blobs }) => {
-                  // given
-                  global.s3.enableMock();
-                  await blobConfigExists(service);
-                  await Blobs.s3UploadPending();
-                  // when
-                  await service.get(`/v1/config/public/${configKey}`)
-                    .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
-
-                  // then
-                    .expect(304)
-                    .then(({ body, text, headers }) => {
-                      body.should.deepEqual({});
-                      text.should.eql('');
-                      should(headers['content-length']).be.undefined();
-                    });
-                }));
-              });
+                // then
+                  .expect(304)
+                  .then(({ body, text, headers }) => {
+                    body.should.deepEqual({});
+                    text.should.eql('');
+                    should(headers['content-length']).be.undefined();
+                  });
+              }));
             });
           });
         });
