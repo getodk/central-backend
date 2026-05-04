@@ -227,17 +227,17 @@ describe('api: /config', () => {
             });
 
             it('should set immutable cache headers if request includes valid ts query param', testService(async (service) => {
-                // given
-                await blobConfigExists(service);
+              // given
+              await blobConfigExists(service);
 
-                // when
-                await service.get(`/v1/config/public/${configKey}`)
+              // when
+              await service.get(`/v1/config/public/${configKey}`)
 
-                // then
-                .expect(200)
-                .then(({ headers }) => {
-                  headers['cache-control'].should.eql('max-age=31536000');
-                });
+              // then
+              .expect(200)
+              .then(({ headers }) => {
+                headers['cache-control'].should.eql('max-age=31536000');
+              });
             }));
 
             it('should ignore incorrect etag', testService(async (service) => {
