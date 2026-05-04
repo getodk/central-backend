@@ -121,8 +121,8 @@ describe('s3 support', () => {
     it('should serve config blobs transparently', async () => {
       const  getPath = 'config/public/logo';
       const postPath = 'config/logo';
-      const goodEtag = 'TODO-goodEtag';
-      const badEtag = 'TODO-badEtag';
+      const goodEtag = '"6576191991d3ace3c931e8a5e19af5b7"';
+      const badEtag = 'whatever';
 
       // expect
       await badResponse(404, () => api.apiRawHead(getPath));
@@ -150,8 +150,8 @@ describe('s3 support', () => {
       }
 
       async function assertLogoServedCorrectly() {
-        await assertResponseFor(getPath,                    {},                             200, { 'Cache-Control':'no-store',     ETag:goodEtag });
-        await assertResponseFor(getPath,                    { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'no-store',     ETag:goodEtag });
+        await assertResponseFor(getPath,                    {},                             200, { 'Cache-Control':'no-cache',     ETag:goodEtag });
+        await assertResponseFor(getPath,                    { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'no-cache',     ETag:goodEtag });
         await assertResponseFor(getPath,                    { 'If-Not-Modified':goodEtag }, 304, { 'Cache-Control': undefined,     ETag:undefined });
         await assertResponseFor(getPath + '?ts=1234567890', {},                             200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
         await assertResponseFor(getPath + '?ts=1234567890', { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
