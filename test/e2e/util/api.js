@@ -27,7 +27,7 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
 
   async function apiGet(path, headers) {
     const res = await apiFetch('GET', path, undefined, headers);
-    return res.json();
+    return contentFrom(res);
   }
 
   function apiRawHead(path, headers) {
@@ -79,13 +79,7 @@ async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPat
 
   async function apiPost(path, body, headers) {
     const res = await apiFetch('POST', path, body, headers);
-    const [ contentType ] = res.headers.get('content-type').split(';', 1);
-
-    switch(contentType) {
-      case 'application/json': return res.json();
-      case 'image/svg':        return res.text();
-      default: throw new Error(`No handling for response Content-Type '${contentType}'`);
-    }
+    return contentFrom(res);
   }
 
   async function apiFetch(method, path, body, extraHeaders) {
@@ -140,6 +134,16 @@ function mimetypeFor(f) {
     case '.xlsx'   : return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
     case '.xml'    : return 'application/xml';
     default: throw new Error(`Unsure what mime type to use for: ${f}`);
+  }
+}
+
+function contentFrom(res) {
+  const [ contentType ] = res.headers.get('content-type').split(';', 1);
+
+  switch(contentType) {
+    case 'application/json': return res.json();
+    case 'image/svg+xml':    return res.text();
+    default: throw new Error(`No handling for response Content-Type '${contentType}'`);
   }
 }
 

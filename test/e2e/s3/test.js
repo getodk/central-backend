@@ -140,13 +140,13 @@ describe('s3 support', () => {
 
       async function assertResponseFor(path, requestHeaders, expectedStatus, expectedResponseHeaders) {
         // when
-        const res = await api.apiGet(path, { headers:requestHeaders });
+        const res = await api.apiRawGet(path, { headers:requestHeaders });
 
         // then
         res.status.should.eql(expectedStatus);
         // and
         Object.entries(expectedResponseHeaders)
-            .every(([ key, expectedValue ]) => res.headers[key].should.eql(expectedValue));
+            .every(([ key, expectedValue ]) => res.headers.get(key).should.eql(expectedValue));
       }
 
       async function assertLogoServedCorrectly() {
