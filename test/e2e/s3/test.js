@@ -138,24 +138,23 @@ describe('s3 support', () => {
       await assertLogoServedCorrectly();
 
 
-      async function assertResponseFor(path, requestHeaders, expectedStatus, expectedResponseHeaders) {
+      async function assertResponseFor(path, requestHeaders, expectedStatus, expectedCacheControlHeader) {
         // when
-        const res = await api.apiRawGet(path, { headers:requestHeaders });
+        const res = await api.apiRawGet(path, requestHeaders);
 
         // then
         res.status.should.eql(expectedStatus);
-        // and
-        Object.entries(expectedResponseHeaders)
-            .every(([ key, expectedValue ]) => res.headers.get(key).should.eql(expectedValue));
+        res.headers.get('ETag').should.eql(goodEtag);
+        res.headers.get('Cache-Control').should.eql(expectedCacheControlHeader);
       }
 
       async function assertLogoServedCorrectly() {
-        await assertResponseFor(getPath,                    {},                             200, { 'Cache-Control':'no-cache',     ETag:goodEtag });
-        await assertResponseFor(getPath,                    { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'no-cache',     ETag:goodEtag });
-        await assertResponseFor(getPath,                    { 'If-Not-Modified':goodEtag }, 304, { 'Cache-Control': undefined,     ETag:undefined });
-        await assertResponseFor(getPath + '?ts=1234567890', {},                             200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
-        await assertResponseFor(getPath + '?ts=1234567890', { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
-        await assertResponseFor(getPath + '?ts=1234567890', { 'If-Not-Modified':goodEtag }, 304);
+        await assertResponseFor(getPath,                    {},                           200, 'no-cache');
+        await assertResponseFor(getPath,                    { 'If-None-Match':badEtag },  200, 'no-cache');
+        await assertResponseFor(getPath,                    { 'If-None-Match':goodEtag }, 304, 'no-cache');
+        await assertResponseFor(getPath + '?ts=1234567890', {},                           200, 'max-age=31536000');
+        await assertResponseFor(getPath + '?ts=1234567890', { 'If-None-Match':badEtag },  200, 'max-age=31536000');
+        await assertResponseFor(getPath + '?ts=1234567890', { 'If-None-Match':goodEtag }, 304, 'max-age=31536000');
       }
     });
 

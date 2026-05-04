@@ -158,7 +158,7 @@ class Redirect {
     this.props = Object.freeze({
       status:   res.status,
       location: res.headers.get('location'),
-      headers:  Object.freeze([...res.headers]),
+      headers:  res.headers,
     });
   }
   get status()   { return this.props.status; }
