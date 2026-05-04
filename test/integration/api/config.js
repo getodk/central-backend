@@ -183,7 +183,7 @@ describe('api: /config', () => {
           status.should.eql(200);
           headers['content-type'].should.eql('image/custom-format');
           headers['content-disposition'].should.eql('attachment');
-          headers['etag'].should.eql('"f513290389192c42721fc73d4f31ab1d"');
+          headers['etag'].should.eql('"f513290389192c42721fc73d4f31ab1d"'); // eslint-disable-line dot-notation
           body.toString('utf8').should.equal('testimage');
 
           return res;
