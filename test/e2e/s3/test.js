@@ -42,6 +42,10 @@ describe('s3 support', () => {
     _minioTerminated = true;
   };
 
+  before(async () => {
+    api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
+  });
+
   beforeEach(async function() {
     this.timeout(5000);
     _initial = await countAllByStatus();
@@ -71,7 +75,6 @@ describe('s3 support', () => {
     fs.mkdirSync(attDir, { recursive:true });
     for(let idx=0; idx<bigFiles; ++idx) bigFileExists(attDir, bigFileSizeMb, 1+idx);
     expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
-    api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
     xmlFormId = await uploadFormWithAttachments(`./test-forms/${testNumber}.xml`, attDir);
 
@@ -116,20 +119,21 @@ describe('s3 support', () => {
     });
 
     it('should serve config blobs transparently', async () => {
-      const apiPath = 'config/public/logo';
+      const  getPath = 'config/public/logo';
+      const postPath = 'config/logo';
       const goodEtag = 'TODO-goodEtag';
       const badEtag = 'TODO-badEtag';
 
       {
         // when
-        const err = await badResponse(() => api.apiRawHead(apiPath));
+        const err = await badResponse(() => api.apiRawHead(getPath));
         // then
         err.responseStatus.should.eql(404);
       }
 
       {
         // when
-        const res = await api.postFile(apiPath, './example-logo.svg');
+        const res = await api.apiPostFile(postPath, './example-logo.svg');
         // then
         res.status.should.eql(200);
       }
@@ -154,12 +158,12 @@ describe('s3 support', () => {
       }
 
       async function assertLogoServedCorrectly() {
-        await assertResponseFor(apiPath,                    {},                             200, { 'Cache-Control':'no-store',     ETag:goodEtag });
-        await assertResponseFor(apiPath,                    { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'no-store',     ETag:goodEtag });
-        await assertResponseFor(apiPath,                    { 'If-Not-Modified':goodEtag }, 304, { 'Cache-Control': undefined,     ETag:undefined });
-        await assertResponseFor(apiPath + '?ts=1234567890', {},                             200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
-        await assertResponseFor(apiPath + '?ts=1234567890', { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
-        await assertResponseFor(apiPath + '?ts=1234567890', { 'If-Not-Modified':goodEtag }, 304);
+        await assertResponseFor(getPath,                    {},                             200, { 'Cache-Control':'no-store',     ETag:goodEtag });
+        await assertResponseFor(getPath,                    { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'no-store',     ETag:goodEtag });
+        await assertResponseFor(getPath,                    { 'If-Not-Modified':goodEtag }, 304, { 'Cache-Control': undefined,     ETag:undefined });
+        await assertResponseFor(getPath + '?ts=1234567890', {},                             200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
+        await assertResponseFor(getPath + '?ts=1234567890', { 'If-Not-Modified':badEtag },  200, { 'Cache-Control':'max-age:1234', ETag:goodEtag });
+        await assertResponseFor(getPath + '?ts=1234567890', { 'If-Not-Modified':goodEtag }, 304);
       }
     });
 
