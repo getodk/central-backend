@@ -233,7 +233,7 @@ describe('api: /projects/:id/app-users', () => {
         .send({ properties: { region: 'north' } })
         .expect(200)
         .then(({ body }) => {
-          body.properties.region.should.equal('north');
+          body.properties.should.eql({ region: 'north' });
         });
     }));
 
@@ -250,8 +250,7 @@ describe('api: /projects/:id/app-users', () => {
         .send({ properties: { region: 'north', worker_id: '42' } })
         .expect(200)
         .then(({ body }) => {
-          body.properties.region.should.equal('north');
-          body.properties.worker_id.should.equal('42');
+          body.properties.should.eql({ region: 'north', worker_id: '42' });
         });
     }));
 
@@ -272,8 +271,7 @@ describe('api: /projects/:id/app-users', () => {
         .send({ properties: { region: 'south', worker_id: null } })
         .expect(200)
         .then(({ body }) => {
-          body.properties.region.should.equal('south');
-          body.properties.should.not.have.property('worker_id');
+          body.properties.should.eql({ region: 'south' });
         });
     }));
 
@@ -295,8 +293,7 @@ describe('api: /projects/:id/app-users', () => {
         .send({ properties: { region: null } })
         .expect(200)
         .then(({ body }) => {
-          body.properties.worker_id.should.equal('42');
-          body.properties.should.not.have.property('region');
+          body.properties.should.eql({ worker_id: '42' });
         });
 
       // unset the last one — properties is null

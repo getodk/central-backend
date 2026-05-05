@@ -150,6 +150,130 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
             })))));
   });
 
+  describe('/:id GET', () => {
+    it('should return 403 unless the user can delete', testService(async (service) => {
+      const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+      const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test1' }).expect(200);
+      await asChelsea.get(`/v1/projects/1/forms/simple/public-links/${pl.id}`).expect(403);
+    }));
+
+    it('should return the public link', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: created } = await asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test1' }).expect(200);
+      await asAlice.get(`/v1/projects/1/forms/simple/public-links/${created.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.a.PublicLink();
+          body.displayName.should.equal('test1');
+        });
+    }));
+
+    it('should return 404 if the public link is not on the form', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test1' }).expect(200);
+      await asAlice.get(`/v1/projects/1/forms/withrepeat/public-links/${pl.id}`).expect(404);
+    }));
+
+    it('should return extended metadata if requested', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: created } = await asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test1' }).expect(200);
+      await asAlice.get(`/v1/projects/1/forms/simple/public-links/${created.id}`)
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.an.ExtendedPublicLink();
+          body.createdBy.displayName.should.equal('Alice');
+        });
+    }));
+
+    it('should return null properties when no actor properties are defined on the project', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: created } = await asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test1' }).expect(200);
+      await asAlice.get(`/v1/projects/1/forms/simple/public-links/${created.id}`)
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          should(body.properties).be.null();
+        });
+    }));
+  });
+
+  describe('/:id PATCH', () => {
+    it('should set actor property values on a public link', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+        .send({ displayName: 'test link' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/forms/simple/public-links/${pl.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ region: 'north' });
+        });
+    }));
+
+    it('should set multiple actor properties at once', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'worker_id' }).expect(200);
+
+      const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+        .send({ displayName: 'test link' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/forms/simple/public-links/${pl.id}`)
+        .send({ properties: { region: 'north', worker_id: '42' } })
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ region: 'north', worker_id: '42' });
+        });
+    }));
+
+    it('should unset an actor property when passed null', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'worker_id' }).expect(200);
+
+      const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+        .send({ displayName: 'test link' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/forms/simple/public-links/${pl.id}`)
+        .send({ properties: { region: 'north', worker_id: '42' } })
+        .expect(200);
+
+      // unset one — the other remains
+      await asAlice.patch(`/v1/projects/1/forms/simple/public-links/${pl.id}`)
+        .send({ properties: { region: null } })
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ worker_id: '42' });
+        });
+
+      // unset the last one — properties is null
+      await asAlice.patch(`/v1/projects/1/forms/simple/public-links/${pl.id}`)
+        .send({ properties: { worker_id: null } })
+        .expect(200)
+        .then(({ body }) => {
+          should(body.properties).be.null();
+        });
+    }));
+
+    it('should return 404 if the actor property does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+        .send({ displayName: 'test link' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/forms/simple/public-links/${pl.id}`)
+        .send({ properties: { nonexistent: 'value' } })
+        .expect(404);
+    }));
+  });
+
   describe('/:id DELETE', () => {
     it('should return 403 unless the user can delete', testService((service) =>
       service.login(['alice', 'chelsea'], (asAlice, asChelsea) =>
