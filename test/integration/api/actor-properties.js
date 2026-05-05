@@ -73,38 +73,37 @@ describe('api: /projects/:id/actor-properties', () => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
       await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'plot_id' }).expect(200);
+
+      const { body: fk1 } = await asAlice.post('/v1/projects/1/app-users').send({ displayName: 'user 1' }).expect(200);
+      const { body: fk2 } = await asAlice.post('/v1/projects/1/app-users').send({ displayName: 'user 2' }).expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${fk1.id}`)
+        .send({ properties: { region: 'north', plot_id: 'A1' } })
+        .expect(200);
+      await asAlice.patch(`/v1/projects/1/app-users/${fk2.id}`)
+        .send({ properties: { region: 'south' } })
+        .expect(200);
+
       await asAlice.get('/v1/projects/1/actor-properties')
-        .set('X-Extended-Metadata', true)
-        .expect(200)
-        .then(({ body }) => {
-          body.map(p => p.name).should.eql(['plot_id', 'region']);
-        });
-    }));
-
-    it('should get an app user by id with actor properties', testService(async (service) => {
-      const asAlice = await service.login('alice');
-      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
-      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'worker_id' }).expect(200);
-
-      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
-        .send({ displayName: 'test user' })
-        .expect(200);
-
-      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
-        .send({ properties: { region: 'north' } })
-        .expect(200);
-
-      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
-        .send({ properties: { worker_id: '1234' } })
-        .expect(200);
-
-      await asAlice.get(`/v1/projects/1/app-users/${appUser.id}`)
         .set('X-Extended-Metadata', 'true')
         .expect(200)
         .then(({ body }) => {
-          body.displayName.should.equal('test user');
-          body.properties.region.should.equal('north');
-          body.properties.worker_id.should.equal('1234');
+          body.should.eql([
+            { name: 'plot_id', values: ['A1'] },
+            { name: 'region', values: ['north', 'south'] }
+          ]);
+        });
+    }));
+
+    it('should return empty values arrays when no values are set', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      await asAlice.get('/v1/projects/1/actor-properties')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.eql([{ name: 'region', values: [] }]);
         });
     }));
   });
