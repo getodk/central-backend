@@ -40,7 +40,7 @@ describe('util/crypto', () => {
       Buffer.byteLength(password).should.be.greaterThan(72);
       return hashPassword(password).should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.');
     });
-    
+
     describe('password strength checks', () => {
       [
         [ '1234567890', 'This is a top-100 common password' ],
