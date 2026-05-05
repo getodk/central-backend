@@ -148,6 +148,26 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
               body.forEach((key) => key.should.be.an.ExtendedPublicLink());
               body.map((key) => key.displayName).should.eql([ 'test 3', 'test 1', 'test 2' ]);
             })))));
+
+    it('should include properties in extended metadata', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: pl1 } = await asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 1' }).expect(200);
+      const { body: pl2 } = await asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test 2' }).expect(200);
+
+      await asAlice.patch(`/v1/projects/1/forms/simple/public-links/${pl1.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/forms/simple/public-links')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.find((pl) => pl.id === pl1.id).properties.should.eql({ region: 'north' });
+          should(body.find((pl) => pl.id === pl2.id).properties).be.null();
+        });
+    }));
   });
 
   describe('/:id GET', () => {
