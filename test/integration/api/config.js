@@ -190,133 +190,81 @@ describe('api: /config', () => {
         };
 
         describe(`GET ${blobConfigPath} (blob)`, () => {
-          const blobConfigExists = async (service) => {
-            const asAlice = await service.login('alice');
-
-            await asAlice.post(`/v1/config/${configKey}`)
-              .set('Content-Type', 'image/custom-format')
-              .send('testimage')
-              .expect(200);
-          };
-
-          it('should return notfound if the config is not set', testService((service) =>
-            service.login('alice', (asAlice) =>
-              asAlice.get(blobConfigPath).expect(404))));
-
-          it('should return the config with expected headers', testService(async (service) => {
-            await blobConfigExists(service);
-            await service.get(blobConfigPath)
-              .then(assertStandardResponse);
-          }));
-
           [
-            '',
-            '?irrelevant=123',
-            '?ts=',
-          ].forEach(queryString => {
-            it(`should set revalidate cache headers for query string: '${queryString}'`, testService(async (service) => {
-              await blobConfigExists(service);
-              await service.get(`${blobConfigPath}${queryString}`)
-                .then(assertStandardResponse)
-                .then(({ headers }) => {
-                  headers['cache-control'].should.eql('no-cache');
-                });
-            }));
-          });
-
-          it('should set immutable cache headers if request includes valid ts query param', testService(async (service) => {
-            await blobConfigExists(service);
-            await service.get(`${blobConfigPath}?ts=123`)
-              .then(assertStandardResponse)
-              .then(({ headers }) => {
-                headers['cache-control'].should.eql('max-age=31536000');
+            { scenario:'s3 NOT enabled',                enableS3:false, transferToS3:false },
+            { scenario:'s3 enabled, blob NOT uploaded', enableS3:true,  transferToS3:true  },
+            { scenario:'s3 enabled, blob uploaded',     enableS3:true,  transferToS3:true  },
+          ].forEach(({ scenario, enableS3, transferToS3 }) => {
+            describe(scenario, () => {
+              beforeEach(() => {
+                if (enableS3) global.s3.enableMock();
               });
-          }));
 
-          it('should ignore incorrect etag', testService(async (service) => {
-            await blobConfigExists(service);
-            await service.get(blobConfigPath)
-              .set('If-None-Match', '"whatever"')
-              .then(assertStandardResponse);
-          }));
+              it('should return notfound if the config is not set', testService((service) =>
+                service.login('alice', (asAlice) =>
+                  asAlice.get(blobConfigPath).expect(404))));
 
-          it('should 304 correct etag', testService(async (service) => {
-            await blobConfigExists(service);
-            await service.get(blobConfigPath)
-              .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
-              .expect(304)
-              .then(({ body, text, headers }) => {
-                body.should.deepEqual({});
-                text.should.eql('');
-                should(headers['content-length']).be.undefined();
-              });
-          }));
+              describe('blob config exists', () => {
+                const blobSetup = async (service, { Blobs }) => {
+                  const asAlice = await service.login('alice');
 
-          describe('with S3 enabled', () => {
-            beforeEach(() => global.s3.enableMock());
+                  await asAlice.post(`/v1/config/${configKey}`)
+                    .set('Content-Type', 'image/custom-format')
+                    .send('testimage')
+                    .expect(200);
 
-            it('should return notfound if the config is not set', testService(async (service) => {
-              const asAlice = await service.login('alice');
-              await asAlice.get(blobConfigPath)
-                .expect(404);
-            }));
+                  if (transferToS3) await Blobs.s3UploadPending();
+                };
 
-            it('should transparently serve 200 with expected content & headers', testService(async (service) => {
-              await blobConfigExists(service);
-              await service.get(blobConfigPath)
-                .then(assertStandardResponse);
-            }));
+                it('should return the config with expected headers', testService(async (service, container) => {
+                  await blobSetup(service, container);
+                  await service.get(blobConfigPath)
+                    .then(assertStandardResponse);
+                }));
 
-            it('should ignore incorrect etag', testService(async (service) => {
-              await blobConfigExists(service);
-              await service.get(blobConfigPath)
-                .set('If-None-Match', '"whatever"')
-
-                .then(assertStandardResponse);
-            }));
-
-            it('should 304 correct etag', testService(async (service, { Blobs }) => {
-              await blobConfigExists(service);
-              await service.get(blobConfigPath)
-                .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
-                .expect(304)
-                .then(({ body, text, headers }) => {
-                  body.should.deepEqual({});
-                  text.should.eql('');
-                  should(headers['content-length']).be.undefined();
+                [
+                  '',
+                  '?irrelevant=123',
+                  '?ts=',
+                ].forEach(queryString => {
+                  it(`should set revalidate cache headers for query string: '${queryString}'`, testService(async (service, container) => {
+                    await blobSetup(service, container);
+                    await service.get(`${blobConfigPath}${queryString}`)
+                      .then(assertStandardResponse)
+                      .then(({ headers }) => {
+                        headers['cache-control'].should.eql('no-cache');
+                      });
+                  }));
                 });
-            }));
 
-            describe('after upload to S3', () => {
-              const blobConfigExistsAndIsUploadedToS3 = async (service) => {
-                await blobConfigExists(service);
-                await Blobs.s3UploadPending();
-              };
+                it('should set immutable cache headers if request includes valid ts query param', testService(async (service, container) => {
+                  await blobSetup(service, container);
+                  await service.get(`${blobConfigPath}?ts=123`)
+                    .then(assertStandardResponse)
+                    .then(({ headers }) => {
+                      headers['cache-control'].should.eql('max-age=31536000');
+                    });
+                }));
 
-              it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
-                await blobConfigExistsAndIsUploadedToS3(service);
-                await service.get(blobConfigPath)
-                  .then(assertStandardResponse);
-              }));
+                it('should ignore incorrect etag', testService(async (service, container) => {
+                  await blobSetup(service, container);
+                  await service.get(blobConfigPath)
+                    .set('If-None-Match', '"whatever"')
+                    .then(assertStandardResponse);
+                }));
 
-              it('should ignore incorrect etag', testService(async (service, { Blobs }) => {
-                await blobConfigExistsAndIsUploadedToS3(service);
-                await service.get(blobConfigPath)
-                  .set('If-None-Match', '"whatever"')
-                  .then(assertStandardResponse);
-              }));
-
-              it('should 304 correct etag', testService(async (service, { Blobs }) => {
-                await blobConfigExistsAndIsUploadedToS3(service);
-                await service.get(blobConfigPath)
-                  .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
-                  .expect(304)
-                  .then(({ body, text, headers }) => {
-                    body.should.deepEqual({});
-                    text.should.eql('');
-                    should(headers['content-length']).be.undefined();
-                  });
-              }));
+                it('should 304 correct etag', testService(async (service, container) => {
+                  await blobSetup(service, container);
+                  await service.get(blobConfigPath)
+                    .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
+                    .expect(304)
+                    .then(({ body, text, headers }) => {
+                      body.should.deepEqual({});
+                      text.should.eql('');
+                      should(headers['content-length']).be.undefined();
+                    });
+                }));
+              });
             });
           });
         });
