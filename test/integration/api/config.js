@@ -204,12 +204,8 @@ describe('api: /config', () => {
               asAlice.get(blobConfigPath).expect(404))));
 
           it('should return the config with expected headers', testService(async (service) => {
-            // given
             await blobConfigExists(service);
-
-            // when
             await service.get(blobConfigPath)
-
               .then(assertStandardResponse);
           }));
 
@@ -219,12 +215,8 @@ describe('api: /config', () => {
             '?ts=',
           ].forEach(queryString => {
             it(`should set revalidate cache headers for query string: '${queryString}'`, testService(async (service) => {
-              // given
               await blobConfigExists(service);
-
-              // when
               await service.get(`${blobConfigPath}${queryString}`)
-
                 .then(assertStandardResponse)
                 .then(({ headers }) => {
                   headers['cache-control'].should.eql('no-cache');
@@ -233,12 +225,8 @@ describe('api: /config', () => {
           });
 
           it('should set immutable cache headers if request includes valid ts query param', testService(async (service) => {
-            // given
             await blobConfigExists(service);
-
-            // when
             await service.get(`${blobConfigPath}?ts=123`)
-
               .then(assertStandardResponse)
               .then(({ headers }) => {
                 headers['cache-control'].should.eql('max-age=31536000');
@@ -246,25 +234,16 @@ describe('api: /config', () => {
           }));
 
           it('should ignore incorrect etag', testService(async (service) => {
-            // given
             await blobConfigExists(service);
-
-            // when
             await service.get(blobConfigPath)
               .set('If-None-Match', '"whatever"')
-
               .then(assertStandardResponse);
           }));
 
           it('should 304 correct etag', testService(async (service) => {
-            // given
             await blobConfigExists(service);
-
-            // when
             await service.get(blobConfigPath)
               .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
-
-            // then
               .expect(304)
               .then(({ body, text, headers }) => {
                 body.should.deepEqual({});
@@ -274,26 +253,22 @@ describe('api: /config', () => {
           }));
 
           describe('with S3 enabled', () => {
-            it('should return notfound if the config is not set', testService((service) =>
-              service.login('alice', (asAlice) =>
-                asAlice.get(blobConfigPath).expect(404))));
+            beforeEach(() => global.s3.enableMock());
+
+            it('should return notfound if the config is not set', testService(async (service) => {
+              const asAlice = await service.login('alice');
+              await asAlice.get(blobConfigPath)
+                .expect(404);
+            }));
 
             it('should transparently serve 200 with expected content & headers', testService(async (service) => {
-              // given
-              global.s3.enableMock();
               await blobConfigExists(service);
-
-              // when
               await service.get(blobConfigPath)
-
                 .then(assertStandardResponse);
             }));
 
             it('should ignore incorrect etag', testService(async (service) => {
-              // given
-              global.s3.enableMock();
               await blobConfigExists(service);
-              // when
               await service.get(blobConfigPath)
                 .set('If-None-Match', '"whatever"')
 
@@ -301,15 +276,9 @@ describe('api: /config', () => {
             }));
 
             it('should 304 correct etag', testService(async (service, { Blobs }) => {
-              // given
-              global.s3.enableMock();
               await blobConfigExists(service);
-              await Blobs.s3UploadPending();
-              // when
               await service.get(blobConfigPath)
                 .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
-
-              // then
                 .expect(304)
                 .then(({ body, text, headers }) => {
                   body.should.deepEqual({});
@@ -319,40 +288,28 @@ describe('api: /config', () => {
             }));
 
             describe('after upload to S3', () => {
-              it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
-                // given
-                global.s3.enableMock();
+              const blobConfigExistsAndIsUploadedToS3 = async (service) => {
                 await blobConfigExists(service);
                 await Blobs.s3UploadPending();
+              };
 
-                // when
+              it('should transparently serve 200 with expected content & headers', testService(async (service, { Blobs }) => {
+                await blobConfigExistsAndIsUploadedToS3(service);
                 await service.get(blobConfigPath)
-
                   .then(assertStandardResponse);
               }));
 
               it('should ignore incorrect etag', testService(async (service, { Blobs }) => {
-                // given
-                global.s3.enableMock();
-                await blobConfigExists(service);
-                await Blobs.s3UploadPending();
-                // when
+                await blobConfigExistsAndIsUploadedToS3(service);
                 await service.get(blobConfigPath)
                   .set('If-None-Match', '"whatever"')
-
                   .then(assertStandardResponse);
               }));
 
               it('should 304 correct etag', testService(async (service, { Blobs }) => {
-                // given
-                global.s3.enableMock();
-                await blobConfigExists(service);
-                await Blobs.s3UploadPending();
-                // when
+                await blobConfigExistsAndIsUploadedToS3(service);
                 await service.get(blobConfigPath)
                   .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
-
-                // then
                   .expect(304)
                   .then(({ body, text, headers }) => {
                     body.should.deepEqual({});
