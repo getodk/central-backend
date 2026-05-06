@@ -304,6 +304,24 @@ describe('s3 support', () => {
     });
   });
 
+  describe('with minio 5xx', () => {
+    before(async () => {
+      // TODO start a fake s3 server which replies 500 to everything
+    });
+
+    after(async () => {
+      // TODO stop the fake s3 server
+    });
+
+    it('should handle upload failure gracefully', async () => {
+      throw new Error('implement me');
+    });
+
+    it('should handle download failure gracefully', async () => {
+      throw new Error('implement me');
+    });
+  });
+
   // Guard against a Promise resolving when it was expected to reject.  This has
   // specifically been seen when upload-pending returns immediately, but later
   // test code is expecting it to spend time uploading.  In those cases, this
