@@ -310,6 +310,8 @@ describe('s3 support', () => {
     let server;
 
     before(() => {
+      minioTerminated();
+
       const app = express();
 
       app.all('/*', (req, res) => res.sendStatus(500));
