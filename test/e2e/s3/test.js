@@ -15,6 +15,8 @@ const TIMEOUT = 240_000; // ms
 const { exec, execSync } = require('node:child_process');
 const fs = require('node:fs');
 const { randomBytes } = require('node:crypto');
+
+const express = require('express');
 const _ = require('lodash');
 const should = require('should');
 
@@ -305,12 +307,23 @@ describe('s3 support', () => {
   });
 
   describe('with minio 5xx', () => {
-    before(async () => {
-      // TODO start a fake s3 server which replies 500 to everything
+    let server;
+
+    before(() => {
+      const app = express();
+
+      app.all('/*', (req, res) => res.sendStatus(500));
+
+      return new Promise((resolve, reject) => {
+        server = app.listen(9000, err => {
+          if(err) return reject(err);
+          resolve();
+        });
+      });
     });
 
-    after(async () => {
-      // TODO stop the fake s3 server
+    after(() => {
+      if(server) return new Promise(resolve => server.close(resolve));
     });
 
     it('should handle upload failure gracefully', async () => {
