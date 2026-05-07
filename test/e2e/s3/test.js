@@ -331,7 +331,7 @@ describe('s3 support', () => {
     });
 
     it('should handle download failure gracefully', async () => {
-      throw new Error('implement me');
+      await expectRejectionFrom(forSacrifice(cli('upload-pending')), /Error: TODO/);
     });
   });
 
