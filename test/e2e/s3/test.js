@@ -308,7 +308,7 @@ describe('s3 support', () => {
     });
   });
 
-  describe.only('with minio 5xx', () => {
+  describe('with minio 5xx', () => {
     let server;
 
     before(() => {
