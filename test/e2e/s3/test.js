@@ -36,6 +36,8 @@ describe('s3 support', () => {
   const minioTerminated = () => {
     if(_minioTerminated) return;
 
+    log('Terminating minio...');
+
     // It should be possible to use docker more precisely here, e.g.
     //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
     // However, the ancestor filter requries specifying the exact tag used.
