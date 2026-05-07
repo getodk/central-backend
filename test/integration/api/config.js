@@ -192,7 +192,7 @@ describe('api: /config', () => {
         describe(`GET ${blobConfigPath} (blob)`, () => {
           [
             { scenario:'s3 NOT enabled',                enableS3:false, transferToS3:false }, // eslint-disable-line no-multi-spaces,key-spacing
-            { scenario:'s3 enabled, blob NOT uploaded', enableS3:true,  transferToS3:true  }, // eslint-disable-line no-multi-spaces,key-spacing
+            { scenario:'s3 enabled, blob NOT uploaded', enableS3:true,  transferToS3:false }, // eslint-disable-line no-multi-spaces,key-spacing
             { scenario:'s3 enabled, blob uploaded',     enableS3:true,  transferToS3:true  }, // eslint-disable-line no-multi-spaces,key-spacing
           ].forEach(({ scenario, enableS3, transferToS3 }) => {
             describe(scenario, () => {
