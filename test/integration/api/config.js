@@ -233,7 +233,7 @@ describe('api: /config', () => {
                       .then(assertStandardResponse)
                       .then(({ headers }) => {
                         headers['cache-control'].should.eql('no-cache');
-                        should(headers['vary']).be.equalOneOf(undefined, 'Accept-Encoding, Origin'); // eslint-disable-line dot-notation
+                        should(headers['vary']).be.undefined(); // eslint-disable-line dot-notation
                       });
                   }));
                 });
@@ -244,7 +244,7 @@ describe('api: /config', () => {
                     .then(assertStandardResponse)
                     .then(({ headers }) => {
                       headers['cache-control'].should.eql('max-age=31536000');
-                      should(headers['vary']).be.equalOneOf(undefined, 'Accept-Encoding, Origin'); // eslint-disable-line dot-notation
+                      should(headers['vary']).be.undefined(); // eslint-disable-line dot-notation
                     });
                 }));
 
