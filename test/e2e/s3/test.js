@@ -15,6 +15,8 @@ const TIMEOUT = 240_000; // ms
 const { exec, execSync } = require('node:child_process');
 const fs = require('node:fs');
 const { randomBytes } = require('node:crypto');
+
+const express = require('express');
 const _ = require('lodash');
 const should = require('should');
 
@@ -34,11 +36,16 @@ describe('s3 support', () => {
   const minioTerminated = () => {
     if(_minioTerminated) return;
 
+    log('Terminating minio...');
+
+    console.log(execSync('docker ps'));
+
     // It should be possible to use docker more precisely here, e.g.
     //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
     // However, the ancestor filter requries specifying the exact tag used.
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
     execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
+    console.log(execSync('docker ps'));
     _minioTerminated = true;
   };
 
@@ -304,6 +311,37 @@ describe('s3 support', () => {
     });
   });
 
+  describe('with minio 5xx', () => {
+    let server;
+
+    before(() => {
+      minioTerminated();
+
+      const app = express();
+
+      app.all('/*', (req, res) => res.sendStatus(500));
+
+      return new Promise((resolve, reject) => {
+        server = app.listen(9000, err => {
+          if(err) return reject(err);
+          resolve();
+        });
+      });
+    });
+
+    after(() => {
+      if(server) return new Promise(resolve => server.close(resolve));
+    });
+
+    it('should handle upload failure gracefully', async () => {
+      throw new Error('implement me');
+    });
+
+    it('should handle download failure gracefully', async () => {
+      await expectRejectionFrom(forSacrifice(cli('upload-pending')), /Error: TODO/);
+    });
+  });
+
   // Guard against a Promise resolving when it was expected to reject.  This has
   // specifically been seen when upload-pending returns immediately, but later
   // test code is expecting it to spend time uploading.  In those cases, this
@@ -420,6 +458,7 @@ function cli(cmd) {
 
   const promise = new Promise((resolve, reject) => {
     const child = exec(cmd, { env, cwd:'../../..' }, (err, stdout, stderr) => {
+      console.log({ stdout, stderr });
       if (err) {
         err.stdout = stdout; // eslint-disable-line no-param-reassign
         err.stderr = stderr; // eslint-disable-line no-param-reassign
