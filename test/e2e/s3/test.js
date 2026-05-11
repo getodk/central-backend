@@ -42,6 +42,10 @@ describe('s3 support', () => {
     _minioTerminated = true;
   };
 
+  before(async () => {
+    api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
+  });
+
   beforeEach(async function() {
     this.timeout(5000);
     _initial = await countAllByStatus();
@@ -71,7 +75,6 @@ describe('s3 support', () => {
     fs.mkdirSync(attDir, { recursive:true });
     for(let idx=0; idx<bigFiles; ++idx) bigFileExists(attDir, bigFileSizeMb, 1+idx);
     expectedAttachments = fs.readdirSync(attDir).filter(f => !f.startsWith('.')).sort();
-    api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
     xmlFormId = await uploadFormWithAttachments(`./test-forms/${testNumber}.xml`, attDir);
 
@@ -112,6 +115,46 @@ describe('s3 support', () => {
           await assertDownloadMatchesOriginal(await fetch(res.location), att.name);
         }
         log.debug('  Looks OK.');
+      }
+    });
+
+    it('should serve config blobs transparently', async () => {
+      const getPath = 'config/public/logo';
+      const postPath = 'config/logo';
+      const goodEtag = '"6576191991d3ace3c931e8a5e19af5b7"';
+      const badEtag = 'whatever';
+
+      // expect
+      await badResponse(404, () => api.apiRawHead(getPath));
+
+      // when
+      await api.apiPostFile(postPath, './example-logo.svg');
+      // then
+      await assertLogoServedCorrectly();
+
+      // when
+      await cli('upload-pending');
+      // then
+      await assertLogoServedCorrectly();
+
+
+      async function assertResponseFor(path, requestHeaders, expectedStatus, expectedCacheControlHeader) {
+        // when
+        const res = await api.apiRawGet(path, requestHeaders);
+
+        // then
+        res.status.should.eql(expectedStatus);
+        res.headers.get('ETag').should.eql(goodEtag);
+        res.headers.get('Cache-Control').should.eql(expectedCacheControlHeader);
+      }
+
+      async function assertLogoServedCorrectly() {
+        await assertResponseFor(getPath,                    {},                           200, 'no-cache');
+        await assertResponseFor(getPath,                    { 'If-None-Match':badEtag },  200, 'no-cache');
+        await assertResponseFor(getPath,                    { 'If-None-Match':goodEtag }, 304, 'no-cache');
+        await assertResponseFor(getPath + '?ts=1234567890', {},                           200, 'max-age=31536000');
+        await assertResponseFor(getPath + '?ts=1234567890', { 'If-None-Match':badEtag },  200, 'max-age=31536000');
+        await assertResponseFor(getPath + '?ts=1234567890', { 'If-None-Match':goodEtag }, 304, 'max-age=31536000');
       }
     });
 
@@ -482,5 +525,14 @@ function bigFileExists(attDir, sizeMb, idx) {
     do {
       fs.appendFileSync(bigFile, randomBytes(batchSize));
     } while((remaining-=batchSize) > 0); // eslint-disable-line no-cond-assign
+  }
+}
+
+async function badResponse(expectedStatus, fn) {
+  try {
+    await fn();
+    throw new Error('No error was thrown by provided function');
+  } catch(err) {
+    err.responseStatus.should.eql(expectedStatus);
   }
 }
