@@ -82,7 +82,7 @@ const initialize = async () => {
     await migrator.raw('drop owned by current_user');
     // Silence logging from migrations.
     console.log = noop; // eslint-disable-line no-console
-    await migrator.migrate.latest({ directory: appRoot + '/lib/model/migrations' });
+    await migrator.migrate.latest({ directory: [appRoot + '/lib/model/migrations/archive', appRoot + '/lib/model/migrations'] });
   } finally {
     console.log = log; // eslint-disable-line no-console
     await migrator.destroy();
