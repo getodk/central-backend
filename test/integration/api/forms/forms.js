@@ -1094,8 +1094,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   }));
             }))));
 
-      describe('publishingNotes', () => {
-        it('should return publishingNotes with extended metadata', testService(async (service) => {
+      describe('publishNotes', () => {
+        it('should return publishNotes with extended metadata', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await publishWithNote(asAlice, '2', 'this is a publishing note');
@@ -1104,10 +1104,10 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('X-Extended-Metadata', true)
             .expect(200);
 
-          body.publishingNotes.should.equal('this is a publishing note');
+          body.publishNotes.should.equal('this is a publishing note');
         }));
 
-        it('should not return publishingNotes for app-user', testService(async (service) => {
+        it('should not return publishNotes for app-user', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await publishWithNote(asAlice, '2', 'this is a publishing note');
@@ -1123,10 +1123,10 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('X-Extended-Metadata', true)
             .expect(200);
 
-          should.not.exist(body.publishingNotes);
+          should.not.exist(body.publishNotes);
         }));
 
-        it('should not return publishingNotes for project-viewer', testService(async (service) => {
+        it('should not return publishNotes for project-viewer', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await publishWithNote(asAlice, '2', 'this is a publishing note');
@@ -1142,10 +1142,10 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('X-Extended-Metadata', true)
             .expect(200);
 
-          should.not.exist(body.publishingNotes);
+          should.not.exist(body.publishNotes);
         }));
 
-        it('should not return publishingNotes for data-collector', testService(async (service) => {
+        it('should not return publishNotes for data-collector', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await publishWithNote(asAlice, '2', 'this is a publishing note');
@@ -1161,7 +1161,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             .set('X-Extended-Metadata', true)
             .expect(200);
 
-          should.not.exist(body.publishingNotes);
+          should.not.exist(body.publishNotes);
         }));
       });
     });

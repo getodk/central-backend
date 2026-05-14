@@ -195,7 +195,7 @@ describe('api: /projects/:id/forms (versions)', () => {
                 body.map((version) => version.version).should.eql([ '2', '3', '' ]);
               })))));
 
-      describe('publishing notes', () => {
+      describe('publish notes', () => {
         it('should return publish notes', testService(async (service) => {
           const asAlice = await service.login('alice');
 
@@ -207,7 +207,7 @@ describe('api: /projects/:id/forms (versions)', () => {
             .expect(200);
 
           body.map((form) => form.version).should.eql(['3', '2', '']);
-          body.map((form) => form.publishingNotes).should.eql([
+          body.map((form) => form.publishNotes).should.eql([
             'publishing version 3',
             'publishing version 2',
             null
@@ -231,7 +231,7 @@ describe('api: /projects/:id/forms (versions)', () => {
             .expect(200);
           body.map((form) => form.version).should.eql(['2', '']);
           body.forEach((form) => {
-            should.not.exist(form.publishingNotes);
+            should.not.exist(form.publishNotes);
           });
         }));
 
@@ -249,7 +249,7 @@ describe('api: /projects/:id/forms (versions)', () => {
             .expect(200);
           body.map((form) => form.version).should.eql(['2', '']);
           body.forEach((form) => {
-            should.not.exist(form.publishingNotes);
+            should.not.exist(form.publishNotes);
           });
         }));
 
@@ -269,7 +269,7 @@ describe('api: /projects/:id/forms (versions)', () => {
             .expect(200);
           body.map((form) => form.version).should.eql(['2', '']);
           body.forEach((form) => {
-            should.not.exist(form.publishingNotes);
+            should.not.exist(form.publishNotes);
           });
         }));
 
@@ -289,7 +289,7 @@ describe('api: /projects/:id/forms (versions)', () => {
             .expect(200);
           body.map((form) => form.version).should.eql(['2', '']);
           body.forEach((form) => {
-            should.not.exist(form.publishingNotes);
+            should.not.exist(form.publishNotes);
           });
         }));
       });
@@ -484,8 +484,8 @@ describe('api: /projects/:id/forms (versions)', () => {
                 })))));
       });
 
-      describe('publishing notes', () => {
-        it('should return publishing notes', testService(async (service) => {
+      describe('publish notes', () => {
+        it('should return publishNotes', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await publishWithNote(asAlice, '2', 'publishing version 2');
@@ -495,10 +495,10 @@ describe('api: /projects/:id/forms (versions)', () => {
             .expect(200);
 
           body.version.should.equal('2');
-          body.publishingNotes.should.equal('publishing version 2');
+          body.publishNotes.should.equal('publishing version 2');
         }));
 
-        it('should not return publishing notes for app-user', testService(async (service) => {
+        it('should not return publishNotes for app-user', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await publishWithNote(asAlice, '2', 'publishing version 2');
@@ -515,10 +515,10 @@ describe('api: /projects/:id/forms (versions)', () => {
             .expect(200);
 
           body.version.should.equal('2');
-          should.not.exist(body.publishingNotes);
+          should.not.exist(body.publishNotes);
         }));
 
-        it('should not return publishing notes for project-viewer', testService(async (service) => {
+        it('should not return publishNotes for project-viewer', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await publishWithNote(asAlice, '2', 'publishing version 2');
@@ -535,10 +535,27 @@ describe('api: /projects/:id/forms (versions)', () => {
             .expect(200);
 
           body.version.should.equal('2');
-          should.not.exist(body.publishingNotes);
+          should.not.exist(body.publishNotes);
         }));
 
-        it('should not return publishing notes for data-collector', testService(async (service) => {
+        it('should not return notes for public-link', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const publicLinkToken = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+            .send({ displayName: 'test public link' })
+            .expect(200)
+            .then(({ body }) => body.token);
+
+          const { body } = await service.get(`/v1/projects/1/forms/simple/versions/2?st=${publicLinkToken}`)
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+          body.version.should.equal('2');
+          should.not.exist(body.publishNotes);
+        }));
+
+        it('should not return publishNotes for data-collector', testService(async (service) => {
           const asAlice = await service.login('alice');
 
           await publishWithNote(asAlice, '2', 'publishing version 2');
@@ -555,7 +572,7 @@ describe('api: /projects/:id/forms (versions)', () => {
             .expect(200);
 
           body.version.should.equal('2');
-          should.not.exist(body.publishingNotes);
+          should.not.exist(body.publishNotes);
         }));
       });
     });
