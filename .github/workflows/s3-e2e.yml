@@ -37,3 +37,6 @@ jobs:
     - name: E2E Test
       timeout-minutes: 10
       run: ./test/e2e/s3/run-tests.sh
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./server.log ]] || cat ./server.log"
