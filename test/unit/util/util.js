@@ -1,4 +1,5 @@
 const util = require('../../../lib/util/util');
+const should = require('should');
 
 describe('util/util', () => {
   describe('isBlank', () => {
@@ -102,6 +103,27 @@ describe('util/util', () => {
         it(`should decode '${good64}' to '${expected}'`, () => {
           base64ToUtf8(good64).should.equal(expected);
         });
+      });
+    });
+  });
+
+  describe('prependString', () => {
+    const { prependString } = util;
+
+    [
+      [null, 'value', 'value'],
+      [undefined, 'value', 'value'],
+      ['', 'value', 'value'],
+      ['prefix', null, 'prefix'],
+      ['prefix', undefined, 'prefix'],
+      ['prefix', '', 'prefix'],
+      ['prefix', 'value', 'prefix value'],
+      ['hello', 'world', 'hello world'],
+      [null, null, null],
+      [undefined, undefined, undefined],
+    ].forEach(([prefix, x, expected]) => {
+      it(`should return '${expected}' for prefix='${prefix}' and x='${x}'`, () => {
+        should(prependString(prefix)(x)).equal(expected);
       });
     });
   });

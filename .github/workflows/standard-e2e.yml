@@ -15,7 +15,7 @@ jobs:
     services:
       # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
       postgres:
-        image: postgres:14.10
+        image: postgres:14.20
         env:
           POSTGRES_PASSWORD: odktest
         ports:
@@ -23,15 +23,15 @@ jobs:
         # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
-          --health-interval 10s
+          --health-interval 1s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 50
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - name: Set node version
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
-        node-version: 22.16.0
+        node-version-file: package.json
         cache: 'npm'
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
@@ -49,7 +49,13 @@ jobs:
     - name: Backup/restore tests
       timeout-minutes: 10
       run: ./test/e2e/standard/backup-restore.sh
-
+    - name: Backup test - test detection of aborted backup process - sabotage DB
+      run: psql -c 'ALTER ROLE jubilant NOSUPERUSER; REVOKE SELECT ON TABLE knex_migrations FROM jubilant;' postgresql://postgres:odktest@localhost/jubilant
+    - name: Backup test - test detection of aborted backup process
+      timeout-minutes: 2
+      run: ./test/e2e/standard/backup-abortstream.sh
+    - name: Backup test - test detection of aborted backup process - unsabotage DB
+      run: psql -c 'GRANT SELECT ON TABLE knex_migrations TO jubilant' postgresql://postgres:odktest@localhost/jubilant
     - name: Backend Logs
       if: always()
       run: "! [[ -f ./server.log ]] || cat ./server.log"

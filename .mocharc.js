@@ -9,6 +9,7 @@
 
 module.exports = {
   ignore: [
+    'test/bin/**',
     'test/db-migrations/**',
     'test/e2e/**',
   ],

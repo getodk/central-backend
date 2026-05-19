@@ -1,4 +1,5 @@
 const appRoot = require('app-root-path');
+const should = require('should');
 const http = require(appRoot + '/lib/util/http');
 const Option = require(appRoot + '/lib/util/option');
 
@@ -147,6 +148,48 @@ describe('util/http', () => {
         const decoded = urlDecode(undecodable);
         (decoded instanceof Option).should.equal(true);
         decoded.isEmpty().should.equal(true);
+      });
+    });
+  });
+
+  describe('convertToSubmissionVersion', () => {
+    const { convertToSubmissionVersion } = http;
+
+    [
+      { url: '/v1/projects/1/forms/simple/submissions/instanceId', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId' },
+      { url: '/v1/projects/1/forms/simple/submissions/instanceId/attachments', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId/attachments' },
+      { url: '/v1/projects/1/forms/simple/submissions/instanceId/attachments/dummy', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId/attachments/dummy' },
+      { url: '/v1/projects/1/forms/simple/submissions/instanceId/attachments/dummy?foo=bar', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId/attachments/dummy?foo=bar' },
+      { url: '/v1/projects/1/forms/simple/submissions/instanceId?foo=bar', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId?foo=bar' },
+
+      // .xml
+      { url: '/v1/projects/1/forms/simple/submissions/instanceId.xml?foo=bar', instanceId: 'instanceId', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId.xml?foo=bar' },
+      { url: '/v1/projects/1/forms/simple/submissions/instanceId.xml.xml?foo=bar', instanceId: 'instanceId.xml', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/instanceId.xml.xml?foo=bar' },
+      { url: '/v1/projects/1/forms/simple/submissions/.xml', instanceId: '.xml', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/.xml' },
+
+      // IDs that match path components
+      { url: '/v1/projects/1/forms/submissions/draft/submissions/draft', instanceId: 'draft', rootId: 'rootId', expected: '/v1/projects/1/forms/submissions/draft/submissions/rootId/versions/draft' },
+      { url: '/v1/projects/1/forms/draft/submissions/submissions', instanceId: 'submissions', rootId: 'rootId', expected: '/v1/projects/1/forms/draft/submissions/rootId/versions/submissions' },
+
+      // Encoded or partially encoded instance IDs
+      { url: '/v1/projects/1/forms/simple/submissions/:%3A', instanceId: '::', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/:%3A' },
+      { url: '/v1/projects/1/forms/simple/submissions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3', instanceId: 'uuid:adcaefa3-91d7-4770-a49a-1f5607d0f2f3', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3' },
+      { url: '/v1/projects/1/forms/simple/submissions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3.xml', instanceId: 'uuid:adcaefa3-91d7-4770-a49a-1f5607d0f2f3', rootId: 'rootId', expected: '/v1/projects/1/forms/simple/submissions/rootId/versions/uuid%3Aadcaefa3-91d7-4770-a49a-1f5607d0f2f3.xml' },
+    ].forEach(({ url, instanceId, rootId, expected }) => {
+      it(`should return ${expected} for ${url}`, () => {
+        convertToSubmissionVersion(url, instanceId, rootId).should.be.eql(expected);
+      });
+    });
+
+    describe('case-insensitive URLs', () => {
+      [
+        '/v1/projects/1/forms/simple/SUBMISSIONS/instanceId.xml?foo=bar',
+        '/v1/projects/1/forms/simple/submissions/instanceId.XML?foo=bar',
+      ].forEach((url, idx) => {
+        it(`should not map example #${idx+1}`, () => {
+          // expect
+          should.throws(() => convertToSubmissionVersion(url, 'instanceId', 'rootId'));
+        });
       });
     });
   });

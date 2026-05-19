@@ -1,0 +1,34 @@
+rules:
+  no-ambiguous-paths: warn
+  no-empty-servers: warn
+  no-enum-type-mismatch: warn
+  no-example-value-and-externalValue: error
+  no-identical-paths: error
+  no-invalid-media-type-examples:
+    severity: warn
+    allowAdditionalProperties: false
+  no-path-trailing-slash: warn
+  no-required-schema-properties-undefined: warn
+  no-schema-type-mismatch: warn
+  no-server-example.com: warn
+  no-server-trailing-slash: error
+  no-server-variables-empty-enum: error
+  no-undefined-server-variable: error
+  no-unresolved-refs: error
+  no-unused-components: warn
+  nullable-type-sibling: warn
+  operation-2xx-response: warn
+  operation-operationId: error
+  operation-operationId-unique: error
+  operation-operationId-url-safe: error
+  operation-parameters-unique: error
+  operation-summary: warn
+  path-declaration-must-exist: error
+  path-not-include-query: error
+  path-parameters-defined: error
+  security-defined: warn
+  spec: error
+  spec-components-invalid-map-name: error
+  spec-strict-refs: error
+  struct: error
+  tag-description: warn

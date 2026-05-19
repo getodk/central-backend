@@ -70,7 +70,7 @@ describe('api: user-preferences', () => {
 
     await asAlice.put('/v1/user-preferences/project/123/someProperty')
       .send({ propertyValue: 'someValue' })
-      .expect(400); // project 123 doesn't exist
+      .expect(404); // project 123 doesn't exist
   }));
 
   it('PUT/DELETE preference storage operations', testService(async (service) => {
@@ -191,4 +191,62 @@ describe('api: user-preferences', () => {
         });
       });
   }));
+
+  describe('audit log', () => {
+    it('can log audit events for updating and deleting site property', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const { Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
+
+      await asAlice.put('/v1/user-preferences/site/some-preference')
+        .send({ propertyValue: 'some-value' })
+        .expect(200);
+
+      await asAlice.delete('/v1/user-preferences/site/some-preference')
+        .expect(200);
+
+      await asAlice.get('/v1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].action.should.equal('user.preference.delete');
+          body[0].actorId.should.equal(5);
+          body[0].acteeId.should.equal(alice.actor.acteeId);
+          body[0].details.should.eql({ propertyName: 'some-preference', scope: 'site' });
+
+          body[1].action.should.equal('user.preference.update');
+          body[1].actorId.should.equal(5);
+          body[1].acteeId.should.equal(alice.actor.acteeId);
+          body[1].details.should.eql({ propertyName: 'some-preference', propertyValue: 'some-value', scope: 'site' });
+        });
+    }));
+
+    it('can log audit events for updating and deleting project property', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      const { Users } = container;
+      const alice = (await Users.getByEmail('alice@getodk.org')).get();
+
+      await asAlice.put('/v1/user-preferences/project/1/some-preference')
+        .send({ propertyValue: 'some-value' })
+        .expect(200);
+
+      await asAlice.delete('/v1/user-preferences/project/1/some-preference')
+        .expect(200);
+
+      await asAlice.get('/v1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body[0].action.should.equal('user.preference.delete');
+          body[0].actorId.should.equal(5);
+          body[0].acteeId.should.equal(alice.actor.acteeId);
+          body[0].details.should.eql({ propertyName: 'some-preference', projectId: 1, scope: 'project' });
+
+          body[1].action.should.equal('user.preference.update');
+          body[1].actorId.should.equal(5);
+          body[1].acteeId.should.equal(alice.actor.acteeId);
+          body[1].details.should.eql({ propertyName: 'some-preference', propertyValue: 'some-value', projectId: 1, scope: 'project' });
+        });
+    }));
+  });
 });

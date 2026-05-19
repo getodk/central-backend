@@ -1936,6 +1936,17 @@ describe('api: /projects/:id/forms (drafts)', () => {
                   });
               })))));
 
+      it('should update version even if version provided in query parameter has special chars', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/draft')
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=x" version%3D"y')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simple')
+                .then(({ body }) => {
+                  body.version.should.eql('x" version="y');
+                }))))));
+
       it('should log the correct def ids in the form audit log', testService(async (service, { Forms }) => {
         const asAlice = await service.login('alice');
 

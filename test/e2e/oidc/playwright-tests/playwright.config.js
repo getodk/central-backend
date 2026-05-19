@@ -22,7 +22,7 @@ const requestedBrowsers = process.env.ODK_PLAYWRIGHT_BROWSERS || 'firefox';
 const projects = requestedBrowsers
   .split(',')
   .map(name => {
-    if (!Object.prototype.hasOwnProperty.call(availableProjects, name)) {
+    if (!Object.hasOwn(availableProjects, name)) {
       throw new Error(`No project config available with name '${name}'!`);
     }
     const use = availableProjects[name];
@@ -36,14 +36,14 @@ const projects = requestedBrowsers
 const config = {
   testDir: 'src',
   /* Maximum time one test can run for. */
-  timeout: 10 * 1000,
+  timeout: 30 * 1000, // ci: sometimes webkit takes ages to do `browserContext.newPage`
   expect: { timeout: 2000 },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0, // retries mean failure
   workers: process.env.CI ? 1 : undefined,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'line',
+  reporter: [ [ 'html', { outputFolder: 'results/html-report' } ] ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     actionTimeout: 0,
@@ -56,7 +56,7 @@ const config = {
     headless: true,
   },
   projects,
-  outputDir: 'results/',
+  outputDir: 'results/basic',
   globalSetup: require.resolve('./src/global-setup-teardown'),
 };
 

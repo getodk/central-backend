@@ -14,6 +14,18 @@ describe('Config', () => {
     });
   });
 
+  describe('isPublic', () => {
+    it('should be false unless explicitly set otherwise', () => {
+      Config.isPublic.should.be.false();
+      Config.forKey('analytics').isPublic.should.be.false();
+    });
+
+    it('should be true if explicitly set', () => {
+      Config.forKey('login-appearance').isPublic.should.be.true();
+      Config.forKey('logo').isPublic.should.be.true();
+    });
+  });
+
   describe('fromValue', () => {
     // There used to be configs that were not settable. Keeping this code in
     // case there are configs like that in the future.
@@ -25,6 +37,10 @@ describe('Config', () => {
 
     it('should not exist for an unknown key', () => {
       should.not.exist(Config.forKey('unknown').fromValue);
+    });
+
+    it('should not exist for a config that stores a blob', () => {
+      should.not.exist(Config.forKey('logo').fromValue);
     });
 
     it('should return an instance of the correct Config subclass', () => {
@@ -96,32 +112,122 @@ describe('Config', () => {
         value.should.eql({ enabled: true });
       });
     });
+
+    describe('login-appearance', () => {
+      const frame = Config.forKey('login-appearance');
+
+      it('should return a title and description', () => {
+        const { value } = frame.fromValue({ title: 'foo', description: 'bar' });
+        value.should.eql({ title: 'foo', description: 'bar' });
+      });
+
+      it('should ignore blank fields', () => {
+        for (const blank of ['', null, undefined]) {
+          frame.fromValue({ title: 'foo', description: blank }).value.should.eql({
+            title: 'foo'
+          });
+          frame.fromValue({ title: blank, description: 'foo' }).value.should.eql({
+            description: 'foo'
+          });
+        }
+
+        frame.fromValue({ title: '', description: '' }).value.should.eql({});
+      });
+
+      it('should ignore non-string fields', () => {
+        frame.fromValue({ title: 1, description: 2 }).value.should.eql({});
+      });
+
+      it('should ignore unknown fields', () => {
+        const { value } = frame.fromValue({
+          title: 'foo',
+          description: 'bar',
+          baz: 'qux'
+        });
+        value.should.eql({ title: 'foo', description: 'bar' });
+      });
+
+      it('should return an empty object if the value is not an object', () => {
+        frame.fromValue('foo').value.should.eql({});
+      });
+    });
+  });
+
+  describe('fromBlob', () => {
+    it('should return a config', () => {
+      const config = Config.forKey('logo').fromBlob(123);
+      config.key.should.equal('logo');
+      config.blobId.should.equal(123);
+      should.not.exist(config.value);
+    });
+
+    it('should not exist for a config that stores a JSON value', () => {
+      should.not.exist(Config.forKey('analytics').fromBlob);
+    });
+
+    it('should not exist for an unknown key', () => {
+      should.not.exist(Config.forKey('unknown').fromBlob);
+    });
   });
 
   describe('forApi', () => {
-    it('should return a config', () => {
-      const config = Config.forKey('analytics').fromValue({ enabled: true })
+    describe('configs that store JSON values', () => {
+      it('should return a config', () => {
+        const config = Config.forKey('analytics').fromValue({ enabled: true })
+          .with({ setAt: new Date('2021-07-31T01:23:45.678Z') });
+        const result = plain(config.forApi());
+        result.should.be.a.Config();
+        result.should.eql({
+          key: 'analytics',
+          value: { enabled: true },
+          setAt: '2021-07-31T01:23:45.678Z'
+        });
+      });
+
+      it('should return the value as-is for analytics', () => {
+        const config = Config.forKey('analytics').fromValue({ enabled: true });
+        config.forApi().value.should.eql({ enabled: true });
+      });
+
+      it('should return the value as-is for login-appearance', () => {
+        const frame = Config.forKey('login-appearance');
+        const config = frame.fromValue({ title: 'foo', description: 'bar' });
+        config.forApi().value.should.eql({ title: 'foo', description: 'bar' });
+      });
+    });
+
+    it('should return a config that stores a blob', () => {
+      const config = Config.forKey('logo').fromBlob(123)
         .with({ setAt: new Date('2021-07-31T01:23:45.678Z') });
       const result = plain(config.forApi());
       result.should.be.a.Config();
       result.should.eql({
-        key: 'analytics',
-        value: { enabled: true },
+        key: 'logo',
+        blobExists: true,
         setAt: '2021-07-31T01:23:45.678Z'
       });
     });
 
-    it('should return the value for analytics', () => {
-      const config = Config.forKey('analytics').fromValue({ enabled: true });
-      config.forApi().value.should.eql({ enabled: true });
-    });
-
-    it('should not return the value for an unknown key', () => {
-      const config = new (Config.forKey('unknown'))({
+    it('should only return basic fields for an unknown key', () => {
+      const unknownValue = new (Config.forKey('unknown'))({
         key: 'unknown',
-        value: { foo: 'bar' }
+        value: { foo: 'bar' },
+        setAt: '2021-07-31T01:23:45.678Z'
       });
-      should.not.exist(config.forApi().value);
+      unknownValue.forApi().should.eql({
+        key: 'unknown',
+        setAt: '2021-07-31T01:23:45.678Z'
+      });
+
+      const unknownBlob = new (Config.forKey('unknown'))({
+        key: 'unknown',
+        blobId: 123,
+        setAt: '2021-07-31T01:23:45.678Z'
+      });
+      unknownBlob.forApi().should.eql({
+        key: 'unknown',
+        setAt: '2021-07-31T01:23:45.678Z'
+      });
     });
   });
 });

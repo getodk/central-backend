@@ -52,6 +52,10 @@ describe('task: accounts', () => {
     it('should complain if the password is too short', testTask(() =>
       createUser('testuser@getodk.org', 'short')
         .catch((problem) => problem.problemCode.should.equal(400.21))));
+
+    it('should complain if the password is too long', testTask(() =>
+      createUser('testuser@getodk.org', 'longggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg')
+        .catch((problem) => problem.problemCode.should.equal(400.38))));
   });
 
   describe('promoteUser', () => {
@@ -97,6 +101,11 @@ describe('task: accounts', () => {
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
         .then(() => setUserPassword('testuser@getodk.org', 'aoeu'))
         .catch((problem) => problem.problemCode.should.equal(400.21))));
+
+    it('should complain about a password that is too long', testTask(({ Users }) =>
+      Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
+        .then(() => setUserPassword('testuser@getodk.org', 'longggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg'))
+        .catch((problem) => problem.problemCode.should.equal(400.38))));
 
     it('should delete sessions', testTask(async ({ Sessions, Users }) => {
       const user = await Users.create(User.fromApi({

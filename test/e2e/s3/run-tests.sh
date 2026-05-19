@@ -52,8 +52,11 @@ EOF
   read -rp ''
 fi
 
+log "Waiting for fake-s3-server to start..."
+wait-for-it localhost:9000 --strict --timeout=10 -- echo '[test/e2e/s3/run-tests] fake-s3-server is UP!'
+
 NODE_CONFIG_ENV=s3-dev node lib/bin/s3-create-bucket.js
-NODE_CONFIG_ENV=s3-dev make run &
+NODE_CONFIG_ENV=s3-dev make run | tee server.log &
 serverPid=$!
 
 log 'Waiting for backend to start...'

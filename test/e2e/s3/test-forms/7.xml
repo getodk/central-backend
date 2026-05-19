@@ -5,13 +5,13 @@
     <model odk:xforms-version="1.0.0">
       <itext>
         <translation lang="default" default="true()">
-          <text id="image-big-1-bin">
-            <value>Big Bin 1</value>
-            <value form="image">jr://images/big-1.bin</value>
+          <text id="image-tiny-2-dat">
+            <value>Tiny Bin 1</value>
+            <value form="image">jr://images/tiny-1.bin</value>
           </text>
-          <text id="image-big-2-bin">
-            <value>Big Bin 2</value>
-            <value form="image">jr://images/big-2.bin</value>
+          <text id="image-tiny-1-dat">
+            <value>Tiny Bin 2</value>
+            <value form="image">jr://images/tiny-2.bin</value>
           </text>
         </translation>
       </itext>
