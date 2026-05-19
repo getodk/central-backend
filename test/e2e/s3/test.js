@@ -330,7 +330,7 @@ describe('s3 support', () => {
     });
 
     after(() => {
-      if(server) return new Promise(resolve => server.close(resolve));
+      if(server) return new Promise(resolve => server.close(resolve)); // eslint-disable-line no-promise-executor-return
     });
 
     it('should handle upload failure gracefully', async () => {
