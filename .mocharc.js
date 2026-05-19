@@ -8,9 +8,4 @@
 // except according to the terms contained in the LICENSE file.
 
 module.exports = {
-  ignore: [
-    'test/bin/**',
-    'test/db-migrations/**',
-    'test/e2e/**',
-  ],
 };
