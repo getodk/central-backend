@@ -171,7 +171,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
   });
 
   describe('/:id GET', () => {
-    it('should return 403 unless the user can delete', testService(async (service) => {
+    it('should return 403 unless the user can read', testService(async (service) => {
       const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
       const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links').send({ displayName: 'test1' }).expect(200);
       await asChelsea.get(`/v1/projects/1/forms/simple/public-links/${pl.id}`).expect(403);
