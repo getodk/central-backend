@@ -478,7 +478,8 @@ describe('api: /projects', () => {
                   'dataset.list',
                   'dataset.read',
                   'entity.list',
-                  'entity.read'
+                  'entity.read',
+                  'actor_property.list'
                 ]);
               }))))));
   });
