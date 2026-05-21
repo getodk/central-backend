@@ -108,8 +108,10 @@ test-db-migrations:
 	    ./test/db-migrations/**/*.spec.js
 
 .PHONY: test-fast
+
 test-fast: node_version
-	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
+	MOCHA_OPTIONS="--fgrep @slow --invert" make test-unit
+	MOCHA_OPTIONS="--fgrep @slow --invert" make test-integration
 
 .PHONY: test-integration
 test-integration: node_version
