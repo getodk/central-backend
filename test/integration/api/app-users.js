@@ -333,12 +333,86 @@ describe('api: /projects/:id/app-users', () => {
 
       await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
         .send({ properties: { nonexistent: 'value' } })
-        .expect(404)
+        .expect(400)
         .then(({ body }) => {
-          body.code.should.equal(404.1);
-          body.message.should.equal('Could not find the resource you were looking for.');
+          body.code.should.equal(400.8);
+          body.details.field.should.equal('properties');
+          body.details.value.should.equal('nonexistent');
         });
     }));
+
+    it('should be a no-op if properties is absent from the body', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      // patch without properties key — existing values unchanged
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({})
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ region: 'north' });
+        });
+    }));
+
+    it('should treat empty string as null (unsetting the property)', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: '' } })
+        .expect(200)
+        .then(({ body }) => {
+          should(body.properties).be.null();
+        });
+    }));
+
+    it('should return 400 if properties is not an object', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: 'not an object' })
+        .expect(400)
+        .then(({ body }) => { body.code.should.equal(400.8); });
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: ['a', 'b'] })
+        .expect(400)
+        .then(({ body }) => { body.code.should.equal(400.8); });
+    }));
+
+    it('should return 400 if a property value is not a string or null', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 42 } })
+        .expect(400)
+        .then(({ body }) => { body.code.should.equal(400.8); });
+    }));
+
+    // The property-setting logic (validation, coercion, bulk upsert/delete) is shared
+    // under the hood with public links. The tests above cover it fully; public-links
+    // tests only verify the happy-path integration without re-testing every edge case.
   });
 
   describe('/:id DELETE', () => {

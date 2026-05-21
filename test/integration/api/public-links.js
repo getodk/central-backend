@@ -282,7 +282,7 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
         });
     }));
 
-    it('should return 404 if the actor property does not exist', testService(async (service) => {
+    it('should return 400 if the actor property does not exist', testService(async (service) => {
       const asAlice = await service.login('alice');
       const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
         .send({ displayName: 'test link' })
@@ -290,8 +290,10 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
 
       await asAlice.patch(`/v1/projects/1/forms/simple/public-links/${pl.id}`)
         .send({ properties: { nonexistent: 'value' } })
-        .expect(404);
+        .expect(400);
     }));
+
+    // Additional behavior tested in app-users test because the machinery of setting properties is the same.
   });
 
   describe('/:id DELETE', () => {
