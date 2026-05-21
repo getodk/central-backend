@@ -99,7 +99,9 @@ debug: base
 # TEST & LINT
 
 .PHONY: test
-test: lint test-unit test-integration
+test: lint
+	$(MAKE) test-unit
+	$(MAKE) test-integration
 
 .PHONY: test-db-migrations
 test-db-migrations:
@@ -108,10 +110,9 @@ test-db-migrations:
 	    ./test/db-migrations/**/*.spec.js
 
 .PHONY: test-fast
-
 test-fast: node_version
-	MOCHA_OPTIONS="--fgrep @slow --invert" make test-unit
-	MOCHA_OPTIONS="--fgrep @slow --invert" make test-integration
+	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-unit
+	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-integration
 
 .PHONY: test-integration
 test-integration: node_version
