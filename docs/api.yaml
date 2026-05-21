@@ -3361,7 +3361,7 @@ paths:
                 updatedAt: 2018-03-21T12:45:02.312Z
             application/json; extended:
               schema:
-                $ref: '#/components/schemas/ExtendedForm'
+                $ref: '#/components/schemas/ExtendedFormWithPublishNotes'
               example:
                 projectId: 1
                 xmlFormId: simple
@@ -3389,6 +3389,7 @@ paths:
                   deletedAt: 2018-04-18T23:42:11.406Z
                 entityRelated: false
                 publicLinks: 4
+                publishNotes: 'Fixed validation rules for required fields'
     delete:
       tags:
       - Individual Form
@@ -12618,6 +12619,11 @@ components:
               type: number
               example: 4
               description: The number of Public Links that can submit to the Form. This does not include Public Links that have been revoked.
+    ExtendedFormWithPublishNotes:
+      allOf:
+        - $ref: '#/components/schemas/ExtendedForm'
+        - type: object
+          properties:
             publishNotes:
               type: string
               example: Fixed validation rules for required fields

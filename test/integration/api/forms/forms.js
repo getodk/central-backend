@@ -1163,6 +1163,44 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
 
           should.not.exist(body.publishNotes);
         }));
+
+        it('should not return publishNotes for data-collector using /forms endpoint', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'this is a publishing note');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaActorId}`)
+            .expect(200);
+
+          const { body } = await chelsea.get('/v1/projects/1/forms')
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          body.length.should.be.greaterThan(0);
+          body.forEach((form) => should.not.exist(form.publishNotes));
+        }));
+
+        it('should not return publishNotes for data-collector using /projects?forms=true endpoint', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'this is a publishing note');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaActorId}`)
+            .expect(200);
+
+          const { body: projects } = await chelsea.get('/v1/projects?forms=true')
+            .expect(200);
+
+          projects[0].formList.forEach((form) => should.not.exist(form.publishNotes));
+        }));
       });
     });
 
