@@ -1925,7 +1925,6 @@ paths:
                   deletedAt: 2018-04-18T23:42:11.406Z
                   token: d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT
                   projectId: 1
-                  lastUsed: 2018-04-14T08:34:21.633Z
             application/json; extended:
               schema:
                 type: array
