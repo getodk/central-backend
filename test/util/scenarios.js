@@ -2,6 +2,14 @@ const appRoot = require('app-root-path');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const testData = require(appRoot + '/test/data/xml');
 
+const publishWithNote = async (asAlice, version, note) => {
+  await asAlice.post('/v1/projects/1/forms/simple/draft')
+    .expect(200);
+  await asAlice.post(`/v1/projects/1/forms/simple/draft/publish?version=${version}`)
+    .set('X-Action-Notes', note)
+    .expect(200);
+};
+
 const createConflict = async (user, container) => {
   await user.post('/v1/projects/1/forms/simpleEntity/submissions')
     .send(testData.instances.simpleEntity.one)
@@ -29,5 +37,6 @@ const createConflict = async (user, container) => {
 };
 
 module.exports = {
-  createConflict
+  createConflict,
+  publishWithNote
 };

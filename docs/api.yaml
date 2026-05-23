@@ -41,6 +41,11 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2026.2
+
+    **Changed**:
+    - The [Getting Form Details](/central-api-form-management/#getting-form-details), [Listing Published Form Versions](/central-api-form-management/#listing-published-form-versions) and [Getting Form Version Details](/central-api-form-management/#getting-form-version-details) endpoints now return a `publishNotes` field in extended metadata. 
+
     ## ODK Central v2026.1
 
     **Added**:
@@ -3356,7 +3361,7 @@ paths:
                 updatedAt: 2018-03-21T12:45:02.312Z
             application/json; extended:
               schema:
-                $ref: '#/components/schemas/ExtendedForm'
+                $ref: '#/components/schemas/ExtendedFormWithPublishNotes'
               example:
                 projectId: 1
                 xmlFormId: simple
@@ -3384,6 +3389,7 @@ paths:
                   deletedAt: 2018-04-18T23:42:11.406Z
                 entityRelated: false
                 publicLinks: 4
+                publishNotes: 'Fixed validation rules for required fields'
     delete:
       tags:
       - Individual Form
@@ -4613,6 +4619,7 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
+                publishNotes: Fixed validation rules for required fields
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}:
     get:
       tags:
@@ -4654,6 +4661,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Form'
+            application/json; extended:
+              schema:
+                $ref: '#/components/schemas/ExtendedFormVersion'
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}.xml:
     get:
       tags:
@@ -12609,6 +12619,15 @@ components:
               type: number
               example: 4
               description: The number of Public Links that can submit to the Form. This does not include Public Links that have been revoked.
+    ExtendedFormWithPublishNotes:
+      allOf:
+        - $ref: '#/components/schemas/ExtendedForm'
+        - type: object
+          properties:
+            publishNotes:
+              type: string
+              example: Fixed validation rules for required fields
+              description: The notes provided when the current Form version was published (via the `X-Action-Notes` header). Only returned to users with `form.update` permission.
     ExtendedFormVersion:
       allOf:
         - $ref: '#/components/schemas/Form'
@@ -12620,6 +12639,10 @@ components:
             excelContentType:
               type: string
               description: If the Form was created by uploading an Excel file, this field contains the MIME type of that file.
+            publishNotes:
+              type: string
+              example: Fixed validation rules for required fields
+              description: The notes provided when this version was published (via the `X-Action-Notes` header). Only returned to users with `form.update` permission.
     FormAttachment:
       type: object
       required:
