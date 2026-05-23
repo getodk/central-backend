@@ -100,7 +100,8 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=insecure npx mocha --recursive
+	$(MAKE) test-unit
+	$(MAKE) test-integration
 
 .PHONY: test-db-migrations
 test-db-migrations:
@@ -110,7 +111,8 @@ test-db-migrations:
 
 .PHONY: test-fast
 test-fast: node_version
-	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
+	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-unit
+	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-integration
 
 .PHONY: test-integration
 test-integration: node_version
