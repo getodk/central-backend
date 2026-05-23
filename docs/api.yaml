@@ -11734,6 +11734,8 @@ paths:
           content:
             "{the MIME type of the logo itself}":
               example: (binary data)
+        "304":
+          description:  Not Modified
         "404":
           description: Not Found
           content:
@@ -11788,6 +11790,8 @@ paths:
           content:
             "{the MIME type of the hero image itself}":
               example: (binary data)
+        "304":
+          description:  Not Modified
         "404":
           description: Not Found
           content:
