@@ -82,7 +82,7 @@ describe('legacy backups', () => {
       (await promisify(readFile)(join(dirpath, 'two'))).toString('utf8').should.equal('test file two');
     }));
 
-    it('should create archive that is immediately decryptable', async function() {
+    it('should create archive that is immediately decryptable @slow', async function() {
       this.timeout(30_000);
 
       // given

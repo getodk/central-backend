@@ -6967,7 +6967,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.not.equal(originalHash);
       }));
 
-      it('does not change hash after an entity is purged', testServiceFullTrx(async (service, container) => {
+      it('does not change hash after an entity is purged @slow', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
@@ -6992,7 +6992,7 @@ describe('datasets and entities', () => {
         hash3.should.not.equal(hash1);
       }));
 
-      it('changes hash after an entity is restored', testServiceFullTrx(async (service, container) => {
+      it('changes hash after an entity is restored @slow', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
@@ -7018,7 +7018,7 @@ describe('datasets and entities', () => {
         [hash1, hash2, hash3].should.be.unique();
       }));
 
-      it('changes hash after an entity is undeleted, then another entity is deleted', testServiceFullTrx(async (service, container) => {
+      it('changes hash after an entity is undeleted, then another entity is deleted @slow', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
@@ -7064,7 +7064,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.not.equal(originalHash);
       }));
 
-      it('computes hash based on timestamps and the entity count', testServiceFullTrx(async (service, container) => {
+      it('computes hash based on timestamps and the entity count @slow', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
