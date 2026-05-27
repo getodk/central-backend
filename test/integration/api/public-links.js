@@ -60,6 +60,25 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
               body[0].actorId.should.equal(5);
               body[0].acteeId.should.be.a.uuid();
             })))));
+
+    it('should set actor property values when creating public link', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+        .send({
+          displayName: 'test link',
+          properties: { region: 'north' }
+        })
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/forms/simple/public-links/${pl.id}`)
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ region: 'north' });
+        });
+    }));
   });
 
   describe('GET', () => {
