@@ -79,6 +79,26 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
           body.properties.should.eql({ region: 'north' });
         });
     }));
+
+    it('should log the property set in the audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+        .send({
+          displayName: 'test link',
+          properties: { region: 'north' }
+        })
+        .expect(200);
+
+      const actor = await container.Actors.getById(pl.id).then((o) => o.get());
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=public_link.property.set').expect(200);
+      audits.length.should.equal(1);
+      audits[0].actorId.should.equal(5); // alice
+      audits[0].acteeId.should.equal(actor.acteeId);
+      audits[0].details.properties.should.eql({ region: 'north' });
+    }));
   });
 
   describe('GET', () => {
@@ -313,6 +333,27 @@ describe('api: /projects/:id/forms/:id/public-links', () => {
     }));
 
     // Additional behavior tested in app-users test because the machinery of setting properties is the same.
+
+    it('should log the property set in the audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: pl } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+        .send({ displayName: 'test link' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/forms/simple/public-links/${pl.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      const actor = await container.Actors.getById(pl.id).then((o) => o.get());
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=public_link.property.set').expect(200);
+      audits.length.should.equal(1);
+      audits[0].actorId.should.equal(5); // alice
+      audits[0].acteeId.should.equal(actor.acteeId);
+      audits[0].details.properties.should.eql({ region: 'north' });
+    }));
   });
 
   describe('/:id DELETE', () => {
