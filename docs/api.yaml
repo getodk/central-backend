@@ -44,17 +44,20 @@ info:
     ## ODK Central v2026.2
 
     **Added**:
-    - Actor properties allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like region or supervisor.
+    - [Actor Properties](/central-api-accounts-and-users/#actor-properties) allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like region or supervisor.
       - [POST /projects/:id/actor-properties](/central-api-accounts-and-users/#registering-an-actor-property-name) to register a new property name for a project.
       - [GET /projects/:id/actor-properties](/central-api-accounts-and-users/#listing-actor-property-names) to list property names. Use `X-Extended-Metadata: true` to also retrieve the distinct values currently in use.
-      - [GET /projects/:id/app-users/:id](/central-api-accounts-and-users/#getting-app-user-details) to get a single App User. Use `X-Extended-Metadata: true` to include property values.
       - [PATCH /projects/:id/app-users/:id](/central-api-accounts-and-users/#setting-actor-property-values-on-an-app-user) to set or unset property values on an App User.
-      - [GET /projects/:id/forms/:xmlFormId/public-links/:id](/central-api-form-management/#getting-link-details) to get a single Public Link. Use `X-Extended-Metadata: true` to include property values.
       - [PATCH /projects/:id/forms/:xmlFormId/public-links/:id](/central-api-form-management/#setting-actor-property-values-on-a-link) to set or unset property values on a Public Link.
-    - New audit log events: `actor.property.create`, `field_key.property.set`, and `public_link.property.set`.
-    
+      - New audit log events: `actor_property.create`, `field_key.property.set`, and `public_link.property.set`.
+
     **Changed**:
     - The [Getting Form Details](/central-api-form-management/#getting-form-details), [Listing Published Form Versions](/central-api-form-management/#listing-published-form-versions) and [Getting Form Version Details](/central-api-form-management/#getting-form-version-details) endpoints now return a `publishNotes` field in extended metadata. 
+    - Several existing endpoints now support [Actor Properties](/central-api-accounts-and-users/#actor-properties):
+      - [GET /projects/:id/app-users](/central-api-accounts-and-users/#listing-all-app-users) and [GET /projects/:id/app-users/:id](/central-api-accounts-and-users/#getting-app-user-details) now return a `properties` object in extended metadata.
+      - [POST /projects/:id/app-users](/central-api-accounts-and-users/#creating-a-new-app-user) now accepts an optional `properties` object to set property values at creation time.
+      - [GET /projects/:id/forms/:xmlFormId/public-links](/central-api-form-management/#listing-all-links) and [GET /projects/:id/forms/:xmlFormId/public-links/:id](/central-api-form-management/#getting-link-details) now return a `properties` object in extended metadata.
+      - [POST /projects/:id/forms/:xmlFormId/public-links](/central-api-form-management/#creating-a-link) now accepts an optional `properties` object to set property values at creation time.
 
     ## ODK Central v2026.1
 
@@ -973,7 +976,7 @@ tags:
     * `public_link.session.end` when a Public Link's access is revoked.
     * `public_link.delete` when a Public Link is deleted.
     * `public_link.property.set` when actor property values are set on a Public Link.
-    * `actor.property.create` when a new actor property name is registered for a project.
+    * `actor_property.create` when a new actor property name is registered for a project.
     * `submission.create` when a new Submission is created.
     * `submission.update` when a Submission's metadata is updated.
     * `submission.update.version` when a Submission XML data is updated.
@@ -1916,7 +1919,7 @@ paths:
       description: |-
         Currently, there are no paging or filtering options, so listing `App User`s will get you every App User in the system, every time.
 
-        This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `lastUsed` timestamp of each App User, as well as to retrieve the details of the `Actor` the App User was `createdBy`.
+        This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the `lastUsed` timestamp of each App User, the details of the `Actor` the App User was `createdBy`, and a `properties` object containing any actor property values set on the App User.
       operationId: listAllAppUsers
       parameters:
       - name: projectId
@@ -1945,7 +1948,6 @@ paths:
                   deletedAt: 2018-04-18T23:42:11.406Z
                   token: d1!E2GVHgpr4h9bpxxtqUJ7EVJ1Q$Dusm2RBXg8XyVJMCBCbvyE8cGacxUx3bcUT
                   projectId: 1
-                  lastUsed: 2018-04-14T08:34:21.633Z
             application/json; extended:
               schema:
                 type: array
@@ -1969,6 +1971,8 @@ paths:
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
                 lastUsed: 2018-04-14T08:34:21.633Z
+                properties:
+                  region: North
     post:
       tags:
       - App Users
@@ -1977,6 +1981,8 @@ paths:
         The only information required to create a new `App User` is its `displayName` (this is called "Nickname" in the administrative panel).
 
         When an App User is created, they are assigned no rights. They will be able to authenticate and list forms on a mobile client, but the form list will be empty, as the list only includes Forms that the App User has read access to. Once an App User is created, you'll likely wish to use the [Form Assignments resource](/central-api-form-management/#form-assignments) to actually assign the `app-user` role to them for the Forms you wish.
+
+        You may also optionally provide a `properties` object to set pre-registered [Actor Property](/central-api-accounts-and-users/#actor-properties) values on the App User at creation time.
       operationId: createAppUser
       parameters:
       - name: projectId
@@ -1997,8 +2003,16 @@ paths:
                 displayName:
                   type: string
                   description: The friendly nickname of the `App User` to be created.
+                properties:
+                  type: object
+                  description: An optional object mapping pre-registered [Actor Property](/central-api-accounts-and-users/#actor-properties) names to string values.
+                  additionalProperties:
+                    type: string
+                    nullable: true
               example:
                 displayName: My Display Name
+                properties:
+                  region: North
         required: false
       responses:
         "200":
@@ -2117,11 +2131,11 @@ paths:
       - App Users
       summary: Setting Actor Property Values on an App User
       description: |-
-        Sets or unsets actor property values on an App User. The body must contain a `properties` object mapping property names to string values or `null`. Sending `null` for a property unsets it. Property names must have been registered on the project via `POST /v1/projects/{projectId}/actor-properties` before they can be set.
+        Sets or unsets pre-registered [Actor Property](/central-api-accounts-and-users/#actor-properties) values on an App User. The body must contain a `properties` object mapping property names to string values or `null`. Sending `null` for a property unsets it.
 
         Returns the extended App User, including a `properties` object containing all currently set property values.
 
-        Requires `project.update` permission.
+        Requires `field_key.update` permission.
       operationId: patchAppUser
       parameters:
       - name: id
@@ -2244,7 +2258,7 @@ paths:
 
         Property names follow the same rules as Entity property names: they must be non-empty, may contain letters, digits, hyphens, and underscores, and the name `displayName` (case-insensitive) is reserved.
 
-        Requires `project.update` permission.
+        Requires `actor_property.update` permission.
       operationId: createActorProperty
       parameters:
       - name: projectId
@@ -5369,7 +5383,7 @@ paths:
       description: |-
         This will list every Public Access Link upon this Form.
 
-        This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to retrieve the Actor the Link was `createdBy`.
+        This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally retrieve the Actor the Link was `createdBy` and a `properties` object containing any actor property values set on the Link.
       operationId: listAllLinks
       parameters:
       - name: projectId
@@ -5426,17 +5440,16 @@ paths:
                   type: user
                   updatedAt: 2018-04-18T23:42:11.406Z
                   deletedAt: 2018-04-18T23:42:11.406Z
+                properties:
+                  region: North
     post:
       tags:
       - Public Access Links
       summary: Creating a Link
-      description: 'To create a new Public Access Link to this Form, you must send
-        at least a `displayName` for the resulting Actor. You may also provide `once:
-        true` if you want to create a link that [can only be filled by each respondent
-        once](https://blog.enketo.org/single-submission-surveys/). This setting is
-        enforced by Enketo using local device tracking; the link is still distributable
-        to multiple recipients, and the enforcement can be defeated by using multiple
-        browsers or devices.'
+      description: |-
+        To create a new Public Access Link to this Form, you must send at least a `displayName` for the resulting Actor. You may also provide `once: true` if you want to create a link that [can only be filled by each respondent once](https://blog.enketo.org/single-submission-surveys/). This setting is enforced by Enketo using local device tracking; the link is still distributable to multiple recipients, and the enforcement can be defeated by using multiple browsers or devices.
+
+        You may also optionally provide a `properties` object to set pre-registered [Actor Property](/central-api-accounts-and-users/#actor-properties) values on the Link at creation time.
       operationId: createLink
       parameters:
       - name: projectId
@@ -5471,9 +5484,17 @@ paths:
                   description: If set to `true`, an Enketo [single submission survey](https://blog.enketo.org/single-submission-surveys/)
                     will be created instead of a standard one, limiting respondents
                     to a single submission each.
+                properties:
+                  type: object
+                  description: An optional object mapping pre-registered [Actor Property](/central-api-accounts-and-users/#actor-properties) names to string values.
+                  additionalProperties:
+                    type: string
+                    nullable: true
               example:
                 displayName: my public link
                 once: false
+                properties:
+                  region: North
         required: false
       responses:
         "200":
@@ -5578,9 +5599,11 @@ paths:
       - Public Access Links
       summary: Setting Actor Property Values on a Link
       description: |-
-        Sets or unsets actor property values on a Public Access Link. The body must contain a `properties` object mapping property names to string values or `null`. Sending `null` for a property unsets it. Property names must have been registered on the project via `POST /v1/projects/{projectId}/actor-properties` before they can be set.
+        Sets or unsets pre-registered [Actor Property](/central-api-accounts-and-users/#actor-properties) values on a Public Access Link. The body must contain a `properties` object mapping property names to string values or `null`. Sending `null` for a property unsets it.
 
         Returns the extended Public Link, including a `properties` object containing all currently set property values.
+
+        Requires `public_link.update` permission.
       operationId: patchLink
       parameters:
       - name: projectId
