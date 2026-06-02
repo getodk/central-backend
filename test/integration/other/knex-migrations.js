@@ -20,7 +20,7 @@ const populateUsers = require('../fixtures/01-users');
 const { getFormFields } = require('../../../lib/data/schema');
 
 const withTestDatabase = withKnex(config.get('test.database'));
-const migrationsDir = appRoot + '/lib/model/migrations';
+const migrationsDir = [appRoot + '/lib/model/migrations/archive', appRoot + '/lib/model/migrations'];
 const upToMigration = (toName, inclusive = true) => withTestDatabase(async (migrator) => {
   await migrator.raw('drop owned by current_user');
   const migrations = await migrator.migrate.list({ directory: migrationsDir });
