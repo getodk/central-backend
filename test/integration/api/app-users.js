@@ -80,6 +80,68 @@ describe('api: /projects/:id/app-users', () => {
           body.properties.should.eql({ region: 'north' });
         });
     }));
+
+    it('should log the property set in the audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({
+          displayName: 'test user',
+          properties: { region: 'north' }
+        })
+        .expect(200);
+
+      const actor = await container.Actors.getById(appUser.id).then((o) => o.get());
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=field_key.property.set').expect(200);
+      audits.length.should.equal(1);
+      audits[0].actorId.should.equal(5); // alice
+      audits[0].acteeId.should.equal(actor.acteeId);
+      audits[0].details.properties.should.eql({ region: 'north' });
+    }));
+
+    it('should not log add audit log event if property set is empty', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      await asAlice.post('/v1/projects/1/app-users')
+        .send({
+          displayName: 'test user',
+          properties: { }
+        })
+        .expect(200);
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=field_key.property.set').expect(200);
+      audits.length.should.equal(0);
+    }));
+
+    it('should log when a property is unset in the audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'team' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({
+          displayName: 'test user',
+          properties: { team: 'abc', region: 'north' }
+        })
+        .expect(200);
+
+      // unset a property
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: '' } })
+        .expect(200);
+
+      const actor = await container.Actors.getById(appUser.id).then((o) => o.get());
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=field_key.property.set').expect(200);
+      audits.length.should.equal(2);
+      audits[0].actorId.should.equal(5); // alice
+      audits[0].acteeId.should.equal(actor.acteeId);
+
+      audits[0].details.properties.should.eql({ region: null });
+    }));
   });
 
   describe('GET', () => {
@@ -432,6 +494,27 @@ describe('api: /projects/:id/app-users', () => {
     // The property-setting logic (validation, coercion, bulk upsert/delete) is shared
     // under the hood with public links. The tests above cover it fully; public-links
     // tests only verify the happy-path integration without re-testing every edge case.
+
+    it('should log the property set in the audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      const actor = await container.Actors.getById(appUser.id).then((o) => o.get());
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=field_key.property.set').expect(200);
+      audits.length.should.equal(1);
+      audits[0].actorId.should.equal(5); // alice
+      audits[0].acteeId.should.equal(actor.acteeId);
+      audits[0].details.properties.should.eql({ region: 'north' });
+    }));
   });
 
   describe('/:id DELETE', () => {
