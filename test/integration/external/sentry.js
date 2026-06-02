@@ -17,7 +17,7 @@ describe('sentry', () => {
       mockSentry?.close();
     });
 
-    it('should include odk-task tag in error event', async () => {
+    it('should include odk-task tag in error event @slow', async () => {
       // given
       const env = {
         PATH: process.env.PATH, // ensure NodeJS is available to child process
