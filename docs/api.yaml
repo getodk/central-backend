@@ -44,7 +44,7 @@ info:
     ## ODK Central v2026.2
 
     **Added**:
-    - [Actor Properties](/central-api-accounts-and-users/#actor-properties) allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like region or supervisor.
+    - [Actor Properties](/central-api-accounts-and-users/#actor-properties) allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like team, region or supervisor.
       - [POST /projects/:id/actor-properties](/central-api-accounts-and-users/#registering-an-actor-property-name) to register a new property name for a project.
       - [GET /projects/:id/actor-properties](/central-api-accounts-and-users/#listing-actor-property-names) to list property names. Use `X-Extended-Metadata: true` to also retrieve the distinct values currently in use.
       - [PATCH /projects/:id/app-users/:id](/central-api-accounts-and-users/#setting-actor-property-values-on-an-app-user) to set or unset property values on an App User.
