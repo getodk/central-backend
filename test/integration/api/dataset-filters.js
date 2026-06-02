@@ -258,4 +258,74 @@ describe('Dataset Access Filters', () => {
         });
     }));
   });
+
+  it('should return null set of entities if actor property is not set', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    // Register actor property names for the project
+    await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+    // Create a "trees" dataset with properties: region, species
+    await createDataset(asAlice, 1, 'trees', ['region', 'species']);
+
+    // North region: oak
+    await createEntities(asAlice, 1, 1, 'trees', [], { region: 'north', species: 'oak' }, 'North Oak');
+    // Region for this tree is null
+    await createEntities(asAlice, 1, 1, 'trees', [], { species: 'pine' }, 'Regionless Pine');
+
+    // Publish a survey form with the trees dataset
+    await asAlice.post('/v1/projects/1/forms')
+      .send(testData.forms.consumeDatasets)
+      .set('Content-Type', 'application/xml')
+      .expect(200);
+    await asAlice.patch('/v1/projects/1/forms/consumeDatasets/draft/attachments/trees.csv')
+      .send({ dataset: true })
+      .expect(200);
+    await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish')
+      .expect(200);
+
+    // Create an app user
+    const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+      .send({ displayName: 'Unassigned Trainee (no region set)' })
+      .expect(200);
+
+    // Assign the app user to the form
+    await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`)
+      .expect(200);
+
+    // Set up access filter rules for trees dataset:
+    //   trees.region -> actor property region
+    await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
+      .send({ datasetProperty: 'region', actorProperty: 'region' })
+      .expect(200);
+
+    // Fetch trees.csv as the app user
+    // Should only get trees that match BOTH region=north AND species=oak (2 trees)
+    await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets/attachments/trees.csv`)
+      .expect(200)
+      .then(({ text }) => {
+        const rows = text.trim().split('\n');
+        rows.length.should.equal(1); // 1 header, no data
+      });
+
+    // Check where app user has property set but entity doesn't have it set
+    const { body: appUserNorth } = await asAlice.post('/v1/projects/1/app-users')
+      .send({
+        displayName: 'Assigned Expert',
+        properties: { region: 'north' }
+      })
+      .expect(200);
+
+    // Assign the app user to the form
+    await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserNorth.id}`)
+      .expect(200);
+
+    // Fetch trees.csv as the app user
+    await service.get(`/v1/key/${appUserNorth.token}/projects/1/forms/consumeDatasets/attachments/trees.csv`)
+      .expect(200)
+      .then(({ text }) => {
+        const rows = text.trim().split('\n');
+        rows.length.should.equal(2); // 1 header + 1 north oak tree
+      });
+  }));
 });
