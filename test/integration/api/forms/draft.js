@@ -1483,6 +1483,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body.version.should.equal('');
                 body.sha256.should.equal('93fdcefabfe5b6ea49f207e0c6fc8ba72ceb34828bff9c7929ef56eafd2d84cc');
                 body.draftToken.should.be.a.token();
+                body.webformsEnabled.should.be.eql(true);
               })))));
 
       it('should give extended draft details', testService((service) =>
@@ -1633,6 +1634,78 @@ describe('api: /projects/:id/forms (drafts)', () => {
                 body[0].details.oldDraftDefId.should.equal(body[1].details.newDraftDefId);
                 body[0].details.oldDraftDefId.should.be.a.Number();
               })))));
+    });
+
+    describe('/:id PATCH', () => {
+      it('should reject unless the user can update', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const asChelsea = await service.login('chelsea');
+
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+
+        await asChelsea.patch('/v1/projects/1/forms/simple/draft')
+          .send({ webformsEnabled: false })
+          .expect(403);
+      }));
+
+      it('should update webformsEnabled on draft form', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simple/draft').expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(true);
+          });
+
+        await asAlice.patch('/v1/projects/1/forms/simple/draft')
+          .send({ webformsEnabled: false })
+          .expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(false);
+          });
+
+        await asAlice.get('/v1/projects/1/forms/simple/draft').expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(false);
+          });
+      }));
+
+      it('should inherit webformsEnabled when creating new draft from published', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .expect(200);
+
+        // Default webformsEnabled is true now
+        await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(true);
+          });
+
+        await asAlice.patch('/v1/projects/1/forms/simple/draft')
+          .send({ webformsEnabled: false })
+          .expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(false);
+          });
+
+        await asAlice.get('/v1/projects/1/forms/simple/draft')
+          .expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(false);
+          });
+
+        await asAlice.post('/v1/projects/1/forms/simple/draft/publish?version=v2')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simple')
+          .expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(false);
+          });
+      }));
     });
 
     describe('/publish POST', () => {

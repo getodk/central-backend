@@ -50,6 +50,7 @@ info:
       - [PATCH /projects/:id/app-users/:id](/central-api-accounts-and-users/#setting-actor-property-values-on-an-app-user) to set or unset property values on an App User.
       - [PATCH /projects/:id/forms/:xmlFormId/public-links/:id](/central-api-form-management/#setting-actor-property-values-on-a-link) to set or unset property values on a Public Link.
       - New audit log events: `actor_property.create`, `field_key.property.set`, and `public_link.property.set`.
+    - `webformsEnabled` boolean flag is added to [Draft Forms](/central-api-form-management/#draft-form) APIs that enables use of ODK Web Forms instead of Enketo for Draft Forms.
 
     **Changed**:
     - The [Getting Form Details](/central-api-form-management/#getting-form-details), [Listing Published Form Versions](/central-api-form-management/#listing-published-form-versions) and [Getting Form Version Details](/central-api-form-management/#getting-form-version-details) endpoints now return a `publishNotes` field in extended metadata. 
@@ -3635,7 +3636,9 @@ paths:
       - Individual Form
       summary: Modifying a Form
       description: |-
-        It is currently possible to modify only one thing about a `Form`: its `state`, which governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
+        It is possible to modify the following properties of a `Form`:
+        - `state`: governs whether it is available for download onto survey clients and whether it accepts new `Submission`s. See the `state` Attribute in the Request documentation to the right to see the possible values and their meanings.
+        - `webformsEnabled`: controls whether ODK Web Forms is used instead of Enketo for filling Forms via web browsers.
 
         We use `PATCH` rather than `PUT` to represent the update operation, so that you only have to supply the properties you wish to change. Anything you do not supply will remain untouched.
       operationId: modifyForm
@@ -3668,8 +3671,13 @@ paths:
                   - open
                   - closing
                   - closed
+                webformsEnabled:
+                  type: boolean
+                  description: If supplied, controls whether ODK Web Forms is used
+                    instead of Enketo for filling Forms via web browsers.
               example:
                 state: open
+                webformsEnabled: true
         required: false
       responses:
         "200":
@@ -3736,6 +3744,10 @@ paths:
                   updatedAt:
                     type: string
                     description: ISO date format
+                  webformsEnabled:
+                    type: boolean
+                    description: Enables use of ODK Web Forms instead of Enketo for
+                      filling Forms via web browsers.
               example:
                 projectId: 1
                 xmlFormId: simple
@@ -3748,6 +3760,7 @@ paths:
                 publishedAt: 2018-01-21T00:04:11.153Z
                 createdAt: 2018-01-19T23:58:03.395Z
                 updatedAt: 2018-03-21T12:45:02.312Z
+                webformsEnabled: true
         "400":
           description: Bad Request
           content:
@@ -4244,6 +4257,50 @@ paths:
               example:
                 code: "400"
                 message: Could not parse the given data (2 chars) as json.
+    patch:
+      tags:
+      - Draft Form
+      summary: Modifying a Draft Form
+      description: |-
+        It is possible to modify the `webformsEnabled` property of a Draft Form, which controls whether ODK Web Forms is used instead of Enketo for filling Forms via web browsers.
+        
+        Added in v2026.2, this endpoint allows the value of `webformsEnabled` to be different from that of the published Form.
+      operationId: modifyDraftForm
+      parameters:
+      - name: projectId
+        in: path
+        description: The numeric ID of the Project
+        required: true
+        schema:
+          type: number
+        example: "16"
+      - name: xmlFormId
+        in: path
+        description: The `xmlFormId` of the Form being referenced.
+        required: true
+        schema:
+          type: string
+        example: simple
+      requestBody:
+        content:
+          '*/*':
+            schema:
+              type: object
+              properties:
+                webformsEnabled:
+                  type: boolean
+                  description: If supplied, controls whether ODK Web Forms is used
+                    instead of Enketo for filling Forms via web browsers.
+              example:
+                webformsEnabled: true
+        required: false
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DraftForm'
     delete:
       tags:
       - Draft Form
@@ -12904,6 +12961,7 @@ components:
         webformsEnabled:
           type: boolean
           description: Enables use of ODK Web Forms instead of Enketo for filling Forms via web browsers.
+          example: true
     ExtendedForm:
       allOf:
         - $ref: '#/components/schemas/Form'
