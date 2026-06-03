@@ -1706,6 +1706,36 @@ describe('api: /projects/:id/forms (drafts)', () => {
             body.webformsEnabled.should.equal(false);
           });
       }));
+
+      it('should inherit webformEnabled from the existing draft', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simple2/draft')
+          .expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(true);
+          });
+
+        await asAlice.patch('/v1/projects/1/forms/simple2/draft')
+          .send({ webformsEnabled: false })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simple2/draft')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simple2/draft')
+          .expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(false);
+          });
+      }));
     });
 
     describe('/publish POST', () => {
