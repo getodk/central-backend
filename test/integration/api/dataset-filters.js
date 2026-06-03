@@ -238,4 +238,55 @@ describe('Dataset Access Filters', () => {
         });
     }));
   });
+
+  it('should return entities where any rule matches (OR semantics)', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    // Create trees dataset with worker_id and supervisor_id properties
+    await createDataset(asAlice, 1, 'trees', ['region', 'worker_id', 'supervisor_id']);
+
+    // Entities assigned to different workers/supervisors
+    await createEntities(asAlice, 2, 1, 'trees', [], { region: 'north', worker_id: 'alice', supervisor_id: 'bob' }, 'Alice North Tree');
+    await createEntities(asAlice, 2, 1, 'trees', [], { region: 'south', worker_id: 'bob', supervisor_id: 'carol' }, 'Bob South Tree');
+    await createEntities(asAlice, 1, 1, 'trees', [], { region: 'east', worker_id: 'carol', supervisor_id: 'alice' }, 'Carol East Tree');
+
+    // Publish the form that consumes trees
+    await asAlice.post('/v1/projects/1/forms')
+      .send(testData.forms.consumeDatasets)
+      .set('Content-Type', 'application/xml').expect(200);
+    await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish').expect(200);
+
+    // Set up actor property: staff_id
+    await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'staff_id' }).expect(200);
+
+    // Set up two filter rules (OR): worker_id → staff_id, supervisor_id → staff_id
+    await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
+      .send({ datasetProperty: 'worker_id', actorProperty: 'staff_id' })
+      .expect(200);
+    await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
+      .send({ datasetProperty: 'supervisor_id', actorProperty: 'staff_id' })
+      .expect(200);
+
+    // Create app user Bob with staff_id = "bob"
+    const { body: appUserBob } = await asAlice.post('/v1/projects/1/app-users')
+      .send({ displayName: 'Bob' }).expect(200);
+    await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserBob.id}`).expect(200);
+    await asAlice.patch(`/v1/projects/1/app-users/${appUserBob.id}`)
+      .send({ properties: { staff_id: 'bob' } })
+      .expect(200);
+
+    // Bob should see:
+    // - 2 "Alice North Tree" entities (supervisor_id = 'bob')
+    // - 2 "Bob South Tree" entities (worker_id = 'bob')
+    // But NOT "Carol East Tree" (worker_id = 'carol', supervisor_id = 'alice')
+    await service.get(`/v1/key/${appUserBob.token}/projects/1/forms/consumeDatasets/attachments/trees.csv`)
+      .expect(200)
+      .then(({ text }) => {
+        const rows = text.trim().split('\n');
+        rows.length.should.equal(5); // 1 header + 4 entities
+        text.should.containEql('Alice North Tree');
+        text.should.containEql('Bob South Tree');
+        text.should.not.containEql('Carol East Tree');
+      });
+  }));
 });
