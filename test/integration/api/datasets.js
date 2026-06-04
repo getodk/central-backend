@@ -1655,6 +1655,111 @@ describe('datasets and entities', () => {
 
       }));
 
+      describe('accessFilter field in metadata', () => {
+        it('should return accessFilter: null when no filter is set', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .expect(200)
+            .then(({ body }) => {
+              should.not.exist(body.accessFilter);
+            });
+        }));
+
+        it('should return { type: "ownerOnly" } when ownerOnly is true', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people', ownerOnly: true })
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .expect(200)
+            .then(({ body }) => {
+              body.accessFilter.should.eql({ type: 'ownerOnly' });
+            });
+        }));
+
+        it('should return property rules when access filter rows exist', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets/people/properties')
+            .send({ name: 'age' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/actor-properties')
+            .send({ name: 'age' })
+            .expect(200);
+
+          await asAlice.put('/v1/projects/1/datasets/people/access-filter')
+            .send({ datasetProperty: 'age', actorProperty: 'age' })
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .expect(200)
+            .then(({ body }) => {
+              body.accessFilter.should.eql({
+                type: 'property',
+                rules: [{ datasetProperty: 'age', actorProperty: 'age' }]
+              });
+            });
+        }));
+
+        it('should return property rules when multiple access filter rows exist', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets/people/properties')
+            .send({ name: 'age' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/datasets/people/properties')
+            .send({ name: 'region' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/actor-properties')
+            .send({ name: 'age' })
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/actor-properties')
+            .send({ name: 'region' })
+            .expect(200);
+
+          await asAlice.put('/v1/projects/1/datasets/people/access-filter')
+            .send({ datasetProperty: 'age', actorProperty: 'age' })
+            .expect(200);
+
+          await asAlice.put('/v1/projects/1/datasets/people/access-filter')
+            .send({ datasetProperty: 'region', actorProperty: 'region' })
+            .expect(200);
+
+          // Note: current API only supports one rule at a time (PUT replaces)
+          // This verifies the single rule is returned correctly
+          await asAlice.get('/v1/projects/1/datasets/people')
+            .expect(200)
+            .then(({ body }) => {
+              body.accessFilter.should.eql({
+                type: 'property',
+                rules: [
+                  { datasetProperty: 'age', actorProperty: 'age' },
+                  { datasetProperty: 'region', actorProperty: 'region' }
+                ]
+              });
+            });
+        }));
+      });
+
       it('should reject if dataset is not published', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms')
