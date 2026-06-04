@@ -26,8 +26,8 @@ async function setupDatasetsAndProperties(asAlice) {
   await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'expertise' }).expect(200);
 
   // Set up dataset filter on trees mapping region to region
-  await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-    .send({ datasetProperty: 'region', actorProperty: 'region' })
+  await asAlice.patch('/v1/projects/1/datasets/trees')
+    .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
     .expect(200);
 
   // Create two app users and assign them to the form
@@ -43,97 +43,191 @@ async function setupDatasetsAndProperties(asAlice) {
 }
 
 describe('Dataset Access Filters', () => {
-  describe('PUT /projects/:id/datasets/:name/access-filter', () => {
-    it('should set an access filter rule', testService(async (service) => {
+  describe('PATCH /projects/:id/datasets/:name accessFilter', () => {
+    it('should set a property access filter', testService(async (service) => {
       const asAlice = await service.login('alice');
       await createDataset(asAlice, 1, 'trees', ['plot_id']);
       await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'plot_id' }).expect(200);
 
-      await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-        .send({ datasetProperty: 'plot_id', actorProperty: 'plot_id' })
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'plot_id', actorProperty: 'plot_id' }] } })
         .expect(200)
         .then(({ body }) => {
-          body.datasetProperty.should.equal('plot_id');
-          body.actorProperty.should.equal('plot_id');
+          body.accessFilter.should.eql({ type: 'property', rules: [{ datasetProperty: 'plot_id', actorProperty: 'plot_id' }] });
         });
     }));
 
-    it('should replace an existing rule', testService(async (service) => {
+    it('should replace all existing rules atomically', testService(async (service) => {
       const asAlice = await service.login('alice');
       await createDataset(asAlice, 1, 'trees', ['plot_id', 'region']);
       await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'plot_id' }).expect(200);
       await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
 
-      await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-        .send({ datasetProperty: 'plot_id', actorProperty: 'plot_id' })
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'plot_id', actorProperty: 'plot_id' }] } })
         .expect(200);
 
-      await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-        .send({ datasetProperty: 'region', actorProperty: 'region' })
+      // Replace with a different set of rules
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
         .expect(200)
         .then(({ body }) => {
-          body.datasetProperty.should.equal('region');
-          body.actorProperty.should.equal('region');
+          body.accessFilter.should.eql({ type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] });
         });
     }));
 
-    it.skip('should clear the rule when sent null body', testService(async (service) => {
+    it('should set multiple rules at once', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'trees', ['plot_id', 'region']);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'plot_id' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [
+          { datasetProperty: 'plot_id', actorProperty: 'plot_id' },
+          { datasetProperty: 'region', actorProperty: 'region' }
+        ] } })
+        .expect(200)
+        .then(({ body }) => {
+          body.accessFilter.type.should.equal('property');
+          body.accessFilter.rules.length.should.equal(2);
+        });
+    }));
+
+    it('should clear the filter when sent accessFilter: null', testService(async (service) => {
       const asAlice = await service.login('alice');
       await createDataset(asAlice, 1, 'trees', ['plot_id']);
       await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'plot_id' }).expect(200);
 
-      await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-        .send({ datasetProperty: 'plot_id', actorProperty: 'plot_id' })
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'plot_id', actorProperty: 'plot_id' }] } })
         .expect(200);
 
-      await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-        .send({})
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: null })
         .expect(200)
         .then(({ body }) => {
-          (body === null || body === undefined || Object.keys(body).length === 0).should.be.true();
+          (body.accessFilter === null).should.be.true();
         });
     }));
-  });
 
-  describe('GET /projects/:id/datasets/:name/access-filter', () => {
-    it('should return the current access filter', testService(async (service) => {
+    it('should set ownerOnly filter', testService(async (service) => {
       const asAlice = await service.login('alice');
       await createDataset(asAlice, 1, 'trees', ['plot_id']);
-      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'plot_id' }).expect(200);
 
-      await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-        .send({ datasetProperty: 'plot_id', actorProperty: 'plot_id' })
-        .expect(200);
-
-      await asAlice.get('/v1/projects/1/datasets/trees/access-filter')
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'ownerOnly' } })
         .expect(200)
         .then(({ body }) => {
-          body.datasetProperty.should.equal('plot_id');
-          body.actorProperty.should.equal('plot_id');
+          body.accessFilter.should.eql({ type: 'ownerOnly' });
         });
     }));
 
-    it.skip('should do something when multiple access rules set', testService(async (service) => {
+    it('should switch from ownerOnly to property rules', testService(async (service) => {
       const asAlice = await service.login('alice');
-      await setupDatasetsAndProperties(asAlice);
+      await createDataset(asAlice, 1, 'trees', ['region']);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
 
-      await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-        .send({ datasetProperty: 'region', actorProperty: 'region' })
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'ownerOnly' } })
         .expect(200);
 
-      await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-        .send({ datasetProperty: 'species', actorProperty: 'expertise' })
-        .expect(200);
-
-      // TODO: you can currently set 2 access rules (and filter with a combination)
-      // but then this GET doesnt work
-      // and it's also a bit unclear how the 2 access rules combine.
-      // There should be ONE conceptual filter on a dataset at a time.
-      await asAlice.get('/v1/projects/1/datasets/trees/access-filter')
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
         .expect(200)
         .then(({ body }) => {
-          body.datasetProperty.should.equal('region');
-          body.actorProperty.should.equal('region');
+          body.accessFilter.should.eql({ type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] });
+          body.ownerOnly.should.be.false();
+        });
+    }));
+
+    it('should switch from property rules to ownerOnly', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'trees', ['region']);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'ownerOnly' } })
+        .expect(200)
+        .then(({ body }) => {
+          body.accessFilter.should.eql({ type: 'ownerOnly' });
+        });
+    }));
+
+    it('should leave filter unchanged when accessFilter absent from body', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'trees', ['region']);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ approvalRequired: false })
+        .expect(200)
+        .then(({ body }) => {
+          body.accessFilter.should.eql({ type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] });
+        });
+    }));
+
+    it('should reject empty rules array', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'trees', ['region']);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [] } })
+        .expect(400);
+    }));
+
+    it('should reject rule missing datasetProperty', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'trees', ['region']);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ actorProperty: 'region' }] } })
+        .expect(400);
+    }));
+
+    it('should clear property rules when legacy ownerOnly: true is sent', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'trees', ['region']);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      // Set property rules first
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      // Switch to ownerOnly via legacy field — property rules should be cleared
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ ownerOnly: true })
+        .expect(200)
+        .then(({ body }) => {
+          body.accessFilter.should.eql({ type: 'ownerOnly' });
+        });
+    }));
+
+    it('should leave property rules unchanged when legacy ownerOnly: false is sent', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'trees', ['region']);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      // Set property rules first
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      // ownerOnly: false is a noop when ownerOnly is already off — property rules should be untouched
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ ownerOnly: false })
+        .expect(200)
+        .then(({ body }) => {
+          body.accessFilter.should.eql({ type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] });
         });
     }));
   });
@@ -180,8 +274,8 @@ describe('Dataset Access Filters', () => {
         });
 
       // Set up dataset filter on people: people.species to actor.expertise
-      await asAlice.put('/v1/projects/1/datasets/people/access-filter')
-        .send({ datasetProperty: 'species', actorProperty: 'expertise' })
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'species', actorProperty: 'expertise' }] } })
         .expect(200);
 
       // Fetch people.csv as the app user after applying filter
@@ -260,11 +354,11 @@ describe('Dataset Access Filters', () => {
     await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'staff_id' }).expect(200);
 
     // Set up two filter rules (OR): worker_id → staff_id, supervisor_id → staff_id
-    await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-      .send({ datasetProperty: 'worker_id', actorProperty: 'staff_id' })
-      .expect(200);
-    await asAlice.put('/v1/projects/1/datasets/trees/access-filter')
-      .send({ datasetProperty: 'supervisor_id', actorProperty: 'staff_id' })
+    await asAlice.patch('/v1/projects/1/datasets/trees')
+      .send({ accessFilter: { type: 'property', rules: [
+        { datasetProperty: 'worker_id', actorProperty: 'staff_id' },
+        { datasetProperty: 'supervisor_id', actorProperty: 'staff_id' }
+      ] } })
       .expect(200);
 
     // Create app user Bob with staff_id = "bob"

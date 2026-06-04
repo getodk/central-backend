@@ -1699,8 +1699,8 @@ describe('datasets and entities', () => {
             .send({ name: 'age' })
             .expect(200);
 
-          await asAlice.put('/v1/projects/1/datasets/people/access-filter')
-            .send({ datasetProperty: 'age', actorProperty: 'age' })
+          await asAlice.patch('/v1/projects/1/datasets/people')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'age', actorProperty: 'age' }] } })
             .expect(200);
 
           await asAlice.get('/v1/projects/1/datasets/people')
@@ -1736,16 +1736,13 @@ describe('datasets and entities', () => {
             .send({ name: 'region' })
             .expect(200);
 
-          await asAlice.put('/v1/projects/1/datasets/people/access-filter')
-            .send({ datasetProperty: 'age', actorProperty: 'age' })
+          await asAlice.patch('/v1/projects/1/datasets/people')
+            .send({ accessFilter: { type: 'property', rules: [
+              { datasetProperty: 'age', actorProperty: 'age' },
+              { datasetProperty: 'region', actorProperty: 'region' }
+            ] } })
             .expect(200);
 
-          await asAlice.put('/v1/projects/1/datasets/people/access-filter')
-            .send({ datasetProperty: 'region', actorProperty: 'region' })
-            .expect(200);
-
-          // Note: current API only supports one rule at a time (PUT replaces)
-          // This verifies the single rule is returned correctly
           await asAlice.get('/v1/projects/1/datasets/people')
             .expect(200)
             .then(({ body }) => {
