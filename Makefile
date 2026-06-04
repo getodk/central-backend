@@ -161,7 +161,7 @@ check-for-large-files:
 .PHONY: api-docs
 api-docs:
 	(test "$(docker images -q odk-docs)" || docker build --file odk-docs.dockerfile -t odk-docs .) && \
-	docker run --rm -it -v ./docs:/docs/docs/_static/central-spec -p 8000:8000 odk-docs
+	docker run --rm -it -v ./docs:/docs/docs/_static/central-spec -p 127.0.0.1:8000:8000 odk-docs
 
 .PHONY: api-docs-lint
 api-docs-lint:

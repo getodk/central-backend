@@ -16,6 +16,21 @@ describe('api: /projects/:id/actor-properties', () => {
         .expect(200);
     }));
 
+    it('should log the property creation in the audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      const project = await container.Projects.getById(1).then((o) => o.get());
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=actor_property.create').expect(200);
+      audits.length.should.equal(1);
+      audits[0].actorId.should.equal(5); // alice
+      audits[0].acteeId.should.equal(project.acteeId);
+      audits[0].details.should.eql({ name: 'region' });
+    }));
+
     it('should reject if name is missing', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/actor-properties')
