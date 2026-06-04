@@ -104,6 +104,7 @@ describe('datasets and entities', () => {
             body.properties.should.eql([]);
             body.approvalRequired.should.eql(false);
             body.ownerOnly.should.eql(false);
+            should.not.exist(body.accessFilter);
           });
       }));
 
@@ -1562,6 +1563,7 @@ describe('datasets and entities', () => {
               projectId: 1,
               approvalRequired: false,
               ownerOnly: false,
+              accessFilter: null,
               deletedAt: null
             });
 
@@ -1626,6 +1628,7 @@ describe('datasets and entities', () => {
               projectId: 1,
               approvalRequired: false,
               ownerOnly: false,
+              accessFilter: null,
               entities: 1,
               deletedAt: null,
               conflicts: 0,
@@ -1635,6 +1638,7 @@ describe('datasets and entities', () => {
               draftSourceForms: []
             });
 
+            should.not.exist(ds.accessFilter);
             lastEntity.should.be.recentIsoDate();
             lastUpdate.should.be.recentIsoDate();
             createdAt.should.be.recentIsoDate();

@@ -179,6 +179,7 @@ describe('Entities from Repeats', () => {
             projectId: 1,
             approvalRequired: false,
             ownerOnly: false,
+            accessFilter: null,
             deletedAt: null
           });
 
@@ -224,6 +225,7 @@ describe('Entities from Repeats', () => {
             projectId: 1,
             approvalRequired: false,
             ownerOnly: false,
+            accessFilter: null,
             deletedAt: null
           });
 
@@ -260,6 +262,7 @@ describe('Entities from Repeats', () => {
             projectId: 1,
             approvalRequired: false,
             ownerOnly: false,
+            accessFilter: null,
             deletedAt: null
           });
 
@@ -305,6 +308,7 @@ describe('Entities from Repeats', () => {
             projectId: 1,
             approvalRequired: false,
             ownerOnly: false,
+            accessFilter: null,
             deletedAt: null
           });
 
@@ -342,6 +346,7 @@ describe('Entities from Repeats', () => {
             projectId: 1,
             approvalRequired: false,
             ownerOnly: false,
+            accessFilter: null,
             deletedAt: null
           });
 
