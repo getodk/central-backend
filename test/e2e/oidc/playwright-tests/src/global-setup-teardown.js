@@ -28,6 +28,7 @@ const backendUrl = 'http://localhost:8383';
 async function startFakeFrontend() {
   console.log('Starting fake frontend proxy...'); // eslint-disable-line no-console
   const fakeFrontend = express();
+  fakeFrontend.set('case sensitive routing', true);
   fakeFrontend.use(cookieParser());
   fakeFrontend.use(createProxyMiddleware('/v1', { target: backendUrl }));
   fakeFrontend.get('*',    successHandler); // eslint-disable-line no-use-before-define

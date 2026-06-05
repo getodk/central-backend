@@ -60,6 +60,7 @@ describe('sentry', () => {
       const events = [];
 
       const app = express();
+      app.set('case sensitive routing', true);
       app.use(express.text({ type: () => true }));
       app.get('/event-log', (req, res) => {
         res.send(events);
