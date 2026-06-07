@@ -34,14 +34,14 @@ async function startFakeFrontend() {
   fakeFrontend.get('*',    successHandler); // eslint-disable-line no-use-before-define
 
   if (frontendUrl.startsWith('http://')) {
-    return fakeFrontend.listen(port);
+    return fakeFrontend.listen(port, '127.0.0.1');
   } else {
     const fs = require('node:fs');
     const https = require('node:https');
     const key  = fs.readFileSync('../certs/odk-central.example.org-key.pem', 'utf8');
     const cert = fs.readFileSync('../certs/odk-central.example.org.pem', 'utf8');
     const httpsServer = https.createServer({ key, cert }, fakeFrontend);
-    await httpsServer.listen(port);
+    await httpsServer.listen(port, '127.0.0.1');
     return httpsServer;
   }
 }

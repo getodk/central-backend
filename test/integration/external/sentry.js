@@ -79,7 +79,7 @@ describe('sentry', () => {
         res.send({ id: uuid().replace(/-/g, '') });
       });
 
-      const _server = app.listen(0, () => {
+      const _server = app.listen(0, '127.0.0.1', () => {
         resolve(_server);
       });
       _server.on('error', reject);
