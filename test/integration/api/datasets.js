@@ -7201,6 +7201,101 @@ describe('datasets and entities', () => {
           .then(({ body }) => body);
         (await getHash(asChelsea)).should.equal(md5sum(`1,${updatedAt}`));
       }));
+
+      describe('Etag / open rosa hash with dataset user property filters', () => {
+        const getHashAppUser = async (service, token) => {
+          const hash = await service.get(`/v1/key/${token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+            .expect(200)
+            .then(response => response.get('ETag').replaceAll('"', ''));
+
+          // Check that the hash from the REST API matches the OpenRosa manifest.
+          const { text: manifest } = await service.get(`/v1/key/${token}/projects/1/forms/consumeDatasets/manifest`)
+            .set('X-OpenRosa-Version', '1.0')
+            .expect(200);
+          manifest.replace(/\s/g, '').should.containEql(`<filename>people.csv</filename><hash>md5:${hash}</hash>`);
+
+          return hash;
+        };
+
+        const countEntities = (service, asUser = null, token = null) => {
+          if (!token)
+            return asUser.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
+              .expect(200)
+              .then((response) => response.text.split('\n').length - 2);
+          else
+            return service.get(`/v1/key/${token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+              .expect(200)
+              .then((response) => response.text.split('\n').length - 2);
+        };
+
+        it('hash changes for alice but not app user when entity outside segment is added', testServiceFullTrx(async (service) => {
+          const asAlice = await service.login('alice');
+
+          // Create people dataset and a form that consumes it
+          await asAlice.post('/v1/projects/1/datasets')
+            .send({ name: 'people' })
+            .expect(200);
+          await asAlice.post('/v1/projects/1/forms?publish=true')
+            .send(testData.forms.consumeDatasets)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          // Add a region property and seed two entities in different regions
+          await asAlice.post('/v1/projects/1/datasets/people/properties')
+            .send({ name: 'region' })
+            .expect(200);
+          await asAlice.post('/v1/projects/1/datasets/people/entities')
+            .send({
+              source: { name: 'people.csv', size: 100 },
+              entities: [
+                { label: 'Keri (north)', data: { region: 'north' } },
+                { label: 'Bob (south)', data: { region: 'south' } },
+              ]
+            })
+            .expect(200);
+
+          // Create an app user and assign to the form
+          const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'Survey Worker - region NORTH' }).expect(200);
+          await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`).expect(200);
+
+          // Before the filter is applied, both see the same hash and all entities
+          const hashBeforeFilter = await getHashAppUser(service, appUser.token);
+          hashBeforeFilter.should.equal(await getHash(asAlice));
+          (await countEntities(service, asAlice)).should.equal(2);
+          (await countEntities(service, null, appUser.token)).should.equal(2);
+
+          // Set up actor properties, dataset filter, and assign region 'north' to the app user
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+          await asAlice.patch('/v1/projects/1/datasets/people')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+            .expect(200);
+          await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+            .send({ properties: { region: 'north' } })
+            .expect(200);
+
+          // After filter: Alice still sees all 2, app user only sees the 1 north entity
+          (await countEntities(service, asAlice)).should.equal(2);
+          (await countEntities(service, null, appUser.token)).should.equal(1);
+
+          const aliceHashAfterFilter = await getHash(asAlice);
+          const appUserHashAfterFilter = await getHashAppUser(service, appUser.token);
+          aliceHashAfterFilter.should.not.equal(appUserHashAfterFilter);
+
+          // Add a new entity outside the app user's segment (south)
+          await asAlice.post('/v1/projects/1/datasets/people/entities')
+            .send({ label: 'Joe (south)', data: { region: 'south' } })
+            .expect(200);
+
+          // Alice now sees 3 entities and her hash changed
+          (await countEntities(service, asAlice)).should.equal(3);
+          (await getHash(asAlice)).should.not.equal(aliceHashAfterFilter);
+
+          // App user still sees only 1 entity and their hash is unchanged
+          (await countEntities(service, null, appUser.token)).should.equal(1);
+          (await getHashAppUser(service, appUser.token)).should.equal(appUserHashAfterFilter);
+        }));
+      });
     });
   });
 
