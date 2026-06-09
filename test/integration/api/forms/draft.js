@@ -1671,6 +1671,25 @@ describe('api: /projects/:id/forms (drafts)', () => {
           });
       }));
 
+      it('should update form updatedAt when draft is updated', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/simple/draft').expect(200);
+
+        // Set updatedAt to an old timestamp
+        await container.run(sql`UPDATE forms SET "updatedAt" = '2026-01-01T00:00:00Z' WHERE "xmlFormId" = 'simple'`);
+
+        await asAlice.patch('/v1/projects/1/forms/simple/draft')
+          .send({ webformsEnabled: false })
+          .expect(200);
+
+        const afterUpdate = await asAlice.get('/v1/projects/1/forms/simple')
+          .expect(200)
+          .then(({ body }) => body.updatedAt);
+
+        afterUpdate.should.be.a.recentIsoDate();
+      }));
+
       it('should inherit webformsEnabled when creating new draft from published', testService(async (service) => {
         const asAlice = await service.login('alice');
 
