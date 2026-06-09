@@ -7119,22 +7119,16 @@ describe('datasets and entities', () => {
         // Two data collectors with ownerOnly=true and no entities each should still
         // get different hashes from each other, because the hash must include the
         // actor ID to prevent one user's cache from being incorrectly reused by another.
-        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        const [asAlice, asBob, asChelsea] = await service.login(['alice', 'bob', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
-
-        // Create a second data-collector-only user (no pre-existing project access).
-        await asAlice.post('/v1/users')
-          .send({ email: 'dana@getodk.org', password: 'password4dana' })
-          .expect(200);
-        const asDana = await service.login('dana');
-        await assignToProject(asAlice, asDana, 'formfill');
+        await assignToProject(asAlice, asBob, 'formfill');
 
         // Neither Chelsea nor Dana has created any entities. They should still
         // get different hashes because the actor ID is part of the hash.
         const chelseaHash = await getHash(asChelsea);
-        const danaHash = await getHash(asDana);
-        chelseaHash.should.not.equal(danaHash);
+        const bobHash = await getHash(asBob);
+        chelseaHash.should.not.equal(bobHash);
       }));
     });
   });
