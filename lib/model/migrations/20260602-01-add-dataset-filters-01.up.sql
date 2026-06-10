@@ -10,7 +10,7 @@ CREATE TABLE dataset_access_filters (
 CREATE UNIQUE INDEX "dataset_access_filters__unique_for_composite_fk_referent" ON ds_properties USING btree ("datasetId", id);
 ALTER TABLE dataset_access_filters
     ADD CONSTRAINT "dataset_access_filters__composite_fk" FOREIGN KEY ("datasetId", "datasetPropertyId") REFERENCES ds_properties ("datasetId", id) ON DELETE CASCADE;
--- Ensures each actor property is used at most once per dataset.
+-- Ensures each actor property is used at most once per dataset property.
 CREATE UNIQUE INDEX "dataset_access_filters__spend_actorprop_once_per_dsprop" ON dataset_access_filters ("datasetPropertyId", "actorPropertyId");
 -- Index to support FK lookup on actorPropertyId (CASCADE deletes from actor_properties).
 CREATE INDEX ON dataset_access_filters ("actorPropertyId");
@@ -18,23 +18,16 @@ CREATE INDEX ON dataset_access_filters ("actorPropertyId");
 CREATE INDEX ON dataset_access_filters ("datasetId", "datasetPropertyId");
 
 CREATE VIEW actor_dataset_filter AS (
-    WITH filter_as_json AS (
-        SELECT
-            pfilter."datasetId",
-            aprop."actorId",
-            jsonb_object_agg (dsprops."name", aprop."value") AS thefilter
-        FROM
-            dataset_access_filters pfilter
-            INNER JOIN ds_properties dsprops ON (pfilter."datasetPropertyId" = dsprops.id)
-            INNER JOIN actor_property_values aprop USING ("actorPropertyId")
-        GROUP BY
-            (pfilter."datasetId", aprop."actorId")
-    )
     SELECT
-        *,
-        md5(thefilter::text) AS filterhash  -- Used to make the filter part of an HTTP resource for incremental entity list download.
+        pfilter."datasetId",
+        aprop."actorId",
+        jsonb_object_agg (dsprops."name", aprop."value") AS thefilter
     FROM
-        filter_as_json
+        dataset_access_filters pfilter
+        INNER JOIN ds_properties dsprops ON (pfilter."datasetPropertyId" = dsprops.id)
+        INNER JOIN actor_property_values aprop USING ("actorPropertyId")
+    GROUP BY
+        (pfilter."datasetId", aprop."actorId")
 );
 
 -- Commented out: add back w/ info about taking a long time
