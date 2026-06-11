@@ -8245,6 +8245,141 @@ describe('datasets and entities', () => {
     });
   });
 
+  describe('Etag / open rosa hash with no filters', () => {
+    // Common setup: create a people dataset, publish the consumeDatasets form,
+    // and seed one entity. Returns { asAlice, entityUuid }.
+    const setup = async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'age' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.consumeDatasets)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const { body: entity } = await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'Alice', data: { age: '30' } })
+        .expect(200);
+
+      return { asAlice, entityUuid: entity.uuid };
+    };
+
+    const getHash = async (asAlice) => {
+      const hash = await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
+        .expect(200)
+        .then(r => r.get('ETag').replaceAll('"', ''));
+
+      // Verify the REST ETag matches the OpenRosa manifest hash
+      const { text: manifest } = await asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200);
+      manifest.replace(/\s/g, '').should.containEql(`<filename>people.csv</filename><hash>md5:${hash}</hash>`);
+
+      return hash;
+    };
+
+    it('hash changes when an entity is added', testServiceFullTrx(async (service) => {
+      const { asAlice } = await setup(service);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'Bob', data: { age: '25' } })
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
+    }));
+
+    it('hash changes when an entity is updated', testServiceFullTrx(async (service) => {
+      const { asAlice, entityUuid } = await setup(service);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.patch(`/v1/projects/1/datasets/people/entities/${entityUuid}?baseVersion=1`)
+        .send({ label: 'Alice - updated', data: { age: '31' } })
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
+    }));
+
+    it('hash changes when an entity is deleted', testServiceFullTrx(async (service) => {
+      const { asAlice, entityUuid } = await setup(service);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${entityUuid}`)
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
+    }));
+
+    it('two app users with no filter get the same hash', testServiceFullTrx(async (service) => {
+      const { asAlice } = await setup(service);
+
+      const { body: appUserA } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Worker A' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserA.id}`).expect(200);
+
+      const { body: appUserB } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Worker B' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserB.id}`).expect(200);
+
+      const hashA = await service.get(`/v1/key/${appUserA.token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+        .expect(200).then(r => r.get('ETag'));
+      const hashB = await service.get(`/v1/key/${appUserB.token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+        .expect(200).then(r => r.get('ETag'));
+
+      hashA.should.equal(hashB);
+    }));
+
+    it('alice (manager) and an app user get the same hash when there is no filter', testServiceFullTrx(async (service) => {
+      const { asAlice } = await setup(service);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Worker' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`).expect(200);
+
+      const aliceHash = await getHash(asAlice);
+      const appUserHash = await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+        .expect(200).then(r => r.get('ETag'));
+
+      aliceHash.should.equal(appUserHash.replaceAll('"', ''));
+    }));
+
+    it('hash changes when a property is added to the dataset', testService(async (service) => {
+      const { asAlice } = await setup(service);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'hometown' })
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
+    }));
+
+    it('hash changes when a property is deleted from the dataset', testService(async (service) => {
+      const { asAlice } = await setup(service);
+
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'city' })
+        .expect(200);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/city')
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
+    }));
+  });
+
   // OpenRosa endpoint
   describe('GET /datasets/:name/integrity', () => {
     it('should return notfound if the dataset does not exist', testEntities(async (service) => {
