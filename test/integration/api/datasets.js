@@ -7069,13 +7069,22 @@ describe('datasets and entities', () => {
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
 
+        const chelseaId = await asChelsea.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => body.id);
+
         const { loggedAt } = await asAlice.get('/v1/audits?action=dataset.update')
           .expect(200)
           .then(({ body }) => {
             body.length.should.equal(1);
             return body[0];
           });
-        (await getHash(asChelsea)).should.equal(md5sum(`0,${loggedAt}`));
+        (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
+          owner: chelseaId,
+          entities: 0,
+          latestEntityCreatedOrUpdated: null,
+          latestAuditEntry: loggedAt,
+        })));
 
         // Have Chelsea create an entity.
         await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
@@ -7086,14 +7095,40 @@ describe('datasets and entities', () => {
         const { createdAt } = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .expect(200)
           .then(({ body }) => body);
-        (await getHash(asChelsea)).should.equal(md5sum(`1,${createdAt}`));
+        (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
+          owner: chelseaId,
+          entities: 1,
+          latestEntityCreatedOrUpdated: createdAt,
+          latestAuditEntry: loggedAt,
+        })));
 
         // Update the entity.
         const { updatedAt } = await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?baseVersion=1')
           .send({ data: { age: '120' } })
           .expect(200)
           .then(({ body }) => body);
-        (await getHash(asChelsea)).should.equal(md5sum(`1,${updatedAt}`));
+        (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
+          owner: chelseaId,
+          entities: 1,
+          latestEntityCreatedOrUpdated: updatedAt,
+          latestAuditEntry: loggedAt,
+        })));
+      }));
+
+      it('returns different hashes to two data collectors who both have zero owned entities', testService(async (service) => {
+        // Two data collectors with ownerOnly=true and no entities each should still
+        // get different hashes from each other, because the hash must include the
+        // actor ID to prevent one user's cache from being incorrectly reused by another.
+        const [asAlice, asBob, asChelsea] = await service.login(['alice', 'bob', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+        await assignToProject(asAlice, asBob, 'formfill');
+
+        // Neither Chelsea nor Dana has created any entities. They should still
+        // get different hashes because the actor ID is part of the hash.
+        const chelseaHash = await getHash(asChelsea);
+        const bobHash = await getHash(asBob);
+        chelseaHash.should.not.equal(bobHash);
       }));
     });
   });
