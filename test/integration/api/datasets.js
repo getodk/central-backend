@@ -6335,6 +6335,61 @@ describe('datasets and entities', () => {
             });
         }));
 
+        it('should allow multiple rules using same dataset property', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['district']);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'primaryDistrict' }).expect(200);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'secondaryDistrict' }).expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [
+              { datasetProperty: 'district', actorProperty: 'primaryDistrict' },
+              { datasetProperty: 'district', actorProperty: 'secondaryDistrict' }
+            ] } })
+            .expect(200)
+            .then(({ body }) => {
+              body.accessFilter.type.should.equal('property');
+              body.accessFilter.rules.length.should.equal(2);
+            });
+        }));
+
+        it('should allow multiple rules using same actor property', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['assignedWorker', 'supervisor']);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'staffId' }).expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [
+              { datasetProperty: 'assignedWorker', actorProperty: 'staffId' },
+              { datasetProperty: 'supervisor', actorProperty: 'staffId' }
+            ] } })
+            .expect(200)
+            .then(({ body }) => {
+              body.accessFilter.type.should.equal('property');
+              body.accessFilter.rules.length.should.equal(2);
+            });
+        }));
+
+        it('should collapse duplicate rules', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['region']);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [
+              { datasetProperty: 'region', actorProperty: 'region' },
+              { datasetProperty: 'region', actorProperty: 'region' }
+            ] } })
+            .expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ approvalRequired: false })
+            .expect(200)
+            .then(({ body }) => {
+              body.accessFilter.should.eql({ type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] });
+            });
+        }));
+
         it('should clear the filter when sent accessFilter: null', testService(async (service) => {
           const asAlice = await service.login('alice');
           await createDataset(asAlice, 1, 'trees', ['plot_id']);
