@@ -29,6 +29,7 @@ async function startFakeFrontend() {
   console.log('Starting fake frontend proxy...'); // eslint-disable-line no-console
   const fakeFrontend = express();
   fakeFrontend.set('case sensitive routing', true);
+  fakeFrontend.set('query parser', 'simple');
   fakeFrontend.use(cookieParser());
   fakeFrontend.use(createProxyMiddleware('/v1', { target: backendUrl }));
   fakeFrontend.get('*',    successHandler); // eslint-disable-line no-use-before-define
