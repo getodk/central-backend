@@ -7309,6 +7309,23 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.not.equal(originalHash);
       }));
 
+      it('changes hash after a dataset property is deleted', testServiceFullTrx(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Add an entity property.
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'foo' })
+          .expect(200);
+        const originalHash = await getHash(asChelsea);
+
+        // Delete the property.
+        await asAlice.delete('/v1/projects/1/datasets/people/properties/foo')
+          .expect(200);
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
       it('computes hash based on timestamps and the entity count @slow', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
@@ -8198,6 +8215,32 @@ describe('datasets and entities', () => {
           latestEntityCreatedOrUpdated: lastEntityCreatedAt,
           latestAuditEntry,
         })));
+      }));
+
+      it('changes hash in property-filtered after a dataset property is deleted', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, assign region 'north' to the app user, and apply filter
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        // Add an entity property.
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'foo' })
+          .expect(200);
+
+        // Get original hash with
+        const originalHashWithFilter = await getHashAppUser(service, appUser.token);
+
+        // Delete the property.
+        await asAlice.delete('/v1/projects/1/datasets/people/properties/foo')
+          .expect(200);
+        (await getHashAppUser(service, appUser.token)).should.not.equal(originalHashWithFilter);
       }));
     });
   });
