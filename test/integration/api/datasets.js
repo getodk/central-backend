@@ -7572,6 +7572,171 @@ describe('datasets and entities', () => {
           text.should.not.containEql('Diane West Tree');
         });
     }));
+
+    it('should filter with same actor property mapped to different entity properties (supervisor vs. worker)', testService(async (service) => {
+      // A community health program tracks household visits as entities.
+      // Every actor has one property: staffId.
+      // Each visit entity records:
+      //   - assignedWorker: the staff ID of the field worker who owns the visit
+      //   - supervisor: the staff ID of that worker's supervisor
+      // Rule 1: entity.assignedWorker = actor.staffId  (worker sees their own visits)
+      // Rule 2: entity.supervisor = actor.staffId      (supervisor sees all visits they oversee)
+      const asAlice = await service.login('alice');
+
+      await createDataset(asAlice, 1, 'visits', ['assignedWorker', 'supervisor']);
+
+      // Visit 1: assigned to worker1, supervised by supervisor1
+      await createEntities(asAlice, 1, 1, 'visits', [], { assignedWorker: 'worker1', supervisor: 'supervisor1' }, 'Visit by worker1');
+      // Visit 2: assigned to worker2, supervised by supervisor1
+      await createEntities(asAlice, 1, 1, 'visits', [], { assignedWorker: 'worker2', supervisor: 'supervisor1' }, 'Visit by worker2');
+      // Visit 3: assigned to worker3, supervised by supervisor2
+      await createEntities(asAlice, 1, 1, 'visits', [], { assignedWorker: 'worker3', supervisor: 'supervisor2' }, 'Visit by worker3');
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.consumeDatasets.replace('people.csv', 'visits.csv'))
+        .set('Content-Type', 'application/xml').expect(200);
+      await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish').expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'staffId' }).expect(200);
+
+      // Two filter rules using the same actor property (staffId) but different entity properties
+      await asAlice.patch('/v1/projects/1/datasets/visits')
+        .send({ accessFilter: { type: 'property', rules: [
+          { datasetProperty: 'assignedWorker', actorProperty: 'staffId' },
+          { datasetProperty: 'supervisor', actorProperty: 'staffId' }
+        ] } })
+        .expect(200);
+
+      // worker1 sees only their own visit (matched via assignedWorker)
+      const { body: appUserWorker1 } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Worker 1' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserWorker1.id}`).expect(200);
+      await asAlice.patch(`/v1/projects/1/app-users/${appUserWorker1.id}`)
+        .send({ properties: { staffId: 'worker1' } }).expect(200);
+
+      await service.get(`/v1/key/${appUserWorker1.token}/projects/1/forms/consumeDatasets/attachments/visits.csv`)
+        .expect(200)
+        .then(({ text }) => {
+          const rows = text.trim().split('\n');
+          rows.length.should.equal(2); // 1 header + 1 visit
+          text.should.containEql('Visit by worker1');
+          text.should.not.containEql('Visit by worker2');
+          text.should.not.containEql('Visit by worker3');
+        });
+
+      // supervisor1 sees visits by worker1 and worker2 (matched via supervisor)
+      const { body: appUserSupervisor1 } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Supervisor 1' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserSupervisor1.id}`).expect(200);
+      await asAlice.patch(`/v1/projects/1/app-users/${appUserSupervisor1.id}`)
+        .send({ properties: { staffId: 'supervisor1' } }).expect(200);
+
+      await service.get(`/v1/key/${appUserSupervisor1.token}/projects/1/forms/consumeDatasets/attachments/visits.csv`)
+        .expect(200)
+        .then(({ text }) => {
+          const rows = text.trim().split('\n');
+          rows.length.should.equal(3); // 1 header + 2 visits
+          text.should.containEql('Visit by worker1');
+          text.should.containEql('Visit by worker2');
+          text.should.not.containEql('Visit by worker3');
+        });
+    }));
+
+    it('should filter with different actor properties mapped to different entity properties', testService(async (service) => {
+      // An actor has actor.homeDistrict = "east" and actor.assignedRegion = "north".
+      // Entities have two properties: entity.district and entity.region.
+      // Rule 1: entity.district = actor.homeDistrict
+      // Rule 2: entity.region = actor.assignedRegion
+      // Actor sees any entity where their home district matches OR their assigned region matches.
+      const asAlice = await service.login('alice');
+
+      await createDataset(asAlice, 1, 'trees', ['district', 'region']);
+
+      await createEntities(asAlice, 1, 1, 'trees', [], { district: 'east', region: 'south' }, 'East District Tree'); // matches Rule 1
+      await createEntities(asAlice, 1, 1, 'trees', [], { district: 'west', region: 'north' }, 'North Region Tree'); // matches Rule 2
+      await createEntities(asAlice, 1, 1, 'trees', [], { district: 'east', region: 'north' }, 'East+North Tree'); // matches both rules
+      await createEntities(asAlice, 1, 1, 'trees', [], { district: 'west', region: 'south' }, 'West South Tree'); // matches neither
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.consumeDatasets)
+        .set('Content-Type', 'application/xml').expect(200);
+      await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish').expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'homeDistrict' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'assignedRegion' }).expect(200);
+
+      // Two rules: different actor properties AND different entity properties
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [
+          { datasetProperty: 'district', actorProperty: 'homeDistrict' },
+          { datasetProperty: 'region', actorProperty: 'assignedRegion' }
+        ] } })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'East/North Worker' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`).expect(200);
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { homeDistrict: 'east', assignedRegion: 'north' } }).expect(200);
+
+      await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets/attachments/trees.csv`)
+        .expect(200)
+        .then(({ text }) => {
+          const rows = text.trim().split('\n');
+          rows.length.should.equal(4); // 1 header + 3 matching entities
+          text.should.containEql('East District Tree');
+          text.should.containEql('North Region Tree');
+          text.should.containEql('East+North Tree');
+          text.should.not.containEql('West South Tree');
+        });
+    }));
+
+    it('should filter with different actor properties mapped to the same entity property (multi-territory)', testService(async (service) => {
+      // An actor has actor.primaryDistrict = "east" and actor.secondaryDistrict = "north".
+      // Entities have one property: entity.district.
+      // Rule 1: entity.district = actor.primaryDistrict
+      // Rule 2: entity.district = actor.secondaryDistrict
+      // Actor sees entities from their primary OR secondary district.
+      const asAlice = await service.login('alice');
+
+      await createDataset(asAlice, 1, 'trees', ['district']);
+
+      await createEntities(asAlice, 1, 1, 'trees', [], { district: 'east' }, 'East Tree'); // matches Rule 1 (primaryDistrict)
+      await createEntities(asAlice, 1, 1, 'trees', [], { district: 'north' }, 'North Tree'); // matches Rule 2 (secondaryDistrict)
+      await createEntities(asAlice, 1, 1, 'trees', [], { district: 'west' }, 'West Tree'); // matches neither
+
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.consumeDatasets)
+        .set('Content-Type', 'application/xml').expect(200);
+      await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish').expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'primaryDistrict' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'secondaryDistrict' }).expect(200);
+
+      // Two rules: different actor properties, same entity property
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [
+          { datasetProperty: 'district', actorProperty: 'primaryDistrict' },
+          { datasetProperty: 'district', actorProperty: 'secondaryDistrict' }
+        ] } })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Multi-territory Worker' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`).expect(200);
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { primaryDistrict: 'east', secondaryDistrict: 'north' } }).expect(200);
+
+      await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets/attachments/trees.csv`)
+        .expect(200)
+        .then(({ text }) => {
+          const rows = text.trim().split('\n');
+          rows.length.should.equal(3); // 1 header + 2 matching entities
+          text.should.containEql('East Tree');
+          text.should.containEql('North Tree');
+          text.should.not.containEql('West Tree');
+        });
+    }));
   });
 
   // OpenRosa endpoint
