@@ -1094,6 +1094,40 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   }));
             }))));
 
+      it('should have webformsEnabled false for a new Form with form-level encryption', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/encrypted')
+          .expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(false);
+          });
+      }));
+
+      it('should have webformsEnabled false for a new Form in a project with system-managed encryption', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/key')
+          .send({ passphrase: 'supersecret' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simple2)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/forms/simple2')
+          .expect(200)
+          .then(({ body }) => {
+            body.webformsEnabled.should.equal(false);
+          });
+      }));
+
       describe('publishNotes', () => {
         it('should return publishNotes with extended metadata', testService(async (service) => {
           const asAlice = await service.login('alice');
