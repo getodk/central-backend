@@ -7344,6 +7344,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
           owner: chelseaId,
           entities: 0,
+          filterRules: null,
           latestEntityCreatedOrUpdated: null,
           latestAuditEntry: loggedAt,
         })));
@@ -7360,6 +7361,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
           owner: chelseaId,
           entities: 1,
+          filterRules: null,
           latestEntityCreatedOrUpdated: createdAt,
           latestAuditEntry: loggedAt,
         })));
@@ -7372,6 +7374,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
           owner: chelseaId,
           entities: 1,
+          filterRules: null,
           latestEntityCreatedOrUpdated: updatedAt,
           latestAuditEntry: loggedAt,
         })));
