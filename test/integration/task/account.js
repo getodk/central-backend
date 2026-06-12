@@ -1,14 +1,17 @@
 const appRoot = require('app-root-path');
 const should = require('should');
+const { v4: uuid } = require('uuid');
 const { testTask } = require('../setup');
 const { verifyPassword } = require(appRoot + '/lib/util/crypto');
 const { createUser, promoteUser, setUserPassword } = require(appRoot + '/lib/task/account');
 const { User } = require(appRoot + '/lib/model/frames');
 
+const newpassword = uuid();
+
 describe('task: accounts', () => {
   describe('createUser', () => {
     it('should create a user account with a password', testTask(({ Users }) =>
-      createUser('testuser@getodk.org', 'aoeuidhtns')
+      createUser('testuser@getodk.org', newpassword)
         .then((result) => {
           result.email.should.equal('testuser@getodk.org');
           return Users.getByEmail('testuser@getodk.org')
@@ -24,7 +27,7 @@ describe('task: accounts', () => {
         })));
 
     it('should log an audit entry', testTask(({ Audits, Users }) =>
-      createUser('testuser@getodk.org', 'aoeuidhtns')
+      createUser('testuser@getodk.org', newpassword)
         .then(() => Promise.all([
           Users.getByEmail('testuser@getodk.org').then((o) => o.get()),
           Audits.getLatestByAction('user.create').then((o) => o.get())
@@ -36,10 +39,10 @@ describe('task: accounts', () => {
         })));
 
     it('should set the password if given', testTask(({ Users }) =>
-      createUser('testuser@getodk.org', 'aoeuidhtns')
+      createUser('testuser@getodk.org', newpassword)
         .then(() => Users.getByEmail('testuser@getodk.org'))
         .then((o) => o.get())
-        .then((user) => verifyPassword('aoeuidhtns', user.password))
+        .then((user) => verifyPassword(newpassword, user.password))
         .then((verified) => verified.should.equal(true))));
 
     it('should not verify a null password', testTask(({ Users }) =>
@@ -56,6 +59,18 @@ describe('task: accounts', () => {
     it('should complain if the password is too long', testTask(() =>
       createUser('testuser@getodk.org', 'longggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg')
         .catch((problem) => problem.problemCode.should.equal(400.38))));
+
+    it('should complain if the password is too weak', testTask(() =>
+      createUser('testuser@getodk.org', 'hunter2!!!')
+        .catch((err) => {
+          err.should.be.a.Problem();
+          err.problemCode.should.eql(400.44);
+          err.message.should.eql('This is similar to a commonly used password');
+          err.problemDetails.should.eql({
+            warning: 'This is similar to a commonly used password',
+            suggestions: [ 'Add another word or two. Uncommon words are better.' ],
+          });
+        })));
   });
 
   describe('promoteUser', () => {
@@ -91,10 +106,10 @@ describe('task: accounts', () => {
   describe('setUserPassword', () => {
     it('should set a user password', testTask(({ Users }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
-        .then(() => setUserPassword('testuser@getodk.org', 'aoeuidhtns'))
+        .then(() => setUserPassword('testuser@getodk.org', newpassword))
         .then(() => Users.getByEmail('testuser@getodk.org'))
         .then((o) => o.get())
-        .then((user) => verifyPassword('aoeuidhtns', user.password))
+        .then((user) => verifyPassword(newpassword, user.password))
         .then((verified) => verified.should.equal(true))));
 
     it('should complain about a password that is too short', testTask(({ Users }) =>
@@ -107,6 +122,19 @@ describe('task: accounts', () => {
         .then(() => setUserPassword('testuser@getodk.org', 'longggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg'))
         .catch((problem) => problem.problemCode.should.equal(400.38))));
 
+    it('should complain about a password that is too weak', testTask(({ Users }) =>
+      Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
+        .then(() => setUserPassword('testuser@getodk.org', 'hunter2!!!'))
+        .catch((err) => {
+          err.should.be.a.Problem();
+          err.problemCode.should.eql(400.44);
+          err.message.should.eql('This is similar to a commonly used password');
+          err.problemDetails.should.eql({
+            warning: 'This is similar to a commonly used password',
+            suggestions: [ 'Add another word or two. Uncommon words are better.' ],
+          });
+        })));
+
     it('should delete sessions', testTask(async ({ Sessions, Users }) => {
       const user = await Users.create(User.fromApi({
         email: 'testuser@getodk.org',
@@ -114,13 +142,13 @@ describe('task: accounts', () => {
       }));
       const { token } = await Sessions.create(user.actor);
       (await Sessions.getByBearerToken(token)).isDefined().should.be.true();
-      await setUserPassword('testuser@getodk.org', 'aoeuidhtns');
+      await setUserPassword('testuser@getodk.org', newpassword);
       (await Sessions.getByBearerToken(token)).isDefined().should.be.false();
     }));
 
     it('should log an audit entry', testTask(({ Audits, Users }) =>
       Users.create(User.fromApi({ email: 'testuser@getodk.org', displayName: 'test user' }))
-        .then(() => setUserPassword('testuser@getodk.org', 'aoeuidhtns'))
+        .then(() => setUserPassword('testuser@getodk.org', newpassword))
         .then(() => Promise.all([
           Audits.getLatestByAction('user.update').then((o) => o.get()),
           Users.getByEmail('testuser@getodk.org').then((o) => o.get())

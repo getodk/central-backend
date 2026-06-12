@@ -40,6 +40,20 @@ describe('util/crypto', () => {
       Buffer.byteLength(password).should.be.greaterThan(72);
       return hashPassword(password).should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.');
     });
+
+    describe('password strength checks', () => {
+      [
+        [ '1234567890', 'This is a top-100 common password' ],
+        [ '2026-04-27', 'Dates are often easy to guess' ],
+        [ 'aaaaaaaaaaaaaaaaaaa', 'Repeats like "aaa" are easy to guess' ],
+        [ 'batteryhorse', 'Add another word or two. Uncommon words are better.' ],
+        [ 'christopher', 'Names and surnames by themselves are easy to guess' ],
+        [ 'tumtumtumtum', 'Repeats like "abcabcabc" are only slightly harder to guess than "abc"' ],
+      ].forEach(([ password, expectedMessage ]) => {
+        it(`should reject password '${password}' with message '${expectedMessage}'`, () =>
+          hashPassword(password).should.be.rejectedWith(expectedMessage));
+      });
+    });
   });
 
   describe('verifyPassword()', () => {
