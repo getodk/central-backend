@@ -8236,6 +8236,63 @@ describe('datasets and entities', () => {
           .expect(200);
         (await getHashAppUser(service, appUser.token)).should.not.equal(originalHashWithFilter);
       }));
+
+      it('hash changes and count changes when an entity in the segment is deleted', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, apply filter, assign 'north' to app user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // App user sees only the 1 north entity
+        const hashBefore = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        // Delete the north entity (in the app user's segment)
+        const { body: entities } = await asAlice.get('/v1/projects/1/datasets/people/entities').expect(200);
+        const northEntity = entities.find(e => e.currentVersion.label === 'Keri (north)');
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${northEntity.uuid}`)
+          .expect(200);
+
+        // Hash must change and count must drop to 0
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashBefore);
+        (await countEntities(service, null, appUser.token)).should.equal(0);
+      }));
+
+      it('hash changes even when count stays the same (delete one, add one in segment)', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, apply filter, assign 'north' to app user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // App user sees only the 1 north entity
+        const hashBefore = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        // Delete the north entity, then add a new north entity
+        const { body: entities } = await asAlice.get('/v1/projects/1/datasets/people/entities').expect(200);
+        const northEntity = entities.find(e => e.currentVersion.label === 'Keri (north)');
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${northEntity.uuid}`)
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'New North Person', data: { region: 'north' } })
+          .expect(200);
+
+        // Count is still 1, but the hash must have changed
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashBefore);
+      }));
     });
   });
 
