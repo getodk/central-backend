@@ -7335,18 +7335,11 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => body.id);
 
-        const { loggedAt } = await asAlice.get('/v1/audits?action=dataset.update')
-          .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(1);
-            return body[0];
-          });
         (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
           owner: chelseaId,
+          propertyList: ['age', 'first_name'],
           entities: 0,
-          filterRules: null,
           latestEntityCreatedOrUpdated: null,
-          latestAuditEntry: loggedAt,
         })));
 
         // Have Chelsea create an entity.
@@ -7360,10 +7353,9 @@ describe('datasets and entities', () => {
           .then(({ body }) => body);
         (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
           owner: chelseaId,
+          propertyList: ['age', 'first_name'],
           entities: 1,
-          filterRules: null,
-          latestEntityCreatedOrUpdated: createdAt,
-          latestAuditEntry: loggedAt,
+          latestEntityCreatedOrUpdated: createdAt
         })));
 
         // Update the entity.
@@ -7373,10 +7365,9 @@ describe('datasets and entities', () => {
           .then(({ body }) => body);
         (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
           owner: chelseaId,
+          propertyList: ['age', 'first_name'],
           entities: 1,
-          filterRules: null,
           latestEntityCreatedOrUpdated: updatedAt,
-          latestAuditEntry: loggedAt,
         })));
       }));
 
@@ -7832,7 +7823,7 @@ describe('datasets and entities', () => {
         return { asAlice, appUser };
       };
 
-      it('hash changes for alice but not app user when entity outside segment is added', testServiceFullTrx(async (service) => {
+      it('hash changes for alice AND for app user when entity outside segment is added', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Before the filter is applied, both see the same hash and all entities
@@ -7867,9 +7858,10 @@ describe('datasets and entities', () => {
         (await countEntities(service, asAlice)).should.equal(3);
         (await getHash(asAlice)).should.not.equal(aliceHashAfterFilter);
 
-        // App user still sees only 1 entity and their hash is unchanged
+        // App user still sees only 1 entity
         (await countEntities(service, null, appUser.token)).should.equal(1);
-        (await getHashAppUser(service, appUser.token)).should.equal(appUserHashAfterFilter);
+        // Their hash has changed because we over-invalidate
+        (await getHashAppUser(service, appUser.token)).should.not.equal(appUserHashAfterFilter);
       }));
 
       it('hash changes for app user when filter rules are first added', testServiceFullTrx(async (service) => {
@@ -7931,6 +7923,12 @@ describe('datasets and entities', () => {
 
       it('hash changes for app user when their actor property value changes', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'otherProp' });
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'anotherProp' });
 
         // Set up actor properties, apply filter, and assign region 'north' to the app user
         await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
@@ -8018,7 +8016,7 @@ describe('datasets and entities', () => {
         northHash.should.not.equal(southHash);
       }));
 
-      it('when user has no property set, hash changes when filter is added but stays stable when entities are added outside the empty segment', testServiceFullTrx(async (service) => {
+      it('when user has no property set, hash changes when filter is added AND ALSO when entities are added outside the empty segment', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Before filter: app user sees all entities
@@ -8044,8 +8042,8 @@ describe('datasets and entities', () => {
           .send({ label: 'New (south)', data: { region: 'south' } })
           .expect(200);
 
-        // Hash stays the same — new entities don't affect a user with no matching segment
-        (await getHashAppUser(service, appUser.token)).should.equal(hashFailClosed);
+        // Hash changes - we over-invalidate when using property filters
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashFailClosed);
         (await countEntities(service, null, appUser.token)).should.equal(0);
       }));
 
@@ -8077,7 +8075,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(1);
       }));
 
-      it('hash does not change when an entity outside the app user segment is updated', testServiceFullTrx(async (service) => {
+      it('hash DOES change when an entity outside the app user segment is updated', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up actor properties, apply filter, assign 'north' to app user
@@ -8100,8 +8098,8 @@ describe('datasets and entities', () => {
           .send({ data: { region: 'south' }, label: 'Bob (south) - updated' })
           .expect(200);
 
-        // Hash must not change — the updated entity is not in the app user's segment
-        (await getHashAppUser(service, appUser.token)).should.equal(hashBefore);
+        // Hash changes even though the updated entity is not in the app user's segment because we over-invalidate
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashBefore);
         (await countEntities(service, null, appUser.token)).should.equal(1);
       }));
 
@@ -8194,13 +8192,8 @@ describe('datasets and entities', () => {
         // Mara (region=south, district=east) yes, Dave (region=south, district=west) no
         (await countEntities(service, null, appUser.token)).should.equal(2);
 
-        // Fetch the latest entity update timestamp (Mara, the last one added)
-        const { createdAt: lastEntityCreatedAt } = await asAlice.get('/v1/projects/1/datasets/people/entities')
-          .expect(200)
-          .then(({ body }) => body.find(e => e.currentVersion.label === 'Mara (east)'));
-
-        // Fetch the latest dataset.update audit entry timestamp
-        const { loggedAt: latestAuditEntry } = await asAlice.get('/v1/audits?limit=1&action=dataset.update')
+        // Fetch the latest dataset.update audit entry timestamp, which happens to be the last entity.create event
+        const { loggedAt: latestAuditEntry } = await asAlice.get('/v1/audits?limit=1')
           .expect(200)
           .then(({ body }) => body[0]);
 
@@ -8213,10 +8206,8 @@ describe('datasets and entities', () => {
 
         (await getHashAppUser(service, appUser.token)).should.equal(md5sum(JSON.stringify({
           owner: appUser.id,
-          entities: 2,
           filterRules: expectedFilterRules,
-          latestEntityCreatedOrUpdated: lastEntityCreatedAt,
-          latestAuditEntry,
+          latestAuditEntry // the last event is the create event for the entity in the dataset
         })));
       }));
 
