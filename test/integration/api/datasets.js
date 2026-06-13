@@ -7309,6 +7309,23 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.not.equal(originalHash);
       }));
 
+      it('changes hash after a dataset property is deleted', testServiceFullTrx(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await createData(asAlice);
+        await assignToProject(asAlice, asChelsea, 'formfill');
+
+        // Add an entity property.
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'foo' })
+          .expect(200);
+        const originalHash = await getHash(asChelsea);
+
+        // Delete the property.
+        await asAlice.delete('/v1/projects/1/datasets/people/properties/foo')
+          .expect(200);
+        (await getHash(asChelsea)).should.not.equal(originalHash);
+      }));
+
       it('computes hash based on timestamps and the entity count @slow', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
@@ -7318,17 +7335,11 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => body.id);
 
-        const { loggedAt } = await asAlice.get('/v1/audits?action=dataset.update')
-          .expect(200)
-          .then(({ body }) => {
-            body.length.should.equal(1);
-            return body[0];
-          });
         (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
           owner: chelseaId,
+          propertyList: ['age', 'first_name'],
           entities: 0,
           latestEntityCreatedOrUpdated: null,
-          latestAuditEntry: loggedAt,
         })));
 
         // Have Chelsea create an entity.
@@ -7342,9 +7353,9 @@ describe('datasets and entities', () => {
           .then(({ body }) => body);
         (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
           owner: chelseaId,
+          propertyList: ['age', 'first_name'],
           entities: 1,
-          latestEntityCreatedOrUpdated: createdAt,
-          latestAuditEntry: loggedAt,
+          latestEntityCreatedOrUpdated: createdAt
         })));
 
         // Update the entity.
@@ -7354,9 +7365,9 @@ describe('datasets and entities', () => {
           .then(({ body }) => body);
         (await getHash(asChelsea)).should.equal(md5sum(JSON.stringify({
           owner: chelseaId,
+          propertyList: ['age', 'first_name'],
           entities: 1,
           latestEntityCreatedOrUpdated: updatedAt,
-          latestAuditEntry: loggedAt,
         })));
       }));
 
@@ -7736,6 +7747,687 @@ describe('datasets and entities', () => {
           text.should.containEql('North Tree');
           text.should.not.containEql('West Tree');
         });
+    }));
+
+    describe('Etag / open rosa hash with dataset user property filters', () => {
+      const getHash = async (asUser) => {
+        const hash = await asUser.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
+          .expect(200)
+          .then(response => response.get('ETag').replaceAll('"', ''));
+
+        // Check that the hash from the REST API matches the OpenRosa manifest.
+        const { text: manifest } = await asUser.get('/v1/projects/1/forms/consumeDatasets/manifest')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200);
+        manifest.replace(/\s/g, '').should.containEql(`<filename>people.csv</filename><hash>md5:${hash}</hash>`);
+
+        return hash;
+      };
+
+      const getHashAppUser = async (service, token) => {
+        const hash = await service.get(`/v1/key/${token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+          .expect(200)
+          .then(response => response.get('ETag').replaceAll('"', ''));
+
+        // Check that the hash from the REST API matches the OpenRosa manifest.
+        const { text: manifest } = await service.get(`/v1/key/${token}/projects/1/forms/consumeDatasets/manifest`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200);
+        manifest.replace(/\s/g, '').should.containEql(`<filename>people.csv</filename><hash>md5:${hash}</hash>`);
+
+        return hash;
+      };
+
+      const countEntities = (service, asUser = null, token = null) => {
+        if (!token)
+          return asUser.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
+            .expect(200)
+            .then((response) => response.text.split('\n').length - 2);
+        else
+          return service.get(`/v1/key/${token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+            .expect(200)
+            .then((response) => response.text.split('\n').length - 2);
+      };
+
+      // Creates the people dataset, publishes the consumeDatasets form, seeds two
+      // entities (one north, one south), and creates an app user assigned to the form.
+      // Returns { asAlice, appUser }.
+      const setupPeopleDatasetWithAppUser = async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.consumeDatasets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'region' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            source: { name: 'people.csv', size: 100 },
+            entities: [
+              { label: 'Keri (north)', data: { region: 'north' } },
+              { label: 'Bob (south)', data: { region: 'south' } },
+            ]
+          })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'Survey Worker - region NORTH' }).expect(200);
+        await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`).expect(200);
+
+        return { asAlice, appUser };
+      };
+
+      it('hash changes for alice AND for app user when entity outside segment is added', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Before the filter is applied, both see the same hash and all entities
+        const hashBeforeFilter = await getHashAppUser(service, appUser.token);
+        hashBeforeFilter.should.equal(await getHash(asAlice));
+        (await countEntities(service, asAlice)).should.equal(2);
+        (await countEntities(service, null, appUser.token)).should.equal(2);
+
+        // Set up actor properties, dataset filter, and assign region 'north' to the app user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // After filter: Alice still sees all 2, app user only sees the 1 north entity
+        (await countEntities(service, asAlice)).should.equal(2);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        const aliceHashAfterFilter = await getHash(asAlice);
+        const appUserHashAfterFilter = await getHashAppUser(service, appUser.token);
+        aliceHashAfterFilter.should.not.equal(appUserHashAfterFilter);
+
+        // Add a new entity outside the app user's segment (south)
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'Joe (south)', data: { region: 'south' } })
+          .expect(200);
+
+        // Alice now sees 3 entities and her hash changed
+        (await countEntities(service, asAlice)).should.equal(3);
+        (await getHash(asAlice)).should.not.equal(aliceHashAfterFilter);
+
+        // App user still sees only 1 entity
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+        // Their hash has changed because we over-invalidate
+        (await getHashAppUser(service, appUser.token)).should.not.equal(appUserHashAfterFilter);
+      }));
+
+      it('hash changes for app user when filter rules are first added', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties and assign region 'north' to the app user (no filter yet)
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // Before filter: app user sees all entities
+        const hashBeforeFilter = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(2);
+
+        // Apply the property filter rule (no entity data has changed)
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        // Hash must change even though no entity was added or updated —
+        // the filter rule itself is now part of the hash input
+        const hashAfterFilter = await getHashAppUser(service, appUser.token);
+        hashAfterFilter.should.not.equal(hashBeforeFilter);
+
+        // App user now only sees the 1 north entity
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+      }));
+
+      it('hash changes for app user when filter rules are removed', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, assign region 'north' to the app user, and apply filter
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        // With filter active: app user sees only 1 north entity
+        const hashWithFilter = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        // Remove the filter (no entity data has changed)
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: null })
+          .expect(200);
+
+        // Hash must change even though no entity was added or updated —
+        // the filter rule is no longer part of the hash input
+        const hashAfterRemove = await getHashAppUser(service, appUser.token);
+        hashAfterRemove.should.not.equal(hashWithFilter);
+
+        // App user now sees all 2 entities again
+        (await countEntities(service, null, appUser.token)).should.equal(2);
+      }));
+
+      it('hash changes for app user when their actor property value changes', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'otherProp' });
+
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'anotherProp' });
+
+        // Set up actor properties, apply filter, and assign region 'north' to the app user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // App user sees only the 1 north entity
+        const hashAsNorth = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        // Change the app user's region to 'south' (no entity data has changed)
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'south' } })
+          .expect(200);
+
+        // Hash must change even though no entity was added or updated —
+        // the actor's property value is now part of the hash input via filterRules.
+        // Without this, the device wouldn't know to re-download and would serve stale data.
+        const hashAsSouth = await getHashAppUser(service, appUser.token);
+        hashAsSouth.should.not.equal(hashAsNorth);
+
+        // App user now sees the 1 south entity instead
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+      }));
+
+      it('hash changes for app user when their actor property value is assigned for the first time', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties and apply filter — but do NOT assign a value to the app user yet
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        // Fail-closed: app user has no property value, so they see 0 entities
+        const hashWithNoValue = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(0);
+
+        // Assign 'north' to the app user for the first time (no entity data has changed)
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // Hash must change — the actor's value went from null to 'north',
+        // so the device must re-download to get the newly visible entities.
+        // Without this, the device would serve an empty dataset indefinitely.
+        const hashWithValue = await getHashAppUser(service, appUser.token);
+        hashWithValue.should.not.equal(hashWithNoValue);
+
+        // App user now sees the 1 north entity
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+      }));
+
+      it('two app users with different property values get different hashes', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser: northUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Create a second app user assigned to the same form
+        const { body: southUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'Survey Worker - region SOUTH' }).expect(200);
+        await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${southUser.id}`).expect(200);
+
+        // Set up actor properties, apply filter, and assign different regions to each user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${northUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${southUser.id}`)
+          .send({ properties: { region: 'south' } })
+          .expect(200);
+
+        // Each user sees only their segment
+        (await countEntities(service, null, northUser.token)).should.equal(1);
+        (await countEntities(service, null, southUser.token)).should.equal(1);
+
+        // Their hashes must be different — each encodes a different actor property value
+        const northHash = await getHashAppUser(service, northUser.token);
+        const southHash = await getHashAppUser(service, southUser.token);
+        northHash.should.not.equal(southHash);
+      }));
+
+      it('when user has no property set, hash changes when filter is added AND ALSO when entities are added outside the empty segment', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Before filter: app user sees all entities
+        const hashBeforeFilter = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(2);
+
+        // Apply filter with no value assigned to app user (fail-closed)
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        // Hash changes when filter is applied — null value is encoded in filterRules
+        const hashFailClosed = await getHashAppUser(service, appUser.token);
+        hashFailClosed.should.not.equal(hashBeforeFilter);
+        (await countEntities(service, null, appUser.token)).should.equal(0);
+
+        // Add more entities — but none match the app user's (null) segment
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'New (north)', data: { region: 'north' } })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'New (south)', data: { region: 'south' } })
+          .expect(200);
+
+        // Hash changes - we over-invalidate when using property filters
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashFailClosed);
+        (await countEntities(service, null, appUser.token)).should.equal(0);
+      }));
+
+      it('hash changes when an entity in the app user segment is updated', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, apply filter, assign 'north' to app user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // App user sees the 1 north entity
+        const hashBefore = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        // Update the north entity (in the app user's segment)
+        const { body: entities } = await asAlice.get('/v1/projects/1/datasets/people/entities').expect(200);
+        const northEntity = entities.find(e => e.currentVersion.label === 'Keri (north)');
+        await asAlice.patch(`/v1/projects/1/datasets/people/entities/${northEntity.uuid}?baseVersion=1`)
+          .send({ data: { region: 'north' }, label: 'Keri (north) - updated' })
+          .expect(200);
+
+        // Hash must change — lastEntityUpdate for the app user's segment changed
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashBefore);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+      }));
+
+      it('hash DOES change when an entity outside the app user segment is updated', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, apply filter, assign 'north' to app user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // App user sees only the 1 north entity
+        const hashBefore = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        // Update the south entity (outside the app user's segment)
+        const { body: entities } = await asAlice.get('/v1/projects/1/datasets/people/entities').expect(200);
+        const southEntity = entities.find(e => e.currentVersion.label === 'Bob (south)');
+        await asAlice.patch(`/v1/projects/1/datasets/people/entities/${southEntity.uuid}?baseVersion=1`)
+          .send({ data: { region: 'south' }, label: 'Bob (south) - updated' })
+          .expect(200);
+
+        // Hash changes even though the updated entity is not in the app user's segment because we over-invalidate
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashBefore);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+      }));
+
+      it('hash changes when the filter rule mapping is changed', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Add a second dataset property 'district' and a second actor property 'district'
+        await asAlice.post('/v1/projects/1/datasets/people/properties').send({ name: 'district' }).expect(200);
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'district' }).expect(200);
+
+        // Apply filter: region → region
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north', district: 'east' } })
+          .expect(200);
+
+        const hashWithRegionFilter = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        // Change the filter rule to district → district (no entity data changed)
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'district', actorProperty: 'district' }] } })
+          .expect(200);
+
+        // Hash must change — the filter rule itself changed
+        const hashWithDistrictFilter = await getHashAppUser(service, appUser.token);
+        hashWithDistrictFilter.should.not.equal(hashWithRegionFilter);
+
+        // App user now sees 0 entities (none have district = 'east')
+        (await countEntities(service, null, appUser.token)).should.equal(0);
+      }));
+
+      it('hash changes for filtered app user when a new dataset property is added', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up filter: region → region, assign 'north' to app user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        const hashBefore = await getHashAppUser(service, appUser.token);
+
+        // Add a new dataset property (not part of the filter rule)
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'organization' })
+          .expect(200);
+
+        // Hash must change — the property addition creates an audit entry that
+        // is part of the hash input (latestAuditEntry)
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashBefore);
+      }));
+
+      it('computes hash with filterRules included for filtered app user @slow', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Add a second property 'district' and two actor properties
+        await asAlice.post('/v1/projects/1/datasets/people/properties').send({ name: 'district' }).expect(200);
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'district' }).expect(200);
+
+        // Apply two OR filter rules: region→region and district→district
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [
+            { datasetProperty: 'region', actorProperty: 'region' },
+            { datasetProperty: 'district', actorProperty: 'district' }
+          ] } })
+          .expect(200);
+
+        // Assign region='north' and district='east' to the app user
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north', district: 'east' } })
+          .expect(200);
+
+        // Add a few more entities: north (in segment), east (in segment), south (out of segment)
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'Mara (east)', data: { region: 'south', district: 'east' } })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'Dave (south)', data: { region: 'south', district: 'west' } })
+          .expect(200);
+
+        // Visible entities: Keri (region=north) yes, Bob (region=south, district=null) no,
+        // Mara (region=south, district=east) yes, Dave (region=south, district=west) no
+        (await countEntities(service, null, appUser.token)).should.equal(2);
+
+        // Fetch the latest dataset.update audit entry timestamp, which happens to be the last entity.create event
+        const { loggedAt: latestAuditEntry } = await asAlice.get('/v1/audits?limit=1')
+          .expect(200)
+          .then(({ body }) => body[0]);
+
+        // filterRules are sorted by datasetProperty name (district before region).
+        // Key order within each rule matches PostgreSQL JSONB output: value, actorProperty, datasetProperty
+        const expectedFilterRules = [
+          { value: 'east', actorProperty: 'district', datasetProperty: 'district' },
+          { value: 'north', actorProperty: 'region', datasetProperty: 'region' },
+        ];
+
+        (await getHashAppUser(service, appUser.token)).should.equal(md5sum(JSON.stringify({
+          owner: appUser.id,
+          filterRules: expectedFilterRules,
+          latestAuditEntry // the last event is the create event for the entity in the dataset
+        })));
+      }));
+
+      it('changes hash in property-filtered after a dataset property is deleted', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, assign region 'north' to the app user, and apply filter
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        // Add an entity property.
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'foo' })
+          .expect(200);
+
+        // Get original hash with
+        const originalHashWithFilter = await getHashAppUser(service, appUser.token);
+
+        // Delete the property.
+        await asAlice.delete('/v1/projects/1/datasets/people/properties/foo')
+          .expect(200);
+        (await getHashAppUser(service, appUser.token)).should.not.equal(originalHashWithFilter);
+      }));
+
+      it('hash changes and count changes when an entity in the segment is deleted', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, apply filter, assign 'north' to app user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // App user sees only the 1 north entity
+        const hashBefore = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        // Delete the north entity (in the app user's segment)
+        const { body: entities } = await asAlice.get('/v1/projects/1/datasets/people/entities').expect(200);
+        const northEntity = entities.find(e => e.currentVersion.label === 'Keri (north)');
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${northEntity.uuid}`)
+          .expect(200);
+
+        // Hash must change and count must drop to 0
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashBefore);
+        (await countEntities(service, null, appUser.token)).should.equal(0);
+      }));
+
+      it('hash changes even when count stays the same (delete one, add one in segment)', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, apply filter, assign 'north' to app user
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        // App user sees only the 1 north entity
+        const hashBefore = await getHashAppUser(service, appUser.token);
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+
+        // Delete the north entity, then add a new north entity
+        const { body: entities } = await asAlice.get('/v1/projects/1/datasets/people/entities').expect(200);
+        const northEntity = entities.find(e => e.currentVersion.label === 'Keri (north)');
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${northEntity.uuid}`)
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'New North Person', data: { region: 'north' } })
+          .expect(200);
+
+        // Count is still 1, but the hash must have changed
+        (await countEntities(service, null, appUser.token)).should.equal(1);
+        (await getHashAppUser(service, appUser.token)).should.not.equal(hashBefore);
+      }));
+    });
+  });
+
+  describe('Etag / open rosa hash with no filters', () => {
+    // Common setup: create a people dataset, publish the consumeDatasets form,
+    // and seed one entity. Returns { asAlice, entityUuid }.
+    const setup = async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'age' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.consumeDatasets)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      const { body: entity } = await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'Alice', data: { age: '30' } })
+        .expect(200);
+
+      return { asAlice, entityUuid: entity.uuid };
+    };
+
+    const getHash = async (asAlice) => {
+      const hash = await asAlice.get('/v1/projects/1/forms/consumeDatasets/attachments/people.csv')
+        .expect(200)
+        .then(r => r.get('ETag').replaceAll('"', ''));
+
+      // Verify the REST ETag matches the OpenRosa manifest hash
+      const { text: manifest } = await asAlice.get('/v1/projects/1/forms/consumeDatasets/manifest')
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200);
+      manifest.replace(/\s/g, '').should.containEql(`<filename>people.csv</filename><hash>md5:${hash}</hash>`);
+
+      return hash;
+    };
+
+    it('hash changes when an entity is added', testServiceFullTrx(async (service) => {
+      const { asAlice } = await setup(service);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'Bob', data: { age: '25' } })
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
+    }));
+
+    it('hash changes when an entity is updated', testServiceFullTrx(async (service) => {
+      const { asAlice, entityUuid } = await setup(service);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.patch(`/v1/projects/1/datasets/people/entities/${entityUuid}?baseVersion=1`)
+        .send({ label: 'Alice - updated', data: { age: '31' } })
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
+    }));
+
+    it('hash changes when an entity is deleted', testServiceFullTrx(async (service) => {
+      const { asAlice, entityUuid } = await setup(service);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${entityUuid}`)
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
+    }));
+
+    it('two app users with no filter get the same hash', testServiceFullTrx(async (service) => {
+      const { asAlice } = await setup(service);
+
+      const { body: appUserA } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Worker A' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserA.id}`).expect(200);
+
+      const { body: appUserB } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Worker B' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserB.id}`).expect(200);
+
+      const hashA = await service.get(`/v1/key/${appUserA.token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+        .expect(200).then(r => r.get('ETag'));
+      const hashB = await service.get(`/v1/key/${appUserB.token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+        .expect(200).then(r => r.get('ETag'));
+
+      hashA.should.equal(hashB);
+    }));
+
+    it('alice (manager) and an app user get the same hash when there is no filter', testServiceFullTrx(async (service) => {
+      const { asAlice } = await setup(service);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Worker' }).expect(200);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`).expect(200);
+
+      const aliceHash = await getHash(asAlice);
+      const appUserHash = await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets/attachments/people.csv`)
+        .expect(200).then(r => r.get('ETag'));
+
+      aliceHash.should.equal(appUserHash.replaceAll('"', ''));
+    }));
+
+    it('hash changes when a property is added to the dataset', testService(async (service) => {
+      const { asAlice } = await setup(service);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'hometown' })
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
+    }));
+
+    it('hash changes when a property is deleted from the dataset', testService(async (service) => {
+      const { asAlice } = await setup(service);
+
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'city' })
+        .expect(200);
+
+      const hashBefore = await getHash(asAlice);
+
+      await asAlice.delete('/v1/projects/1/datasets/people/properties/city')
+        .expect(200);
+
+      (await getHash(asAlice)).should.not.equal(hashBefore);
     }));
   });
 
