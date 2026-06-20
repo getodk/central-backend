@@ -376,6 +376,7 @@ should.Assertion.add('Dataset', function assertDataset(extraKeys = []) {
     'projectId', 'name', 'approvalRequired', 'ownerOnly', 'createdAt', 'deletedAt',
     // Optional metadata
     'properties', 'linkedForms', 'sourceForms', 'lastUpdate', 'draftLinkedForms', 'draftSourceForms',
+    'accessFilter',
     ...extraKeys
   ]);
   this.obj.projectId.should.be.a.Number();

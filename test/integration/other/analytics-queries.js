@@ -98,7 +98,7 @@ const submitToForm = (service, user, projectId, xmlFormId, xml, deviceId = 'abcd
 ////////////////////////////////////////////////////////////////////////////////
 // Tests!
 ////////////////////////////////////////////////////////////////////////////////
-describe('analytics task queries', function () {
+describe('analytics task queries @slow', function () {
   // increasing timeouts on this set of tests
   this.timeout(8000);
 

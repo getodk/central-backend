@@ -54,7 +54,7 @@ dev-s3: fake-s3-accounts base
 # MINIO_KMS_SECRET_KEY, MINIO_KMS_AUTO_ENCRYPTION enable encryption - this changes how s3 ETags are generated.
 #   See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html
 #   See: https://github.com/minio/minio/discussions/19012
-S3_SERVER_ARGS := --network host \
+S3_SERVER_ARGS := -p 127.0.0.1:9000:9000 -p 127.0.0.1:9001:9001 \
 		-e MINIO_ROOT_USER=odk-central-dev \
 		-e MINIO_ROOT_PASSWORD=topSecret123 \
 		-e MINIO_KMS_AUTO_ENCRYPTION=on \
@@ -100,7 +100,8 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=insecure npx mocha --recursive
+	$(MAKE) test-unit
+	$(MAKE) test-integration
 
 .PHONY: test-db-migrations
 test-db-migrations:
@@ -110,7 +111,8 @@ test-db-migrations:
 
 .PHONY: test-fast
 test-fast: node_version
-	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
+	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-unit
+	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-integration
 
 .PHONY: test-integration
 test-integration: node_version
@@ -135,7 +137,7 @@ lint: node_version
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
 	docker start odk-postgres14 || (\
-		docker run -d --name odk-postgres14 -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.20-alpine \
+		docker run -d --name odk-postgres14 -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.20-alpine \
 		&& sleep 5 \
 		&& node lib/bin/create-docker-databases.js --log \
 	)
@@ -159,7 +161,7 @@ check-for-large-files:
 .PHONY: api-docs
 api-docs:
 	(test "$(docker images -q odk-docs)" || docker build --file odk-docs.dockerfile -t odk-docs .) && \
-	docker run --rm -it -v ./docs:/docs/docs/_static/central-spec -p 8000:8000 odk-docs
+	docker run --rm -it -v ./docs:/docs/docs/_static/central-spec -p 127.0.0.1:8000:8000 odk-docs
 
 .PHONY: api-docs-lint
 api-docs-lint:

@@ -62,29 +62,26 @@ describe('api: /config', () => {
             });
         }));
 
-        it('should inline select image types', testService(async (service) => {
-          const asAlice = await service.login('alice');
+        [
+          'image/jpeg',
+          'image/svg+xml',
+          'text/html',
+          'text/javascript',
+        ].forEach(mimeType => {
+          it(`should not set Content-Disposition: inline for mime type: ${mimeType}`, testService(async (service) => {
+            const asAlice = await service.login('alice');
 
-          await asAlice.post('/v1/config/logo')
-            .set('Content-Type', 'image/jpeg')
-            .send('testimage')
-            .expect(200);
-          await asAlice.get('/v1/config/logo')
-            .expect(200)
-            .then(({ headers }) => {
-              headers['content-disposition'].should.startWith('inline');
-            });
-
-          await asAlice.post('/v1/config/logo')
-            .set('Content-Type', 'image/svg+xml')
-            .send('testimage2')
-            .expect(200);
-          await asAlice.get('/v1/config/logo')
-            .expect(200)
-            .then(({ headers }) => {
-              headers['content-disposition'].should.startWith('attachment');
-            });
-        }));
+            await asAlice.post('/v1/config/logo')
+              .set('Content-Type', mimeType)
+              .send('testimage')
+              .expect(200);
+            await asAlice.get('/v1/config/logo')
+              .expect(200)
+              .then(({ headers }) => {
+                headers['content-disposition'].should.startWith('attachment');
+              });
+          }));
+        });
       });
 
       it('should overwrite the existing config', testService((service) =>
@@ -172,17 +169,108 @@ describe('api: /config', () => {
             body.value.should.eql({ title: 'foo' });
             body.setAt.should.be.a.recentIsoDate();
           });
-
-        await asAlice.post('/v1/config/logo')
-          .set('Content-Type', 'image/jpeg')
-          .send('testimage')
-          .expect(200);
-        await service.get('/v1/config/public/logo')
-          .expect(200)
-          .then(({ body }) => {
-            body.toString('utf8').should.equal('testimage');
-          });
       }));
+
+      [
+        'hero-image',
+        'logo',
+      ].forEach(configKey => {
+        const blobConfigPath = `/v1/config/public/${configKey}`;
+
+        const assertStandardResponse = (res) => {
+          const { status, body, headers } = res;
+
+          status.should.eql(200);
+          headers['content-type'].should.eql('image/custom-format');
+          headers['content-disposition'].should.eql('attachment');
+          headers['etag'].should.eql('"f513290389192c42721fc73d4f31ab1d"'); // eslint-disable-line dot-notation
+          body.toString('utf8').should.equal('testimage');
+
+          return res;
+        };
+
+        describe(`GET ${blobConfigPath} (blob)`, () => {
+          [
+            { scenario:'s3 NOT enabled',                enableS3:false, transferToS3:false }, // eslint-disable-line no-multi-spaces,key-spacing
+            { scenario:'s3 enabled, blob NOT uploaded', enableS3:true,  transferToS3:false }, // eslint-disable-line no-multi-spaces,key-spacing
+            { scenario:'s3 enabled, blob uploaded',     enableS3:true,  transferToS3:true  }, // eslint-disable-line no-multi-spaces,key-spacing
+          ].forEach(({ scenario, enableS3, transferToS3 }) => {
+            describe(scenario, () => {
+              beforeEach(() => {
+                if (enableS3) global.s3.enableMock();
+              });
+
+              it('should return notfound if the config is not set', testService((service) =>
+                service.login('alice', (asAlice) =>
+                  asAlice.get(blobConfigPath).expect(404))));
+
+              describe('blob config exists', () => {
+                const blobSetup = async (service, { Blobs }) => {
+                  const asAlice = await service.login('alice');
+
+                  await asAlice.post(`/v1/config/${configKey}`)
+                    .set('Content-Type', 'image/custom-format')
+                    .send('testimage')
+                    .expect(200);
+
+                  if (transferToS3) await Blobs.s3UploadPending();
+                };
+
+                it('should return the config with expected headers', testService(async (service, container) => {
+                  await blobSetup(service, container);
+                  await service.get(blobConfigPath)
+                    .then(assertStandardResponse);
+                }));
+
+                [
+                  '',
+                  '?irrelevant=123',
+                  '?ts=',
+                ].forEach(queryString => {
+                  it(`should set revalidate cache headers for query string: '${queryString}'`, testService(async (service, container) => {
+                    await blobSetup(service, container);
+                    await service.get(`${blobConfigPath}${queryString}`)
+                      .then(assertStandardResponse)
+                      .then(({ headers }) => {
+                        headers['cache-control'].should.eql('no-cache');
+                        headers['vary'].should.eql('Accept-Encoding'); // eslint-disable-line dot-notation
+                      });
+                  }));
+                });
+
+                it('should set immutable cache headers if request includes valid ts query param', testService(async (service, container) => {
+                  await blobSetup(service, container);
+                  await service.get(`${blobConfigPath}?ts=123`)
+                    .then(assertStandardResponse)
+                    .then(({ headers }) => {
+                      headers['cache-control'].should.eql('max-age=31536000');
+                      headers['vary'].should.eql('Accept-Encoding'); // eslint-disable-line dot-notation
+                    });
+                }));
+
+                it('should ignore incorrect etag', testService(async (service, container) => {
+                  await blobSetup(service, container);
+                  await service.get(blobConfigPath)
+                    .set('If-None-Match', '"whatever"')
+                    .then(assertStandardResponse);
+                }));
+
+                it('should 304 correct etag', testService(async (service, container) => {
+                  await blobSetup(service, container);
+                  await service.get(blobConfigPath)
+                    .set('If-None-Match', '"f513290389192c42721fc73d4f31ab1d"')
+                    .expect(304)
+                    .then(({ body, text, headers }) => {
+                      body.should.deepEqual({});
+                      text.should.eql('');
+                      should(headers['content-length']).be.undefined();
+                    });
+                }));
+              });
+            });
+          });
+        });
+      });
     });
 
     describe('GET - all public config', () => {
