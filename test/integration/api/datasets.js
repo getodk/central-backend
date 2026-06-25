@@ -6526,6 +6526,120 @@ describe('datasets and entities', () => {
               body.accessFilter.should.eql({ type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] });
             });
         }));
+
+        it('should log when a filter rule is added to a dataset', testService(async (service, { Audits }) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['region']);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+            .expect(200);
+
+          const audit = await Audits.getLatestByAction('dataset.update').then(o => o.get());
+          audit.details.should.eql({
+            data: {
+              ownerOnly: false,
+              accessFilter: {
+                type: 'property',
+                rules: [{ datasetProperty: 'region', actorProperty: 'region' }]
+              }
+            }
+          });
+        }));
+
+        it('should log when a filter rule is updated', testService(async (service, { Audits }) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['region']);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'district' }).expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+            .expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'district' }] } })
+            .expect(200);
+
+          const audit = await Audits.getLatestByAction('dataset.update').then(o => o.get());
+          audit.details.should.eql({
+            data: {
+              ownerOnly: false,
+              accessFilter: {
+                type: 'property',
+                rules: [{ datasetProperty: 'region', actorProperty: 'district' }]
+              }
+            }
+          });
+        }));
+
+        it('should log when a filter rule is removed', testService(async (service, { Audits }) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['region']);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+            .expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: null })
+            .expect(200);
+
+          const audit = await Audits.getLatestByAction('dataset.update').then(o => o.get());
+          audit.details.should.eql({
+            data: {
+              ownerOnly: false,
+              accessFilter: null
+            }
+          });
+        }));
+
+        it('should log changes to the dataset access mode', testService(async (service, { Audits }) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['region']);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'ownerOnly' } })
+            .expect(200);
+
+          let audit = await Audits.getLatestByAction('dataset.update').then(o => o.get());
+          audit.details.should.eql({
+            data: {
+              ownerOnly: true,
+              accessFilter: { type: 'ownerOnly' }
+            }
+          });
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+            .expect(200);
+
+          audit = await Audits.getLatestByAction('dataset.update').then(o => o.get());
+          audit.details.should.eql({
+            data: {
+              ownerOnly: false,
+              accessFilter: {
+                type: 'property',
+                rules: [{ datasetProperty: 'region', actorProperty: 'region' }]
+              }
+            }
+          });
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: null })
+            .expect(200);
+
+          audit = await Audits.getLatestByAction('dataset.update').then(o => o.get());
+          audit.details.should.eql({
+            data: {
+              ownerOnly: false,
+              accessFilter: null
+            }
+          });
+        }));
       });
     });
 
