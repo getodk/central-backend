@@ -6640,6 +6640,39 @@ describe('datasets and entities', () => {
             }
           });
         }));
+
+        it('should not include accessFilter in audit details when only approvalRequired is updated', testService(async (service, { Audits }) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['region']);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ approvalRequired: true })
+            .expect(200);
+
+          const audit = await Audits.getLatestByAction('dataset.update').then(o => o.get());
+          audit.details.should.eql({
+            data: {
+              approvalRequired: true
+            }
+          });
+        }));
+
+        it('should not include accessFilter in audit details when both approvalRequired and ownerOnly are updated', testService(async (service, { Audits }) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['region']);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ approvalRequired: true, ownerOnly: true })
+            .expect(200);
+
+          const audit = await Audits.getLatestByAction('dataset.update').then(o => o.get());
+          audit.details.should.eql({
+            data: {
+              approvalRequired: true,
+              ownerOnly: true
+            }
+          });
+        }));
       });
     });
 
