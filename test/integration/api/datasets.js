@@ -40,6 +40,46 @@ const testEntities = (test) => testService(async (service, container) => {
   await test(service, container);
 });
 
+const setupDatasetsAndProperties = async (asAlice) => {
+  // Create trees dataset with "region" and "species" and 5 trees
+  // 3 north + oak trees
+  // 2 south + pine trees
+  await createDataset(asAlice, 1, 'trees', ['region', 'species']);
+  await createEntities(asAlice, 3, 1, 'trees', [], { region: 'north', species: 'oak' }, 'North Oak Tree');
+  await createEntities(asAlice, 2, 1, 'trees', [], { region: 'south', species: 'pine' }, 'South Pine Tree');
+
+  // Create people dataset
+  await createDataset(asAlice, 1, 'people', ['species']);
+  await createEntities(asAlice, 1, 1, 'people', [], { species: 'oak' }, 'Oak Specialist');
+  await createEntities(asAlice, 1, 1, 'people', [], { species: 'pine' }, 'Pine Specialist');
+
+  // Publish a form that consumes trees and people datasets
+  await asAlice.post('/v1/projects/1/forms')
+    .send(testData.forms.consumeDatasets)
+    .set('Content-Type', 'application/xml').expect(200);
+  await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish').expect(200);
+
+  // Set up actor properties region and expertise
+  await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+  await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'expertise' }).expect(200);
+
+  // Set up dataset filter on trees mapping region to region
+  await asAlice.patch('/v1/projects/1/datasets/trees')
+    .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+    .expect(200);
+
+  // Create two app users and assign them to the form
+  const { body: appUserA } = await asAlice.post('/v1/projects/1/app-users')
+    .send({ displayName: 'Survey Worker A' }).expect(200);
+  await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserA.id}`).expect(200);
+
+  const { body: appUserB } = await asAlice.post('/v1/projects/1/app-users')
+    .send({ displayName: 'Survey Worker B' }).expect(200);
+  await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserB.id}`).expect(200);
+
+  return { appUserA, appUserB };
+};
+
 describe('datasets and entities', () => {
 
   describe('creating datasets and properties via the API', () => {
@@ -7390,46 +7430,6 @@ describe('datasets and entities', () => {
   });
 
   describe('filter attached dataset', () => {
-    async function setupDatasetsAndProperties(asAlice) {
-      // Create trees dataset with "region" and "species" and 5 trees
-      // 3 north + oak trees
-      // 2 south + pine trees
-      await createDataset(asAlice, 1, 'trees', ['region', 'species']);
-      await createEntities(asAlice, 3, 1, 'trees', [], { region: 'north', species: 'oak' }, 'North Oak Tree');
-      await createEntities(asAlice, 2, 1, 'trees', [], { region: 'south', species: 'pine' }, 'South Pine Tree');
-
-      // Create people dataset
-      await createDataset(asAlice, 1, 'people', ['species']);
-      await createEntities(asAlice, 1, 1, 'people', [], { species: 'oak' }, 'Oak Specialist');
-      await createEntities(asAlice, 1, 1, 'people', [], { species: 'pine' }, 'Pine Specialist');
-
-      // Publish a form that consumes trees and people datasets
-      await asAlice.post('/v1/projects/1/forms')
-        .send(testData.forms.consumeDatasets)
-        .set('Content-Type', 'application/xml').expect(200);
-      await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/publish').expect(200);
-
-      // Set up actor properties region and expertise
-      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
-      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'expertise' }).expect(200);
-
-      // Set up dataset filter on trees mapping region to region
-      await asAlice.patch('/v1/projects/1/datasets/trees')
-        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
-        .expect(200);
-
-      // Create two app users and assign them to the form
-      const { body: appUserA } = await asAlice.post('/v1/projects/1/app-users')
-        .send({ displayName: 'Survey Worker A' }).expect(200);
-      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserA.id}`).expect(200);
-
-      const { body: appUserB } = await asAlice.post('/v1/projects/1/app-users')
-        .send({ displayName: 'Survey Worker B' }).expect(200);
-      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUserB.id}`).expect(200);
-
-      return { appUserA, appUserB };
-    }
-
     it('should only return the entities that the user has access to based on property filter', testService(async (service) => {
       const asAlice = await service.login('alice');
       const { appUserA } = await setupDatasetsAndProperties(asAlice);
@@ -8589,6 +8589,330 @@ describe('datasets and entities', () => {
           entity.deleted.should.be.eql('true');
         });
     }));
+
+    describe('ownerOnly', () => {
+      async function setupOwnerOnlyEntities(asAlice, service, container) {
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.consumeDatasets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: true })
+          .expect(200);
+
+        const appUser1 = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User 1' })
+          .then(({ body }) => body);
+        const appUser2 = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User 2' })
+          .then(({ body }) => body);
+
+        await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser1.id}`).expect(200);
+        await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser2.id}`).expect(200);
+        await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser1.id}`).expect(200);
+        await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser2.id}`).expect(200);
+
+        await service.post(`/v1/key/${appUser1.token}/projects/1/forms/simpleEntity/submissions`)
+          .send(testData.instances.simpleEntity.two)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await service.post(`/v1/key/${appUser2.token}/projects/1/forms/simpleEntity/submissions`)
+          .send(testData.instances.simpleEntity.three)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await exhaust(container);
+
+        return { appUser1, appUser2 };
+      }
+
+      it('should return deleted for entities that are created by other users', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const { appUser1, appUser2 } = await setupOwnerOnlyEntities(asAlice, service, container);
+
+        await service.get(`/v1/key/${appUser1.token}/projects/1/datasets/people/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(2);
+
+            entity.find(e => e.$.id.endsWith('aaa'))
+              .deleted.should.be.eql('false');
+
+            entity.find(e => e.$.id.endsWith('bbb'))
+              .deleted.should.be.eql('true');
+          });
+
+        await service.get(`/v1/key/${appUser2.token}/projects/1/datasets/people/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(2);
+
+            entity.find(e => e.$.id.endsWith('aaa'))
+              .deleted.should.be.eql('true');
+
+            entity.find(e => e.$.id.endsWith('bbb'))
+              .deleted.should.be.eql('false');
+          });
+      }));
+
+      it('should return not deleted for all entities if caller is project viewer', testService(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await setupOwnerOnlyEntities(asAlice, service, container);
+
+        const chelseaId = await asChelsea.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => body.id);
+        await asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
+          .expect(200);
+
+        await asChelsea.get('/v1/projects/1/datasets/people/integrity')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(2);
+
+            entity.find(e => e.$.id.endsWith('aaa'))
+              .deleted.should.be.eql('false');
+
+            entity.find(e => e.$.id.endsWith('bbb'))
+              .deleted.should.be.eql('false');
+          });
+      }));
+
+      it('should return not deleted for all entities when ownerOnly is set to false', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+        const { appUser1, appUser2 } = await setupOwnerOnlyEntities(asAlice, service, container);
+
+        await service.get(`/v1/key/${appUser1.token}/projects/1/datasets/people/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.find(e => e.$.id.endsWith('aaa')).deleted.should.be.eql('false');
+            entity.find(e => e.$.id.endsWith('bbb')).deleted.should.be.eql('true');
+          });
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: false })
+          .expect(200);
+
+        await service.get(`/v1/key/${appUser1.token}/projects/1/datasets/people/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.find(e => e.$.id.endsWith('aaa')).deleted.should.be.eql('false');
+            entity.find(e => e.$.id.endsWith('bbb')).deleted.should.be.eql('false');
+          });
+
+        await service.get(`/v1/key/${appUser2.token}/projects/1/datasets/people/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.find(e => e.$.id.endsWith('aaa')).deleted.should.be.eql('false');
+            entity.find(e => e.$.id.endsWith('bbb')).deleted.should.be.eql('false');
+          });
+      }));
+    });
+
+    describe('access filter', () => {
+      const getTreeUuids = async (asAlice) => {
+        const allTrees = await asAlice.get('/v1/projects/1/datasets/trees.svc/Entities')
+          .expect(200)
+          .then(({ body }) => body.value);
+
+        return {
+          northUuids: allTrees.filter(t => t.region === 'north').map(t => t.__id),
+          southUuids: allTrees.filter(t => t.region === 'south').map(t => t.__id),
+          oakUuids: allTrees.filter(t => t.species === 'oak').map(t => t.__id),
+          pineUuids: allTrees.filter(t => t.species === 'pine').map(t => t.__id)
+        };
+      };
+
+      it('should return deleted for entities for which app user has no access', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const { appUserA } = await setupDatasetsAndProperties(asAlice);
+
+        const { northUuids, southUuids } = await getTreeUuids(asAlice);
+
+        await asAlice.patch(`/v1/projects/1/app-users/${appUserA.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        await service.get(`/v1/key/${appUserA.token}/projects/1/datasets/trees/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(5);
+
+            for (const id of northUuids) {
+              entity.find(e => e.$.id === id).deleted.should.be.eql('false');
+            }
+            for (const id of southUuids) {
+              entity.find(e => e.$.id === id).deleted.should.be.eql('true');
+            }
+          });
+      }));
+
+      it('should return correct value for deleted when access filter rule is changed', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const { appUserA } = await setupDatasetsAndProperties(asAlice);
+
+        const { northUuids, southUuids, oakUuids, pineUuids } = await getTreeUuids(asAlice);
+
+        await asAlice.patch(`/v1/projects/1/app-users/${appUserA.id}`)
+          .send({ properties: { region: 'north', expertise: 'pine' } })
+          .expect(200);
+
+        await service.get(`/v1/key/${appUserA.token}/projects/1/datasets/trees/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(5);
+
+            for (const id of northUuids) {
+              entity.find(e => e.$.id === id).deleted.should.be.eql('false');
+            }
+            for (const id of southUuids) {
+              entity.find(e => e.$.id === id).deleted.should.be.eql('true');
+            }
+          });
+
+        await asAlice.patch('/v1/projects/1/datasets/trees')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'species', actorProperty: 'expertise' }] } })
+          .expect(200);
+
+        await service.get(`/v1/key/${appUserA.token}/projects/1/datasets/trees/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(5);
+
+            for (const id of oakUuids) {
+              entity.find(e => e.$.id === id).deleted.should.be.eql('true');
+            }
+            for (const id of pineUuids) {
+              entity.find(e => e.$.id === id).deleted.should.be.eql('false');
+            }
+          });
+      }));
+
+      it('should return not deleted for all entities if caller is project viewer', testService(async (service) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+        await setupDatasetsAndProperties(asAlice);
+
+        const chelseaId = await asChelsea.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => body.id);
+        await asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaId}`)
+          .expect(200);
+
+        await asChelsea.get('/v1/projects/1/datasets/trees/integrity')
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(5);
+
+            for (const e of entity) {
+              e.deleted.should.be.eql('false');
+            }
+          });
+      }));
+
+      it('should return not deleted for all entities when access filter is removed', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const { appUserA } = await setupDatasetsAndProperties(asAlice);
+
+        const { northUuids, southUuids } = await getTreeUuids(asAlice);
+
+        await asAlice.patch(`/v1/projects/1/app-users/${appUserA.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        await service.get(`/v1/key/${appUserA.token}/projects/1/datasets/trees/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(5);
+
+            for (const id of northUuids) {
+              entity.find(e => e.$.id === id).deleted.should.be.eql('false');
+            }
+            for (const id of southUuids) {
+              entity.find(e => e.$.id === id).deleted.should.be.eql('true');
+            }
+          });
+
+        await asAlice.patch('/v1/projects/1/datasets/trees')
+          .send({ accessFilter: null })
+          .expect(200);
+
+        await service.get(`/v1/key/${appUserA.token}/projects/1/datasets/trees/integrity`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(5);
+
+            for (const e of entity) {
+              e.deleted.should.be.eql('false');
+            }
+          });
+      }));
+
+      it('should return correct values when queried with specific ids', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const { appUserA } = await setupDatasetsAndProperties(asAlice);
+
+        const { northUuids, southUuids } = await getTreeUuids(asAlice);
+
+        await asAlice.patch(`/v1/projects/1/app-users/${appUserA.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        await service.get(`/v1/key/${appUserA.token}/projects/1/datasets/trees/integrity?id=${northUuids[0]},${southUuids[0]}`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(async ({ text }) => {
+            const result = await xml2js.parseStringPromise(text, { explicitArray: false });
+            const { entity } = result.data.entities;
+            entity.length.should.be.eql(2);
+
+            entity.find(e => e.$.id === northUuids[0]).deleted.should.be.eql('false');
+            entity.find(e => e.$.id === southUuids[0]).deleted.should.be.eql('true');
+          });
+      }));
+    });
   });
 
   describe('api: DELETE /projects/:id/dataset/:name', () => {
