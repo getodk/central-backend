@@ -2588,7 +2588,6 @@ describe('analytics task queries @slow', function () {
         .expect(200)
         .then(({ body }) => body.id);
 
-      // Create a dataset in new project to be deleted
       await asAlice.post(`/v1/projects/${newProjectId}/datasets`)
         .send({ name: 'people', ownerOnly: true })
         .expect(200);
