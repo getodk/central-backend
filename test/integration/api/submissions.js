@@ -1577,20 +1577,6 @@ describe('api: /forms/:id/submissions', () => {
                 .expect(302)
                 .then(({ text }) => { text.should.equal('Found. Redirecting to https://enketo/edit/url'); })))))));
 
-    it('should redirect to the edit_url - webformsEnabled', testService((service, { run }) =>
-      run(sql`update forms set "enketoId"='myenketoid'`)
-        .then(() => service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/submissions')
-            .send(testData.instances.simple.one)
-            .set('Content-Type', 'application/xml')
-            .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
-              .expect(302)
-              .then(({ text }) => {
-                text.should.match(/Found. Redirecting to /);
-                text.should.containEql('projects/1/forms/simple/submissions/one/edit');
-              }))))));
-
     // TODO: okay, so it'd be better if this were a true true integration test.
     it('should pass the appropriate parameters to the enketo module', testService((service, { run }) =>
       service.login('alice', (asAlice) =>
@@ -1620,6 +1606,20 @@ describe('api: /forms/:id/submissions', () => {
               editData.attachments.length.should.equal(2);
               editData.token.should.be.a.token();
             })))));
+
+    it('should redirect to the edit_url - webformsEnabled', testService((service, { run }) =>
+      run(sql`update forms set "enketoId"='myenketoid'`)
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
+            .set('Content-Type', 'application/xml')
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
+              .expect(302)
+              .then(({ text }) => {
+                text.should.match(/Found. Redirecting to /);
+                text.should.containEql('projects/1/forms/simple/submissions/one/edit');
+              }))))));
   });
 
   describe('/:instanceId PATCH', () => {
