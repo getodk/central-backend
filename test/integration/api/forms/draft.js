@@ -630,7 +630,7 @@ describe('api: /projects/:id/forms (drafts)', () => {
 
       context('updating form titles', () => {
         const withRenamedTitleAndVersion = (newTitle, newVersion='2.1') => testData.forms.simple2
-          .replace('Simple 2', `${newTitle}`).replace('version="2.1"', `version="${newVersion}"`);
+          .replace('Simple 2', newTitle).replace('version="2.1"', `version="${newVersion}"`);
 
         it('should update form title with draft title when no published form exists', testService((service) =>
           service.login('alice', (asAlice) =>
