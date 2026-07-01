@@ -1080,6 +1080,46 @@ describe('api: /forms/:id.svc', () => {
             body['@odata.nextLink'].should.have.skiptoken({ instanceId: 'rthree' });
           }))));
 
+    it('should not use eventhash for ETag when $top=0 with $count on Submissions table', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=0&$count=true')
+          .expect(200)
+          .then(({ body, headers }) => {
+            headers.etag.should.not.startWith('W/"eventhash');
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+              '@odata.count': 3,
+              value: []
+            });
+          }))));
+
+    it('should not use eventhash for ETag when $top=0 with $count on subtable', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=0&$count=true')
+          .expect(200)
+          .then(({ body, headers }) => {
+            // expressjs can't add etag for "streaming" response
+            should.not.exist(headers.etag);
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=0&%24count=true&%24skiptoken=01eyJyZXBlYXRJZCI6bnVsbH0%3D',
+              '@odata.count': 3,
+              value: []
+            });
+          }))));
+
+    it('should not use eventhash for ETag when $top=0 without $count', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=0')
+          .expect(200)
+          .then(({ body, headers }) => {
+            headers.etag.should.not.startWith('W/"eventhash');
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+              value: []
+            });
+          }))));
+
     it('should return id-filtered toplevel rows if requested', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
