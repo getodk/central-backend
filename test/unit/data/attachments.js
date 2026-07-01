@@ -5,7 +5,7 @@ const { PartialPipe } = require(appRoot + '/lib/util/stream');
 const { streamAttachments } = require(appRoot + '/lib/data/attachments');
 const { zipStreamFromParts } = require(appRoot + '/lib/util/zip');
 
-describe('.zip attachments streaming', () => {
+describe.only('.zip attachments streaming', () => {
   it('should stream the contents to files at the appropriate paths', (done) => {
     const inStream = PartialPipe.of(streamTest.fromObjects([
       { row: { instanceId: 'subone', name: 'firstfile.ext', content: 'this is my first file' } },

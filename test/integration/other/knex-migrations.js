@@ -41,7 +41,6 @@ const up = () => withTestDatabase((migrator) =>
 const testMigration = (filename, tests, options = {}) => {
   const { only = false, skip = false } = options;
   const f = only
-    // eslint-disable-next-line no-only-tests/no-only-tests
     ? describe.only.bind(describe)
     : (skip ? describe.skip.bind(describe) : describe);
   f(`database migrations: ${filename}`, function() {

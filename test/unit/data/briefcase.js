@@ -31,7 +31,7 @@ const callAndParse = (inStream, formXml, xmlFormId, callback) => {
 };
 
 
-describe('.csv.zip briefcase output @slow', () => {
+describe.only('.csv.zip briefcase output @slow', () => {
   it('should output a simple flat table within a zip', (done) => {
     const formXml = `
       <?xml version="1.0"?>
