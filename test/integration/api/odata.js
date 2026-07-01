@@ -659,6 +659,26 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    it('should not update Etag if submission is made to another form', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      const firstResult = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+        .expect(200);
+
+      const etag = firstResult.get('ETag');
+      should.exist(etag);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const secondResult = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+        .expect(200);
+
+      secondResult.get('ETag').should.equal(etag);
+    }));
+
     it('should exclude a deleted submission from rows', testService((service) =>
       withSubmissions(service, (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/withrepeat/submissions/rthree')
