@@ -1,12 +1,28 @@
-name: Full Standard Test Suite
+name: Database Migrations
 
 on:
-  push:
   pull_request:
+    paths:
+    - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
+    - lib/model/migrations/**
+    - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
+  push:
+    paths:
+    - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
+    - lib/model/migrations/**
+    - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
 
 jobs:
-  standard-tests:
-    timeout-minutes: 20
+  db-migration-tests:
+    timeout-minutes: 2
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
@@ -30,8 +46,6 @@ jobs:
       with:
         node-version-file: package.json
         cache: 'npm'
-    - run: make check-for-large-files
     - run: npm ci
-    - run: make api-docs-lint
     - run: node lib/bin/create-docker-databases.js
-    - run: make test
+    - run: make test-db-migrations

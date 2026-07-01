@@ -101,6 +101,7 @@ debug: base
 .PHONY: test
 test: lint
 	$(MAKE) test-unit
+	$(MAKE) test-integration
 
 .PHONY: test-db-migrations
 test-db-migrations:
