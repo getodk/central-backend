@@ -659,6 +659,27 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    it('should update Etag if a new submission is made', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      const firstResult = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+        .expect(200);
+
+      const etag = firstResult.get('ETag');
+      should.exist(etag);
+
+      await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+        .send(testData.instances.withrepeat.three.replaceAll('rthree', 'rfour'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const secondResult = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+        .expect(200);
+      should.exist(secondResult);
+
+      secondResult.get('ETag').should.not.equal(etag);
+    }));
+
     it('should not update Etag if submission is made to another form', testService(async (service) => {
       const asAlice = await withSubmissions(service, identity);
 
