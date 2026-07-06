@@ -101,7 +101,7 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
           code: 502.2,
           details: {
             error: {
-              code: 'ECONNRESET',
+              code: 'ECONNREFUSED',
             },
           },
         });
