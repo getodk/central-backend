@@ -10,6 +10,8 @@
 const assert = require('node:assert');
 const fs = require('node:fs');
 
+const express = require('express');
+
 const SUITE_NAME = 'test/e2e/standard';
 const { apiClient } = require('../util/api');
 
@@ -84,7 +86,7 @@ describe('#1157 - Backend crash when opening hostile-named submission detail', (
 });
 
 describe('pyxform OOM giving empty response', () => {
-  let api, projectId, xmlFormId, xmlFormVersion; // eslint-disable-line one-var, one-var-declaration-per-line
+  let api, projectId; // eslint-disable-line one-var, one-var-declaration-per-line
 
   let server;
 
@@ -106,7 +108,7 @@ describe('pyxform OOM giving empty response', () => {
 
   after(new Promise(resolve => {
     server.close(resolve);
-  });
+  }));
 
   it('should handle "[1] [ERROR] Worker (pid:43) was sent SIGKILL! Perhaps out of memory?"', async () => {
     // given
@@ -114,7 +116,7 @@ describe('pyxform OOM giving empty response', () => {
     projectId = await createProject();
 
     // when
-    await uploadForm('empty.xlsx');
+    await api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx');
   });
 
   async function createProject() {
@@ -123,24 +125,5 @@ describe('pyxform OOM giving empty response', () => {
       { name:`standard-test-${new Date().toISOString().replace(/\..*/, '')}` },
     );
     return project.id;
-  }
-
-  async function uploadForm(xmlFilePath) {
-    const res = await api.apiPostFile(`projects/${projectId}/forms?publish=true`, xmlFilePath);
-    xmlFormId = res.xmlFormId;
-    xmlFormVersion = res.version;
-  }
-
-  function uploadSubmission(submissionId) {
-    const xmlTemplate = fs.readFileSync('submission.xml', { encoding: 'utf8' });
-    const formXml = xmlTemplate
-      .replace('{{submissionId}}', submissionId)
-      .replace('{{formId}}', xmlFormId)
-      .replace('{{formVersion}}', xmlFormVersion);
-
-    return api.apiPostFile(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}/submissions?deviceID=testid`, {
-      body: formXml,
-      mimeType: 'application/xml',
-    });
   }
 });
