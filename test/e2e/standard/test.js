@@ -128,9 +128,19 @@ describe('pyxform OOM giving empty response', () => {
     // when
     await assert.rejects(
       () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
-      {
-        type: 'SeoimthingError',
-        message: 'asdf',
+      (err) => {
+        // then
+        assert.strictEqual(err.responseStatus, 502);
+        assert.deepStrictEqual(JSON.parse(err.responseText), {
+          message: 'The XLSForm conversion service could not be contacted.',
+          code: 502.2,
+          details: {
+            error: {
+              code: 'ECONNRESET',
+            },
+          },
+        });
+        return true;
       },
     );
   });
