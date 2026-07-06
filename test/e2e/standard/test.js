@@ -136,7 +136,7 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
         () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
         (err) => {
           // then
-          assert.strictEqual(err.responseStatus, 502);
+          assert.strictEqual(err.responseStatus, 500);
           assert.deepStrictEqual(JSON.parse(err.responseText), {
             message: 'The XLSForm conversion service could not be contacted.',
             code: 502.2,
