@@ -84,31 +84,8 @@ describe('#1157 - Backend crash when opening hostile-named submission detail', (
     });
   }
 });
-
-describe('pyxform OOM giving empty response', () => {
-  let api, projectId, server; // eslint-disable-line one-var, one-var-declaration-per-line
-
-  before(() => new Promise(resolve => {
-    const app = express();
-    app.post('/api/v1/convert', express.raw({ type:'*/*' }), (req, res) => {
-      // This is how pyxform-http behaves when it runs out of memory.  `curl` will see this as:
-      //
-      //     * We are completely uploaded and fine
-      //     * Empty reply from server
-      //     * Closing connection
-      //     curl: (52) Empty reply from server
-      //
-      // and exit with error code 52
-      res.socket.destroy();
-    });
-    server = app.listen(5001, resolve);
-  }));
-
-  after(() => new Promise(resolve => {
-    server.close(resolve);
-  }));
-
-  it('should handle "[1] [ERROR] Worker (pid:43) was sent SIGKILL! Perhaps out of memory?"', async () => {
+describe('upstream XLSForm (pyxform-http) issues', () => {
+  it('should handle pyxform down completely', async () => {
     // given
     api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
     projectId = await createProject();
@@ -131,6 +108,55 @@ describe('pyxform OOM giving empty response', () => {
         return true;
       },
     );
+  });
+
+  describe('pyxform OOM giving empty response', () => {
+    let api, projectId, server; // eslint-disable-line one-var, one-var-declaration-per-line
+
+    before(() => new Promise(resolve => {
+      const app = express();
+      app.post('/api/v1/convert', express.raw({ type:'*/*' }), (req, res) => {
+        // This is how pyxform-http behaves when it runs out of memory.  `curl` will see this as:
+        //
+        //     * We are completely uploaded and fine
+        //     * Empty reply from server
+        //     * Closing connection
+        //     curl: (52) Empty reply from server
+        //
+        // and exit with error code 52
+        res.socket.destroy();
+      });
+      server = app.listen(5001, resolve);
+    }));
+
+    after(() => new Promise(resolve => {
+      server.close(resolve);
+    }));
+
+    it('should handle "[1] [ERROR] Worker (pid:43) was sent SIGKILL! Perhaps out of memory?"', async () => {
+      // given
+      api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
+      projectId = await createProject();
+
+      // when
+      await assert.rejects(
+        () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
+        (err) => {
+          // then
+          assert.strictEqual(err.responseStatus, 502);
+          assert.deepStrictEqual(JSON.parse(err.responseText), {
+            message: 'The XLSForm conversion service could not be contacted.',
+            code: 502.2,
+            details: {
+              error: {
+                code: 'ECONNRESET',
+              },
+            },
+          });
+          return true;
+        },
+      );
+    });
   });
 
   async function createProject() {
