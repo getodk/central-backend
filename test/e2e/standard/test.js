@@ -110,6 +110,48 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
     );
   });
 
+  describe('pyxform serving HTML', () => {
+    let api, projectId, server; // eslint-disable-line one-var, one-var-declaration-per-line
+
+    before(() => new Promise(resolve => {
+      const app = express();
+      app.post('/api/v1/convert', express.raw({ type:'*/*' }), (req, res) => {
+        res.set('Content-Type', 'text/html');
+        res.send('<html><body><div>hi</div></body></html>');
+      });
+      server = app.listen(5001, resolve);
+    }));
+
+    after(() => new Promise(resolve => {
+      server.close(resolve);
+    }));
+
+    it('should handle weird content', async () => {
+      // given
+      api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
+      projectId = await createProject();
+
+      // when
+      await assert.rejects(
+        () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
+        (err) => {
+          // then
+          assert.strictEqual(err.responseStatus, 502);
+          assert.deepStrictEqual(JSON.parse(err.responseText), {
+            message: 'The XLSForm conversion service could not be contacted.',
+            code: 502.2,
+            details: {
+              error: {
+                code: 'ECONNRESET',
+              },
+            },
+          });
+          return true;
+        },
+      );
+    });
+  });
+
   describe('pyxform OOM giving empty response', () => {
     let api, projectId, server; // eslint-disable-line one-var, one-var-declaration-per-line
 
