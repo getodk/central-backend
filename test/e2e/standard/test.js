@@ -89,7 +89,7 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
   it('should handle pyxform down completely', async () => {
     // given
     const api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
-    const projectId = await createProject();
+    const projectId = await createProject(api);
 
     // when
     await assert.rejects(
@@ -130,7 +130,7 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
     it('should handle weird content', async () => {
       // given
       api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
-      projectId = await createProject();
+      projectId = await createProject(api);
 
       // when
       await assert.rejects(
@@ -173,7 +173,7 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
     it('should handle "[1] [ERROR] Worker (pid:43) was sent SIGKILL! Perhaps out of memory?"', async () => {
       // given
       api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
-      projectId = await createProject();
+      projectId = await createProject(api);
 
       // when
       await assert.rejects(
@@ -196,7 +196,7 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
     });
   });
 
-  async function createProject() {
+  async function createProject(api) {
     const project = await api.apiPostJson(
       'projects',
       { name:`standard-test-${new Date().toISOString().replace(/\..*/, '')}` },
