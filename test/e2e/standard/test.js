@@ -38,16 +38,12 @@ describe('#1157 - Backend crash when opening hostile-named submission detail', (
     const badSubmissionId = 'bad-id:';
     await uploadSubmission(badSubmissionId);
     // when
-    await assert.rejects(
+    await assertHttpRejects(
       () => api.apiGet(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}.svc/Submissions('${badSubmissionId}')?%24select=__id%2C__system%2Cmeta`),
-      (err) => {
-        // then
-        assert.strictEqual(err.responseStatus, 404);
-        assert.deepStrictEqual(JSON.parse(err.responseText), {
-          message: 'Could not find the resource you were looking for.',
-          code: 404.1,
-        });
-        return true;
+      404,
+      {
+        message: 'Could not find the resource you were looking for.',
+        code: 404.1,
       },
     );
 
@@ -92,21 +88,17 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
     const projectId = await createProject(api);
 
     // when
-    await assert.rejects(
+    await assertHttpRejects(
       () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
-      (err) => {
-        // then
-        assert.strictEqual(err.responseStatus, 502);
-        assert.deepStrictEqual(JSON.parse(err.responseText), {
-          message: 'The XLSForm conversion service could not be contacted.',
-          code: 502.2,
-          details: {
-            error: {
-              code: 'ECONNREFUSED',
-            },
+      502,
+      {
+        message: 'The XLSForm conversion service could not be contacted.',
+        code: 502.2,
+        details: {
+          error: {
+            code: 'ECONNREFUSED',
           },
-        });
-        return true;
+        },
       },
     );
   });
@@ -133,16 +125,10 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
       projectId = await createProject(api);
 
       // when
-      await assert.rejects(
+      await assertHttpRejects(
         () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
-        (err) => {
-          // then
-          assert.strictEqual(err.responseStatus, 500);
-          assert.deepStrictEqual(JSON.parse(err.responseText), {
-            message: 'Internal Server Error',
-          });
-          return true;
-        },
+        500,
+        { message:'Internal Server Error' },
       );
     });
   });
@@ -176,21 +162,17 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
       projectId = await createProject(api);
 
       // when
-      await assert.rejects(
+      await assertHttpRejects(
         () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
-        (err) => {
-          // then
-          assert.strictEqual(err.responseStatus, 502);
-          assert.deepStrictEqual(JSON.parse(err.responseText), {
-            message: 'The XLSForm conversion service could not be contacted.',
-            code: 502.2,
-            details: {
-              error: {
-                code: 'ECONNRESET',
-              },
+        502,
+        {
+          message: 'The XLSForm conversion service could not be contacted.',
+          code: 502.2,
+          details: {
+            error: {
+              code: 'ECONNRESET',
             },
-          });
-          return true;
+          },
         },
       );
     });
@@ -204,3 +186,13 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
     return project.id;
   }
 });
+
+function assertHttpRejects(fn, expectedStatus, expectedBody) {
+  return assert.rejects(
+    fn,
+    (err) => {
+      assert.strictEqual(err.responseStatus, expectedStatus);
+      assert.deepStrictEqual(JSON.parse(err.responseText), expectedBody);
+    },
+  );
+}
