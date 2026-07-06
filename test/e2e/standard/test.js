@@ -88,8 +88,8 @@ describe('#1157 - Backend crash when opening hostile-named submission detail', (
 describe('upstream XLSForm (pyxform-http) issues', () => {
   it('should handle pyxform down completely', async () => {
     // given
-    api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
-    projectId = await createProject();
+    const api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
+    const projectId = await createProject();
 
     // when
     await assert.rejects(
