@@ -116,7 +116,14 @@ describe('pyxform OOM giving empty response', () => {
     projectId = await createProject();
 
     // when
-    await api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx');
+    let caught;
+    try {
+      await api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx');
+    } catch(err) {
+      caught = err;
+    }
+    should(caught).be.an.Error();
+    caught.message.should.match(/asdf/);
   });
 
   async function createProject() {
