@@ -100,7 +100,7 @@ describe('pyxform OOM giving empty response', () => {
     projectId = await createProject();
 
     // when
-    await uploadForm('test-form.xlsx');
+    await uploadForm('empty.xlsx');
   });
 
   async function createProject() {
