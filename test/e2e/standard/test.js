@@ -182,6 +182,7 @@ function assertHttpRejects(fn, expectedStatus, expectedBody) {
     (err) => {
       assert.strictEqual(err.responseStatus, expectedStatus);
       assert.deepStrictEqual(JSON.parse(err.responseText), expectedBody);
+      return true;
     },
   );
 }
