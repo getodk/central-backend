@@ -113,7 +113,7 @@ describe('pyxform OOM giving empty response', () => {
     server = app.listen(5001, resolve);
   }));
 
-  after(new Promise(resolve => {
+  after(() => new Promise(resolve => {
     server.close(() => {
       process.off('uncaughtException', handleUncaught);
       resolve();
