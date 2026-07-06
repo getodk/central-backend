@@ -84,6 +84,7 @@ describe('#1157 - Backend crash when opening hostile-named submission detail', (
     });
   }
 });
+
 describe('upstream XLSForm (pyxform-http) issues', () => {
   it('should handle pyxform down completely', async () => {
     // given
