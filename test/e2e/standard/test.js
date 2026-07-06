@@ -41,10 +41,7 @@ describe('#1157 - Backend crash when opening hostile-named submission detail', (
     await assertHttpRejects(
       () => api.apiGet(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}.svc/Submissions('${badSubmissionId}')?%24select=__id%2C__system%2Cmeta`),
       404,
-      {
-        message: 'Could not find the resource you were looking for.',
-        code: 404.1,
-      },
+      { code:404.1, message:'Could not find the resource you were looking for.' },
     );
 
     // and service has not crashed:
@@ -92,13 +89,9 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
       () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
       502,
       {
-        message: 'The XLSForm conversion service could not be contacted.',
         code: 502.2,
-        details: {
-          error: {
-            code: 'ECONNREFUSED',
-          },
-        },
+        message: 'The XLSForm conversion service could not be contacted.',
+        details: { error:{ code:'ECONNREFUSED' } },
       },
     );
   });
@@ -166,13 +159,9 @@ describe('upstream XLSForm (pyxform-http) issues', () => {
         () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
         502,
         {
-          message: 'The XLSForm conversion service could not be contacted.',
           code: 502.2,
-          details: {
-            error: {
-              code: 'ECONNRESET',
-            },
-          },
+          message: 'The XLSForm conversion service could not be contacted.',
+          details: { error:{ code:'ECONNRESET' } },
         },
       );
     });
