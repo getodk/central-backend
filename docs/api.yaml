@@ -44,7 +44,7 @@ info:
     ## ODK Central v2026.2
 
     **Added**:
-    - [Actor Properties](/central-api-accounts-and-users/#actor-properties) allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like team, region or supervisor.
+    - [Actor Properties](/central-api-accounts-and-users/#actor-properties) allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like team, region or supervisor, which can then be used to [filter Dataset access](/central-api-dataset-management/#update-dataset-access-filters-and-metadata).
       - [POST /projects/:id/actor-properties](/central-api-accounts-and-users/#registering-an-actor-property-name) to register a new property name for a project.
       - [GET /projects/:id/actor-properties](/central-api-accounts-and-users/#listing-actor-property-names) to list property names. Use `X-Extended-Metadata: true` to also retrieve the distinct values currently in use.
       - [PATCH /projects/:id/app-users/:id](/central-api-accounts-and-users/#setting-actor-property-values-on-an-app-user) to set or unset property values on an App User.
@@ -58,6 +58,7 @@ info:
       - [POST /projects/:id/app-users](/central-api-accounts-and-users/#creating-a-new-app-user) now accepts an optional `properties` object to set property values at creation time.
       - [GET /projects/:id/forms/:xmlFormId/public-links](/central-api-form-management/#listing-all-links) and [GET /projects/:id/forms/:xmlFormId/public-links/:id](/central-api-form-management/#getting-link-details) now return a `properties` object in extended metadata.
       - [POST /projects/:id/forms/:xmlFormId/public-links](/central-api-form-management/#creating-a-link) now accepts an optional `properties` object to set property values at creation time.
+      - [PATCH /projects/:id/datasets/:name](/central-api-dataset-management/#update-dataset-access-filters-and-metadata) now supports an `accessFilter` field for controlling which Entities App Users and Public Links can see via Actor Properties.
 
     ## ODK Central v2026.1
 
@@ -758,7 +759,7 @@ tags:
   description: |-
     _(introduced: version 2026.2)_
 
-    Actor properties allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like region or supervisor for filtering entities.
+    Actor properties allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like region or supervisor, which can then be used to [filter Dataset access](/central-api-dataset-management/#update-dataset-access-filters-and-metadata).
 
     Property names must be registered on the project before they can be set on individual App Users or Public Links. Property names follow the same rules as Entity property names, with the additional restriction that `displayName` (case-insensitive) is reserved.
 - name: App Users
@@ -8652,14 +8653,22 @@ paths:
     patch:
       tags:
       - Dataset Management
-      summary: Update Dataset Metadata
+      summary: Update Dataset Access Filters and Metadata
       operationId: updateDatasetMetadata
       description: |-
-        You can use this endpoint to update `approvalRequired` and `ownerOnly`. However, you cannot update other properties, such as `name`.
+        You can use this endpoint to update `approvalRequired`, `ownerOnly`, and `accessFilter`. However, you cannot update other properties, such as `name`.
 
         The `approvalRequired` flag controls the Entity creation flow. If it is `true`, then the Submission must be approved before an Entity can be created from it. If it is `false`, then an Entity is created as soon as the Submission is received by ODK Central. By default, `approvalRequired` is `false` for Datasets created after v2023.3. Datasets created prior to that will have `approvalRequired` set to `true`.
 
-        The `ownerOnly` flag determines which Entities in the Dataset are included for download to an OpenRosa client. More specifically, it determines which Entities are included in a Form Attachment that has been linked to the Dataset. If `ownerOnly` is `true`, and the Actor using the OpenRosa client only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be included. This is true of App Users, Web Users with a role of Data Collector, and Public Access Links. If `ownerOnly` is `false`, or if the Actor has direct access to the Dataset CSV file, then all Entities will be included. Accessing the Dataset CSV file via linked Form Attachments using a [draftToken](/central-api-form-management/#draft-form) will also retrieve all Entities, this functionality assumes the `draftToken` is used by Actors with full dataset access, such as Project Managers and System Administrators. By default, `ownerOnly` is `false`.
+        The `accessFilter` field filters which Entities are visible to [App Users](/central-api-accounts-and-users/#app-users) and [Public Links](/central-api-form-management/#public-access-links) when they download the Dataset via a linked Form Attachment. When `accessFilter` is present, it takes precedence over the legacy `ownerOnly` flag.
+
+        | `accessFilter` value | Behavior |
+        | --- | --- |
+        | `null` | No restrictions; all Entities are visible. |
+        | `{ "type": "ownerOnly" }` | Each Actor only sees Entities they created. |
+        | `{ "type": "property", "rules": [...] }` | Each Actor only sees Entities where the specified Dataset property matches their [Actor property](/central-api-accounts-and-users/#actor-properties) value. Multiple rules are ANDed together. |
+
+        The legacy `ownerOnly` boolean field is still accepted when `accessFilter` is absent, and behaves as before. If `ownerOnly` is `true`, and the Actor using the OpenRosa client only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be included. This is true of App Users, Web Users with a role of Data Collector, and Public Access Links. If `ownerOnly` is `false`, or if the Actor has direct access to the Dataset CSV file, then all Entities will be included. Accessing the Dataset CSV file via linked Form Attachments using a [draftToken](/central-api-form-management/#draft-form) will also retrieve all Entities; this functionality assumes the `draftToken` is used by Actors with full dataset access, such as Project Managers and System Administrators. By default, `ownerOnly` is `false`.
       parameters:
         - name: projectId
           in: path
@@ -8687,10 +8696,44 @@ paths:
                   example: true
                 ownerOnly:
                   type: boolean
-                  description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
+                  description: Legacy flag. If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. Ignored when `accessFilter` is also present.
                   example: false
+                accessFilter:
+                  nullable: true
+                  description: Controls which Entities are visible to restricted Actors (App Users, Data Collectors, Public Links) via linked Form Attachments. Takes precedence over `ownerOnly` when present. Set to `null` to remove all restrictions.
+                  type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - ownerOnly
+                        - property
+                      description: '`ownerOnly` restricts each Actor to Entities they created. `property` restricts based on matching dataset and actor property values.'
+                    rules:
+                      type: array
+                      description: Required when `type` is `property`. Each rule matches a Dataset property against an Actor property; all rules must match.
+                      items:
+                        type: object
+                        required:
+                          - datasetProperty
+                          - actorProperty
+                        properties:
+                          datasetProperty:
+                            type: string
+                            description: The name of a Dataset property to compare.
+                            example: state
+                          actorProperty:
+                            type: string
+                            description: The name of an Actor property to compare against.
+                            example: region
               example:
-                approvalRequired: true
+                accessFilter:
+                  type: property
+                  rules:
+                  - datasetProperty: state
+                    actorProperty: region
       responses:
         "200":
           description: OK
@@ -13062,8 +13105,34 @@ components:
           example: true
         ownerOnly:
           type: boolean
-          description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
+          description: Legacy flag. If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. Superseded by `accessFilter` when set.
           example: false
+        accessFilter:
+          nullable: true
+          description: Controls which Entities are visible to restricted Actors (App Users, Data Collectors, Public Links) via linked Form Attachments. `null` means no restrictions. When present, supersedes `ownerOnly`.
+          type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum:
+                - ownerOnly
+                - property
+              description: '`ownerOnly` restricts each Actor to Entities they created. `property` restricts based on matching dataset and actor property values.'
+              example: property
+            rules:
+              type: array
+              description: Present when `type` is `property`. Each rule specifies a Dataset property and an Actor property that must match.
+              items:
+                type: object
+                properties:
+                  datasetProperty:
+                    type: string
+                    example: state
+                  actorProperty:
+                    type: string
+                    example: region
     ExtendedDataset:
       allOf:
       - $ref: '#/components/schemas/Dataset'
