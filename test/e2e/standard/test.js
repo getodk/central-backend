@@ -86,12 +86,26 @@ describe('#1157 - Backend crash when opening hostile-named submission detail', (
 describe('pyxform OOM giving empty response', () => {
   let api, projectId, xmlFormId, xmlFormVersion; // eslint-disable-line one-var, one-var-declaration-per-line
 
-  before(async () => {
-    // TODO configure & start bad pyxform server
-  });
+  let server;
 
-  after(async () => {
-    // TODO any cleanup
+  before(() => new Promise(resolve => {
+    const app = express();
+    app.post('/api/v1/convert', express.raw({ type:'*/*' }), (req, res) => {
+      // This is how pyxform-http behaves when it runs out of memory.  `curl` will see this as:
+      //
+      //     * We are completely uploaded and fine
+      //     * Empty reply from server
+      //     * Closing connection
+      //     curl: (52) Empty reply from server
+      //
+      // and exit with error code 52
+      res.socket.destroy();
+    });
+    server = app.listen(5001, resolve);
+  }));
+
+  after(new Promise(resolve => {
+    server.close(resolve);
   });
 
   it('should handle "[1] [ERROR] Worker (pid:43) was sent SIGKILL! Perhaps out of memory?"', async () => {
