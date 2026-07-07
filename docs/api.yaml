@@ -12246,7 +12246,7 @@ paths:
 
         For this reason, **we recommend always setting a timezone** when querying based on `start` and `end`: either by appending a `z` to indicate UTC (eg `2000-01-01z`) or by explicitly specifying a timezone per ISO 8601 (eg `2000-01-01+08`). The same applies for full timestamps (eg `2000-01-01T12:12:12z`, `2000-01-01T12:12:12+08`).
 
-        `start` may be given without `end`, and vice versa, in which case the timestamp filter will only be bounded on the specified side. They are both inclusive (`>=` and `<=`, respectively).
+        `start` may be given without `end`, and vice versa, in which case the timestamp filter will only be bounded on the specified side. `start` is inclusive, and `end` is exclusive (`>=` and `<`, respectively).
 
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally expand the `actorId` into full `actor` details, and `acteeId` into full `actee` details. The `actor` will always be an Actor, but the `actee` may be an Actor, a Project, a Form, or some other type of object depending on the type of action.
       operationId: getAuditLogEntries
@@ -12265,7 +12265,7 @@ paths:
         example: 2000-01-01z
       - name: end
         in: query
-        description: The timestamp after which log entries are to be filtered out.
+        description: The timestamp from which log entries are to be filtered out.
         schema:
           type: string
         example: 2000-12-31T23:59.999z
