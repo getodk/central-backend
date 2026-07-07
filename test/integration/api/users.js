@@ -84,7 +84,6 @@ describe('api: /users', () => {
           .then(() => asAlice.get('/v1/users?q=GETO')
             .expect(200)
             .then(({ body }) => {
-              console.log(body);
               body.length.should.equal(4);
               body.forEach((user) => user.should.be.a.User());
               body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea', 'David' ]);
@@ -99,7 +98,6 @@ describe('api: /users', () => {
           .then(() => asAlice.get('/v1/users?q=GETO')
             .expect(200)
             .then(({ body }) => {
-              console.log(body);
               body.length.should.equal(4);
               body.forEach((user) => user.should.be.a.User());
               body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea', 'getouttahererightnow!' ]);
@@ -111,12 +109,9 @@ describe('api: /users', () => {
         asAlice.post('/v1/users')
           .send({ email: 'david@closeddatakit.org', displayName: 'geto\\uttahererightnow!' })
           .expect(200)
-          .then(() => all(sql`SELECT * FROM actors`))
-          .then(users => console.log(users))
           .then(() => asAlice.get('/v1/users?q=GETO\\')
             .expect(200)
             .then(({ body }) => {
-              console.log(body);
               body.length.should.equal(2);
               body.forEach((user) => user.should.be.a.User());
               body.map((user) => user.displayName).should.containDeep([ 'Bob', 'geto\\uttahererightnow!' ]);
