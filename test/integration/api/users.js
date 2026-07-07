@@ -104,7 +104,7 @@ describe('api: /users', () => {
               body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org', 'david@closeddatakit.org' ]);
             })))));
 
-    it('should escape backslashes in search string', testService((service, { all }) =>
+    it('should escape backslashes in search string', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
           .send({ email: 'david@closeddatakit.org', displayName: 'geto\\uttahererightnow!' })
