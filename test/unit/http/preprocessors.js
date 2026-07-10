@@ -136,7 +136,7 @@ describe('preprocessors', () => {
             context.auth.actor.should.eql(Option.of(new Actor({ displayName: 'test' })));
           })));
 
-      it('should treat additional colons as part of password', () =>
+      it('should handle colons-in-password as part of password (not username)', () =>
         hashPassword('password:4alice').then((hashed) =>
           Promise.resolve(authHandler(
             { Auth, Users: mockUsers('alice@getodk.org', hashed) },
