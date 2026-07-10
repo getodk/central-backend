@@ -11,13 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        pg:
-        - { name:"Postgres 14.20", version:"14.20" }
-        - { name:"Postgres 18",    version:"18" }
+        postgres-version:
+          - 14.20
+          - 18
     services:
       # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
       postgres:
-        image: postgres:${{ matrix.pg.version }}
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_PASSWORD: odktest
         ports:
