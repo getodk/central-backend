@@ -48,7 +48,7 @@ jobs:
 
     - uses: ./.github/actions/install-postgres-client
       with:
-        postgres-version: ${{ matrix.postgres-version }}
+        postgres-version: ${{ split(matrix.postgres-version, '.')[0] }}
     - name: Grant postgres superuser role
       # As per #1368, this role is required to create the pgrowlocks extension
       run: psql -c 'ALTER ROLE jubilant SUPERUSER' postgresql://postgres:odktest@localhost/postgres
