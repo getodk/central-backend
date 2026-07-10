@@ -135,6 +135,21 @@ describe('preprocessors', () => {
           )).then((context) => {
             context.auth.actor.should.eql(Option.of(new Actor({ displayName: 'test' })));
           })));
+
+      it('should treat additional colons as part of password', () =>
+        hashPassword('password:4alice').then((hashed) =>
+          Promise.resolve(authHandler(
+            { Auth, Users: mockUsers('alice@getodk.org', hashed) },
+            new Context(
+              createRequest({ headers: {
+                Authorization: `Basic ${Buffer.from('alice@getodk.org:password:4alice', 'utf8').toString('base64')}`,
+                'X-Forwarded-Proto': 'https'
+              } }),
+              { fieldKey: Option.none() }
+            )
+          )).then((context) => {
+            context.auth.actor.should.eql(Option.of(new Actor({ displayName: 'test' })));
+          })));
     });
 
     describe('by cookie', () => {
