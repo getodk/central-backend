@@ -76,6 +76,20 @@ describe('api: /users', () => {
               body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
             })))));
 
+    it('should not have a problem with the postgres escape character in searches', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'abcdef_hijklmnopqrstuvwxyz@example.com', displayName: 'David' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=g')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea' ]);
+              body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
+            })))));
+
     it('should return sane email matches', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
