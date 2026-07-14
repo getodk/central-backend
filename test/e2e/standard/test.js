@@ -10,6 +10,8 @@
 const assert = require('node:assert');
 const fs = require('node:fs');
 
+const express = require('express');
+
 const SUITE_NAME = 'test/e2e/standard';
 const { apiClient } = require('../util/api');
 
@@ -36,17 +38,10 @@ describe('#1157 - Backend crash when opening hostile-named submission detail', (
     const badSubmissionId = 'bad-id:';
     await uploadSubmission(badSubmissionId);
     // when
-    await assert.rejects(
+    await assertHttpRejects(
       () => api.apiGet(`projects/${projectId}/forms/${encodeURIComponent(xmlFormId)}.svc/Submissions('${badSubmissionId}')?%24select=__id%2C__system%2Cmeta`),
-      (err) => {
-        // then
-        assert.strictEqual(err.responseStatus, 404);
-        assert.deepStrictEqual(JSON.parse(err.responseText), {
-          message: 'Could not find the resource you were looking for.',
-          code: 404.1,
-        });
-        return true;
-      },
+      404,
+      { code:404.1, message:'Could not find the resource you were looking for.' },
     );
 
     // and service has not crashed:
@@ -82,3 +77,112 @@ describe('#1157 - Backend crash when opening hostile-named submission detail', (
     });
   }
 });
+
+describe('upstream XLSForm (pyxform-http) issues', () => {
+  it('should handle pyxform down completely', async () => {
+    // given
+    const api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
+    const projectId = await createProject(api);
+
+    // when
+    await assertHttpRejects(
+      () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
+      502,
+      {
+        code: 502.2,
+        message: 'The XLSForm conversion service could not be contacted.',
+        details: { error:{ code:'ECONNREFUSED' } },
+      },
+    );
+  });
+
+  describe('pyxform serving HTML', () => {
+    let api, projectId, server; // eslint-disable-line one-var, one-var-declaration-per-line
+
+    before(() => new Promise(resolve => {
+      const app = express();
+      app.post('/api/v1/convert', express.raw({ type:'*/*' }), (req, res) => {
+        res.set('Content-Type', 'text/html');
+        res.send('<html><body><div>hi</div></body></html>');
+      });
+      server = app.listen(5001, resolve);
+    }));
+
+    after(() => new Promise(resolve => {
+      server.close(resolve);
+    }));
+
+    it('should handle weird content', async () => {
+      // given
+      api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
+      projectId = await createProject(api);
+
+      // when
+      await assertHttpRejects(
+        () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
+        500,
+        { message:'Internal Server Error' },
+      );
+    });
+  });
+
+  describe('pyxform OOM giving empty response', () => {
+    let api, projectId, server; // eslint-disable-line one-var, one-var-declaration-per-line
+
+    before(() => new Promise(resolve => {
+      const app = express();
+      app.post('/api/v1/convert', express.raw({ type:'*/*' }), (req, res) => {
+        // This is how pyxform-http behaves when it runs out of memory.  `curl` will see this as:
+        //
+        //     * We are completely uploaded and fine
+        //     * Empty reply from server
+        //     * Closing connection
+        //     curl: (52) Empty reply from server
+        //
+        // and exit with error code 52
+        res.socket.destroy();
+      });
+      server = app.listen(5001, resolve);
+    }));
+
+    after(() => new Promise(resolve => {
+      server.close(resolve);
+    }));
+
+    it('should handle "[1] [ERROR] Worker (pid:43) was sent SIGKILL! Perhaps out of memory?"', async () => {
+      // given
+      api = await apiClient(SUITE_NAME, { serverUrl, userEmail, userPassword });
+      projectId = await createProject(api);
+
+      // when
+      await assertHttpRejects(
+        () => api.apiPostFile(`projects/${projectId}/forms?publish=true`, 'empty.xlsx'),
+        502,
+        {
+          code: 502.2,
+          message: 'The XLSForm conversion service could not be contacted.',
+          details: { error:{ code:'ECONNRESET' } },
+        },
+      );
+    });
+  });
+
+  async function createProject(api) {
+    const project = await api.apiPostJson(
+      'projects',
+      { name:`standard-test-${new Date().toISOString().replace(/\..*/, '')}` },
+    );
+    return project.id;
+  }
+});
+
+function assertHttpRejects(fn, expectedStatus, expectedBody) {
+  return assert.rejects(
+    fn,
+    (err) => {
+      assert.strictEqual(err.responseStatus, expectedStatus);
+      assert.deepStrictEqual(JSON.parse(err.responseText), expectedBody);
+      return true;
+    },
+  );
+}
