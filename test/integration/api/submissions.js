@@ -3284,7 +3284,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
       const asAlice = await service.login('alice');
 
       await Promise.all(Array.from({ length: 100 }, (_, idx) => asAlice.post('/v1/projects/1/forms/simple/submissions')
-        .send(`<data id="simple"><meta><instanceID>instance-${idx}</instanceID></meta>${idx}</data>`)
+        .send(`<data id="simple"><meta><instanceID>instance-${idx}</instanceID></meta></data>`)
         .set('Content-Type', 'text/xml')
         .expect(200)));
 
