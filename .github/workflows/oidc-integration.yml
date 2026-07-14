@@ -9,10 +9,16 @@ jobs:
     timeout-minutes: 6
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres-version:
+          - "14.20"
+          - "18"
     services:
       # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
       postgres:
-        image: postgres:14.20
+        image: postgres:${{ matrix.postgres-version }}
         env:
           POSTGRES_PASSWORD: odktest
         ports:
