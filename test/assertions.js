@@ -217,7 +217,7 @@ should.Assertion.add('ExtendedForm', function() {
 should.Assertion.add('FormAttachment', function() {
   this.params = { operator: 'to be a Form Attachment' };
 
-  Object.keys(this.obj).should.be.a.subsetOf([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'hash', 'updatedAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'size', 'hash', 'updatedAt' ]);
   this.obj.name.should.be.a.String();
   this.obj.type.should.be.a.String();
   const { blobExists, datasetExists, exists, hash } = this.obj;
