@@ -41,6 +41,11 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2026.3
+
+    **Changed**:
+    - [GET /audits](/central-api-system-endpoints/#getting-audit-log-entries) now uses less-than when filtering with the `end` parameter.
+
     ## ODK Central v2026.2
 
     **Added**:
