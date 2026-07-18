@@ -8358,6 +8358,29 @@ describe('datasets and entities', () => {
         })));
       }));
 
+      it('changes hash in property-filtered after a dataset property is added', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, assign region 'north' to the app user, and apply filter
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        // Get original hash with
+        const originalHashWithFilter = await getHashAppUser(service, appUser.token);
+
+        // Add an entity property.
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'foo' })
+          .expect(200);
+
+        (await getHashAppUser(service, appUser.token)).should.not.equal(originalHashWithFilter);
+      }));
+
       it('changes hash in property-filtered after a dataset property is deleted', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
