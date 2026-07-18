@@ -12268,7 +12268,7 @@ paths:
         description: The timestamp from which log entries are to be filtered out.
         schema:
           type: string
-        example: 2000-12-31T23:59.999z
+        example: 2001-01-01T00:00.000z
       - name: limit
         in: query
         description: The maximum number of entries to return.
