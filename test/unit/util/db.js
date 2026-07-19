@@ -225,6 +225,51 @@ returning *`);
       });
     });
 
+    describe('array joining', () => {
+      it('should return empty SQL for an empty array', () => {
+        sqlAnd([]).should.eql(sql``);
+      });
+
+      it('should return a simple AND for a single value', () => {
+        sqlAnd([ sql`x = y` ]).should.eql(sql`AND x = y`);
+      });
+
+      it('should strip truth and return an empty array if nothing left', () => {
+        sqlAnd([ sql`true`, sql`${boolTrue}` ]).should.eql(sql``);
+      });
+
+      it('should strip truth', () => {
+        sqlAnd([ sql`a = b`, sql`true`, sql`${boolTrue}`, sql`c = ${boolTrue}` ])
+          .should.eql(sql`AND ${sql.join([ sql`a = b`, sql`c = ${boolTrue}` ], sql` AND `)}`);
+      });
+    });
+
+    describe('join joining', () => {
+      it('should wrap non-and list in brackets', () => {
+        sqlAnd(sql.join([ sql`a`, sql`b` ], sql` OR `))
+          .should.eql(sql`AND (${sql.join([ sql`a`, sql`b` ], sql` OR `)})`);
+      });
+
+      // other behaviour shoudl match that for "array joining" above
+
+      it('should return empty SQL for an empty array', () => {
+        sqlAnd(sql.join([], sql` AND `)).should.eql(sql``);
+      });
+
+      it('should return a simple AND for a single value', () => {
+        sqlAnd(sql.join([ sql`x = y` ], sql` AND `)).should.eql(sql`AND x = y`);
+      });
+
+      it('should strip truth and return an empty array if nothing left', () => {
+        sqlAnd(sql.join([ sql`true`, sql`${boolTrue}` ], sql` AND `)).should.eql(sql``);
+      });
+
+      it('should strip truth', () => {
+        sqlAnd(sql.join([ sql`a = b`, sql`true`, sql`${boolTrue}`, sql`c = ${boolTrue}` ], sql` AND `))
+          .should.eql(sql`AND ${sql.join([ sql`a = b`, sql`c = ${boolTrue}` ], sql` AND `)}`);
+      });
+    });
+
     [
       [ sql`x=${numberOne}`, sql`AND x=${numberOne}` ],
     ].forEach(([ input, expected ]) => {
