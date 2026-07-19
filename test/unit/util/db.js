@@ -205,7 +205,7 @@ returning *`);
     });
   });
 
-  describe.only('sqlAnd', () => {
+  describe('sqlAnd', () => {
     const { sqlAnd } = util;
 
     const numberOne = 1;
