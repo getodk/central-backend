@@ -205,6 +205,35 @@ returning *`);
     });
   });
 
+  describe.only('sqlAnd', () => {
+    const { sqlAnd } = util;
+
+    const numberOne = 1;
+    const boolTrue = true;
+
+    describe('truthy statements', () => {
+      [
+        sql`true`,
+        sql`TRUE`,
+        sql` true `,
+        sql`${boolTrue}`,
+        sql` ${boolTrue} `,
+      ].forEach(input => {
+        it(`should evaluate "${input.sql}" to empty string`, () => {
+          sqlAnd(input).should.eql(sql``);
+        });
+      });
+    });
+
+    [
+      [ sql`x=${numberOne}`, sql`AND x=${numberOne}` ],
+    ].forEach(([ input, expected ]) => {
+      it(`should evaluate "${input.sql}" to "${expected.sql}"`, () => {
+        sqlAnd(input).should.eql(expected);
+      });
+    });
+  });
+
   describe('sqlEquals', () => {
     const { sqlEquals } = util;
     it('should do nothing if given no conditions', () => {
