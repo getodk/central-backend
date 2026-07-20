@@ -2,7 +2,7 @@ const { sql } = require('slonik');
 
 const { testContainer } = require('../setup');
 
-describe('database', () => {
+describe.only('database', () => {
   describe('pg_stat_statements', () => {
     it('should allow reading postgres stats', testContainer(async ({ all }) => {
       const stats = await all(sql`
