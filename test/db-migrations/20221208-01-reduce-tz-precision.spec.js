@@ -1,8 +1,5 @@
 const { // eslint-disable-line object-curly-newline
   assertColumnPrecision,
-  assertIndexExists,
-  assertTableDoesNotExist,
-  assertTableSchema,
   describeMigration,
 } = require('./utils'); // eslint-disable-line object-curly-newline
 
