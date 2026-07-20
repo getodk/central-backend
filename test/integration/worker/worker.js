@@ -36,7 +36,7 @@ describe('worker', () => {
       queue.run({ action: 'test.event' }, done).should.equal(true);
     });
 
-    it('should pass the container and event details to the job @slow', testContainerFullTrx(async (container) => {
+    it('should pass the container and event details to the job', testContainerFullTrx(async (container) => {
       const sentineledContainer = container.with({ testSentinel: 108 });
       const event = { id: -1, action: 'test.event', details: { x: 42 } };
 
@@ -54,7 +54,7 @@ describe('worker', () => {
       checked.should.equal(true);
     }));
 
-    it('should run all matched jobs @slow', testContainerFullTrx(async (container) => {
+    it('should run all matched jobs', testContainerFullTrx(async (container) => {
       let count = 0;
       const jobMap = { 'test.event': [
         // eslint-disable-next-line no-return-assign
@@ -68,7 +68,7 @@ describe('worker', () => {
       count.should.equal(2);
     }));
 
-    it('should mark the event as processed after on job completion @slow', testContainerFullTrx(async (container) => {
+    it('should mark the event as processed after on job completion', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.create', alice.actor);
@@ -80,7 +80,7 @@ describe('worker', () => {
       after.processed.should.be.a.recentDate();
     }));
 
-    it('should log to Sentry if a worker goes wrong @slow', testContainerFullTrx(async (container) => {
+    it('should log to Sentry if a worker goes wrong', testContainerFullTrx(async (container) => {
       let captured = null;
       const Sentry = { captureException(err) { captured = err; } };
       const hijackedContainer = container.with({ Sentry });
@@ -94,7 +94,7 @@ describe('worker', () => {
 
     // ideally we'd test that the error gets written to stderr but i don't like
     // hijacking globals in tests.
-    it('should still survive and reschedule if Sentry goes wrong @slow', testContainerFullTrx(async (container) => {
+    it('should still survive and reschedule if Sentry goes wrong', testContainerFullTrx(async (container) => {
       // eslint-disable-next-line no-throw-literal
       const Sentry = { captureException() { throw 'no sentry for you'; } };
       const hijackedContainer = container.with({ Sentry });
@@ -108,7 +108,7 @@ describe('worker', () => {
     // we need to use a real event here that doesn't get auto-marked as processed, so
     // we can test that it is not indeed processed afterwards.
     // TODO: we should be able to not do this as of block 8.
-    it('should unclaim the event and mark failure in case of failure @slow', testContainerFullTrx(async (container) => {
+    it('should unclaim the event and mark failure in case of failure', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -123,7 +123,7 @@ describe('worker', () => {
       after.lastFailure.should.be.a.recentDate();
     }));
 
-    it('should roll back changes in case of error in any job @slow', testContainerFullTrx(async (container) => {
+    it('should roll back changes in case of error in any job', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -256,7 +256,7 @@ describe('worker', () => {
   describe('loop', () => {
     const millis = (x) => new Promise((done) => { setTimeout(done, x); });
 
-    it('should run a full loop right away @slow', testContainerFullTrx(async (container) => {
+    it('should run a full loop right away', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -275,7 +275,7 @@ describe('worker', () => {
       ran.should.equal(true);
     }));
 
-    it('should run two full loops right away @slow', testContainerFullTrx(async (container) => {
+    it('should run two full loops right away', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -294,7 +294,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       await millis(20); // ditto above
     }));
 
-    it('should run two full loops with an idle cycle in between @slow', testContainerFullTrx(async (container) => {
+    it('should run two full loops with an idle cycle in between', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -319,7 +319,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       await millis(20); // ditto above
     }));
 
-    it('should restart if the check fails prequery @slow', testContainerFullTrx(async (container) => {
+    it('should restart if the check fails prequery', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -348,7 +348,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       failed.should.equal(true);
     }));
 
-    it('should restart if the check fails in-query @slow', testContainerFullTrx(async (container) => {
+    it('should restart if the check fails in-query', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);
@@ -378,7 +378,7 @@ select count(*) from audits where action='submission.attachment.update' and proc
       failed.should.equal(true);
     }));
 
-    it('should restart if the process itself fails @slow', testContainerFullTrx(async (container) => {
+    it('should restart if the process itself fails', testContainerFullTrx(async (container) => {
       const { Audits, Users } = container;
       const alice = (await Users.getByEmail('alice@getodk.org')).get();
       await Audits.log(alice.actor, 'submission.attachment.update', alice.actor);

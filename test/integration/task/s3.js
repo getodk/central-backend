@@ -218,7 +218,7 @@ describe('task: s3', () => {
           restoreS3mock();
         });
 
-        it('should not attempt to upload an in-progress blob @slow', testTaskFullTrx(async (container) => {
+        it('should not attempt to upload an in-progress blob', testTaskFullTrx(async (container) => {
           await aBlobExistsWith(container, { status: 'pending' });
 
           // when

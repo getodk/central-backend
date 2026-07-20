@@ -2003,7 +2003,7 @@ describe('Entities API', () => {
     // `getById` creates an advisory lock which blocks other transactions to do the same.
     // Once first transaction updates the Entity, only then second transaction is able
     // to get the Entity.
-    it('should not allow parallel updates to the same Entity @slow', testServiceFullTrx(async (service, container) => {
+    it('should not allow parallel updates to the same Entity', testServiceFullTrx(async (service, container) => {
 
       const asAlice = await service.login('alice');
 
@@ -2554,7 +2554,7 @@ describe('Entities API', () => {
           });
       }));
 
-      it('should not create any entities there is a UUID collision @slow', testServiceFullTrx(async (service) => {
+      it('should not create any entities there is a UUID collision', testServiceFullTrx(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2621,7 +2621,7 @@ describe('Entities API', () => {
           });
       }));
 
-      it('should not create any entities if there is a UUID collision with soft deleted Entity @slow', testServiceFullTrx(async (service) => {
+      it('should not create any entities if there is a UUID collision with soft deleted Entity', testServiceFullTrx(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
