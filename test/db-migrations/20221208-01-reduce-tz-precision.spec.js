@@ -26,7 +26,7 @@ describeMigration('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested 
     await runMigrationBeingTested();
   });
 
-  it('should convert application columns to TODO', async () => {
+  it('should reduce column precision', async () => {
     await assertColumnPrecision('actees',           'purgedAt',       3);
     await assertColumnPrecision('actors',           'createdAt',      3);
     await assertColumnPrecision('audits',           'loggedAt',       3);
