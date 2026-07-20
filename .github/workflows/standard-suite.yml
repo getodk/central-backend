@@ -15,6 +15,7 @@ jobs:
         image: postgres:14.20
         env:
           POSTGRES_PASSWORD: odktest
+          POSTGRESQL_SHARED_PRELOAD_LIBRARIES: pg_stat_statements
         ports:
           - 5432:5432
         # Set health checks to wait until postgres has started
@@ -23,7 +24,6 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 50
-          -c shared_preload_libraries=pg_stat_statements
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
