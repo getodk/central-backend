@@ -250,7 +250,7 @@ returning *`);
           .should.eql(sql`AND (${sql.join([ sql`a`, sql`b` ], sql` OR `)})`);
       });
 
-      // other behaviour shoudl match that for "array joining" above
+      // other behaviour should match that for "array joining" above
 
       it('should return empty SQL for an empty array', () => {
         sqlAnd(sql.join([], sql` AND `)).should.eql(sql``);
