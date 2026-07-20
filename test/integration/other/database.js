@@ -15,7 +15,7 @@ describe('database', () => {
           ORDER BY total_exec_time DESC
       `);
 
-      stats.should.have.property('rows');
+      stats.should.be.an.Array();
     }));
 
     it.only('should allow clearing postgres stats', testContainer(async ({ run }) => {
