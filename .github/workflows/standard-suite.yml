@@ -19,14 +19,5 @@ jobs:
     - run: make check-for-large-files
     - run: npm ci
     - run: make api-docs-lint
-
-    - run: |
-        docker run -d \
-          --name postgres \
-          --publish 5432:5432 \
-          --env POSTGRES_PASSWORD=odktest \
-          postgres:14.20-alpine \
-            --shared_preload_libraries=pg_stat_statements
-    - run: docker exec postgres pg_isready -U postgres --timeout=30
-    - run: node lib/bin/create-docker-databases.js
+    - run: make run-docker-postgres
     - run: make test

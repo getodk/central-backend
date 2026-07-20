@@ -143,7 +143,8 @@ run-docker-postgres: stop-docker-postgres
 			--env POSTGRES_PASSWORD=odktest \
 			postgres:14.20-alpine \
 				--shared_preload_libraries=pg_stat_statements \
-		&& sleep 5 \
+		&& sleep 2 \
+		&& docker exec odk-postgres14 pg_isready --username=postgres --timeout=10 \
 		&& node lib/bin/create-docker-databases.js --log \
 	)
 
