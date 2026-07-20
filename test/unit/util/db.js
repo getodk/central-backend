@@ -211,6 +211,17 @@ returning *`);
     const numberOne = 1;
     const boolTrue = true;
 
+    describe('empty statements', () => {
+      [
+        sql``,
+        sql`     `,
+      ].forEach(input => {
+        it(`should evaluate "${input.sql}" to empty string`, () => {
+          sqlAnd(input).should.eql(sql``);
+        });
+      });
+    });
+
     describe('truthy statements', () => {
       [
         sql`true`,
