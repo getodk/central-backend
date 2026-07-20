@@ -23,7 +23,7 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 50
-          --entrypoint docker-entrypoint.sh
+          --entrypoint /usr/local/bin/docker-entrypoint.sh
           postgres -c shared_preload_libraries=pg_stat_statements
     steps:
     - uses: actions/checkout@v6
