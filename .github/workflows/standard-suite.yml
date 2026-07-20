@@ -23,7 +23,7 @@ jobs:
           --health-interval 1s
           --health-timeout 5s
           --health-retries 50
-          --shared_preload_libraries=pg_stat_statements
+          -c shared_preload_libraries=pg_stat_statements
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
