@@ -33,6 +33,17 @@ function describeMigration(...args) { return _describeMigration(describe, ...arg
 describeMigration.only =  (...args) =>       _describeMigration(describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
 describeMigration.skip =  (...args) =>       _describeMigration(describe.skip, ...args); // eslint-disable-line no-multi-spaces
 
+async function assertColumnType(tableName, columnName, expectedType) {
+  const actualType = await db.oneFirst(sql`
+    SELECT udt_name
+      FROM information_schema.columns
+      WHERE table_name  = ${tableName}
+        AND column_name = ${columnName}
+  `);
+
+  assert.equal(actualType, expectedType);
+}
+
 async function assertIndexExists(tableName, expected) {
   if (arguments.length !== 2) throw new Error('Incorrect arg count.');
   const actualIndexes = await db.anyFirst(sql`SELECT indexdef FROM pg_indexes WHERE tablename=${tableName}`);
@@ -175,6 +186,7 @@ function assertAllHaveSameProps(list) {
 }
 
 module.exports = {
+  assertColumnType,
   assertIndexExists,
   assertTableContents,
   assertTableDoesNotExist,
