@@ -10,21 +10,6 @@ jobs:
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     services:
-      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
-      postgres:
-        image: postgres:14.20
-        env:
-          POSTGRES_PASSWORD: odktest
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 50
-          --entrypoint /usr/local/bin/docker-entrypoint.sh
-          postgres -c shared_preload_libraries=pg_stat_statements
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
@@ -35,5 +20,14 @@ jobs:
     - run: make check-for-large-files
     - run: npm ci
     - run: make api-docs-lint
+
+    - run: |
+        docker run -d \
+          --name postgres \
+          --port 5432:5432 \
+          --env POSTGRES_PASSWORD=odktest \
+          postgres:14.20-alpine \
+            --shared_preload_libraries=pg_stat_statements
+    - run: docker exec postgres pg_isready -U postgres --timeout=30
     - run: node lib/bin/create-docker-databases.js
     - run: make test
