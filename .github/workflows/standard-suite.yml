@@ -23,7 +23,7 @@ jobs:
     - run: |
         docker run -d \
           --name postgres \
-          --port 5432:5432 \
+          --publish 5432:5432 \
           --env POSTGRES_PASSWORD=odktest \
           postgres:14.20-alpine \
             --shared_preload_libraries=pg_stat_statements
