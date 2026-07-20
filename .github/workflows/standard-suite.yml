@@ -9,7 +9,6 @@ jobs:
     timeout-minutes: 20
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
-    services:
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
