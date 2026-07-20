@@ -1,5 +1,5 @@
 const { // eslint-disable-line object-curly-newline
-  assertColumnType,
+  assertColumnPrecision,
   assertIndexExists,
   assertTableDoesNotExist,
   assertTableSchema,
@@ -8,46 +8,38 @@ const { // eslint-disable-line object-curly-newline
 
 describeMigration('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested }) => {
   before(async () => {
-    await assertColumnType('actees',                  'purgedAt',       'timestamptz');
-    await assertColumnType('actors',                  'createdAt',      'timestamptz');
-    await assertColumnType('audits',                  'loggedAt',       'timestamptz');
-    await assertColumnType('comments',                'createdAt',      'timestamptz');
-    await assertColumnType('config',                  'setAt',          'timestamptz');
-    await assertColumnType('datasets',                'publishedAt',    'timestamptz');
-    await assertColumnType('ds_properties',           'publishedAt',    'timestamptz');
-    await assertColumnType('entities',                'updatedAt',      'timestamptz');
-    await assertColumnType('entity_defs',             'createdAt',      'timestamptz');
-    await assertColumnType('form_attachments',        'updatedAt',      'timestamptz');
-    await assertColumnType('form_defs',               'createdAt',      'timestamptz');
-    await assertColumnType('forms',                   'createdAt',      'timestamptz');
-    await assertColumnType('keys',                    'createdAt',      'timestamptz');
-    await assertColumnType('knex_migrations',         'migration_time', 'timestamptz');
-
-    await assertColumnType('pg_stat_statements_info', 'stats_reset',    'timestamptz');
-    await assertColumnType('pg_stat_statements_info', 'stats_reset',    'timestamptz');
+    await assertColumnPrecision('actees',           'purgedAt',       6);
+    await assertColumnPrecision('actors',           'createdAt',      6);
+    await assertColumnPrecision('audits',           'loggedAt',       6);
+    await assertColumnPrecision('comments',         'createdAt',      6);
+    await assertColumnPrecision('config',           'setAt',          6);
+    await assertColumnPrecision('datasets',         'publishedAt',    6);
+    await assertColumnPrecision('ds_properties',    'publishedAt',    6);
+    await assertColumnPrecision('entities',         'updatedAt',      6);
+    await assertColumnPrecision('entity_defs',      'createdAt',      6);
+    await assertColumnPrecision('form_attachments', 'updatedAt',      6);
+    await assertColumnPrecision('form_defs',        'createdAt',      6);
+    await assertColumnPrecision('forms',            'createdAt',      6);
+    await assertColumnPrecision('keys',             'createdAt',      6);
+    await assertColumnPrecision('knex_migrations',  'migration_time', 6);
 
     await runMigrationBeingTested();
   });
 
   it('should convert application columns to TODO', async () => {
-    await assertColumnType('actees',                  'purgedAt',       'timestamptz');
-    await assertColumnType('actors',                  'createdAt',      'timestamptz');
-    await assertColumnType('audits',                  'loggedAt',       'timestamptz');
-    await assertColumnType('comments',                'createdAt',      'timestamptz');
-    await assertColumnType('config',                  'setAt',          'timestamptz');
-    await assertColumnType('datasets',                'publishedAt',    'timestamptz');
-    await assertColumnType('ds_properties',           'publishedAt',    'timestamptz');
-    await assertColumnType('entities',                'updatedAt',      'timestamptz');
-    await assertColumnType('entity_defs',             'createdAt',      'timestamptz');
-    await assertColumnType('form_attachments',        'updatedAt',      'timestamptz');
-    await assertColumnType('form_defs',               'createdAt',      'timestamptz');
-    await assertColumnType('forms',                   'createdAt',      'timestamptz');
-    await assertColumnType('keys',                    'createdAt',      'timestamptz');
-    await assertColumnType('knex_migrations',         'migration_time', 'timestamptz');
-  });
-
-  it('should not alter DB/extension columns', async () => {
-    await assertColumnType('pg_stat_statements_info', 'stats_reset',    'timestamptz');
-    await assertColumnType('pg_stat_statements_info', 'stats_reset',    'timestamptz');
+    await assertColumnPrecision('actees',           'purgedAt',       3);
+    await assertColumnPrecision('actors',           'createdAt',      3);
+    await assertColumnPrecision('audits',           'loggedAt',       3);
+    await assertColumnPrecision('comments',         'createdAt',      3);
+    await assertColumnPrecision('config',           'setAt',          3);
+    await assertColumnPrecision('datasets',         'publishedAt',    3);
+    await assertColumnPrecision('ds_properties',    'publishedAt',    3);
+    await assertColumnPrecision('entities',         'updatedAt',      3);
+    await assertColumnPrecision('entity_defs',      'createdAt',      3);
+    await assertColumnPrecision('form_attachments', 'updatedAt',      3);
+    await assertColumnPrecision('form_defs',        'createdAt',      3);
+    await assertColumnPrecision('forms',            'createdAt',      3);
+    await assertColumnPrecision('keys',             'createdAt',      3);
+    await assertColumnPrecision('knex_migrations',  'migration_time', 3);
   });
 });

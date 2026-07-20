@@ -33,15 +33,15 @@ function describeMigration(...args) { return _describeMigration(describe, ...arg
 describeMigration.only =  (...args) =>       _describeMigration(describe.only, ...args); // eslint-disable-line no-only-tests/no-only-tests, no-multi-spaces
 describeMigration.skip =  (...args) =>       _describeMigration(describe.skip, ...args); // eslint-disable-line no-multi-spaces
 
-async function assertColumnType(tableName, columnName, expectedType) {
-  const actualType = await db.oneFirst(sql`
-    SELECT udt_name
+async function assertColumnPrecision(tableName, columnName, expected) {
+  const actual = await db.oneFirst(sql`
+    SELECT datetime_precision
       FROM information_schema.columns
       WHERE table_name  = ${tableName}
         AND column_name = ${columnName}
   `);
 
-  assert.equal(actualType, expectedType);
+  assert.equal(actual, expected);
 }
 
 async function assertIndexExists(tableName, expected) {
@@ -186,7 +186,7 @@ function assertAllHaveSameProps(list) {
 }
 
 module.exports = {
-  assertColumnType,
+  assertColumnPrecision,
   assertIndexExists,
   assertTableContents,
   assertTableDoesNotExist,
