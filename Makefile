@@ -128,7 +128,7 @@ test-coverage: node_version
 
 .PHONY: lint
 lint: node_version
-	bash -c 'echo hi'
+	npx eslint --cache --max-warnings 0 .
 
 
 ################################################################################
