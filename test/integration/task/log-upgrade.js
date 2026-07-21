@@ -3,7 +3,7 @@ const { sql } = require('slonik');
 const { testTaskFullTrx, } = require('../setup');
 const { logUpgrade } = require(appRoot + '/lib/task/log-upgrade');
 
-describe('task: log-upgrade', () => {
+describe('task: log-upgrade @slow', () => {
   it('should log upgrade if no previous upgrade event exists', testTaskFullTrx(async ({ Audits }) => {
     await logUpgrade({ version: '1234', server: 'cb1', client: 'cf1' });
     const audit = await Audits.getLatestByAction('upgrade.server').then(o => o.get());
