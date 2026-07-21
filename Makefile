@@ -137,7 +137,11 @@ lint: node_version
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
 	docker start odk-postgres14 || (\
-		docker run -d --name odk-postgres14 -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.20-alpine \
+		docker run -d \
+			--name odk-postgres14 \
+			--publish 127.0.0.1:5432:5432 \
+			--env POSTGRES_PASSWORD=odktest \
+			postgres:14.20-alpine \
 		&& sleep 5 \
 		&& node lib/bin/create-docker-databases.js --log \
 	)
