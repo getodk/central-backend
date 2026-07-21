@@ -41,6 +41,8 @@ describeMigration('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested 
     await assertColumnPrecision('submissions',      'deletedAt',      6);
     await assertColumnPrecision('submissions',      'updatedAt',      6);
     await assertColumnPrecision('submissions',      'createdAt',      6);
+    
+    await assertColumnPrecision('pg_stat_statements_info', 'stats_reset', 6);
 
     await runMigrationBeingTested();
   });
