@@ -227,6 +227,7 @@ should.Assertion.add('FormAttachment', function() {
   exists.should.equal(blobExists || datasetExists);
   (hash != null).should.equal(blobExists);
   if (hash != null) hash.should.be.an.md5Sum();
+  if (this.obj.size != null) this.obj.size.should.be.a.Number();
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
