@@ -43,7 +43,7 @@ jobs:
     - run: npm ci
     - run: node lib/bin/create-docker-databases.js
     - run: sudo apt-get install wait-for-it
-	  - run: ./test/e2e/oidc/run-tests.sh
+	- run: ./test/e2e/oidc/run-tests.sh
     - name: Archive Playwright Test Report
       if: failure()
       uses: actions/upload-artifact@v7
