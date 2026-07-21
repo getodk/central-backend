@@ -19,10 +19,6 @@ node_version: node_modules
 test-oidc-integration: node_version
 	TEST_AUTH=oidc NODE_CONFIG_ENV=oidc-integration-test make test-integration
 
-.PHONY: test-oidc-e2e
-test-oidc-e2e: node_version
-	test/e2e/oidc/run-tests.sh
-
 .PHONY: dev-oidc
 dev-oidc: base
 	NODE_CONFIG_ENV=oidc-development npx nodemon --watch lib --watch config lib/bin/run-server.js
