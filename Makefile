@@ -140,7 +140,7 @@ run-docker-postgres: stop-docker-postgres
 			postgres:14.20-alpine \
 		&& sleep 2 \
 		&& docker exec odk-postgres14 pg_isready --username=postgres --timeout=10 \
-		&& node lib/bin/create-docker-databases.js --log \
+		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
 	)
 
 .PHONY: stop-docker-postgres
