@@ -1693,7 +1693,7 @@ describe('api: /forms/:id/submissions', () => {
         .expect(404);
     }));
 
-    it('should not let a submission with the same instanceId as a deleted submission be sent', testServiceFullTrx(async (service, { Submissions }) => {
+    it('should not let a submission with the same instanceId as a deleted submission be sent @slow', testServiceFullTrx(async (service, { Submissions }) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/simple/submissions')
