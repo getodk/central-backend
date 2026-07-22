@@ -1,3 +1,5 @@
+const should = require('should');
+
 const { readFileSync } = require('fs');
 const appPath = require('app-root-path');
 const { sql } = require('slonik');
@@ -166,6 +168,56 @@ describe('blob query module', () => {
       .expect(200)
       .then(({ body }) => {
         body.size.should.equal(4);
+      });
+  }));
+
+  it('should not recompute size when blob with same hash comes in', testService(async (service, container) => {
+    const asAlice = await service.login('alice');
+    const bufferContent = Buffer.from('some,csv,data');
+
+    await asAlice.post('/v1/projects/1/forms')
+      .set('Content-Type', 'application/xml')
+      .send(testData.forms.withAttachments)
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
+      .set('Content-Type', 'text/csv')
+      .send(bufferContent)
+      .expect(200)
+      .then(({ body }) => {
+        body.size.should.equal(13);
+      });
+
+    // simulate uploading to s3 before migration: content is set to null, status set to uploaded, size is not filled in
+    await container.run(sql`update blobs set size = null, content = null, s3_status = 'uploaded'`);
+    await asAlice.get('/v1/projects/1/forms/withAttachments/draft/attachments')
+      .expect(200)
+      .then(({ body }) => {
+        body[0].name.should.equal('goodone.csv');
+        should.not.exist(body[0].size);
+      });
+
+    // create a new form with a new attachment that uses the same underlying blob
+    await asAlice.post('/v1/projects/1/forms')
+      .set('Content-Type', 'application/xml')
+      .send(testData.forms.consumeDatasets)
+      .expect(200);
+
+    // reupload the file to new form attachment
+    // hash of contents will match with existing blob and blob will not be re-written, causing size to remain null
+    await asAlice.post('/v1/projects/1/forms/consumeDatasets/draft/attachments/people.csv')
+      .set('Content-Type', 'text/csv')
+      .send(bufferContent)
+      .expect(200)
+      .then(({ body }) => {
+        should.not.exist(body.size);
+      });
+
+    await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
+      .expect(200)
+      .then(({ body }) => {
+        body[0].name.should.equal('people.csv');
+        should.not.exist(body[0].size);
       });
   }));
 });
