@@ -54,7 +54,6 @@
     "@sinonjs/fake-timers": "^15.1.1",
     "app-root-path": "~3",
     "eslint": "^8.57.1",
-    "eslint-config-airbnb-base": "~15",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-no-only-tests": "^3.3.0",
     "fetch-cookie": "^3.2.0",
