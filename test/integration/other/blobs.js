@@ -151,9 +151,9 @@ describe('blob query module', () => {
         .then(() => container.oneFirst(sql`select count(*) from blobs`))
         .then((count) => count.should.equal(1))))); //
 
-  it('should store size as byte length when a blob is created via form attachment', testService(async (service, container) => {
+  it('should store size as byte length when a blob is created via form attachment', testService(async (service) => {
     const asAlice = await service.login('alice');
-    const bufferContent = Buffer.from('some,csv,data');
+    const bufferContent = Buffer.from('📊');
 
     await asAlice.post('/v1/projects/1/forms')
       .set('Content-Type', 'application/xml')
@@ -163,9 +163,9 @@ describe('blob query module', () => {
     await asAlice.post('/v1/projects/1/forms/withAttachments/draft/attachments/goodone.csv')
       .set('Content-Type', 'text/csv')
       .send(bufferContent)
-      .expect(200);
-
-    const { size } = await container.one(sql`SELECT size FROM blobs LIMIT 1`);
-    size.should.equal(bufferContent.length);
+      .expect(200)
+      .then(({ body }) => {
+        body.size.should.equal(4);
+      });
   }));
 });
