@@ -303,7 +303,7 @@ describe('Update / migrate entities-version within form', () => {
           // eslint-disable-next-line no-param-reassign
           delete body[0].updatedAt;
           body.should.eql([
-            { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
+            { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, size: 12, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
             { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false, hash: null }
           ]);
         });
@@ -339,7 +339,7 @@ describe('Update / migrate entities-version within form', () => {
           // eslint-disable-next-line no-param-reassign
           delete body[0].updatedAt;
           body.should.eql([
-            { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
+            { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, size: 12, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
             { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false, hash: null }
           ]);
         });
@@ -350,7 +350,7 @@ describe('Update / migrate entities-version within form', () => {
           // eslint-disable-next-line no-param-reassign
           delete body[0].updatedAt;
           body.should.eql([
-            { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
+            { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, size: 12, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
             { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false, hash: null }
           ]);
         });
