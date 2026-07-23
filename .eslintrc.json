@@ -397,7 +397,15 @@
     } ],
     "sort-keys": [ "off", "asc", { "caseSensitive": false, "natural": true } ],
     "sort-vars": "off",
+    "space-before-blocks": [ "error" ],
+    "space-before-function-paren": [ "error", { "anonymous": "always", "asyncArrow": "always", "named": "never" } ],
+    "space-in-parens": [ "error", "never" ],
+    "space-infix-ops": [ "off" ],
     "space-unary-ops": [ "error", { "nonwords": false, "overrides": {}, "words": true } ],
+    "spaced-comment": [ "off", "always", {
+      "block": { "balanced": true, "exceptions": [ "-", "+" ], "markers": [ "=", "!", ":", "::" ] },
+      "line": { "exceptions": [ "-", "+" ], "markers": [ "=", "!", "/" ] }
+    } ],
     "strict": [ "error", "never" ],
     "switch-colon-spacing": [ "error", { "after": true, "before": false } ],
     "symbol-description": "error",
