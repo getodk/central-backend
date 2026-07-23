@@ -1,0 +1,23 @@
+name: Full Standard Test Suite
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  standard-tests:
+    timeout-minutes: 20
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: make check-for-large-files
+    - run: npm ci
+    - run: make api-docs-lint
+    - run: make run-docker-postgres
+    - run: make test
