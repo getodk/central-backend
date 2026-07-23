@@ -6,7 +6,7 @@ const { // eslint-disable-line object-curly-newline
 
 describeMigration('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested }) => {
   before(async () => {
-    const precisions = await getPrecisions();
+    const precisions = await getPrecisions(); // eslint-disable-line no-use-before-define
     assert.ok(
       precisions
         .every(row => row.datetime_precision === 6),
@@ -16,7 +16,7 @@ describeMigration('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested 
   });
 
   it('should reduce application column precision', async () => {
-    const precisions = await getPrecisions();
+    const precisions = await getPrecisions(); // eslint-disable-line no-use-before-define
     assert.ok(
       precisions
         .filter(row => row.table_name !== 'pg_stat_statements_info')
@@ -25,7 +25,7 @@ describeMigration('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested 
   });
 
   it('should not reduce postgres/extension column precision', async () => {
-    const precisions = await getPrecisions();
+    const precisions = await getPrecisions(); // eslint-disable-line no-use-before-define
     assert.ok(
       precisions
         .filter(row => row.table_name === 'pg_stat_statements_info')
