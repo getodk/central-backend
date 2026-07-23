@@ -1566,13 +1566,16 @@ describe('api: /forms/:id/submissions', () => {
     it('should redirect to the edit_url', testService((service, { run }) =>
       run(sql`update forms set "enketoId"='myenketoid'`)
         .then(() => service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms/simple/submissions')
-            .send(testData.instances.simple.one)
-            .set('Content-Type', 'application/xml')
+          asAlice.patch('/v1/projects/1/forms/simple')
+            .send({ webformsEnabled: false })
             .expect(200)
-            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
-              .expect(302)
-              .then(({ text }) => { text.should.equal('Found. Redirecting to https://enketo/edit/url'); }))))));
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'application/xml')
+              .expect(200)
+              .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
+                .expect(302)
+                .then(({ text }) => { text.should.equal('Found. Redirecting to https://enketo/edit/url'); })))))));
 
     // TODO: okay, so it'd be better if this were a true true integration test.
     it('should pass the appropriate parameters to the enketo module', testService((service, { run }) =>
@@ -1581,25 +1584,42 @@ describe('api: /forms/:id/submissions', () => {
           .set('Content-Type', 'text/xml')
           .send(testData.forms.binaryType)
           .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
-            .send(testData.instances.binaryType.both)
+          .then(() => asAlice.patch('/v1/projects/1/forms/binaryType')
+            .send({ webformsEnabled: false })
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions')
+              .send(testData.instances.binaryType.both)
+              .set('Content-Type', 'application/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
+              .set('Content-Type', 'application/octet-stream')
+              .send('this is a test file nr 1')
+              .expect(200))
+            .then(() => run(sql`update forms set "enketoId"='myenketoid'`))
+            .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/edit')
+              .expect(302))
+            .then(() => {
+              const { editData } = global.enketo;
+              editData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
+              editData.domain.should.equal('http://localhost:8989');
+              editData.logicalId.should.equal('both');
+              editData.attachments.length.should.equal(2);
+              editData.token.should.be.a.token();
+            })))));
+
+    it('should redirect to the edit_url - webformsEnabled', testService((service, { run }) =>
+      run(sql`update forms set "enketoId"='myenketoid'`)
+        .then(() => service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms/simple/submissions')
+            .send(testData.instances.simple.one)
             .set('Content-Type', 'application/xml')
-            .expect(200))
-          .then(() => asAlice.post('/v1/projects/1/forms/binaryType/submissions/both/attachments/my_file1.mp4')
-            .set('Content-Type', 'application/octet-stream')
-            .send('this is a test file nr 1')
-            .expect(200))
-          .then(() => run(sql`update forms set "enketoId"='myenketoid'`))
-          .then(() => asAlice.get('/v1/projects/1/forms/binaryType/submissions/both/edit')
-            .expect(302))
-          .then(() => {
-            const { editData } = global.enketo;
-            editData.openRosaUrl.should.equal('http://localhost:8989/v1/projects/1');
-            editData.domain.should.equal('http://localhost:8989');
-            editData.logicalId.should.equal('both');
-            editData.attachments.length.should.equal(2);
-            editData.token.should.be.a.token();
-          }))));
+            .expect(200)
+            .then(() => asAlice.get('/v1/projects/1/forms/simple/submissions/one/edit')
+              .expect(302)
+              .then(({ text }) => {
+                text.should.match(/Found. Redirecting to /);
+                text.should.containEql('projects/1/forms/simple/submissions/one/edit');
+              }))))));
   });
 
   describe('/:instanceId PATCH', () => {
@@ -1673,7 +1693,7 @@ describe('api: /forms/:id/submissions', () => {
         .expect(404);
     }));
 
-    it('should not let a submission with the same instanceId as a deleted submission be sent', testServiceFullTrx(async (service, { Submissions }) => {
+    it('should not let a submission with the same instanceId as a deleted submission be sent @slow', testServiceFullTrx(async (service, { Submissions }) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/simple/submissions')

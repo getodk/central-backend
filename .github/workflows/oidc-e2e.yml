@@ -13,20 +13,6 @@ jobs:
     timeout-minutes: 6
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
-    services:
-      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
-      postgres:
-        image: postgres:14.20
-        env:
-          POSTGRES_PASSWORD: odktest
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 50
     steps:
 
     # This one weird trick speeds up every build!
@@ -40,10 +26,13 @@ jobs:
       with:
         node-version-file: package.json
         cache: 'npm'
-    - run: make test-oidc-e2e
+    - run: npm ci
+    - run: make run-docker-postgres
+    - run: sudo apt-get install wait-for-it
+    - run: ./test/e2e/oidc/run-tests.sh
     - name: Archive Playwright Test Report
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: Playwright Test Report
         path: test/e2e/oidc/playwright-tests/results/html-report/

@@ -57,7 +57,7 @@ testMigration.only = (filename, tests) =>
 testMigration.skip = (filename, tests) =>
   testMigration(filename, tests, { skip: true });
 
-describe('database migrations: removing default project', function() {
+describe('database migrations: removing default project @slow', function() {
   this.timeout(8000);
 
   it('should put old forms into project', testServiceFullTrx(async (service, container) => {
@@ -94,7 +94,7 @@ describe('database migrations: removing default project', function() {
   }));
 });
 
-describe('database migrations: intermediate form schema', function() {
+describe('database migrations: intermediate form schema @slow', function() {
   this.timeout(20000);
 
   it('should test migration', testServiceFullTrx(async (service, container) => {
@@ -223,7 +223,7 @@ describe('database migrations: intermediate form schema', function() {
   }));
 });
 
-describe('database migrations: 20230123-01-remove-google-backups', function() {
+describe('database migrations: 20230123-01-remove-google-backups @slow', function() {
   this.timeout(20000);
 
   beforeEach(() => upToMigration('20230123-01-remove-google-backups.js', false));

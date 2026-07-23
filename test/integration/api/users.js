@@ -26,6 +26,28 @@ describe('api: /users', () => {
             body.slice(1).map((user) => user.lastLoginAt).should.eql([ null, null]);
           }))));
 
+    it('should escape % in search string', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'test@email.org', displayName: 'alicia' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=%')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(0);
+            })))));
+
+    it('should escape _ in search string', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'test@email.org', displayName: 'alicia' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=_')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(0);
+            })))));
+
     it('should search user display names if a query is given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/users')
@@ -52,6 +74,62 @@ describe('api: /users', () => {
               body.forEach((user) => user.should.be.a.User());
               body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea' ]);
               body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
+            })))));
+
+    it('should not have a problem with the postgres escape character in searches', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'abcdef_hijklmnopqrstuvwxyz@example.com', displayName: 'David' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=g')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea' ]);
+              body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
+            })))));
+
+    it('should return sane email matches', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'getouttahere@closeddatakit.org', displayName: 'David' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=GETO')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(4);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea', 'David' ]);
+              body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org', 'getouttahere@closeddatakit.org' ]);
+            })))));
+
+    it('should return sane displayName matches', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@closeddatakit.org', displayName: 'getouttahererightnow!' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=GETO')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(4);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea', 'getouttahererightnow!' ]);
+              body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org', 'david@closeddatakit.org' ]);
+            })))));
+
+    it('should escape backslashes in search string', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@closeddatakit.org', displayName: 'geto\\uttahererightnow!' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=GETO\\')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Bob', 'geto\\uttahererightnow!' ]);
+              body.map((user) => user.email).should.containDeep([ 'bob@getodk.org', 'david@closeddatakit.org' ]);
             })))));
 
     it('should search with compound phrases if given', testService((service) =>

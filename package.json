@@ -6,7 +6,7 @@
     "node": "24"
   },
   "volta": {
-    "node": "24.13.0"
+    "node": "24.16.0"
   },
   "dependencies": {
     "@sentry/node": "^10.46.0",
@@ -49,7 +49,7 @@
     "yauzl": "^3.2.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.58.2",
+    "@playwright/test": "^1.60.0",
     "@redocly/cli": "^2.25.1",
     "@sinonjs/fake-timers": "^15.1.1",
     "app-root-path": "~3",
@@ -66,7 +66,7 @@
     "node-mocks-http": "^1.17.2",
     "nodemon": "^3.1.14",
     "nyc": "^18.0.0",
-    "oidc-provider": "^8.8.1",
+    "oidc-provider": "^9.8.6",
     "should": "~13",
     "streamtest": "~1.2",
     "supertest": "^7.2.2",

@@ -6,6 +6,7 @@ const { sql } = require('slonik');
 const superagent = require('superagent');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+const { publishWithNote } = require('../../../util/scenarios');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('api: /projects/:id/forms (versions)', () => {
@@ -193,6 +194,105 @@ describe('api: /projects/:id/forms (versions)', () => {
               .then(({ body }) => {
                 body.map((version) => version.version).should.eql([ '2', '3', '' ]);
               })))));
+
+      describe('publish notes', () => {
+        it('should return publish notes', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+          await publishWithNote(asAlice, '3', 'publishing version 3');
+
+          const { body } = await asAlice.get('/v1/projects/1/forms/simple/versions')
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          body.map((form) => form.version).should.eql(['3', '2', '']);
+          body.map((form) => form.publishNotes).should.eql([
+            'publishing version 3',
+            'publishing version 2',
+            null
+          ]);
+        }));
+
+        it('should not return notes for app-user', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const appUser = await asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'test app user' })
+            .expect(200)
+            .then(({ body }) => body);
+          await asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${appUser.id}`)
+            .expect(200);
+
+          const { body } = await service.get(`/v1/key/${appUser.token}/projects/1/forms/simple/versions`)
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+          body.map((form) => form.version).should.eql(['2', '']);
+          body.forEach((form) => {
+            should.not.exist(form.publishNotes);
+          });
+        }));
+
+        it('should not return notes for public-link', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const publicLinkToken = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+            .send({ displayName: 'test public link' })
+            .expect(200)
+            .then(({ body }) => body.token);
+
+          const { body } = await service.get(`/v1/projects/1/forms/simple/versions?st=${publicLinkToken}`)
+            .expect(200);
+          body.map((form) => form.version).should.eql(['2', '']);
+          body.forEach((form) => {
+            should.not.exist(form.publishNotes);
+          });
+        }));
+
+        it('should not return notes for project-viewer', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaActorId}`)
+            .expect(200);
+
+          const { body } = await chelsea.get('/v1/projects/1/forms/simple/versions')
+            .expect(200);
+          body.map((form) => form.version).should.eql(['2', '']);
+          body.forEach((form) => {
+            should.not.exist(form.publishNotes);
+          });
+        }));
+
+        it('should not return notes for data-collector', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaActorId}`)
+            .expect(200);
+
+          const { body } = await chelsea.get('/v1/projects/1/forms/simple/versions')
+            .expect(200);
+          body.map((form) => form.version).should.eql(['2', '']);
+          body.forEach((form) => {
+            should.not.exist(form.publishNotes);
+          });
+        }));
+      });
     });
 
     describe('/:version', () => {
@@ -354,7 +454,7 @@ describe('api: /projects/:id/forms (versions)', () => {
                   delete body[0].updatedAt;
 
                   body.should.eql([
-                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, hash: '2af2751b79eccfaa8f452331e76e679e' },
+                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, size: 19, hash: '2af2751b79eccfaa8f452331e76e679e' },
                     { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false, hash: null }
                   ]);
                 })))));
@@ -382,6 +482,98 @@ describe('api: /projects/:id/forms (versions)', () => {
                 .then(({ text }) => {
                   text.should.equal('this is goodone.csv');
                 })))));
+      });
+
+      describe('publish notes', () => {
+        it('should return publishNotes', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const { body } = await asAlice.get('/v1/projects/1/forms/simple/versions/2')
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          body.version.should.equal('2');
+          body.publishNotes.should.equal('publishing version 2');
+        }));
+
+        it('should not return publishNotes for app-user', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const appUser = await asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'test app user' })
+            .expect(200)
+            .then(({ body }) => body);
+          await asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${appUser.id}`)
+            .expect(200);
+
+          const { body } = await service.get(`/v1/key/${appUser.token}/projects/1/forms/simple/versions/2`)
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          body.version.should.equal('2');
+          should.not.exist(body.publishNotes);
+        }));
+
+        it('should not return publishNotes for project-viewer', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaActorId}`)
+            .expect(200);
+
+          const { body } = await chelsea.get('/v1/projects/1/forms/simple/versions/2')
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          body.version.should.equal('2');
+          should.not.exist(body.publishNotes);
+        }));
+
+        it('should not return notes for public-link', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const publicLinkToken = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+            .send({ displayName: 'test public link' })
+            .expect(200)
+            .then(({ body }) => body.token);
+
+          const { body } = await service.get(`/v1/projects/1/forms/simple/versions/2?st=${publicLinkToken}`)
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+          body.version.should.equal('2');
+          should.not.exist(body.publishNotes);
+        }));
+
+        it('should not return publishNotes for data-collector', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'publishing version 2');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaActorId}`)
+            .expect(200);
+
+          const { body } = await chelsea.get('/v1/projects/1/forms/simple/versions/2')
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          body.version.should.equal('2');
+          should.not.exist(body.publishNotes);
+        }));
       });
     });
   });
