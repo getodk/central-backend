@@ -454,7 +454,7 @@ describe('api: /projects/:id/forms (versions)', () => {
                   delete body[0].updatedAt;
 
                   body.should.eql([
-                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, hash: '2af2751b79eccfaa8f452331e76e679e' },
+                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, size: 19, hash: '2af2751b79eccfaa8f452331e76e679e' },
                     { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false, hash: null }
                   ]);
                 })))));
