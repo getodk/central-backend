@@ -4,9 +4,7 @@
     "es2024": true,
     "node": true
   },
-  "parserOptions": {
-    "ecmaVersion": 2022
-  },
+  "parserOptions": { "ecmaVersion": 2022 },
   "plugins": [
     "import",
     "no-only-tests"
