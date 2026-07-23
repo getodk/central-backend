@@ -198,6 +198,26 @@ describe('task: s3', () => {
         (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0 });
       }));
 
+      it('should retain blob size after content is offloaded to s3', testTask(async (container) => {
+        // given
+        const blob = await Blob.fromBuffer(crypto.randomBytes(100));
+        const blobId = await container.Blobs.ensure(blob);
+
+        // expect: size is populated and content is present before upload
+        const before = await container.one(sql`SELECT size, (content IS NOT NULL) AS "hasContent" FROM blobs WHERE id=${blobId}`);
+        before.size.should.equal(100);
+        before.hasContent.should.equal(true);
+
+        // when
+        await uploadPending();
+
+        // then: content has been offloaded to s3 but size is retained
+        assertUploadCount(1);
+        const after = await container.one(sql`SELECT size, (content IS NOT NULL) AS "hasContent" FROM blobs WHERE id=${blobId}`);
+        after.size.should.equal(100);
+        after.hasContent.should.equal(false);
+      }));
+
       describe('with delayed s3 upload', () => {
         let restoreS3mock;
         let resumeFirstUpload;
