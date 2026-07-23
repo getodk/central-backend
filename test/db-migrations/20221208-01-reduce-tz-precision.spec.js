@@ -6,7 +6,11 @@ const { // eslint-disable-line object-curly-newline
 
 describeMigration('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested }) => {
   before(async () => {
-    assert.ok((await getPrecisions()).every(row => row.datetime_precision === 6));
+    const precisions = await getPrecisions();
+    assert.ok(
+      precisions
+        .every(row => row.datetime_precision === 6),
+    );
 
     await runMigrationBeingTested();
   });
