@@ -2,7 +2,7 @@ name: Soak Test
 
 on:
   push:
-    branches: master
+  pull_request:
 
 jobs:
   soak-test:
