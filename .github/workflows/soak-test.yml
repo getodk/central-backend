@@ -1,11 +1,11 @@
-name: Full Standard Test Suite
+name: Soak Test
 
 on:
   push:
   pull_request:
 
 jobs:
-  standard-tests:
+  soak-test:
     timeout-minutes: 15
     # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
