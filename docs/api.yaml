@@ -45,6 +45,7 @@ info:
 
     **Changed**:
     - [GET /audits](/central-api-system-endpoints/#getting-audit-log-entries) now uses less-than when filtering with the `end` parameter.
+    - [Form Attachment](/central-api-form-management/#listing-form-attachments) objects now include a `size` field (in bytes) when a file has been uploaded. The field is absent for dataset-linked attachments and empty slots, and may be `null` for blobs uploaded before this version.
 
     ## ODK Central v2026.2
 
@@ -3940,6 +3941,7 @@ paths:
                 exists: true
                 blobExists: true
                 datasetExists: false
+                size: 4096
                 hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
   /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}:
@@ -4419,6 +4421,7 @@ paths:
                 exists: true
                 blobExists: true
                 datasetExists: false
+                size: 4096
                 hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}:
@@ -5029,6 +5032,7 @@ paths:
                 exists: true
                 blobExists: true
                 datasetExists: false
+                size: 4096
                 hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/attachments/{filename}:
@@ -13033,11 +13037,16 @@ components:
         blobExists:
           type: boolean
           example: true
-          description: Whether the server has the file or not.
+          description: True only when a file has been uploaded for this attachment slot. False when no file has been uploaded, or when the attachment is linked to a Dataset instead of a file.
         datasetExists:
           type: boolean
           example: true
           description: Whether attachment is linked to a Dataset.
+        size:
+          type: integer
+          nullable: true
+          example: 4096
+          description: The size of the uploaded file in bytes. Only present when `blobExists` is `true`. May be `null` for files on external blob store uploaded before version 2026.3.
         updatedAt:
           type: string
           example: '2018-03-21T12:45:02.312Z'

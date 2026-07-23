@@ -141,7 +141,7 @@ run-docker-postgres: stop-docker-postgres
 				--shared_preload_libraries=pg_stat_statements \
 		&& sleep 2 \
 		&& docker exec odk-postgres14 pg_isready --username=postgres --timeout=10 \
-		&& node lib/bin/create-docker-databases.js --log \
+		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
 	)
 
 .PHONY: stop-docker-postgres
