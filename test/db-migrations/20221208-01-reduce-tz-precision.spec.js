@@ -43,7 +43,7 @@ describeMigration('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested 
           AND udt_name = 'timestamptz'
         ORDER BY table_name, column_name
     `);
-    if(filterFn) return precisions.filter(filterFn);
-    else         return precisions;
+    if (filterFn) return precisions.filter(filterFn);
+    else          return precisions;
   }
 });
