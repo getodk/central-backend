@@ -4,7 +4,7 @@ const { // eslint-disable-line object-curly-newline
   describeMigration,
 } = require('./utils'); // eslint-disable-line object-curly-newline
 
-describeMigration.only('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested }) => {
+describeMigration('20221208-01-reduce-tz-precision', ({ runMigrationBeingTested }) => {
   before(async () => {
     const precisions = await getPrecisions(); // eslint-disable-line no-use-before-define
     assert.equal(precisions.length, 37);
