@@ -135,23 +135,16 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-<<<<<<< HEAD
 	docker start $(PG_IMG) || (\
-		docker run -d --name $(PG_IMG) -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=odktest postgres:$(PG_VERSION) \
-		&& sleep 5 \
-		&& node lib/bin/create-docker-databases.js --log \
-=======
-	docker start odk-postgres14 || (\
 		docker run -d \
-			--name odk-postgres14 \
+			--name $(PG_IMG) \
 			--publish 127.0.0.1:5432:5432 \
 			--env POSTGRES_PASSWORD=odktest \
-			postgres:14.23 \
+			postgres:$(PG_VERSION) \
 				--shared_preload_libraries=pg_stat_statements \
 		&& sleep 2 \
 		&& docker exec odk-postgres14 pg_isready --username=postgres --timeout=10 \
 		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
->>>>>>> master
 	)
 
 .PHONY: stop-docker-postgres
