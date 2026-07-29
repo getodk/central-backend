@@ -339,7 +339,7 @@
     "no-unsafe-optional-chaining": [ "error", { "disallowArithmeticOperators": true } ],
     "no-unused-expressions": [ "error", { "allowShortCircuit": false, "allowTaggedTemplates": false, "allowTernary": false, "enforceForJSX": false } ],
     "no-unused-private-class-members": "off",
-    "no-unused-vars": [ "error", { "args": "after-used", "ignoreRestSiblings": true, "vars": "all" } ],
+    "no-unused-vars": [ "error", { "args": "after-used", "caughtErrors": "none", "ignoreRestSiblings": true, "vars": "all" } ],
     "no-use-before-define": [ "error", { "classes": true, "functions": true, "variables": true } ],
     "no-useless-call": "off",
     "no-useless-computed-key": "error",
