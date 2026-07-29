@@ -1,0 +1,27 @@
+name: Soak Test
+
+on:
+  push:
+    branches: master
+
+jobs:
+  soak-test:
+    timeout-minutes: 15
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: make run-docker-postgres
+    - run: ./test/e2e/soak/ci/prepare-postgres.sh
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci/run-tests.sh
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"

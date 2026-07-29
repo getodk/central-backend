@@ -1,0 +1,37 @@
+name: Database Migrations
+
+on:
+  pull_request:
+    paths:
+    - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
+    - lib/model/migrations/**
+    - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
+  push:
+    paths:
+    - .github/workflows/db-migrations.yml
+    - lib/bin/create-docker-databases.js
+    - lib/model/migrations/**
+    - test/db-migrations/**
+    - package.json
+    - package-lock.json
+    - Makefile
+
+jobs:
+  db-migration-tests:
+    timeout-minutes: 2
+    # TODO should we use the same container as circle & central?
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: make run-docker-postgres
+    - run: make test-db-migrations
