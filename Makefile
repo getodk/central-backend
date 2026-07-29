@@ -3,6 +3,9 @@ default: base
 NODE_CONFIG_ENV ?= test
 export PGAPPNAME ?= odkcentral
 
+PG_IMG = odk-central-backend-dev-postgres
+PG_VERSION ?= 14
+
 node_modules: package.json
 	npm install
 	touch node_modules
@@ -136,19 +139,19 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker start odk-postgres14 || (\
-		docker run -d --name odk-postgres14 -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.20-alpine \
+	docker start $(PG_IMG) || (\
+		docker run -d --name $(PG_IMG) -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=odktest postgres:$(PG_VERSION) \
 		&& sleep 5 \
 		&& node lib/bin/create-docker-databases.js --log \
 	)
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
-	docker stop odk-postgres14 || true
+	docker stop $(PG_IMG) || true
 
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
-	docker rm odk-postgres14 || true
+	docker rm $(PG_IMG) || true
 
 
 ################################################################################
