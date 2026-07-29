@@ -16,8 +16,10 @@ jobs:
       fail-fast: false
       matrix:
         postgres-version:
-          - "14.23"
-          - "18"
+          - full: "14.23"
+            major: 14
+          - full: "18"
+            major: 18
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
@@ -28,7 +30,7 @@ jobs:
     - run: npm ci
     - run: make run-docker-postgres
       env:
-        PG_VERSION: ${{ matrix.postgres-version }}
+        PG_VERSION: ${{ matrix.postgres-version.full }}
 
     - name: E2E Test
       timeout-minutes: 10
@@ -36,7 +38,7 @@ jobs:
 
     - uses: ./.github/actions/install-postgres-client
       with:
-        postgres-version: ${{ split(matrix.postgres-version, '.')[0] }}
+        postgres-version: ${{ matrix.postgres-version.major }}
     - name: Grant postgres superuser role
       # As per #1368, this role is required to create the pgrowlocks extension
       run: psql -c 'ALTER ROLE jubilant SUPERUSER' postgresql://postgres:odktest@localhost/postgres
