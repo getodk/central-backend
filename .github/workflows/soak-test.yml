@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
-    - run: ./test/e2e/soak/ci/prepare-postgres.sh
     - name: Set node version
       uses: actions/setup-node@v6
       with:
@@ -19,6 +18,7 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: make run-docker-postgres
+    - run: ./test/e2e/soak/ci/prepare-postgres.sh
     - name: Soak Test
       timeout-minutes: 10
       run: ./test/e2e/soak/ci/run-tests.sh

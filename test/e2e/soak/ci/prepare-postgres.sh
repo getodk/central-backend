@@ -24,7 +24,7 @@ pg_exec "ALTER SYSTEM SET track_activity_query_size = 16384"
 # Postgres must be restarted to apply change to track_activity_query_size
 # See: https://www.postgresql.org/docs/14/runtime-config-statistics.html#GUC-TRACK-ACTIVITY-QUERY-SIZE
 log "  Restarting postgres..."
-pgImg="$(docker ps -q --filter name=postgres)"
+pgImg=odk-postgres14
 docker restart "$pgImg" >/dev/null
 timeout 10 bash -c "while ! docker exec $pgImg pg_isready --timeout=1; do sleep 1; done"
 log "  Restarted OK."
