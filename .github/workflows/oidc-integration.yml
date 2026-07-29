@@ -26,7 +26,7 @@ jobs:
     - run: FAKE_OIDC_ROOT_URL=http://localhost:9898 make fake-oidc-server-ci > fake-oidc-server.log &
     - run: make run-docker-postgres
       env:
-        PG_VERSION: ${{ matrix.postgres-version }} 
+        PG_VERSION: ${{ matrix.postgres-version }}
     - run: make test-oidc-integration
     - name: Fake OIDC Server Logs
       if: always()

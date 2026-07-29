@@ -25,7 +25,7 @@ jobs:
     - run: npm ci
     - run: make run-docker-postgres
       env:
-        PG_VERSION: ${{ matrix.postgres-version }} 
+        PG_VERSION: ${{ matrix.postgres-version }}
     - run: ./test/e2e/soak/ci/prepare-postgres.sh
     - name: Soak Test
       timeout-minutes: 10

@@ -41,5 +41,5 @@ jobs:
     - run: npm ci
     - run: make run-docker-postgres
       env:
-        PG_VERSION: ${{ matrix.postgres-version }} 
+        PG_VERSION: ${{ matrix.postgres-version }}
     - run: make test-db-migrations

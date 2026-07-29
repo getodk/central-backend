@@ -28,7 +28,7 @@ jobs:
     - run: npm ci
     - run: make run-docker-postgres
       env:
-        PG_VERSION: ${{ matrix.postgres-version }} 
+        PG_VERSION: ${{ matrix.postgres-version }}
 
     - name: E2E Test
       timeout-minutes: 10

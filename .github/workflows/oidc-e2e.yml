@@ -35,7 +35,7 @@ jobs:
     - run: npm ci
     - run: make run-docker-postgres
       env:
-        PG_VERSION: ${{ matrix.postgres-version }} 
+        PG_VERSION: ${{ matrix.postgres-version }}
     - run: sudo apt-get install wait-for-it
     - run: ./test/e2e/oidc/run-tests.sh
     - name: Archive Playwright Test Report
