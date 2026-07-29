@@ -15,20 +15,6 @@ jobs:
         postgres-version:
           - "14.20"
           - "18"
-    services:
-      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
-      postgres:
-        image: postgres:${{ matrix.postgres-version }}
-        env:
-          POSTGRES_PASSWORD: odktest
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 1s
-          --health-timeout 5s
-          --health-retries 50
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
@@ -39,5 +25,7 @@ jobs:
     - run: make check-for-large-files
     - run: npm ci
     - run: make api-docs-lint
-    - run: node lib/bin/create-docker-databases.js
+    - run: make run-docker-postgres
+      env:
+        PG_VERSION: ${{ matrix.postgres-version }} 
     - run: make test

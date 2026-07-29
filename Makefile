@@ -22,10 +22,6 @@ node_version: node_modules
 test-oidc-integration: node_version
 	TEST_AUTH=oidc NODE_CONFIG_ENV=oidc-integration-test make test-integration
 
-.PHONY: test-oidc-e2e
-test-oidc-e2e: node_version
-	test/e2e/oidc/run-tests.sh
-
 .PHONY: dev-oidc
 dev-oidc: base
 	NODE_CONFIG_ENV=oidc-development npx nodemon --watch lib --watch config lib/bin/run-server.js
@@ -139,10 +135,23 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
+<<<<<<< HEAD
 	docker start $(PG_IMG) || (\
 		docker run -d --name $(PG_IMG) -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=odktest postgres:$(PG_VERSION) \
 		&& sleep 5 \
 		&& node lib/bin/create-docker-databases.js --log \
+=======
+	docker start odk-postgres14 || (\
+		docker run -d \
+			--name odk-postgres14 \
+			--publish 127.0.0.1:5432:5432 \
+			--env POSTGRES_PASSWORD=odktest \
+			postgres:14.23 \
+				--shared_preload_libraries=pg_stat_statements \
+		&& sleep 2 \
+		&& docker exec odk-postgres14 pg_isready --username=postgres --timeout=10 \
+		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
+>>>>>>> master
 	)
 
 .PHONY: stop-docker-postgres
