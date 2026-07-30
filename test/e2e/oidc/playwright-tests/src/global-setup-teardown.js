@@ -23,7 +23,7 @@ const cookieParser = require('cookie-parser');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const { port, frontendUrl } = require('./config');
-const backendUrl = 'http://localhost:8383';
+const backendUrl = 'http://localhost:8383/v1';
 
 async function startFakeFrontend() {
   console.log('Starting fake frontend proxy...'); // eslint-disable-line no-console
