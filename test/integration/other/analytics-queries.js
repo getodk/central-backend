@@ -98,7 +98,7 @@ const submitToForm = (service, user, projectId, xmlFormId, xml, deviceId = 'abcd
 ////////////////////////////////////////////////////////////////////////////////
 // Tests!
 ////////////////////////////////////////////////////////////////////////////////
-describe('analytics task queries', function () {
+describe('analytics task queries @slow', function () {
   // increasing timeouts on this set of tests
   this.timeout(8000);
 
@@ -2547,13 +2547,130 @@ describe('analytics task queries', function () {
       await Datasets.purge(true, newProjectId);
 
       const res = await Analytics.countDeletedDatasetAndPropertiesByProject();
-      for (const row in res) {
+      for (const row of res) {
         if (row.projectId === 1) {
           row.dataset_count.should.equal(2);
           row.property_count.should.equal(1);
         } else if (row.projectId === newProjectId) {
           row.dataset_count.should.equal(1);
           row.property_count.should.equal(0);
+        }
+      }
+    }));
+
+    it('should count how many datasets are ownerOnly per project', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'households' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'patients' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/patients')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/households')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      // Create another project
+      const newProjectId = await asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'Test Project' })
+        .expect(200)
+        .then(({ body }) => body.id);
+
+      await asAlice.post(`/v1/projects/${newProjectId}/datasets`)
+        .send({ name: 'people', ownerOnly: true })
+        .expect(200);
+
+      // count datasets
+      const res = await container.Analytics.countOwnerOnlyDatasetsPerProject();
+      for (const row of res) {
+        if (row.projectId === 1) {
+          row.dataset_count.should.equal(2);
+        } else if (row.projectId === newProjectId) {
+          row.dataset_count.should.equal(1);
+        }
+      }
+    }));
+
+    it('should count user properties and filtered datasets per project', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/trees/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'households' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/households/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'patients' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/households')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      // Create another project
+      const newProjectId = await asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'Test Project' })
+        .expect(200)
+        .then(({ body }) => body.id);
+
+      await asAlice.post(`/v1/projects/${newProjectId}/datasets`)
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${newProjectId}/actor-properties`)
+        .send({ name: 'prop1' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${newProjectId}/actor-properties`)
+        .send({ name: 'prop2' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${newProjectId}/actor-properties`)
+        .send({ name: 'prop3' })
+        .expect(200);
+
+      // count datasets
+      const res = await container.Analytics.countUserFilteredDatasetsPerProject();
+      res.should.eql([ { dataset_count: 2, projectId: 1 } ]);
+
+      const properties = await container.Analytics.countCustomPropertiesPerProject();
+      for (const row of properties) {
+        if (row.projectId === 1) {
+          row.property_count.should.equal(1);
+        } else if (row.projectId === newProjectId) {
+          row.property_count.should.equal(3);
         }
       }
     }));
@@ -2912,6 +3029,28 @@ describe('analytics task queries', function () {
 
       // Delete the dataset
       await asAlice.delete('/v1/projects/1/datasets/trees')
+        .expect(200);
+
+      // Add owner only dataset
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'patients', ownerOnly: true })
+        .expect(200);
+
+      // Add a new actor_property, dataset, and filter
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/')
+        .send({ name: 'households' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/households/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/households')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
         .expect(200);
 
       const res = await container.Analytics.previewMetrics();

@@ -17,7 +17,7 @@ describe('sentry', () => {
       mockSentry?.close();
     });
 
-    it('should include odk-task tag in error event', async () => {
+    it('should include odk-task tag in error event @slow', async () => {
       // given
       const env = {
         PATH: process.env.PATH, // ensure NodeJS is available to child process
@@ -60,6 +60,8 @@ describe('sentry', () => {
       const events = [];
 
       const app = express();
+      app.set('case sensitive routing', true);
+      app.set('query parser', 'simple');
       app.use(express.text({ type: () => true }));
       app.get('/event-log', (req, res) => {
         res.send(events);
@@ -78,7 +80,7 @@ describe('sentry', () => {
         res.send({ id: uuid().replace(/-/g, '') });
       });
 
-      const _server = app.listen(0, () => {
+      const _server = app.listen(0, '127.0.0.1', () => {
         resolve(_server);
       });
       _server.on('error', reject);

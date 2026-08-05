@@ -4,7 +4,7 @@
     <h:title>ODK Analytics</h:title>
     <model odk:xforms-version="1.0.0">
       <instance>
-        <data id="odk-analytics" version="v2026.1.0_1">
+        <data id="odk-analytics" version="v2026.2.0_1">
           <config>
             <email/>
             <organization/>
@@ -229,6 +229,9 @@
               <description_length/>
               <num_datasets_deleted/>
               <num_dataset_properties_deleted/>
+              <num_owner_only_datasets_per_project/>
+              <num_custom_user_properties/>
+              <num_user_property_filtered_datasets/>
             </other>
           </projects>
           <projects>
@@ -399,6 +402,9 @@
               <description_length/>
               <num_datasets_deleted/>
               <num_dataset_properties_deleted/>
+              <num_owner_only_datasets_per_project/>
+              <num_custom_user_properties/>
+              <num_user_property_filtered_datasets/>
             </other>
           </projects>
           <meta>
@@ -538,6 +544,9 @@
       <bind nodeset="/data/projects/other/description_length" type="int"/>
       <bind nodeset="/data/projects/other/num_datasets_deleted" type="int"/>
       <bind nodeset="/data/projects/other/num_dataset_properties_deleted" type="int"/>
+      <bind nodeset="/data/projects/other/num_owner_only_datasets_per_project" type="int"/>
+      <bind nodeset="/data/projects/other/num_custom_user_properties" type="int"/>
+      <bind nodeset="/data/projects/other/num_user_property_filtered_datasets" type="int"/>
       <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
     </model>
   </h:head>
@@ -1079,6 +1088,15 @@
           </input>
           <input ref="/data/projects/other/num_dataset_properties_deleted">
             <label>Number of dataset property delete events</label>
+          </input>
+          <input ref="/data/projects/other/num_owner_only_datasets_per_project">
+            <label>Number of Entity Lists restricted to Owner Only</label>
+          </input>
+          <input ref="/data/projects/other/num_custom_user_properties">
+            <label>Number of custom user properties</label>
+          </input>
+          <input ref="/data/projects/other/num_user_property_filtered_datasets">
+            <label>Number of Entity Lists restricted by User Properties</label>
           </input>
         </group>
       </repeat>

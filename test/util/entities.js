@@ -51,18 +51,14 @@ const deleteDatasets = async (user, names, projectId) => {
   }
 };
 
-const createEntities = async (user, count, projectId, datasetName, properties = []) => {
+const createEntities = async (user, count, projectId, datasetName, properties = [], data = null, label = 'John Doe') => {
   const uuids = [];
+  const entityData = data ?? Object.fromEntries(properties.map((property) => [property, 'foo']));
   for (let i = 0; i < count; i += 1) {
     const _uuid = uuid();
-    const data = Object.fromEntries(properties.map((property) => [property, 'foo']));
     // eslint-disable-next-line no-await-in-loop
     await user.post(`/v1/projects/${projectId}/datasets/${datasetName}/entities`)
-      .send({
-        uuid: _uuid,
-        label: 'John Doe',
-        ...(properties.length ? { data } : {})
-      })
+      .send({ uuid: _uuid, label, data: entityData })
       .expect(200);
     uuids.push(_uuid);
   }

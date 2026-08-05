@@ -61,6 +61,87 @@ describe('api: /projects/:id/app-users', () => {
               body[0].actorId.should.equal(5);
               body[0].acteeId.should.be.a.uuid();
             })))));
+
+    it('should set actor property values when creating app user', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({
+          displayName: 'test user',
+          properties: { region: 'north' }
+        })
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/app-users/${appUser.id}`)
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ region: 'north' });
+        });
+    }));
+
+    it('should log the property set in the audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({
+          displayName: 'test user',
+          properties: { region: 'north' }
+        })
+        .expect(200);
+
+      const actor = await container.Actors.getById(appUser.id).then((o) => o.get());
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=field_key.property.set').expect(200);
+      audits.length.should.equal(1);
+      audits[0].actorId.should.equal(5); // alice
+      audits[0].acteeId.should.equal(actor.acteeId);
+      audits[0].details.properties.should.eql({ region: 'north' });
+    }));
+
+    it('should not log add audit log event if property set is empty', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      await asAlice.post('/v1/projects/1/app-users')
+        .send({
+          displayName: 'test user',
+          properties: { }
+        })
+        .expect(200);
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=field_key.property.set').expect(200);
+      audits.length.should.equal(0);
+    }));
+
+    it('should log when a property is unset in the audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'team' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({
+          displayName: 'test user',
+          properties: { team: 'abc', region: 'north' }
+        })
+        .expect(200);
+
+      // unset a property
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: '' } })
+        .expect(200);
+
+      const actor = await container.Actors.getById(appUser.id).then((o) => o.get());
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=field_key.property.set').expect(200);
+      audits.length.should.equal(2);
+      audits[0].actorId.should.equal(5); // alice
+      audits[0].acteeId.should.equal(actor.acteeId);
+
+      audits[0].details.properties.should.eql({ region: null });
+    }));
   });
 
   describe('GET', () => {
@@ -173,6 +254,267 @@ describe('api: /projects/:id/app-users', () => {
               body.forEach((key) => key.should.be.an.ExtendedFieldKey());
               body.map((key) => key.displayName).should.eql([ 'test 3', 'test 1', 'test 2' ]);
             })))));
+
+    it('should include properties in extended metadata', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: fk1 } = await asAlice.post('/v1/projects/1/app-users').send({ displayName: 'test 1' }).expect(200);
+      const { body: fk2 } = await asAlice.post('/v1/projects/1/app-users').send({ displayName: 'test 2' }).expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${fk1.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/app-users')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.find((fk) => fk.id === fk1.id).properties.should.eql({ region: 'north' });
+          should(body.find((fk) => fk.id === fk2.id).properties).be.null();
+        });
+    }));
+  });
+
+  describe('/:id GET', () => {
+    it('should return 403 unless the user can delete', testService(async (service) => {
+      const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+      const { body: fk } = await asAlice.post('/v1/projects/1/app-users').send({ displayName: 'test1' }).expect(200);
+      await asChelsea.get(`/v1/projects/1/app-users/${fk.id}`).expect(403);
+    }));
+
+    it('should return the app user', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: created } = await asAlice.post('/v1/projects/1/app-users').send({ displayName: 'test1' }).expect(200);
+      const { body } = await asAlice.get(`/v1/projects/1/app-users/${created.id}`).expect(200);
+      body.should.be.a.FieldKey();
+      body.displayName.should.equal('test1');
+    }));
+
+    it('should return 404 if the app user is not in the project', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: project2 } = await asAlice.post('/v1/projects').send({ name: 'project 2' }).expect(200);
+      const { body: fk } = await asAlice.post('/v1/projects/1/app-users').send({ displayName: 'test1' }).expect(200);
+      await asAlice.get(`/v1/projects/${project2.id}/app-users/${fk.id}`).expect(404);
+    }));
+
+    it('should return extended metadata if requested', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: created } = await asAlice.post('/v1/projects/1/app-users').send({ displayName: 'test1' }).expect(200);
+      const { body } = await asAlice.get(`/v1/projects/1/app-users/${created.id}`)
+        .set('X-Extended-Metadata', 'true')
+        .expect(200);
+      body.should.be.an.ExtendedFieldKey();
+      body.displayName.should.equal('test1');
+      body.createdBy.displayName.should.equal('Alice');
+    }));
+
+    it('should return null properties when no actor properties are defined on the project', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: created } = await asAlice.post('/v1/projects/1/app-users').send({ displayName: 'test1' }).expect(200);
+      await asAlice.get(`/v1/projects/1/app-users/${created.id}`)
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          should(body.properties).be.null();
+        });
+    }));
+  });
+
+  describe('/:id PATCH', () => {
+    it('should set actor property values on an app user', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ region: 'north' });
+        });
+    }));
+
+    it('should set multiple actor properties at once', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'worker_id' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north', worker_id: '42' } })
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ region: 'north', worker_id: '42' });
+        });
+    }));
+
+    it('should set some properties and unset others in the same request', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'worker_id' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north', worker_id: '42' } })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'south', worker_id: null } })
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ region: 'south' });
+        });
+    }));
+
+    it('should unset an actor property when passed null', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'worker_id' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north', worker_id: '42' } })
+        .expect(200);
+
+      // unset one — the other remains
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: null } })
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ worker_id: '42' });
+        });
+
+      // unset the last one — properties is null
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { worker_id: null } })
+        .expect(200)
+        .then(({ body }) => {
+          should(body.properties).be.null();
+        });
+    }));
+
+    it('should return 404 if the actor property does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { nonexistent: 'value' } })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.8);
+          body.details.field.should.equal('properties');
+          body.details.value.should.equal('nonexistent');
+        });
+    }));
+
+    it('should be a no-op if properties is absent from the body', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      // patch without properties key — existing values unchanged
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({})
+        .expect(200)
+        .then(({ body }) => {
+          body.properties.should.eql({ region: 'north' });
+        });
+    }));
+
+    it('should treat empty string as null (unsetting the property)', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: '' } })
+        .expect(200)
+        .then(({ body }) => {
+          should(body.properties).be.null();
+        });
+    }));
+
+    it('should return 400 if properties is not an object', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: 'not an object' })
+        .expect(400)
+        .then(({ body }) => { body.code.should.equal(400.8); });
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: ['a', 'b'] })
+        .expect(400)
+        .then(({ body }) => { body.code.should.equal(400.8); });
+    }));
+
+    it('should return 400 if a property value is not a string or null', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 42 } })
+        .expect(400)
+        .then(({ body }) => { body.code.should.equal(400.8); });
+    }));
+
+    // The property-setting logic (validation, coercion, bulk upsert/delete) is shared
+    // under the hood with public links. The tests above cover it fully; public-links
+    // tests only verify the happy-path integration without re-testing every edge case.
+
+    it('should log the property set in the audit log', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test user' })
+        .expect(200);
+
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      const actor = await container.Actors.getById(appUser.id).then((o) => o.get());
+
+      const { body: audits } = await asAlice.get('/v1/audits?action=field_key.property.set').expect(200);
+      audits.length.should.equal(1);
+      audits[0].actorId.should.equal(5); // alice
+      audits[0].acteeId.should.equal(actor.acteeId);
+      audits[0].details.properties.should.eql({ region: 'north' });
+    }));
   });
 
   describe('/:id DELETE', () => {

@@ -38,7 +38,7 @@ describe('db.stream()', () => {
     });
     afterEach(() => clock?.uninstall());
 
-    it('should time out after 2 mins if no activity at all', async () => {
+    it('should time out after 2 mins if no activity at all @slow', async () => {
       // given
       const stream = await db.stream(sql`SELECT * FROM GENERATE_SERIES(1, 1000)`);
 
@@ -56,7 +56,7 @@ describe('db.stream()', () => {
       stream.destroyed.should.equal(true);
     });
 
-    it('should not time out after 2 mins if the stream is read', async () => {
+    it('should not time out after 2 mins if the stream is read @slow', async () => {
       // given
       const stream = await db.stream(sql`SELECT * FROM GENERATE_SERIES(1, 1000)`);
 
