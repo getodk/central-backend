@@ -23,7 +23,6 @@ on:
 jobs:
   db-migration-tests:
     timeout-minutes: 2
-    # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false

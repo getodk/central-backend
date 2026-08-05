@@ -7,7 +7,6 @@ on:
 jobs:
   standard-tests:
     timeout-minutes: 20
-    # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
