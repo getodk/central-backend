@@ -12,6 +12,12 @@ jobs:
   oidc-e2e-test:
     timeout-minutes: 6
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres-version:
+          - "14.23"
+          - "18"
     steps:
 
     # This one weird trick speeds up every build!
@@ -27,6 +33,8 @@ jobs:
         cache: 'npm'
     - run: npm ci
     - run: make run-docker-postgres
+      env:
+        PG_VERSION: ${{ matrix.postgres-version }}
     - run: sudo apt-get install wait-for-it
     - run: ./test/e2e/oidc/run-tests.sh
     - name: Archive Playwright Test Report

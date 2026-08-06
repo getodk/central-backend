@@ -1,7 +1,12 @@
 default: base
 
+SHELL := /usr/bin/env bash
+
 NODE_CONFIG_ENV ?= test
 export PGAPPNAME ?= odkcentral
+
+PG_IMG = odk-central-backend-dev-postgres
+PG_VERSION ?= 14
 
 node_modules: package.json
 	npm install
@@ -124,7 +129,9 @@ test-coverage: node_version
 
 .PHONY: lint
 lint: node_version
-	npx eslint --cache --max-warnings 0 .
+	ESLINT_USE_FLAT_CONFIG=false \
+	npx eslint --cache --max-warnings 0 . \
+	2> >(grep -Ev 'ESLintRCWarning|--trace-warnings' >&2) # filter eslintrc deprecation warning
 
 
 ################################################################################
@@ -132,25 +139,25 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker start odk-postgres14 || (\
+	docker start $(PG_IMG) || (\
 		docker run -d \
-			--name odk-postgres14 \
+			--name $(PG_IMG) \
 			--publish 127.0.0.1:5432:5432 \
 			--env POSTGRES_PASSWORD=odktest \
-			postgres:14.23 \
+			postgres:$(PG_VERSION) \
 				--shared_preload_libraries=pg_stat_statements \
 		&& sleep 2 \
-		&& docker exec odk-postgres14 pg_isready --username=postgres --timeout=10 \
+		&& docker exec $(PG_IMG) pg_isready --username=postgres --timeout=10 \
 		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
 	)
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
-	docker stop odk-postgres14 || true
+	docker stop $(PG_IMG) || true
 
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
-	docker rm odk-postgres14 || true
+	docker rm $(PG_IMG) || true
 
 
 ################################################################################
