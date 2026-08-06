@@ -35,7 +35,7 @@
     "odata-v4-parser": "~0.1",
     "openid-client": "^6.8.4",
     "path-to-regexp": "^8.3.0",
-    "pg": "~8.8.0",
+    "pg": "^8.22.0",
     "pg-query-stream": "^4.14.0",
     "pm2": "~5.4",
     "prompt": "~1",
