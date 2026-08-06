@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
 const { sql } = require('slonik');
-const { toText } = require('streamtest').v2;
+const { toText } = require('streamtest');
 const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');
 const testData = require(appRoot + '/test/data/xml');
 const { httpZipResponseToFiles } = require(appRoot + '/test/util/zip');
