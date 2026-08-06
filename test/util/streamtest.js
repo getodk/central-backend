@@ -1,9 +1,9 @@
-const {
+const { // eslint-disable-line object-curly-newline
   fromChunks,
   fromObjects,
   toObjects,
   toText,
-} = require('streamtest').default;
+} = require('streamtest').default; // eslint-disable-line object-curly-newline
 
 const withOldApi = fn => callback => {
   const [ outputStream, resultP ] = fn();
