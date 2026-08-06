@@ -1006,6 +1006,206 @@ describe('api: /datasets/:name.svc', () => {
       await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?viewAs=99999')
         .expect(404);
     }));
+
+    it('should return 400 if viewAs is not a numeric ID', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?viewAs=notanumber')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.eql(400.8);
+        });
+    }));
+
+    it('should filter entities based on actor property rules', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Dataset with a region property
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      // Set up actor property and filter rule: entity.region must match actor.region
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      // Two entities in 'north', one in 'south'
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'north person 1', data: { region: 'north' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'north person 2', data: { region: 'north' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'south person', data: { region: 'south' } })
+        .expect(200);
+
+      // App user assigned to 'north'
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'North Worker' }).expect(200);
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(2);
+          body.value.map(e => e.label).should.containDeep(['north person 1', 'north person 2']);
+        });
+    }));
+
+    it('should return correct $count with actor property filter', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'north person', data: { region: 'north' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'south person 1', data: { region: 'south' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'south person 2', data: { region: 'south' } })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'South Worker' }).expect(200);
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'south' } })
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$count=true`)
+        .expect(200)
+        .then(({ body }) => {
+          body['@odata.count'].should.eql(2);
+          body.value.length.should.eql(2);
+        });
+    }));
+
+    it('should apply ownerOnly filter even for a non-app-user actor', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      // Entity created by Alice
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'alice entity' })
+        .expect(200);
+      // Entity created by Bob
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'bob entity' })
+        .expect(200);
+
+      const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
+
+      // viewAs Bob (a web user) on an ownerOnly dataset — only his entity
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${bobId}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(1);
+          body.value[0].label.should.eql('bob entity');
+        });
+    }));
+
+    it('should return no entities for actor with no matching property values', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'north person', data: { region: 'north' } })
+        .expect(200);
+
+      // App user with no region property set
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'Unassigned Worker' }).expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(0);
+        });
+    }));
+
+    it('should apply property filter even for a web user actor (unlike the OpenRosa path)', testService(async (service) => {
+      // NOTE: The real OpenRosa CSV path skips access filtering for actors that can
+      // entity.list (managers, web users). viewAs does NOT replicate that check —
+      // it always applies the SQL filter. A web user with no actor property values
+      // set will get 0 entities, not all entities.
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'north person', data: { region: 'north' } })
+        .expect(200);
+
+      // Bob is a web user (project manager) with no actor property values
+      const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${bobId}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(0);
+        });
+    }));
   });
 
   describe('GET service document', () => {
