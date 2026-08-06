@@ -1,6 +1,12 @@
 default: base
 
+SHELL := /usr/bin/env bash
+
 NODE_CONFIG_ENV ?= test
+export PGAPPNAME ?= odkcentral
+
+PG_IMG = odk-central-backend-dev-postgres
+PG_VERSION ?= 14
 
 node_modules: package.json
 	npm install
@@ -17,10 +23,6 @@ node_version: node_modules
 .PHONY: test-oidc-integration
 test-oidc-integration: node_version
 	TEST_AUTH=oidc NODE_CONFIG_ENV=oidc-integration-test make test-integration
-
-.PHONY: test-oidc-e2e
-test-oidc-e2e: node_version
-	test/e2e/oidc/run-tests.sh
 
 .PHONY: dev-oidc
 dev-oidc: base
@@ -53,7 +55,7 @@ dev-s3: fake-s3-accounts base
 # MINIO_KMS_SECRET_KEY, MINIO_KMS_AUTO_ENCRYPTION enable encryption - this changes how s3 ETags are generated.
 #   See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html
 #   See: https://github.com/minio/minio/discussions/19012
-S3_SERVER_ARGS := --network host \
+S3_SERVER_ARGS := -p 127.0.0.1:9000:9000 -p 127.0.0.1:9001:9001 \
 		-e MINIO_ROOT_USER=odk-central-dev \
 		-e MINIO_ROOT_PASSWORD=topSecret123 \
 		-e MINIO_KMS_AUTO_ENCRYPTION=on \
@@ -99,11 +101,8 @@ debug: base
 
 .PHONY: test
 test: lint
-	BCRYPT=insecure npx mocha --recursive
-
-.PHONY: test-ci
-test-ci: lint
-	BCRYPT=insecure npx mocha --recursive --reporter test/ci-mocha-reporter.js
+	$(MAKE) test-unit
+	$(MAKE) test-integration
 
 .PHONY: test-db-migrations
 test-db-migrations:
@@ -113,7 +112,8 @@ test-db-migrations:
 
 .PHONY: test-fast
 test-fast: node_version
-	NODE_CONFIG_ENV=test BCRYPT=insecure npx mocha --recursive --fgrep @slow --invert
+	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-unit
+	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-integration
 
 .PHONY: test-integration
 test-integration: node_version
@@ -129,7 +129,9 @@ test-coverage: node_version
 
 .PHONY: lint
 lint: node_version
-	npx eslint --cache --max-warnings 0 .
+	ESLINT_USE_FLAT_CONFIG=false \
+	npx eslint --cache --max-warnings 0 . \
+	2> >(grep -Ev 'ESLintRCWarning|--trace-warnings' >&2) # filter eslintrc deprecation warning
 
 
 ################################################################################
@@ -137,29 +139,40 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker start odk-postgres14 || (\
-		docker run -d --name odk-postgres14 -p 5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.10-alpine \
-		&& sleep 5 \
-		&& node lib/bin/create-docker-databases.js --log \
+	docker start $(PG_IMG) || (\
+		docker run -d \
+			--name $(PG_IMG) \
+			--publish 127.0.0.1:5432:5432 \
+			--env POSTGRES_PASSWORD=odktest \
+			postgres:$(PG_VERSION) \
+				--shared_preload_libraries=pg_stat_statements \
+		&& sleep 2 \
+		&& docker exec $(PG_IMG) pg_isready --username=postgres --timeout=10 \
+		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
 	)
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
-	docker stop odk-postgres14 || true
+	docker stop $(PG_IMG) || true
 
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
-	docker rm odk-postgres14 || true
+	docker rm $(PG_IMG) || true
 
 
 ################################################################################
 # OTHER
 
-.PHONY: check-file-headers
-check-file-headers:
-	git ls-files | node lib/bin/check-file-headers.js
+.PHONY: check-for-large-files
+check-for-large-files:
+	./test/check-for-large-files.sh
 
 .PHONY: api-docs
 api-docs:
 	(test "$(docker images -q odk-docs)" || docker build --file odk-docs.dockerfile -t odk-docs .) && \
-	docker run --rm -it -v ./docs:/docs/docs/_static/central-spec -p 8000:8000 odk-docs
+	docker run --rm -it -v ./docs:/docs/docs/_static/central-spec -p 127.0.0.1:8000:8000 odk-docs
+
+.PHONY: api-docs-lint
+api-docs-lint:
+	node lib/bin/openapi-docs-lint.js docs/api.yaml && \
+	npx --no @redocly/cli lint --config docs/redocly.conf.yaml docs/api.yaml

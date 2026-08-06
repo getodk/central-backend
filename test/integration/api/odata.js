@@ -7,6 +7,16 @@ const should = require('should');
 const { URL } = require('url');
 const { url } = require('../../../lib/util/http');
 
+const validateAndFilterSubmissionDates = (res) => {
+  for (const row of res.body.value) {
+    // have to manually check and clear the date for exact matches
+    row.__system.submissionDate.should.be.an.isoDate();
+    // eslint-disable-next-line no-param-reassign
+    delete row.__system.submissionDate;
+  }
+  return res;
+};
+
 // NOTE: for the data output tests, we do not attempt to extensively determine if every
 // internal case is covered; there are already two layers of tests below these, at
 // test/unit/data/json, then test/unit/formats/odata. here we simply attempt to verify
@@ -137,12 +147,8 @@ describe('api: /forms/:id.svc', () => {
       withSubmission(service, (asAlice) =>
         asAlice.get("/v1/projects/1/forms/doubleRepeat.svc/Submissions('double')")
           .expect(200)
+          .then(validateAndFilterSubmissionDates)
           .then(({ body }) => {
-            // have to manually check and clear the date for exact match:
-            body.value[0].__system.submissionDate.should.be.an.isoDate();
-            // eslint-disable-next-line no-param-reassign
-            delete body.value[0].__system.submissionDate;
-
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat.svc/$metadata#Submissions',
               value: [{
@@ -211,12 +217,8 @@ describe('api: /forms/:id.svc', () => {
             .expect(200))
           .then(() => asAlice.get("/v1/projects/1/forms/encrypted.svc/Submissions('uuid:dcf4a151-5088-453f-99e6-369d67828f7a')")
             .expect(200)
+            .then(validateAndFilterSubmissionDates)
             .then(({ body }) => {
-              // have to manually check and clear the date for exact match:
-              body.value[0].__system.submissionDate.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[0].__system.submissionDate;
-
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
                 value: [{
@@ -254,12 +256,8 @@ describe('api: /forms/:id.svc', () => {
             .expect(200))
           .then(() => asAlice.get("/v1/projects/1/forms/encrypted.svc/Submissions('uuid:dcf4a151-5088-453f-99e6-369d67828f7a')")
             .expect(200)
+            .then(validateAndFilterSubmissionDates)
             .then(({ body }) => {
-              // have to manually check and clear the date for exact match:
-              body.value[0].__system.submissionDate.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[0].__system.submissionDate;
-
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
                 value: [{
@@ -345,7 +343,7 @@ describe('api: /forms/:id.svc', () => {
           }))));
 
     // HACK: this test sort of relies on some trickery to make the backend
-    // thing the submission is encrypted even though it isn't (see the replace
+    // think the submission is encrypted even though it isn't (see the replace
     // call). there is some chance this methodology is fragile. (mark1)
     it('should gracefully degrade on encrypted subtables', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -589,13 +587,8 @@ describe('api: /forms/:id.svc', () => {
       withSubmissions(service, (asAlice) =>
         asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
           .expect(200)
+          .then(validateAndFilterSubmissionDates)
           .then(({ body }) => {
-            for (const idx of [0, 1, 2]) {
-              body.value[idx].__system.submissionDate.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[idx].__system.submissionDate;
-            }
-
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
               value: [{
@@ -666,19 +659,55 @@ describe('api: /forms/:id.svc', () => {
             });
           }))));
 
+    it('should update Etag if a new submission is made', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      const firstResult = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+        .expect(200);
+
+      const etag = firstResult.get('ETag');
+      should.exist(etag);
+
+      await asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+        .send(testData.instances.withrepeat.three.replaceAll('rthree', 'rfour'))
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const secondResult = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+        .expect(200);
+      should.exist(secondResult);
+
+      secondResult.get('ETag').should.not.equal(etag);
+    }));
+
+    it('should not update Etag if submission is made to another form', testService(async (service) => {
+      const asAlice = await withSubmissions(service, identity);
+
+      const firstResult = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+        .expect(200);
+
+      const etag = firstResult.get('ETag');
+      should.exist(etag);
+
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+
+      const secondResult = await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
+        .expect(200);
+
+      secondResult.get('ETag').should.equal(etag);
+    }));
+
     it('should exclude a deleted submission from rows', testService((service) =>
       withSubmissions(service, (asAlice) =>
         asAlice.delete('/v1/projects/1/forms/withrepeat/submissions/rthree')
           .expect(200)
           .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions')
             .expect(200)
+            .then(validateAndFilterSubmissionDates)
             .then(({ body }) => {
-              for (const idx of [0, 1]) {
-                body.value[idx].__system.submissionDate.should.be.an.isoDate();
-                // eslint-disable-next-line no-param-reassign
-                delete body.value[idx].__system.submissionDate;
-              }
-
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                 value: [{
@@ -733,10 +762,8 @@ describe('api: /forms/:id.svc', () => {
           .expect(200)
           .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=not __system/deletedAt eq null')
             .expect(200)
+            .then(validateAndFilterSubmissionDates)
             .then(({ body }) => {
-              body.value[0].__system.submissionDate.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[0].__system.submissionDate;
               body.value[0].__system.deletedAt.should.be.an.isoDate();
               // eslint-disable-next-line no-param-reassign
               delete body.value[0].__system.deletedAt;
@@ -805,11 +832,8 @@ describe('api: /forms/:id.svc', () => {
       withSubmissions(service, (asAlice) =>
         asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$skip=1')
           .expect(200)
+          .then(validateAndFilterSubmissionDates)
           .then(({ body }) => {
-            body.value[0].__system.submissionDate.should.be.an.isoDate();
-            // eslint-disable-next-line no-param-reassign
-            delete body.value[0].__system.submissionDate;
-
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
               '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnR3byJ9',
@@ -1064,11 +1088,8 @@ describe('api: /forms/:id.svc', () => {
       withSubmissions(service, (asAlice) =>
         asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=1&$count=true')
           .expect(200)
+          .then(validateAndFilterSubmissionDates)
           .then(({ body }) => {
-            body.value[0].__system.submissionDate.should.be.an.isoDate();
-            // eslint-disable-next-line no-param-reassign
-            delete body.value[0].__system.submissionDate;
-
             body.should.eql({
               '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
               '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions?%24top=1&%24count=true&%24skiptoken=01eyJpbnN0YW5jZUlkIjoicnRocmVlIn0%3D',
@@ -1100,6 +1121,153 @@ describe('api: /forms/:id.svc', () => {
             body['@odata.nextLink'].should.have.skiptoken({ instanceId: 'rthree' });
           }))));
 
+    it('should not use eventhash for ETag when $top=0 with $count on Submissions table', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=0&$count=true')
+          .expect(200)
+          .then(({ body, headers }) => {
+            headers.etag.should.not.startWith('W/"eventhash');
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+              '@odata.count': 3,
+              value: []
+            });
+          }))));
+
+    it('should not use eventhash for ETag when $top=0 with $count on subtable', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?$top=0&$count=true')
+          .expect(200)
+          .then(({ body, headers }) => {
+            // expressjs can't add etag for "streaming" response
+            should.not.exist(headers.etag);
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions.children.child',
+              '@odata.nextLink': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/Submissions.children.child?%24top=0&%24count=true&%24skiptoken=01eyJyZXBlYXRJZCI6bnVsbH0%3D',
+              '@odata.count': 3,
+              value: []
+            });
+          }))));
+
+    it('should not use eventhash for ETag when $top=0 without $count', testService((service) =>
+      withSubmissions(service, (asAlice) =>
+        asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$top=0')
+          .expect(200)
+          .then(({ body, headers }) => {
+            headers.etag.should.not.startWith('W/"eventhash');
+            body.should.eql({
+              '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+              value: []
+            });
+          }))));
+
+    it('should return id-filtered toplevel rows if requested', testService((service) =>
+      service.login('alice', (asAlice) =>
+        service.login('bob', (asBob) =>
+          asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+            .send(testData.instances.withrepeat.one)
+            .set('Content-Type', 'text/xml')
+            .expect(200)
+            .then(() => asBob.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.two)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/withrepeat/submissions')
+              .send(testData.instances.withrepeat.three)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
+              .send(testData.instances.simple.one)
+              .set('Content-Type', 'text/xml')
+              .expect(200))
+            .then(() => asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__id eq 'rone'`)
+              .expect(200)
+              .then(validateAndFilterSubmissionDates)
+              .then(({ body }) => {
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                  value: [{
+                    __id: 'rone',
+                    __system: {
+                      // submissionDate is checked above,
+                      updatedAt: null,
+                      deletedAt: null,
+                      submitterId: '5',
+                      submitterName: 'Alice',
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null,
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0,
+                      formVersion: '1.0',
+                    },
+                    meta: { instanceID: 'rone' },
+                    name: 'Alice',
+                    age: 30,
+                    children: {},
+                  }],
+                });
+              }))
+            .then(() => asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__id eq 'rtwo'`)
+              .expect(200)
+              .then(validateAndFilterSubmissionDates)
+              .then(({ body }) => {
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                  value: [{
+                    __id: 'rtwo',
+                    __system: {
+                      // submissionDate is checked above,
+                      updatedAt: null,
+                      deletedAt: null,
+                      submitterId: '6',
+                      submitterName: 'Bob',
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null,
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0,
+                      formVersion: '1.0',
+                    },
+                    meta: { instanceID: 'rtwo' },
+                    name: 'Bob',
+                    age: 34,
+                    children: { 'child@odata.navigationLink': `Submissions('rtwo')/children/child` },
+                  }],
+                });
+              }))
+            .then(() => asAlice.get(`/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__id eq 'rthree'`)
+              .expect(200)
+              .then(validateAndFilterSubmissionDates)
+              .then(({ body }) => {
+                body.should.eql({
+                  '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
+                  value: [{
+                    __id: 'rthree',
+                    __system: {
+                      // submissionDate is checked above,
+                      updatedAt: null,
+                      deletedAt: null,
+                      submitterId: '5',
+                      submitterName: 'Alice',
+                      attachmentsPresent: 0,
+                      attachmentsExpected: 0,
+                      status: null,
+                      reviewState: null,
+                      deviceId: null,
+                      edits: 0,
+                      formVersion: '1.0',
+                    },
+                    meta: { instanceID: 'rthree' },
+                    name: 'Chelsea',
+                    age: 38,
+                    children: { 'child@odata.navigationLink': `Submissions('rthree')/children/child` },
+                  }],
+                });
+              }))))));
+
     it('should return submitter-filtered toplevel rows if requested', testService((service) =>
       service.login('alice', (asAlice) =>
         service.login('bob', (asBob) =>
@@ -1121,13 +1289,8 @@ describe('api: /forms/:id.svc', () => {
               .expect(200))
             .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__system/submitterId eq 5')
               .expect(200)
+              .then(validateAndFilterSubmissionDates)
               .then(({ body }) => {
-                for (const idx of [0, 1]) {
-                  body.value[idx].__system.submissionDate.should.be.an.isoDate();
-                  // eslint-disable-next-line no-param-reassign
-                  delete body.value[idx].__system.submissionDate;
-                }
-
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                   value: [{
@@ -1301,12 +1464,8 @@ describe('api: /forms/:id.svc', () => {
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__system/updatedAt eq null')
             .expect(200)
+            .then(validateAndFilterSubmissionDates)
             .then(({ body }) => {
-              // have to manually check and clear the date for exact match:
-              body.value[0].__system.submissionDate.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[0].__system.submissionDate;
-
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat.svc/$metadata#Submissions',
                 value: [{
@@ -1347,12 +1506,10 @@ describe('api: /forms/:id.svc', () => {
             .expect(200))
           .then(() => asAlice.get("/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=__system/reviewState eq 'rejected'")
             .expect(200)
+            .then(validateAndFilterSubmissionDates)
             .then(({ body }) => {
               // have to manually check and clear the dates for exact match:
-              body.value[0].__system.submissionDate.should.be.an.isoDate();
               body.value[0].__system.updatedAt.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[0].__system.submissionDate;
               // eslint-disable-next-line no-param-reassign
               delete body.value[0].__system.updatedAt;
 
@@ -1391,12 +1548,10 @@ describe('api: /forms/:id.svc', () => {
 
       await asAlice.get('/v1/projects/1/forms/withrepeat.svc/Submissions?$filter=$root/Submissions/__system/reviewState eq \'rejected\'')
         .expect(200)
+        .then(validateAndFilterSubmissionDates)
         .then(({ body }) => {
           // have to manually check and clear the dates for exact match:
-          body.value[0].__system.submissionDate.should.be.an.isoDate();
           body.value[0].__system.updatedAt.should.be.an.isoDate();
-          // eslint-disable-next-line no-param-reassign
-          delete body.value[0].__system.submissionDate;
           // eslint-disable-next-line no-param-reassign
           delete body.value[0].__system.updatedAt;
 
@@ -1659,15 +1814,8 @@ describe('api: /forms/:id.svc', () => {
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/encrypted.svc/Submissions')
             .expect(200)
+            .then(validateAndFilterSubmissionDates)
             .then(({ body }) => {
-              // have to manually check and clear the date for exact match:
-              body.value[0].__system.submissionDate.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[0].__system.submissionDate;
-              body.value[1].__system.submissionDate.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[1].__system.submissionDate;
-
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
                 value: [{
@@ -1728,15 +1876,8 @@ describe('api: /forms/:id.svc', () => {
             .expect(200))
           .then(() => asAlice.get('/v1/projects/1/forms/encrypted.svc/Submissions')
             .expect(200)
+            .then(validateAndFilterSubmissionDates)
             .then(({ body }) => {
-              // have to manually check and clear the date for exact match:
-              body.value[0].__system.submissionDate.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[0].__system.submissionDate;
-              body.value[1].__system.submissionDate.should.be.an.isoDate();
-              // eslint-disable-next-line no-param-reassign
-              delete body.value[1].__system.submissionDate;
-
               body.should.eql({
                 '@odata.context': 'http://localhost:8989/v1/projects/1/forms/encrypted.svc/$metadata#Submissions',
                 value: [{
@@ -2328,12 +2469,8 @@ describe('api: /forms/:id.svc', () => {
               .expect(200))
             .then(() => asAlice.get("/v1/projects/1/forms/doubleRepeat/draft.svc/Submissions('double')")
               .expect(200)
+              .then(validateAndFilterSubmissionDates)
               .then(({ body }) => {
-                // have to manually check and clear the date for exact match:
-                body.value[0].__system.submissionDate.should.be.an.isoDate();
-                // eslint-disable-next-line no-param-reassign
-                delete body.value[0].__system.submissionDate;
-
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/doubleRepeat/draft.svc/$metadata#Submissions',
                   value: [{
@@ -2410,13 +2547,8 @@ describe('api: /forms/:id.svc', () => {
               .expect(200))
             .then(() => asAlice.get('/v1/projects/1/forms/withrepeat/draft.svc/Submissions')
               .expect(200)
+              .then(validateAndFilterSubmissionDates)
               .then(({ body }) => {
-                for (const idx of [0, 1, 2]) {
-                  body.value[idx].__system.submissionDate.should.be.an.isoDate();
-                  // eslint-disable-next-line no-param-reassign
-                  delete body.value[idx].__system.submissionDate;
-                }
-
                 body.should.eql({
                   '@odata.context': 'http://localhost:8989/v1/projects/1/forms/withrepeat/draft.svc/$metadata#Submissions',
                   value: [{

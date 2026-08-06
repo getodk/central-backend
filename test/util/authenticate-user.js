@@ -1,7 +1,7 @@
 // Allow main functionality to stay at top of file:
 /* eslint-disable no-use-before-define */
 
-const makeFetchCookie = require('fetch-cookie');
+const { default: makeFetchCookie } = require('fetch-cookie');
 
 module.exports = async (service, user, includeCsrf) => {
   if (!user) throw new Error('Did you forget the **service** arg?');

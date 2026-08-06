@@ -1,1 +1,3 @@
 /*-attachments/big-*.bin
+/5-*.xml
+!/5-template.xml

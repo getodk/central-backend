@@ -13,3 +13,9 @@ node_modules/
 .vscode
 /junit-reports/
 /config/development.json
+
+# context files for AI agents
+AGENTS.md
+CLAUDE.md
+.github/copilot-instructions.md
+.cursor

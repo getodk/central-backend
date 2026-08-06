@@ -16,6 +16,7 @@ module.exports = {
   assertTitle,
   fillLoginForm,
   initTest,
+  sleep,
 };
 
 const assert = require('node:assert');

@@ -11,33 +11,35 @@ env:
 jobs:
   oidc-e2e-test:
     timeout-minutes: 6
-    # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
-    services:
-      # see: https://docs.github.com/en/enterprise-server@3.5/actions/using-containerized-services/creating-postgresql-service-containers
-      postgres:
-        image: postgres:14.10
-        env:
-          POSTGRES_PASSWORD: odktest
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres-version:
+          - "14.23"
+          - "18"
     steps:
-    - uses: actions/checkout@v4
+
+    # This one weird trick speeds up every build!
+    # see: https://github.com/getodk/central-backend/pull/1642
+    # see: https://github.com/actions/runner/issues/4030
+    - run: sudo apt-get remove --purge man-db
+
+    - uses: actions/checkout@v6
     - name: Set node version
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
-        node-version: 22.16.0
+        node-version-file: package.json
         cache: 'npm'
-    - run: make test-oidc-e2e
-    - name: Archive playwright screenshots
+    - run: npm ci
+    - run: make run-docker-postgres
+      env:
+        PG_VERSION: ${{ matrix.postgres-version }}
+    - run: sudo apt-get install wait-for-it
+    - run: ./test/e2e/oidc/run-tests.sh
+    - name: Archive Playwright Test Report
       if: failure()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
-        name: Playwright Screenshots
-        path: test/e2e/oidc/playwright-tests/results/**/*.png
+        name: Playwright Test Report
+        path: test/e2e/oidc/playwright-tests/results/html-report/

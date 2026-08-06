@@ -1,11 +1,12 @@
 const appRoot = require('app-root-path');
 const should = require('should');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 const { sql } = require('slonik');
 const { plain } = require('../../util/util');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { Form } = require(appRoot + '/lib/model/frames');
 
 const assertAuditActions = (audits, expected) => {
   audits.map(a => a.action).should.deepEqual(expected);
@@ -63,7 +64,8 @@ describe('/audits', () => {
               audits[0].details.should.eql({ data: {
                 actorId: david.actor.id,
                 email: 'david@getodk.org',
-                password: null
+                password: null,
+                lastLoginAt: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
 
@@ -102,7 +104,7 @@ describe('/audits', () => {
               asAlice.get('/v1/audits').set('X-Extended-Metadata', true)
                 .expect(200).then(({ body }) => body),
               Projects.getById(projectId).then((o) => o.get())
-                .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')
+                .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', Form.PublishedVersion)
                   .then((o) => o.get())
                   .then((form) => [ project, form ])),
               Users.getByEmail('alice@getodk.org').then((o) => o.get()),
@@ -126,7 +128,8 @@ describe('/audits', () => {
               audits[0].details.should.eql({ data: {
                 actorId: david.actor.id,
                 email: 'david@getodk.org',
-                password: null
+                password: null,
+                lastLoginAt: null
               } });
               audits[0].loggedAt.should.be.a.recentIsoDate();
 
@@ -430,6 +433,34 @@ describe('/audits', () => {
         });
     }));
 
+    it('should filter by action category (config)', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/config/analytics')
+        .send({ enabled: true })
+        .expect(200);
+      await asAlice.post('/v1/config/logo')
+        .set('Content-Type', 'image/jpeg')
+        .send('testimage')
+        .expect(200);
+      const { body: audits } = await asAlice.get('/v1/audits?action=config')
+        .expect(200);
+
+      audits.length.should.equal(2);
+      for (const audit of audits) {
+        audit.actorId.should.equal(5);
+        should.not.exist(audit.acteeId);
+      }
+
+      Object.keys(audits[0].details).should.eql(['key', 'blobId']);
+      audits[0].details.key.should.equal('logo');
+      audits[0].details.blobId.should.be.a.Number();
+
+      audits[1].details.should.eql({
+        key: 'analytics',
+        value: { enabled: true }
+      });
+    }));
+
     it('should filter extended data by action', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects')
@@ -515,13 +546,13 @@ describe('/audits', () => {
                 body[2].actee.displayName.should.equal('Alice');
               }))))));
 
-    it('should filter (inclusively) by end date', testService((service, { run }) =>
+    it('should filter (exclusively) by end date', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
           .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
-          asAlice.get('/v1/audits?end=2000-01-03Z')
+          asAlice.get('/v1/audits?end=2000-01-04Z')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(3);
@@ -860,6 +891,111 @@ describe('/audits', () => {
               datasetActee.projectId.should.equal(1);
             }));
       }));
+    });
+
+    describe('audit logs of OpenRosa submission attachment events', () => {
+      it('should get the attachment events of a (partial) submission', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.binaryType)
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body[0].details.name.should.equal('my_file1.mp4');
+              })
+            )
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body.length.should.equal(2);
+                body[0].details.name.should.equal('here_is_file2.jpg');
+                body[1].details.name.should.equal('my_file1.mp4');
+              })
+            )
+        )
+      ));
+
+      it('should handle resubmitting partial submission with all attachments', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.binaryType)
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body[0].details.name.should.equal('my_file1.mp4');
+              })
+            )
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body.length.should.equal(2);
+                body[0].details.name.should.equal('here_is_file2.jpg');
+                body[1].details.name.should.equal('my_file1.mp4');
+              })
+            )
+        )
+      ));
+
+      it('should handle resubmitting partial submission with contents of attachment changed', testService((service) =>
+        service.login('alice', (asAlice) =>
+          asAlice.post('/v1/projects/1/forms?publish=true')
+            .set('Content-Type', 'application/xml')
+            .send(testData.forms.binaryType)
+            .expect(200)
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('this is test file one'), { filename: 'my_file1.mp4' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body[0].details.name.should.equal('my_file1.mp4');
+              })
+            )
+            .then(() => asAlice.post('/v1/projects/1/submission')
+              .set('X-OpenRosa-Version', '1.0')
+              .attach('xml_submission_file', Buffer.from(testData.instances.binaryType.both), { filename: 'data.xml' })
+              .attach('my_file1.mp4', Buffer.from('file one contents have changed'), { filename: 'my_file1.mp4' })
+              .attach('here_is_file2.jpg', Buffer.from('this is test file two'), { filename: 'here_is_file2.jpg' })
+              .expect(201)
+              .then(() => asAlice.get('/v1/audits?action=submission.attachment.update')
+                .expect(200))
+              .then(({ body }) => {
+                body.length.should.equal(3);
+                body[0].details.name.should.equal('here_is_file2.jpg');
+                body[1].details.name.should.equal('my_file1.mp4');
+                body[2].details.name.should.equal('my_file1.mp4');
+                body[1].details.newBlobId.should.not.equal(body[2].details.newBlobId);
+              })
+            )
+        )
+      ));
     });
   });
 });

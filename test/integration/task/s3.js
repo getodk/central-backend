@@ -7,8 +7,8 @@ const { getCount, setFailedToPending, uploadPending } = require(appRoot + '/lib/
 const { Blob } = require(appRoot + '/lib/model/frames');
 
 // eslint-disable-next-line camelcase
-const aBlobExistsWith = async (container, { status }) => {
-  const blob = await Blob.fromBuffer(crypto.randomBytes(100));
+const aBlobExistsWith = async (container, { status, contentLength=100 }) => {
+  const blob = await Blob.fromBuffer(crypto.randomBytes(contentLength));
   await container.run(sql`
     INSERT INTO BLOBS (sha, md5, content, "contentType", s3_status)
       VALUES (${blob.sha}, ${blob.md5}, ${sql.binary(blob.content)}, ${blob.contentType || sql`DEFAULT`}, ${status})
@@ -44,6 +44,9 @@ describe('task: s3', () => {
     const assertUploadCount = (expected) => {
       global.s3.uploads.successful.should.equal(expected);
     };
+    const assertSkippedCount = (expected) => {
+      global.s3.uploads.skipped.should.equal(expected);
+    };
 
     beforeEach(() => {
       global.s3.enableMock();
@@ -54,6 +57,7 @@ describe('task: s3', () => {
         ['pending', 1],
         ['uploaded', 2],
         ['failed', 3],
+        ['skipped', 4],
       ].forEach(([ status, expectedCount ]) => {
         it(`should return count of ${status} blobs`, testTask(async (container) => {
           // given
@@ -65,6 +69,11 @@ describe('task: s3', () => {
           await aBlobExistsWith(container, { status: 'failed' });
           await aBlobExistsWith(container, { status: 'failed' });
           await aBlobExistsWith(container, { status: 'failed' });
+
+          await aBlobExistsWith(container, { status: 'skipped' });
+          await aBlobExistsWith(container, { status: 'skipped' });
+          await aBlobExistsWith(container, { status: 'skipped' });
+          await aBlobExistsWith(container, { status: 'skipped' });
 
           // when
           const count = await getCount(status);
@@ -88,6 +97,10 @@ describe('task: s3', () => {
         await aBlobExistsWith(container, { status: 'failed' });
         await aBlobExistsWith(container, { status: 'failed' });
         await aBlobExistsWith(container, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'skipped' });
+        await aBlobExistsWith(container, { status: 'skipped' });
+        await aBlobExistsWith(container, { status: 'skipped' });
+        await aBlobExistsWith(container, { status: 'skipped' });
 
         // expect
         (await getCount('pending')).should.equal(1);
@@ -118,9 +131,11 @@ describe('task: s3', () => {
         await aBlobExistsWith(container, { status: 'pending' });
         await aBlobExistsWith(container, { status: 'uploaded' });
         await aBlobExistsWith(container, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'skipped' });
         await aBlobExistsWith(container, { status: 'pending' });
         await aBlobExistsWith(container, { status: 'uploaded' });
         await aBlobExistsWith(container, { status: 'failed' });
+        await aBlobExistsWith(container, { status: 'skipped' });
 
         // when
         await uploadPending();
@@ -128,6 +143,20 @@ describe('task: s3', () => {
         // then
         assertUploadCount(2);
         (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 2, failed: 0 });
+      }));
+
+      it('should skip 0-byte blobs', testTask(async (container) => {
+        // given
+        await aBlobExistsWith(container, { status: 'pending', contentLength: 0 });
+        await aBlobExistsWith(container, { status: 'pending', contentLength: 100 });
+
+        // when
+        await uploadPending();
+
+        // then
+        assertUploadCount(1);
+        assertSkippedCount(1);
+        (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0, skipped: 1 });
       }));
 
       it('should return error if uploading fails', testTask(async (container) => {
@@ -169,6 +198,26 @@ describe('task: s3', () => {
         (await container.Audits.getLatestByAction('blobs.s3.upload')).get().details.should.containEql({ uploaded: 1, failed: 0 });
       }));
 
+      it('should retain blob size after content is offloaded to s3', testTask(async (container) => {
+        // given
+        const blob = await Blob.fromBuffer(crypto.randomBytes(100));
+        const blobId = await container.Blobs.ensure(blob);
+
+        // expect: size is populated and content is present before upload
+        const before = await container.one(sql`SELECT size, (content IS NOT NULL) AS "hasContent" FROM blobs WHERE id=${blobId}`);
+        before.size.should.equal(100);
+        before.hasContent.should.equal(true);
+
+        // when
+        await uploadPending();
+
+        // then: content has been offloaded to s3 but size is retained
+        assertUploadCount(1);
+        const after = await container.one(sql`SELECT size, (content IS NOT NULL) AS "hasContent" FROM blobs WHERE id=${blobId}`);
+        after.size.should.equal(100);
+        after.hasContent.should.equal(false);
+      }));
+
       describe('with delayed s3 upload', () => {
         let restoreS3mock;
         let resumeFirstUpload;
@@ -181,7 +230,7 @@ describe('task: s3', () => {
             await new Promise(resolve => {
               resumeFirstUpload = resolve;
             });
-            original.apply(global.s3, args);
+            return original.apply(global.s3, args);
           };
         });
 
@@ -189,7 +238,7 @@ describe('task: s3', () => {
           restoreS3mock();
         });
 
-        it('should not attempt to upload an in-progress blob', testTaskFullTrx(async (container) => {
+        it('should not attempt to upload an in-progress blob @slow', testTaskFullTrx(async (container) => {
           await aBlobExistsWith(container, { status: 'pending' });
 
           // when

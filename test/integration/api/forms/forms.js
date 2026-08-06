@@ -7,6 +7,8 @@ const superagent = require('superagent');
 const { DateTime } = require('luxon');
 const { testService } = require('../../setup');
 const testData = require('../../../data/xml');
+const { publishWithNote } = require('../../../util/scenarios');
+const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { omit } = require(appRoot + '/lib/util/util');
 
@@ -89,6 +91,19 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             body.name.should.equal('Simple 2');
             body.version.should.equal('2.1');
             body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
+          }))));
+
+    it('should decode html entities in the value of form version - getodk/central#1470', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simple2.replace('2.1', '&lt;{}&gt;'))
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Form();
+            body.name.should.equal('Simple 2');
+            body.version.should.equal('<{}>');
+            body.hash.should.equal('232ffd287a8eaef0103ad2386dafa44e');
           }))));
 
     it('should reject if form id ends in .xml', testService((service) =>
@@ -580,50 +595,54 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         });
     }));
 
-    it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice');
+    describe('with structureChanged warning', () => {
+      const withChangedStructure = xml => xml.replace(/age/g, 'address');
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft')
-        .send(testData.forms.simple.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .then(({ body }) => {
-          body.code.should.be.eql(400.16);
-          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
-        });
-    }));
+      it('should reject', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-    it('should reject with structure changed warning', testService(async (service) => {
-      const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft')
+          .send(withChangedStructure(testData.forms.simple))
+          .set('Content-Type', 'application/xml')
+          .then(({ body }) => {
+            body.code.should.be.eql(400.16);
+            body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'age' ] });
+          });
+      }));
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
-        .send(testData.forms.simple.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+      it('should accept if ignoreWarnings set', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
-        .expect(200);
-    }));
+        await asAlice.post('/v1/projects/1/forms/simple/draft?ignoreWarnings=true')
+          .send(withChangedStructure(testData.forms.simple))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-    it('should reject with xls and structure changed warnings', testService(async (service) => {
-      const asAlice = await service.login('alice');
+        await asAlice.post('/v1/projects/1/forms/simple/draft/publish?ignoreWarnings=true&version=v2')
+          .expect(200);
+      }));
 
-      await asAlice.post('/v1/projects/1/forms?publish=true')
-        .send(testData.forms.simple2.replace(/age/g, 'address'))
-        .set('Content-Type', 'application/xml')
-        .expect(200);
+      it('should reject with xls', testService(async (service) => {
+        const asAlice = await service.login('alice');
 
-      global.xlsformTest = 'warning'; // set up the mock service to warn.
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(withChangedStructure(testData.forms.simple2))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
 
-      await asAlice.post('/v1/projects/1/forms/simple2/draft')
-        .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
-        .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        .expect(400)
-        .then(({ body }) => {
-          body.code.should.be.eql(400.16);
-          body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
-          body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
-        });
-    }));
+        global.xlsformTest = 'warning'; // set up the mock service to warn.
+
+        await asAlice.post('/v1/projects/1/forms/simple2/draft')
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
+          .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.be.eql(400.16);
+            body.details.warnings.xlsFormWarnings.should.be.eql(['warning 1', 'warning 2']);
+            body.details.warnings.workflowWarnings[0].should.be.eql({ type: 'structureChanged', details: [ 'address' ] });
+          });
+      }));
+    });
 
     it('should reject form with missing meta group', testService(async (service) => {
       const asAlice = await service.login('alice');
@@ -1074,6 +1093,115 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                     body.enketoOnceId.should.equal('::::abcdefgh');
                   }));
             }))));
+
+      describe('publishNotes', () => {
+        it('should return publishNotes with extended metadata', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'this is a publishing note');
+
+          const { body } = await asAlice.get('/v1/projects/1/forms/simple')
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          body.publishNotes.should.equal('this is a publishing note');
+        }));
+
+        it('should not return publishNotes for app-user', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'this is a publishing note');
+
+          const appUser = await asAlice.post('/v1/projects/1/app-users')
+            .send({ displayName: 'test app user' })
+            .expect(200)
+            .then(({ body }) => body);
+          await asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${appUser.id}`)
+            .expect(200);
+
+          const { body } = await service.get(`/v1/key/${appUser.token}/projects/1/forms/simple`)
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          should.not.exist(body.publishNotes);
+        }));
+
+        it('should not return publishNotes for project-viewer', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'this is a publishing note');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/viewer/${chelseaActorId}`)
+            .expect(200);
+
+          const { body } = await chelsea.get('/v1/projects/1/forms/simple')
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          should.not.exist(body.publishNotes);
+        }));
+
+        it('should not return publishNotes for data-collector', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'this is a publishing note');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaActorId}`)
+            .expect(200);
+
+          const { body } = await chelsea.get('/v1/projects/1/forms/simple')
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          should.not.exist(body.publishNotes);
+        }));
+
+        it('should not return publishNotes for data-collector using /forms endpoint', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'this is a publishing note');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaActorId}`)
+            .expect(200);
+
+          const { body } = await chelsea.get('/v1/projects/1/forms')
+            .set('X-Extended-Metadata', true)
+            .expect(200);
+
+          body.length.should.be.greaterThan(0);
+          body.forEach((form) => should.not.exist(form.publishNotes));
+        }));
+
+        it('should not return publishNotes for data-collector using /projects?forms=true endpoint', testService(async (service) => {
+          const asAlice = await service.login('alice');
+
+          await publishWithNote(asAlice, '2', 'this is a publishing note');
+
+          const chelsea = await service.login('chelsea');
+          const chelseaActorId = await chelsea.get('/v1/users/current')
+            .expect(200)
+            .then(({ body }) => body.id);
+          await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaActorId}`)
+            .expect(200);
+
+          const { body: projects } = await chelsea.get('/v1/projects?forms=true')
+            .expect(200);
+
+          projects[0].formList.forEach((form) => should.not.exist(form.publishNotes));
+        }));
+      });
     });
 
     ////////////////////////////////////////
@@ -1171,22 +1299,22 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         <instance>
           <data id="sanitize">
             <meta>
-              <instanceID>
+              <instanceID/>
             </meta>
             <q1.8>
-              <17/>
+              <🌩/>
             </q1.8>
-            <4.2/>
+            <🤟/>
           </data>
         </instance>
         <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
-        <bind nodeset="/data/q1.8/17" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
-        <bind nodeset="/data/4.2" type="number"/>
+        <bind nodeset="/data/q1.8/🌩" type="string" readonly="true()" calculate="concat('uuid:', uuid())"/>
+        <bind nodeset="/data/🤟" type="number"/>
       </model>
 
     </h:head>
     <h:body>
-      <input ref="/data/4.2">
+      <input ref="/data/🤟">
         <label>What is your age?</label>
       </input>
     </h:body>
@@ -1205,8 +1333,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   { name: 'meta', path: '/meta', type: 'structure', binary: null, selectMultiple: null },
                   { name: 'instanceID', path: '/meta/instanceID', type: 'string', binary: null, selectMultiple: null },
                   { name: 'q1_8', path: '/q1_8', type: 'structure', binary: null, selectMultiple: null },
-                  { name: '_17', path: '/q1_8/_17', type: 'string', binary: null, selectMultiple: null },
-                  { name: '_4_2', path: '/_4_2', type: 'number', binary: null, selectMultiple: null }
+                  { name: '__', path: '/q1_8/__', type: 'string', binary: null, selectMultiple: null },
+                  { name: '__', path: '/__', type: 'number', binary: null, selectMultiple: null }
                 ]);
               })))));
     });
@@ -1269,9 +1397,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   body[0].updatedAt.should.be.a.recentIsoDate();
                   // eslint-disable-next-line no-param-reassign
                   delete body[0].updatedAt;
-
                   body.should.eql([
-                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
+                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, size: 12, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
                     { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false, hash: null }
                   ]);
                 })))));
@@ -1380,6 +1507,63 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   headers['content-type'].should.equal('text/csv; charset=utf-8');
                   text.should.equal('test,csv\n1,2');
                 })))));
+
+        it('should return image contents with appropriate attachment content-disposition headers', testService(async (service) => {
+          const xml = `<?xml version="1.0"?>
+          <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms">
+            <h:head>
+              <h:title>Image Attachment Form</h:title>
+              <model odk:xforms-version="1.0.0">
+                <itext>
+                  <translation lang="default" default="true()">
+                    <text id="/data/logo:label">
+                      <value>Form Logo</value>
+                      <value form="image">jr://images/logo.png</value>
+                    </text>
+                  </translation>
+                </itext>
+                <instance>
+                  <data id="withImageAttachment" version="20260305120303">
+                    <logo/>
+                    <meta>
+                      <instanceID/>
+                    </meta>
+                  </data>
+                </instance>
+                <bind nodeset="/data/logo" readonly="true()" type="string"/>
+                <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
+              </model>
+            </h:head>
+            <h:body>
+              <input ref="/data/logo">
+                <label ref="jr:itext('/data/logo:label')"/>
+              </input>
+            </h:body>
+          </h:html>`;
+
+          const asAlice = await service.login('alice');
+
+          await asAlice.post('/v1/projects/1/forms')
+            .send(xml)
+            .set('Content-Type', 'application/xml')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withImageAttachment/draft/attachments/logo.png')
+            .send('this is some image data')
+            .set('Content-Type', 'image/png')
+            .expect(200);
+
+          await asAlice.post('/v1/projects/1/forms/withImageAttachment/draft/publish')
+            .expect(200);
+
+          await asAlice.get('/v1/projects/1/forms/withImageAttachment/attachments/logo.png')
+            .expect(200)
+            .then(({ headers, body }) => {
+              headers['content-disposition'].should.equal('attachment; filename="logo.png"; filename*=UTF-8\'\'logo.png');
+              headers['content-type'].should.equal('image/png');
+              body.toString('utf8').should.equal('this is some image data');
+            });
+        }));
 
         it('should return 307 if file has been moved to s3', testService((service, { Blobs }) => {
           global.s3.enableMock();
@@ -1627,7 +1811,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
           .then(() => Promise.all([
             Users.getByEmail('alice@getodk.org').then((o) => o.get()),
             Projects.getById(1).then((o) => o.get())
-              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple')).then((o) => o.get()),
+              .then((project) => Forms.getByProjectAndXmlFormId(project.id, 'simple', Form.WithoutDef)).then((o) => o.get()),
             Audits.getLatestByAction('form.update').then((o) => o.get())
           ])
             .then(([ alice, form, log ]) => {
@@ -1652,7 +1836,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .then(({ body }) => body.enketoId);
 
       await service.get(`/v1/form-links/${enketoId}/form`)
-        .expect(403);
+        .expect(401);
     }));
 
     it('should reject without session token', testService(async (service) => {
@@ -1662,7 +1846,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .then(({ body }) => body.enketoId);
 
       await service.get(`/v1/form-links/${enketoId}/form`)
-        .expect(404);
+        .expect(401);
     }));
 
     it('should return the Form with session token queryparam', testService(async (service) => {

@@ -15,5 +15,9 @@ const mapSequential = (xs, f) => {
   return reduce(step, f(head).then(push), tail).then(() => results);
 };
 
-module.exports = { plain, mapSequential };
+const sleep = async ms => new Promise(resolve => {
+  setTimeout(resolve, ms);
+});
+
+module.exports = { plain, mapSequential, sleep };
 

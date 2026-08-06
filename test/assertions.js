@@ -97,7 +97,7 @@ should.Assertion.add('User', function() {
   this.params = { operator: 'to be a User' };
 
   this.obj.should.be.an.Actor();
-  Object.keys(this.obj).should.containDeep([ 'email' ]);
+  Object.keys(this.obj).should.containDeep([ 'email', 'lastLoginAt' ]);
   this.obj.email.should.be.a.String();
 });
 
@@ -217,7 +217,7 @@ should.Assertion.add('ExtendedForm', function() {
 should.Assertion.add('FormAttachment', function() {
   this.params = { operator: 'to be a Form Attachment' };
 
-  Object.keys(this.obj).should.be.a.subsetOf([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'hash', 'updatedAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'size', 'hash', 'updatedAt' ]);
   this.obj.name.should.be.a.String();
   this.obj.type.should.be.a.String();
   const { blobExists, datasetExists, exists, hash } = this.obj;
@@ -227,6 +227,10 @@ should.Assertion.add('FormAttachment', function() {
   exists.should.equal(blobExists || datasetExists);
   (hash != null).should.equal(blobExists);
   if (hash != null) hash.should.be.an.md5Sum();
+  if (this.obj.size != null) {
+    this.obj.size.should.be.a.Number();
+    this.obj.blobExists.should.be.true();
+  }
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
@@ -295,10 +299,16 @@ should.Assertion.add('Key', function() {
 should.Assertion.add('Config', function() {
   this.params = { operator: 'to be a Config' };
 
-  Object.keys(this.obj).should.containDeep([ 'key', 'value', 'setAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([ 'key', 'setAt', 'value', 'blobExists' ]);
   this.obj.key.should.be.a.String();
-  this.obj.value.should.be.an.Object();
   this.obj.setAt.should.be.an.isoDate();
+
+  if (this.obj.value != null) {
+    this.obj.value.should.be.an.Object();
+    should.not.exist(this.obj.blobExists);
+  } else {
+    this.obj.blobExists.should.be.true();
+  }
 });
 
 should.Assertion.add('SimpleCsv', function() {
@@ -367,9 +377,10 @@ should.Assertion.add('Dataset', function assertDataset(extraKeys = []) {
   this.params = { operator: 'to be a Dataset' };
 
   Object.keys(this.obj).should.be.a.subsetOf([
-    'projectId', 'name', 'approvalRequired', 'ownerOnly', 'createdAt',
+    'projectId', 'name', 'approvalRequired', 'ownerOnly', 'createdAt', 'deletedAt',
     // Optional metadata
-    'properties', 'linkedForms', 'sourceForms', 'lastUpdate',
+    'properties', 'linkedForms', 'sourceForms', 'lastUpdate', 'draftLinkedForms', 'draftSourceForms',
+    'accessFilter',
     ...extraKeys
   ]);
   this.obj.projectId.should.be.a.Number();

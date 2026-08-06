@@ -38,7 +38,7 @@ async function apiClient(suiteName, { token, serverUrl, userEmail, userPassword,
 
   async function apiGet(path, headers) {
     const res = await apiFetch('GET', path, undefined, headers);
-    return res.json();
+    return contentFrom(res);
   }
 
   function apiRawHead(path, headers) {
@@ -90,7 +90,7 @@ async function apiClient(suiteName, { token, serverUrl, userEmail, userPassword,
 
   async function apiPost(path, body, headers) {
     const res = await apiFetch('POST', path, body, headers);
-    return res.json();
+    return contentFrom(res);
   }
 
   async function apiFetch(method, path, body, extraHeaders) {
@@ -148,6 +148,16 @@ function mimetypeFor(f) {
   }
 }
 
+function contentFrom(res) {
+  const [ contentType ] = res.headers.get('content-type').split(';', 1);
+
+  switch(contentType) {
+    case 'application/json': return res.json();
+    case 'image/svg+xml':    return res.text();
+    default: throw new Error(`No handling for response Content-Type '${contentType}'`);
+  }
+}
+
 function isRedirected(res) {
   // should support res.redirected, but maybe old version
   // See: https://www.npmjs.com/package/node-fetch#responseredirected
@@ -159,7 +169,7 @@ class Redirect {
     this.props = Object.freeze({
       status:   res.status,
       location: res.headers.get('location'),
-      headers:  Object.freeze([...res.headers]),
+      headers:  res.headers,
     });
   }
   get status()   { return this.props.status; }

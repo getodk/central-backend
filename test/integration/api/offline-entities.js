@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
-const uuid = require('uuid').v4;
+const { v4: uuid } = require('uuid');
 const should = require('should');
 const { sql } = require('slonik');
 
@@ -1923,11 +1923,11 @@ describe('Offline Entities', () => {
     }));
   });
 
-  describe('locking an entity while processing a related submission', function() {
-    this.timeout(8000);
+  describe('locking an entity while processing a related submission @slow', function() {
+    this.timeout(16_000);
 
     // https://github.com/getodk/central/issues/705
-    it('should concurrently process an offline create + update @slow', testServiceFullTrx(async (service, container) => {
+    it('should concurrently process an offline create + update', testServiceFullTrx(async (service, container) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.offlineEntity)

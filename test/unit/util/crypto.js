@@ -7,8 +7,8 @@ const streamTest = require('streamtest').v2;
 const crypto = require(appRoot + '/lib/util/crypto');
 
 describe('util/crypto', () => {
-  describe('hashPassword/verifyPassword', () => {
-    const { hashPassword, verifyPassword } = crypto;
+  describe('hashPassword()', () => {
+    const { hashPassword } = crypto;
 
     // we do not actually verify the hashing itself, as:
     // 1. it is entirely performed by bcrypt, which has is own tests.
@@ -17,11 +17,37 @@ describe('util/crypto', () => {
     it('should always return a Promise', () => {
       hashPassword('').should.be.a.Promise();
       hashPassword('password').should.be.a.Promise();
-      hashPassword('password', 'hashhash').should.be.a.Promise();
     });
 
     it('should reject given a blank plaintext', () =>
       hashPassword('').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
+
+    it('should reject given a short plaintext', () =>
+      hashPassword('2short').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
+
+    it('should reject given a short plaintext (measured in bytes)', () =>
+      // This emoji is a single char on some devices, but in UTF-8 is 11 bytes.  A
+      // single character is too short to use as a password, even if its byte length
+      // is above the password length limit.
+      hashPassword('👩‍💻').should.be.rejectedWith('The password or passphrase provided does not meet the required length.'));
+
+    it('should reject given a long plaintext', () =>
+      hashPassword('longggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg').should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.'));
+
+    it('should reject given a long plaintext (measured in bytes)', () => {
+      const password = '❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️';
+      password.length.should.be.lessThan(72);
+      Buffer.byteLength(password).should.be.greaterThan(72);
+      return hashPassword(password).should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.');
+    });
+  });
+
+  describe('verifyPassword()', () => {
+    const { verifyPassword } = crypto;
+
+    it('should always return a Promise', () => {
+      verifyPassword('password', 'hashhash').should.be.a.Promise();
+    });
 
     it('should not attempt to verify empty plaintext', (done) => {
       verifyPassword('', '$2a$12$hCRUXz/7Hx2iKPLCduvrWugC5Q/j5e3bX9KvaYvaIvg/uvFYEpzSy').then((result) => {
@@ -238,7 +264,7 @@ describe('util/crypto', () => {
       const ciphertext = Buffer.from('kMhJdk0mZOqvlxndUO3v4+UPvfYoc+bbkPmF3QmhoP7lP/QjHbzqw/IfZxQ54D328eCc4V6jtbrjeAXV+m1cWsCGGLW5KwTAxBjPBXzsZrUeY0RISVJ1g9BJoXfSRAjYMrFYOM907BFUIYYxMqpVWGy1lo8ljqY+Sgq1VphkQk/TQGgOVYFALHDLOYnLKuLHvwBLQQwK3lje8CwNlf/b2rY9qfGC4P1emoiP+YzkLp8eH6x/HfMvRIFoZEaom1i5s3SU4WVwe2Tno4jKD69ojMlQN6VKB7DK4xaRSs2C7zfDm63n1WCyyOAj8mASIFhb3sc3hD56HTJFUV/TH3UVlzP7oPm/Mm7nEcU3+HdSSwm3I1qFYhsXfVRym41IlbC4Twf660/kUZrugA7Zqd5K9Un3lOVTzYowaF+m5OIOO56wff3zPBxeOVjANDKR7V6/', 'base64');
       const plaintext = `<?xml version='1.0' ?><data id="encrypted" version="working3" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa"><meta><instanceID>uuid:99b303d9-6494-477b-a30d-d8aae8867335</instanceID></meta><name>bob</name><age>30</age><file>1561432532482.jpg</file></data>`;
 
-      it('should successfully decrypt data syncronously @slow', () => {
+      it('should successfully decrypt data synchronously @slow', () => {
         const aesKey = getSubmissionKey(priv, encAesKey);
         const ivs = getSubmissionIvs(instanceId, aesKey);
 

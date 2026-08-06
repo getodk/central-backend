@@ -42,20 +42,23 @@ const processZipFile = (zipfile, callback) => {
 };
 
 const zipStreamToFiles = (zipStream, callback) => {
+  zipStream.on('error', callback);
+
   tmp.file((err, tmpfile) => {
     if (err) return callback(err);
 
     const writeStream = createWriteStream(tmpfile);
-    zipStream.pipe(writeStream);
-    zipStream.on('end', () => {
-      setTimeout(() => {
-        // eslint-disable-next-line no-shadow
-        yauzl.open(tmpfile, { autoClose: false }, (err, zipfile) => {
-          if (err) return callback(err);
-          processZipFile(zipfile, callback);
-        });
-      }, 5); // otherwise sometimes the file doesn't fully drain
+    writeStream.on('error', callback);
+
+    writeStream.on('finish', () => {
+      // eslint-disable-next-line no-shadow
+      yauzl.open(tmpfile, { autoClose: false }, (err, zipfile) => {
+        if (err) return callback(err);
+        processZipFile(zipfile, callback);
+      });
     });
+
+    zipStream.pipe(writeStream);
   });
 };
 

@@ -106,9 +106,9 @@ const oidc = new Provider(rootUrl, {
     const key  = fs.readFileSync('../certs/fake-oidc-server.example.net-key.pem', 'utf8'); // eslint-disable-line no-multi-spaces
     const cert = fs.readFileSync('../certs/fake-oidc-server.example.net.pem', 'utf8');
     const httpsServer = https.createServer({ key, cert }, oidc.callback());
-    await httpsServer.listen(port);
+    await httpsServer.listen(port, '127.0.0.1');
   } else {
-    await oidc.listen(port);
+    await oidc.listen(port, '127.0.0.1');
   }
   log(`oidc-provider listening on port ${port}, check ${rootUrl}/.well-known/openid-configuration`);
 })();

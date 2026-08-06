@@ -8,200 +8,9 @@ const Option = require(appRoot + '/lib/util/option');
 const Problem = require(appRoot + '/lib/util/problem');
 
 describe('util/db', () => {
-  describe('connectionString', () => {
-    const { connectionString } = util;
-
-    it('should return a string with the required options', () => {
-      const result = connectionString({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz'
-      });
-      result.should.equal('postgres://bar:baz@localhost/foo');
-    });
-
-    it('should encode the password', () => {
-      const result = connectionString({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'b@z'
-      });
-      result.should.equal('postgres://bar:b%40z@localhost/foo');
-    });
-
-    it('should use the port if one is specified', () => {
-      const result = connectionString({
-        host: 'localhost',
-        port: 1234,
-        database: 'foo',
-        user: 'bar',
-        password: 'baz'
-      });
-      result.should.equal('postgres://bar:baz@localhost:1234/foo');
-    });
-
-    it('should return ?ssl=true if ssl is true', () => {
-      const result = connectionString({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: true
-      });
-      result.should.equal('postgres://bar:baz@localhost/foo?ssl=true');
-    });
-
-    it('should throw if ssl is false', () => {
-      const result = () => connectionString({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: false
-      });
-      result.should.throw();
-    });
-
-    it('should throw if ssl is an object', () => {
-      const result = () => connectionString({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: { rejectUnauthorized: false }
-      });
-      result.should.throw();
-    });
-
-    it('should allow (but ignore) maximumPoolSize', () => {
-      const result = connectionString({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        maximumPoolSize: 42
-      });
-      result.should.equal('postgres://bar:baz@localhost/foo');
-    });
-
-    it('should throw for an unsupported option', () => {
-      const result = () => connectionString({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        encoding: 'latin1'
-      });
-      result.should.throw();
-    });
-  });
-
-  describe('knexConnection', () => {
-    const { knexConnection } = util;
-
-    it('should return an object with the required options', () => {
-      const result = knexConnection({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz'
-      });
-      result.should.eql({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz'
-      });
-    });
-
-    it('should include the port if one is specified', () => {
-      const result = knexConnection({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        port: 1234
-      });
-      result.should.eql({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        port: 1234
-      });
-    });
-
-    it('should return the correct object if ssl is true', () => {
-      const result = knexConnection({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: true
-      });
-      result.should.eql({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: { rejectUnauthorized: false }
-      });
-    });
-
-    it('should throw if ssl is false', () => {
-      const result = () => knexConnection({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: false
-      });
-      result.should.throw();
-    });
-
-    it('should throw if ssl is an object', () => {
-      const result = () => knexConnection({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        ssl: { rejectUnauthorized: false }
-      });
-      result.should.throw();
-    });
-
-    it('should allow (but ignore) maximumPoolSize', () => {
-      const result = knexConnection({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        maximumPoolSize: 42
-      });
-      result.should.eql({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz'
-      });
-    });
-
-    it('should throw for an unsupported option', () => {
-      const result = () => knexConnection({
-        host: 'localhost',
-        database: 'foo',
-        user: 'bar',
-        password: 'baz',
-        encoding: 'latin1'
-      });
-      result.should.throw();
-    });
-  });
 
   describe('unjoiner', () => {
-    const { unjoiner } = util;
+    const { unjoiner, specificFields } = util;
 
     const T = Frame.define(table('frames'), 'x', 'y');
     const U = Frame.define(into('extra'), 'z');
@@ -224,6 +33,76 @@ describe('util/db', () => {
       const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 });
       unjoined1.should.eql(new T({ x: 3, y: 4 }));
       unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined2.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #1', () => {
+      const unjoin = unjoiner(specificFields(T, 'x'), Option.of(U));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","z" as "z"`);
+
+      const unjoined1 = unjoin({ 'frames!x': 3, z: 5 });
+      unjoined1.should.eql(new T({ x: 3 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!x': 3 });
+      unjoined2.should.eql(new T({ x: 3 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #2', () => {
+      const unjoin = unjoiner(specificFields(T, 'y'), Option.of(U));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."y" as "frames!y","z" as "z"`);
+
+      const unjoined1 = unjoin({ 'frames!y': 4, z: 5 });
+      unjoined1.should.eql(new T({ y: 4 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!y': 4 });
+      unjoined2.should.eql(new T({ y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #3', () => {
+      const unjoin = unjoiner(specificFields(T, 'x', 'y'), Option.of(U));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+
+      const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 });
+      unjoined1.should.eql(new T({ x: 3, y: 4 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined2.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #4', () => {
+      const unjoin = unjoiner(T, Option.of(specificFields(U, 'z')));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+
+      const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 });
+      unjoined1.should.eql(new T({ x: 3, y: 4 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined2.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #5', () => {
+      const unjoin = unjoiner(T, Option.of(specificFields(U)));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y"`);
+
+      const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined1.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined1.aux.extra).be.undefined();
 
       const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
       unjoined2.should.eql(new T({ x: 3, y: 4 }));
@@ -410,6 +289,11 @@ returning *`);
     it('should split compound keys', () => {
       sqlEquals({ 'x.y': 2 })
         .should.eql(sql.join([ sql`"x"."y"=${2}` ], sql` and `));
+    });
+
+    it('should use ARRAY', () => {
+      sqlEquals({ x: [1, 2, 3] }, { x: 'int' })
+        .should.eql(sql.join([ sql`"x" = ANY(${sql.array([1, 2, 3], 'int')})` ], sql` and `));
     });
   });
 

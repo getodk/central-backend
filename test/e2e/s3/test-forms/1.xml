@@ -57,6 +57,10 @@
             <value>geojson</value>
             <value form="image">jr://images/some.nomime</value>
           </text>
+          <text id="zero-bytes">
+            <value>Zero</value>
+            <value form="image">jr://images/zero.bin</value>
+          </text>
         </translation>
       </itext>
       <instance>

@@ -1,3 +1,7 @@
+const { Readable } = require('node:stream');
+
+const { PartialPipe } = require('../../lib/util/stream');
+
 const keyFrom = (id, sha) => {
   if (!id || !sha) throw new Error('Missing required arg: ' + JSON.stringify({ id, sha }));
   return sha+id;
@@ -17,7 +21,7 @@ class S3mock {
     this.s3bucket = new Map();
     this.error = {};
     this.downloads = { attempted: 0, successful: 0 };
-    this.uploads = { attempted: 0, successful: 0, deleted: 0 };
+    this.uploads = { attempted: 0, successful: 0, deleted: 0, skipped: 0 };
   }
 
   mockExistingBlobs(blobs) {
@@ -41,6 +45,12 @@ class S3mock {
       throw new Error(`Mock error when trying to upload #${this.uploads.attempted}`);
     }
 
+    if (!content.length) {
+      // eslint-disable-next-line no-plusplus
+      ++this.uploads.skipped;
+      return;
+    }
+
     const key = keyFrom(id, sha);
 
     if (this.s3bucket.has(key)) {
@@ -50,6 +60,8 @@ class S3mock {
     this.s3bucket.set(key, content);
     // eslint-disable-next-line no-plusplus
     ++this.uploads.successful;
+
+    return true;
   }
 
   async getContentFor({ id, sha }) {
@@ -69,6 +81,11 @@ class S3mock {
     ++this.downloads.successful;
 
     return content;
+  }
+
+  async pipeContent(blob) {
+    const content = await this.getContentFor(blob);
+    return PartialPipe.of(Readable.from(content));
   }
 
   async urlForBlob(filename, { md5, sha, contentType }) {

@@ -1,10 +1,11 @@
 const should = require('should');
 const { testService } = require('../setup');
+const { sleep } = require('../../util/util');
 
 describe('api: /users', () => {
   describe('GET', () => {
     it('should reject for anonymous users', testService((service) =>
-      service.get('/v1/users').expect(403)));
+      service.get('/v1/users').expect(401)));
 
     it('should return nothing for authed users who cannot user.list', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -20,7 +21,32 @@ describe('api: /users', () => {
             body.forEach((user) => user.should.be.a.User());
             body.map((user) => user.displayName).should.eql([ 'Alice', 'Bob', 'Chelsea' ]);
             body.map((user) => user.email).should.eql([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
+            body.forEach((user) => user.should.have.property('lastLoginAt'));
+            body[0].lastLoginAt.should.not.be.null();
+            body.slice(1).map((user) => user.lastLoginAt).should.eql([ null, null]);
           }))));
+
+    it('should escape % in search string', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'test@email.org', displayName: 'alicia' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=%')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(0);
+            })))));
+
+    it('should escape _ in search string', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'test@email.org', displayName: 'alicia' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=_')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(0);
+            })))));
 
     it('should search user display names if a query is given', testService((service) =>
       service.login('alice', (asAlice) =>
@@ -50,6 +76,62 @@ describe('api: /users', () => {
               body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
             })))));
 
+    it('should not have a problem with the postgres escape character in searches', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'abcdef_hijklmnopqrstuvwxyz@example.com', displayName: 'David' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=g')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(3);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea' ]);
+              body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org' ]);
+            })))));
+
+    it('should return sane email matches', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'getouttahere@closeddatakit.org', displayName: 'David' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=GETO')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(4);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea', 'David' ]);
+              body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org', 'getouttahere@closeddatakit.org' ]);
+            })))));
+
+    it('should return sane displayName matches', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@closeddatakit.org', displayName: 'getouttahererightnow!' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=GETO')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(4);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Alice', 'Bob', 'Chelsea', 'getouttahererightnow!' ]);
+              body.map((user) => user.email).should.containDeep([ 'alice@getodk.org', 'bob@getodk.org', 'chelsea@getodk.org', 'david@closeddatakit.org' ]);
+            })))));
+
+    it('should escape backslashes in search string', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'david@closeddatakit.org', displayName: 'geto\\uttahererightnow!' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users?q=GETO\\')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(2);
+              body.forEach((user) => user.should.be.a.User());
+              body.map((user) => user.displayName).should.containDeep([ 'Bob', 'geto\\uttahererightnow!' ]);
+              body.map((user) => user.email).should.containDeep([ 'bob@getodk.org', 'david@closeddatakit.org' ]);
+            })))));
+
     it('should search with compound phrases if given', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users?q=chelsea getodk')
@@ -63,7 +145,7 @@ describe('api: /users', () => {
           }))));
 
     it('should reject unauthed users even if they exactly match an email', testService((service) =>
-      service.get('/v1/users/?q=alice@getodk.org').expect(403)));
+      service.get('/v1/users/?q=alice@getodk.org').expect(401)));
 
     it('should return an exact email match to any authed user', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -74,6 +156,39 @@ describe('api: /users', () => {
             body[0].email.should.equal('alice@getodk.org');
             body[0].displayName.should.equal('Alice');
           }))));
+
+    it('should return lastLoginAt as null for users who have never logged in', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/users')
+          .send({ email: 'newuser@getodk.org' })
+          .expect(200)
+          .then(() => asAlice.get('/v1/users/?q=newuser@getodk.org')
+            .expect(200)
+            .then(({ body }) => {
+              body.length.should.equal(1);
+              body[0].email.should.equal('newuser@getodk.org');
+              should(body[0].lastLoginAt).be.null();
+            })))));
+
+    it('should update lastLoginAt when user logs in multiple times', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const firstLogin = await asAlice.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body);
+      should(firstLogin.lastLoginAt).not.be.null();
+      const firstLoginTime = new Date(firstLogin.lastLoginAt);
+
+      await sleep(1);
+      await service.login('alice');
+      const secondLogin = await asAlice.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body);
+      should(secondLogin.lastLoginAt).not.be.null();
+      const secondLoginTime = new Date(secondLogin.lastLoginAt);
+
+      secondLoginTime.should.be.greaterThan(firstLoginTime);
+    }));
   });
 
   describe('POST', () => {
@@ -221,7 +336,8 @@ describe('api: /users', () => {
                   log.details.should.eql({
                     data: {
                       email: 'david@getodk.org',
-                      password: null
+                      password: null,
+                      lastLoginAt: null
                     }
                   });
                 })))));
@@ -338,10 +454,16 @@ describe('api: /users', () => {
                 body[0].details.data.should.eql({ password: true });
               }))));
 
-        it('should fail the request if invalidation is requested but not allowed', testService((service) =>
+        it('should fail the request if invalidation is requested and no auth provided', testService((service) =>
           service.post('/v1/users/reset/initiate?invalidate=true')
             .send({ email: 'alice@getodk.org' })
-            .expect(403)));
+            .expect(401)));
+
+        it('should fail the request if invalidation is requested but user is not authorized', testService((service) =>
+          service.login('chelsea', (asChelsea) =>
+            asChelsea.post('/v1/users/reset/initiate?invalidate=true')
+              .send({ email: 'alice@getodk.org' })
+              .expect(403))));
 
         it('should invalidate the existing password if requested', testService((service) =>
           service.login('alice', (asAlice) =>
@@ -422,8 +544,8 @@ describe('api: /users', () => {
   });
 
   describe('/users/current GET', () => {
-    it('should return not found if nobody is logged in', testService((service) =>
-      service.get('/v1/users/current').expect(404)));
+    it('should return unauthenticated if nobody is logged in', testService((service) =>
+      service.get('/v1/users/current').expect(401)));
 
     it('should give the authed user if logged in', testService((service) =>
       service.login('chelsea', (asChelsea) =>
@@ -431,13 +553,13 @@ describe('api: /users', () => {
           .expect(200)
           .then(({ body }) => body.email.should.equal('chelsea@getodk.org')))));
 
-    it('should not return sidewide verbs if not extended', testService((service) =>
+    it('should not return site-wide verbs if not extended', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
           .expect(200)
           .then(({ body }) => { should.not.exist(body.verbs); }))));
 
-    it('should return sidewide verbs if logged in (alice)', testService((service) =>
+    it('should return site-wide verbs if logged in (alice)', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/current')
           .set('X-Extended-Metadata', 'true')
@@ -450,7 +572,7 @@ describe('api: /users', () => {
             body.verbs.should.containDeep([ 'user.password.invalidate', 'assignment.create', 'role.update' ]);
           }))));
 
-    it('should return sidewide verbs if logged in (chelsea)', testService((service) =>
+    it('should return site-wide verbs if logged in (chelsea)', testService((service) =>
       service.login('chelsea', (asChelsea) =>
         asChelsea.get('/v1/users/current')
           .set('X-Extended-Metadata', 'true')
@@ -459,6 +581,24 @@ describe('api: /users', () => {
             body.verbs.should.be.an.Array();
             body.verbs.length.should.equal(0);
           }))));
+
+    it('should return 404 for app user', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'test' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((fk) => service.get(`/v1/key/${fk.token}/users/current`)
+            .expect(404)))));
+
+    it('should return 404 for public link', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'link1' })
+          .expect(200)
+          .then(({ body }) => body)
+          .then((link) => service.get(`/v1/users/current?st=${link.token}`)
+            .expect(404)))));
   });
 
   describe('/users/:id GET', () => {
@@ -494,6 +634,18 @@ describe('api: /users', () => {
     it('should reject if the user does not exist', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.get('/v1/users/99').expect(404))));
+
+    it('should include lastLoginAt field when getting a user by id', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.get('/v1/users/current')
+          .expect(200)
+          .then(({ body }) => asAlice.get(`/v1/users/${body.id}`)
+            .expect(200)
+            .then(({ body: user }) => {
+              user.should.be.a.User();
+              user.email.should.equal('alice@getodk.org');
+              user.lastLoginAt.should.be.recentIsoDate();
+            })))));
   });
 
   describe('/users/:id PATCH', () => {
