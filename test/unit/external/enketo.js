@@ -74,7 +74,7 @@ describe('external/enketo', () => {
     it('should throw a Problem if the Enketo response code is unexpected', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey/all')
-        .reply(204, {});
+        .reply(209, {});
 
       return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('wrong status code'));
