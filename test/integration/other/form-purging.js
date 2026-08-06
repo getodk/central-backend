@@ -1,11 +1,11 @@
 const { createReadStream, readFileSync } = require('fs');
-const appPath = require('app-root-path');
+const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const assert = require('assert');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-const { Form } = require(appPath + '/lib/model/frames');
-const { exhaust } = require(appPath + '/lib/worker/worker');
+const { Form } = require(appRoot + '/lib/model/frames');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 
 describe('query module form purge', () => {
@@ -429,7 +429,7 @@ describe('query module form purge', () => {
           .expect(200)
           .then(() => asAlice.post('/v1/projects/1/submission')
             .set('X-OpenRosa-Version', '1.0')
-            .attach('audit.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'audit.csv' })
+            .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
             .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
             .expect(201))
           .then(() => exhaust(container))
@@ -445,7 +445,7 @@ describe('query module form purge', () => {
     it('should purge xls blob of a form', testService((service, container) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(readFileSync(appPath + '/test/data/simple.xlsx'))
+          .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
           .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
           .then(() => asAlice.delete('/v1/projects/1/forms/simple2') // Delete form
             .expect(200))
