@@ -1,5 +1,7 @@
 default: base
 
+SHELL := /usr/bin/env bash
+
 NODE_CONFIG_ENV ?= test
 export PGAPPNAME ?= odkcentral
 
@@ -127,7 +129,9 @@ test-coverage: node_version
 
 .PHONY: lint
 lint: node_version
-	npx eslint --cache --max-warnings 0 .
+	ESLINT_USE_FLAT_CONFIG=false \
+	npx eslint --cache --max-warnings 0 . \
+	2> >(grep -Ev 'ESLintRCWarning|--trace-warnings' >&2) # filter eslintrc deprecation warning
 
 
 ################################################################################

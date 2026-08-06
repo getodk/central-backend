@@ -23,7 +23,7 @@ const cookieParser = require('cookie-parser');
 const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const { port, frontendUrl } = require('./config');
-const backendUrl = 'http://localhost:8383';
+const backendUrl = 'http://localhost:8383/v1';
 
 async function startFakeFrontend() {
   console.log('Starting fake frontend proxy...'); // eslint-disable-line no-console
@@ -31,7 +31,7 @@ async function startFakeFrontend() {
   fakeFrontend.set('case sensitive routing', true);
   fakeFrontend.set('query parser', 'simple');
   fakeFrontend.use(cookieParser());
-  fakeFrontend.use(createProxyMiddleware('/v1', { target: backendUrl }));
+  fakeFrontend.use('/v1', createProxyMiddleware({ target: backendUrl }));
   fakeFrontend.get('*',    successHandler); // eslint-disable-line no-use-before-define
 
   if (frontendUrl.startsWith('http://')) {
