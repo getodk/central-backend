@@ -894,6 +894,120 @@ describe('api: /datasets/:name.svc', () => {
     }));
   });
 
+  describe('GET /Entities with viewAs', () => {
+    it('should return all entities if dataset has no access filter', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'entity1' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'entity2' })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'App User' }).expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(2);
+        });
+    }));
+
+    it('should filter entities for ownerOnly dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      // Set ownerOnly on the dataset
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'App User' }).expect(200);
+
+      // Create two entities as Alice (not the app user)
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'alice entity' })
+        .expect(200);
+
+      // Create one entity as the app user via submission
+      await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
+        .expect(200);
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/simpleEntity/submissions`)
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      // viewAs the app user — should only see the entity they created
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(1);
+          body.value[0].label.should.eql('Alice (88)');
+        });
+    }));
+
+    it('should return correct $count when filtered by ownerOnly', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'App User' }).expect(200);
+
+      // Two entities created by Alice
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'alice entity 1' }).expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: uuid(), label: 'alice entity 2' }).expect(200);
+
+      // One entity created by app user via submission
+      await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
+        .expect(200);
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/simpleEntity/submissions`)
+        .send(testData.instances.simpleEntity.one)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$count=true`)
+        .expect(200)
+        .then(({ body }) => {
+          body['@odata.count'].should.eql(1);
+          body.value.length.should.eql(1);
+        });
+    }));
+
+    it('should return 404 if viewAs actor does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?viewAs=99999')
+        .expect(404);
+    }));
+  });
+
   describe('GET service document', () => {
     it('should return service document', testService(async (service) => {
 
