@@ -7,8 +7,13 @@ on:
 jobs:
   standard-tests:
     timeout-minutes: 20
-    # TODO should we use the same container as circle & central?
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres-version:
+          - "14.23"
+          - "18"
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
@@ -20,4 +25,6 @@ jobs:
     - run: npm ci
     - run: make api-docs-lint
     - run: make run-docker-postgres
+      env:
+        PG_VERSION: ${{ matrix.postgres-version }}
     - run: make test
