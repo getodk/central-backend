@@ -43,6 +43,9 @@ info:
 
     ## ODK Central v2026.3
 
+    **Added**:
+    - [Entities OData](/central-api-odata-endpoints/#data-document-1) now supports a `viewAs` query parameter to preview the filtered Entity list for a specific Actor.
+
     **Changed**:
     - [GET /audits](/central-api-system-endpoints/#getting-audit-log-entries) now uses less-than when filtering with the `end` parameter.
     - [Form Attachment](/central-api-form-management/#listing-form-attachments) objects now include a `size` field (in bytes) when a file has been uploaded. The field is absent for dataset-linked attachments and empty slots, and may be `null` for blobs uploaded before this version.
@@ -11468,6 +11471,15 @@ paths:
         description: Opaque cursor from `@odata.nextLink` used for paging.
         schema:
           type: string
+      - name: viewAs
+        in: query
+        description: |-
+          If provided, filters the response to only the Entities that the specified Actor would be able to see, based on the Dataset's access filter (`ownerOnly` or property rules). The value must be a numeric Actor ID.
+
+          This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
+        schema:
+          type: number
+        example: "42"
       responses:
         "200":
           description: Ok
