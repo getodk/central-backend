@@ -941,7 +941,7 @@ describe('api: /datasets/:name.svc', () => {
         await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?viewAs=notanumber')
           .expect(400)
           .then(({ body }) => {
-            body.code.should.eql(400.8);
+            body.code.should.eql(400.11);
           });
       }));
     });
@@ -972,7 +972,6 @@ describe('api: /datasets/:name.svc', () => {
         await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
           .expect(200);
         await service.post(`/v1/key/${appUser.token}/projects/1/forms/simpleEntity/submissions`)
-          .send(testData.instances.simpleEntity.one.replace(''))
           .send(testData.instances.simpleEntity.one.replace(
             '<entities:label>Alice (88)</entities:label>',
             '<entities:label>Made By App User</entities:label>'))
@@ -1027,9 +1026,8 @@ describe('api: /datasets/:name.svc', () => {
           });
       }));
 
-      it('should apply ownerOnly filter even for a non-app-user actor', testService(async (service) => {
-        const asAlice = await service.login('alice');
-        const asBob = await service.login('bob');
+      it('should apply ownerOnly filter for a web data collector', testService(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
           .set('Content-Type', 'application/xml')
@@ -1039,23 +1037,31 @@ describe('api: /datasets/:name.svc', () => {
           .send({ ownerOnly: true })
           .expect(200);
 
+        // Assign Chelsea the Data Collector (formfill) role on the project.
+        const chelseaId = await asChelsea.get('/v1/users/current')
+          .then(({ body }) => body.id);
+        await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+          .expect(200);
+
         // Entity created by Alice
         await asAlice.post('/v1/projects/1/datasets/people/entities')
           .send({ uuid: uuid(), label: 'alice entity' })
           .expect(200);
-        // Entity created by Bob
-        await asBob.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'bob entity' })
+        // Entity created by Chelsea via submission
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace(
+            '<entities:label>Alice (88)</entities:label>',
+            '<entities:label>chelsea entity</entities:label>'))
+          .set('Content-Type', 'application/xml')
           .expect(200);
+        await exhaust(container);
 
-        const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
-
-        // viewAs Bob (a web user) on an ownerOnly dataset — only his entity
-        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${bobId}`)
+        // viewAs Chelsea (a web data collector) on an ownerOnly dataset — only her entity
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${chelseaId}`)
           .expect(200)
           .then(({ body }) => {
             body.value.length.should.eql(1);
-            body.value[0].label.should.eql('bob entity');
+            body.value[0].label.should.eql('chelsea entity');
           });
       }));
     });
@@ -1179,11 +1185,7 @@ describe('api: /datasets/:name.svc', () => {
           });
       }));
 
-      it('should apply property filter even for a web user actor (unlike the OpenRosa path)', testService(async (service) => {
-        // NOTE: The real OpenRosa CSV path skips access filtering for actors that can
-        // entity.list (managers, web users). viewAs does NOT replicate that check —
-        // it always applies the SQL filter. A web user with no actor property values
-        // set will get 0 entities, not all entities.
+      it('should reproduce filter behavior where actors with entity.list see all entities, unfiltered', testService(async (service) => {
         const asAlice = await service.login('alice');
         const asBob = await service.login('bob');
 
@@ -1211,7 +1213,7 @@ describe('api: /datasets/:name.svc', () => {
         await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${bobId}`)
           .expect(200)
           .then(({ body }) => {
-            body.value.length.should.eql(0);
+            body.value.length.should.eql(1);
           });
       }));
     });
