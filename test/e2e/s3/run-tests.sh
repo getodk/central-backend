@@ -44,7 +44,7 @@ if [[ "${CI-}" = '' ]]; then
     !
     ! A quick fix for this could be:
     !
-    !   docker exec odk-postgres14 psql -U jubilant jubilant -c "TRUNCATE blobs CASCADE"
+    !   docker exec odk-central-backend-dev-postgres psql -U jubilant jubilant -c "TRUNCATE blobs CASCADE"
     !
     ! Press <enter> to continue...
 
