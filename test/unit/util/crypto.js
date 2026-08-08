@@ -3,7 +3,7 @@ const { KeyObject } = require('node:crypto');
 const appRoot = require('app-root-path');
 const { readFileSync } = require('fs');
 const should = require('should');
-const streamTest = require('streamtest').v2;
+const streamTest = require(appRoot + '/test/util/streamtest');
 const crypto = require(appRoot + '/lib/util/crypto');
 
 describe('util/crypto', () => {
