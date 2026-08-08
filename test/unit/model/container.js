@@ -1,6 +1,6 @@
 const should = require('should');
 const { queryModuleBuilder, injector, withDefaults } = require('../../../lib/model/container');
-const streamTest = require('streamtest').v2;
+const streamTest = require('../../util/streamtest');
 
 describe('container', () => {
   describe('query module builder', () => {

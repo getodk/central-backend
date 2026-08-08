@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { Submission } = require(appRoot + '/lib/model/frames');
-const streamTest = require('streamtest').v2;
+const streamTest = require(appRoot + '/test/util/streamtest');
 
 describe('Submission', () => {
   describe('fromXml', () => {

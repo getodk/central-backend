@@ -4,7 +4,7 @@ const { Transform, Readable } = require('stream');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
 const { zipPart, zipStreamFromParts } = require(appRoot + '/lib/util/zip');
-const { fromChunks } = require('streamtest').v2;
+const { fromChunks } = require(appRoot + '/test/util/streamtest');
 
 describe('zipPart streamer', () => {
   it('should close the archive only after parts are finalized', (done) => {
