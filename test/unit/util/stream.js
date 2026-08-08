@@ -2,7 +2,7 @@ require('should');
 const appPath = require('app-root-path');
 const { Transform } = require('stream');
 const { consumeAndBuffer, pipethrough, pipethroughAndBuffer, splitStream, PartialPipe } = require(appPath + '/lib/util/stream');
-const { fromObjects, toObjects } = require('streamtest').v2;
+const { fromObjects, toObjects } = require(appPath + '/test/util/streamtest');
 
 describe('stream utils', () => {
   describe('consumeAndBuffer', () => {
