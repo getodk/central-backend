@@ -1,5 +1,4 @@
-const _log = level => (...args) => console.log(level, ...args); // eslint-disable-line no-console
-global.log = _log('[INFO]');
+const log = level => (...args) => console.log('[INFO]', ...args); // eslint-disable-line no-console
 
 async function mochaGlobalSetup() {
   log('mochaGlobalSetup() :: ENTRY');
