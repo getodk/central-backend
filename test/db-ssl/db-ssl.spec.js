@@ -21,11 +21,11 @@ describe('db connection', () => {
     assert.throws(() => slonikPool(config.default.database));
   });
 
-  it(`should not connect to db if expected env vars are not set`, () => {
+  it(`should not connect to db if expected env vars are not set`, async () => {
     let pool;
     try {
       pool = slonikPool(config.default.database);
-      assert.rejects(() => pool.oneFirst(sql`SELECT 1`));
+      await assert.rejects(() => pool.oneFirst(sql`SELECT 1`));
     } finally {
       pool?.end();
     }
@@ -37,7 +37,7 @@ describe('db connection', () => {
     let pool;
     try {
       pool = slonikPool(config.default.database);
-      assert.rejects(() => pool.oneFirst(sql`SELECT 1`));
+      await assert.rejects(() => pool.oneFirst(sql`SELECT 1`));
     } finally {
       pool?.end();
     }
@@ -50,7 +50,7 @@ describe('db connection', () => {
     let pool;
     try {
       pool = slonikPool(config.default.database);
-      assert.rejects(() => pool.oneFirst(sql`SELECT 1`));
+      await assert.rejects(() => pool.oneFirst(sql`SELECT 1`));
     } finally {
       pool?.end();
     }

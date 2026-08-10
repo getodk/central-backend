@@ -183,6 +183,9 @@ run-docker-postgres-ssl: stop-docker-postgres-ssl
 		&& sleep 2 \
 		&& docker exec $(PG_IMG)-ssl pg_isready --username=postgres --timeout=10 \
 		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
+		&& docker exec $(PG_IMG)-ssl bash -c "sed -i 's/^host\b/hostssl/' \$$PGDATA/pg_hba.conf" \
+		&& docker exec $(PG_IMG)-ssl psql -U postgres -c "SELECT pg_reload_conf();" \
+		&& docker exec $(PG_IMG)-ssl pg_isready --username=postgres --timeout=10 \
 	)
 
 .PHONY: stop-docker-postgres
