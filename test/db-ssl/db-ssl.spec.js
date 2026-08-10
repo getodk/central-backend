@@ -70,29 +70,26 @@ describe('db connection', () => {
       it('should connect to db if PGSSLMODE and PGSSLROOTCERT are supplied', async () => {
         process.env.PGSSLMODE = sslMode;
         process.env.PGSSLROOTCERT = './.pg-certs/ca.crt';
-
-        let pool;
-        try {
-          pool = slonikPool(config.default.database);
-          const res = await pool.oneFirst(sql`SELECT 1`);
-          assert.equal(res, 1);
-        } finally {
-          pool?.end();
-        }
+        await assertFirstQuerySucceeds();
       });
     });
   });
 });
 
-async function assertFirstQueryFailsWith(expectedError) {
+async function assertFirstQuerySucceeds() {
   let pool;
   try {
     pool = slonikPool(config.default.database);
-    await assert.rejects(
-      () => pool.oneFirst(sql`SELECT 1`),
-      expectedError,
-    );
+    const res = await pool.oneFirst(sql`SELECT 1`);
+    assert.equal(res, 1);
   } finally {
     await pool?.end();
   }
+}
+
+async function assertFirstQueryFailsWith(expectedError) {
+  await assert.rejects(
+    () => assertFirstQuerySucceeds(),
+    expectedError,
+  );
 }
