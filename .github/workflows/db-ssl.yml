@@ -1,4 +1,4 @@
-name: Database Migrations
+name: Database SSL Checks
 
 on:
   pull_request:
