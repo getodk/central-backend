@@ -160,8 +160,10 @@ run-docker-postgres: stop-docker-postgres
 .PHONY: run-docker-postgres-ssl
 run-docker-postgres-ssl: stop-docker-postgres-ssl
 	mkdir -p .pg-certs && \
-	(cd .pg-certs && [[ -s ca.key     ]] || openssl genrsa -out ca.key 2048) && \
-	(cd .pg-certs && [[ -s ca.crt     ]] || openssl req -x509 -new -nodes -key ca.key -sha256 -days 1 -out ca.crt -subj "/CN=TestCA") && \
+	(cd .pg-certs && [[ -s ca.key     ]] || openssl genrsa -out     ca.key 2048) && \
+	(cd .pg-certs && [[ -s not-ca.key ]] || openssl genrsa -out not-ca.key 2048) && \
+	(cd .pg-certs && [[ -s ca.crt     ]] || openssl req -x509 -new -nodes -key     ca.key -sha256 -days 1 -out     ca.crt -subj "/CN=TestCA") && \
+	(cd .pg-certs && [[ -s not-ca.crt ]] || openssl req -x509 -new -nodes -key not-ca.key -sha256 -days 1 -out not-ca.crt -subj "/CN=NotTestCA") && \
 	(cd .pg-certs && [[ -s server.key ]] || openssl genrsa -out server.key 2048) && \
 	(cd .pg-certs && [[ -s server.csr ]] || openssl req -new -key server.key -out server.csr -subj "/CN=localhost") && \
 	(cd .pg-certs && [[ -s server.crt ]] || openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 1 -sha256 -extfile <(printf "subjectAltName=DNS:localhost,IP:127.0.0.1")) && \
