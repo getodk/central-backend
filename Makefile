@@ -110,6 +110,12 @@ test-db-migrations:
 	    --require test/db-migrations/mocha-setup.js \
 	    ./test/db-migrations/**/*.spec.js
 
+.PHONY: test-db-ssl
+test-db-ssl:
+	NODE_CONFIG_ENV=db-migration-test npx mocha --bail --sort --timeout=20000 \
+	    --require test/db-ssl/mocha-setup.js \
+	    ./test/db-ssl/**/*.spec.js
+
 .PHONY: test-fast
 test-fast: node_version
 	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-unit

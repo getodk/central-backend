@@ -1,12 +1,16 @@
-name: OIDC integration tests
+name: Database Migrations
 
 on:
-  push:
   pull_request:
+#    paths:    FIXME: ENABLE THIS BEFORE MERGE
+#    - lib/external/slonik.js
+  push:
+#    paths:    FIXME: ENABLE THIS BEFORE MERGE
+#    - lib/external/slonik.js
 
 jobs:
-  oidc-integration-test:
-    timeout-minutes: 6
+  db-ssl-test:
+    timeout-minutes: 2
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -22,11 +26,7 @@ jobs:
         node-version-file: package.json
         cache: 'npm'
     - run: npm ci
-    - run: FAKE_OIDC_ROOT_URL=http://localhost:9898 make fake-oidc-server-ci > fake-oidc-server.log &
-    - run: make run-docker-postgres
+    - run: make run-docker-postgres-ssl
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
-    - run: make test-oidc-integration
-    - name: Fake OIDC Server Logs
-      if: always()
-      run: "! [[ -f ./fake-oidc-server.log ]] || cat ./fake-oidc-server.log"
+    - run: make test-db-ssl
