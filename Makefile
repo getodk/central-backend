@@ -147,14 +147,28 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
+	docker start $(PG_IMG) || (\
+		docker run -d \
+			--name $(PG_IMG) \
+			--publish 127.0.0.1:5432:5432 \
+			--env POSTGRES_PASSWORD=odktest \
+			postgres:$(PG_VERSION) \
+				--shared_preload_libraries=pg_stat_statements \
+		&& sleep 2 \
+		&& docker exec $(PG_IMG) pg_isready --username=postgres --timeout=10 \
+		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
+	)
+
+.PHONY: run-docker-postgres-ssl
+run-docker-postgres: stop-docker-postgres-ssl
 	mkdir -p .pg-certs &&
 	([[ -s .pg-certs/ca.crt     ]] || TODO generate) &&
 	([[ -s .pg-certs/ca.key     ]] || TODO generate) &&
 	([[ -s .pg-certs/server.crt ]] || TODO generate) &&
 	([[ -s .pg-certs/server.key ]] || TODO generate) &&
-	docker start $(PG_IMG) || (\
+	docker start $(PG_IMG)-ssl || (\
 		docker run -d \
-			--name $(PG_IMG) \
+			--name $(PG_IMG)-ssl \
 			--publish 127.0.0.1:5432:5432 \
 			--env POSTGRES_PASSWORD=odktest \
 			--volume $(PWD)/.pg-certs:/postgres-certs
@@ -163,7 +177,7 @@ run-docker-postgres: stop-docker-postgres
 				--ssl_cert_file=/postgres-certs/server.crt \
 				--ssl_key_file=/postgres-certs/server.key \
 		&& sleep 2 \
-		&& docker exec $(PG_IMG) pg_isready --username=postgres --timeout=10 \
+		&& docker exec $(PG_IMG)-ssl pg_isready --username=postgres --timeout=10 \
 		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
 	)
 
@@ -171,9 +185,17 @@ run-docker-postgres: stop-docker-postgres
 stop-docker-postgres:
 	docker stop $(PG_IMG) || true
 
+.PHONY: stop-docker-postgres-ssl
+stop-docker-postgres-ssl:
+	docker stop $(PG_IMG)-ssl || true
+
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
 	docker rm $(PG_IMG) || true
+
+.PHONY: rm-docker-postgres-ssl
+rm-docker-postgres-ssl: stop-docker-postgres-ssl
+	docker rm $(PG_IMG)-ssl || true
 
 
 ################################################################################
