@@ -160,7 +160,7 @@ run-docker-postgres: stop-docker-postgres
 	)
 
 .PHONY: run-docker-postgres-ssl
-run-docker-postgres: stop-docker-postgres-ssl
+run-docker-postgres-ssl: stop-docker-postgres-ssl
 	mkdir -p .pg-certs &&
 	([[ -s .pg-certs/ca.crt     ]] || TODO generate) &&
 	([[ -s .pg-certs/ca.key     ]] || TODO generate) &&

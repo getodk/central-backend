@@ -30,6 +30,3 @@ jobs:
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
     - run: make test-db-ssl
-      env:
-        PGSSLMODE: verify-full
-        PGSSLROOTCERT: ./.pg-certs/ca.crt
