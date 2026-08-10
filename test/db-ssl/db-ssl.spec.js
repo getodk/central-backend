@@ -98,6 +98,6 @@ async function assertFirstQueryFailsWith(expectedError) {
       expectedError,
     );
   } finally {
-    pool?.end();
+    await pool?.end();
   }
 }
