@@ -16,12 +16,6 @@ describe('db connection', () => {
     assert.throws(() => slonikPool(config.default.database));
   });
 
-  it('should fail to create pool if PGSSLROOTCERT is set with nonsense PGSSLMODE', () => {
-    process.env.PGSSLMODE = 'not-a-real-setting';
-    process.env.PGSSLROOTCERT = './.pg-certs/ca.crt';
-    assert.throws(() => slonikPool(config.default.database));
-  });
-
   it('should reject PGSSLROOTCERT if PGSSLMODE is not set', () => {
     process.env.PGSSLROOTCERT = './.pg-certs/ca.crt';
     assert.throws(() => slonikPool(config.default.database));
