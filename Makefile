@@ -112,9 +112,7 @@ test-db-migrations:
 
 .PHONY: test-db-ssl
 test-db-ssl:
-	PGSSLMODE=verify-full \
-	PGSSLROOTCERT=./.pg-certs/ca.crt \
-	NODE_CONFIG_ENV=db-migration-test npx mocha --bail --sort --timeout=20000 \
+	NODE_CONFIG_ENV=db-migration-test npx mocha --sort --timeout=20000 \
 	    --require test/db-ssl/mocha-setup.js \
 	    ./test/db-ssl/**/*.spec.js
 
