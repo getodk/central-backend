@@ -145,13 +145,21 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
+	mkdir -p .pg-certs &&
+	([[ -s .pg-certs/ca.crt     ]] || TODO generate) &&
+	([[ -s .pg-certs/ca.key     ]] || TODO generate) &&
+	([[ -s .pg-certs/server.crt ]] || TODO generate) &&
+	([[ -s .pg-certs/server.key ]] || TODO generate) &&
 	docker start $(PG_IMG) || (\
 		docker run -d \
 			--name $(PG_IMG) \
 			--publish 127.0.0.1:5432:5432 \
 			--env POSTGRES_PASSWORD=odktest \
+			--volume $(PWD)/.pg-certs:/postgres-certs
 			postgres:$(PG_VERSION) \
 				--shared_preload_libraries=pg_stat_statements \
+				--ssl_cert_file=/postgres-certs/server.crt \
+				--ssl_key_file=/postgres-certs/server.key \
 		&& sleep 2 \
 		&& docker exec $(PG_IMG) pg_isready --username=postgres --timeout=10 \
 		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
