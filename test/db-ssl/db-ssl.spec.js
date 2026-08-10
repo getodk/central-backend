@@ -11,23 +11,30 @@ describe('db connection', () => {
     delete process.env.PGSSLROOTCERT;
   });
 
-  [
-    {},
-    { PGSSLMODE:'asdf', PGSSLROOTCERT:'nonsense' },
-  ].forEach(envVars => {
-    it(`should not connect to db if only ${JSON.stringify(envVars)} are set`, async () => {
-      for (const [k, v] of Object.entries(envVars)) {
-        process.env[k] = v;
-      }
+  it('should fail to create pool if PGSSLROOTCERT is set without PGSSLMODE', () => {
+    process.env.PGSSLROOTCERT = './.pg-certs/ca.crt';
+    assert.throws(() => slonikPool(config.default.database));
+  });
 
-      let pool;
-      try {
-        pool = slonikPool(config.default.database);
-        await assert.rejects(() => pool.oneFirst(sql`SELECT 1`));
-      } finally {
-        pool.end();
-      }
-    });
+  it('should fail to create pool if PGSSLROOTCERT is set with nonsense PGSSLMODE', () => {
+    process.env.PGSSLMODE = 'not-a-real-setting';
+    process.env.PGSSLROOTCERT = './.pg-certs/ca.crt';
+    assert.throws(() => slonikPool(config.default.database));
+  });
+
+  it('should reject PGSSLROOTCERT if PGSSLMODE is not set', () => {
+    process.env.PGSSLROOTCERT = './.pg-certs/ca.crt';
+    assert.throws(() => slonikPool(config.default.database));
+  });
+
+  it(`should not connect to db if expected env vars are not set`, () => {
+    let pool;
+    try {
+      pool = slonikPool(config.default.database);
+      assert.rejects(() => pool.oneFirst(sql`SELECT 1`));
+    } finally {
+      pool?.end();
+    }
   });
 
   it('should connect to db if PGSSLMODE and PGSSLROOTCERT are supplied', async () => {
@@ -40,7 +47,7 @@ describe('db connection', () => {
       const res = await pool.oneFirst(sql`SELECT 1`);
       assert.equal(res, 1);
     } finally {
-      pool.end();
+      pool?.end();
     }
   });
 });
