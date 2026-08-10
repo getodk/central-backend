@@ -903,10 +903,10 @@ describe('api: /datasets/:name.svc', () => {
         .expect(200);
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
-        .send({ uuid: uuid(), label: 'entity1' })
+        .send({ label: 'entity1' })
         .expect(200);
       await asAlice.post('/v1/projects/1/datasets/people/entities')
-        .send({ uuid: uuid(), label: 'entity2' })
+        .send({ label: 'entity2' })
         .expect(200);
 
       const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
@@ -965,7 +965,7 @@ describe('api: /datasets/:name.svc', () => {
 
         // Create an entity as Alice (not the app user)
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'alice entity' })
+          .send({ label: 'alice entity' })
           .expect(200);
 
         // Create one entity as the app user via submission
@@ -1005,9 +1005,9 @@ describe('api: /datasets/:name.svc', () => {
 
         // Two entities created by Alice
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'alice entity 1' }).expect(200);
+          .send({ label: 'alice entity 1' }).expect(200);
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'alice entity 2' }).expect(200);
+          .send({ label: 'alice entity 2' }).expect(200);
 
         // One entity created by app user via submission
         await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
@@ -1045,7 +1045,7 @@ describe('api: /datasets/:name.svc', () => {
 
         // Entity created by Alice
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'alice entity' })
+          .send({ label: 'alice entity' })
           .expect(200);
         // Entity created by Chelsea via submission
         await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
@@ -1088,13 +1088,13 @@ describe('api: /datasets/:name.svc', () => {
 
         // Two entities in 'north', one in 'south'
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'north person 1', data: { region: 'north' } })
+          .send({ label: 'north person 1', data: { region: 'north' } })
           .expect(200);
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'north person 2', data: { region: 'north' } })
+          .send({ label: 'north person 2', data: { region: 'north' } })
           .expect(200);
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'south person', data: { region: 'south' } })
+          .send({ label: 'south person', data: { region: 'south' } })
           .expect(200);
 
         // App user assigned to 'north'
@@ -1130,13 +1130,13 @@ describe('api: /datasets/:name.svc', () => {
           .expect(200);
 
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'north person', data: { region: 'north' } })
+          .send({ label: 'north person', data: { region: 'north' } })
           .expect(200);
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'south person 1', data: { region: 'south' } })
+          .send({ label: 'south person 1', data: { region: 'south' } })
           .expect(200);
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'south person 2', data: { region: 'south' } })
+          .send({ label: 'south person 2', data: { region: 'south' } })
           .expect(200);
 
         const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
@@ -1171,7 +1171,7 @@ describe('api: /datasets/:name.svc', () => {
           .expect(200);
 
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'north person', data: { region: 'north' } })
+          .send({ label: 'north person', data: { region: 'north' } })
           .expect(200);
 
         // App user with no region property set
@@ -1204,7 +1204,7 @@ describe('api: /datasets/:name.svc', () => {
           .expect(200);
 
         await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({ uuid: uuid(), label: 'north person', data: { region: 'north' } })
+          .send({ label: 'north person', data: { region: 'north' } })
           .expect(200);
 
         // Bob is a web user (project manager) with no actor property values
@@ -1214,6 +1214,63 @@ describe('api: /datasets/:name.svc', () => {
           .expect(200)
           .then(({ body }) => {
             body.value.length.should.eql(1);
+          });
+      }));
+    });
+
+    describe('viewAs combined with other query params', () => {
+      // shared setup: dataset with region property filter, app user assigned to north
+      // north entity 1 created by Alice, north entity 2 by Bob, south entity by Alice
+      const setupPropertyFilter = async (service, asAlice) => {
+        const asBob = await service.login('bob');
+
+        await asAlice.post('/v1/projects/1/datasets').send({ name: 'people' }).expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/properties').send({ name: 'region' }).expect(200);
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north entity 1', data: { region: 'north' } }).expect(200);
+        await asBob.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north entity 2', data: { region: 'north' } }).expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'south entity', data: { region: 'south' } }).expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'North Worker' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } }).expect(200);
+        return appUser;
+      };
+
+      it('should apply $filter alongside viewAs', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const appUser = await setupPropertyFilter(service, asAlice);
+
+        const aliceId = await asAlice.get('/v1/users/current').then(({ body }) => body.id);
+
+        // viewAs filters to 2 north entities; $filter by Alice's creatorId narrows to the 1 she created
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$filter=__system/creatorId eq ${aliceId}&$count=true`)
+          .expect(200)
+          .then(({ body }) => {
+            body['@odata.count'].should.eql(1);
+            body.value.length.should.eql(1);
+            body.value[0].label.should.eql('north entity 1');
+          });
+      }));
+
+      it('should apply $search alongside viewAs', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const appUser = await setupPropertyFilter(service, asAlice);
+
+        // viewAs filters to north entities; $search further narrows to only the matching label
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$search=entity+1`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+            body.value[0].label.should.eql('north entity 1');
           });
       }));
     });
