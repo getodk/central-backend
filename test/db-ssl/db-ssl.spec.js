@@ -37,6 +37,18 @@ describe('db connection', () => {
     }
   });
 
+  it('should not connect to db if no root cert is supplied', async () => {
+    process.env.PGSSLMODE = 'verify-full';
+
+    let pool;
+    try {
+      pool = slonikPool(config.default.database);
+      assert.rejects(() => pool.oneFirst(sql`SELECT 1`));
+    } finally {
+      pool?.end();
+    }
+  });
+
   it('should not connect to db if a different root cert is supplied', async () => {
     process.env.PGSSLMODE = 'verify-full';
     process.env.PGSSLROOTCERT = './.pg-certs/not-ca.crt';
