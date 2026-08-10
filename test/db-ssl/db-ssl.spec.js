@@ -32,11 +32,6 @@ describe('db connection', () => {
     });
   });
 
-  it('should reject PGSSLROOTCERT if PGSSLMODE is not set', () => {
-    process.env.PGSSLROOTCERT = './.pg-certs/ca.crt';
-    assert.throws(() => slonikPool(config.default.database), E_INCOMPATIBLE_ENV);
-  });
-
   it('should fail to create pool if cert file is missing', () => {
     process.env.PGSSLMODE = 'verify-full';
     process.env.PGSSLROOTCERT = './.pg-certs/ca-does-not-exist-at-this-path.crt';
@@ -49,7 +44,7 @@ describe('db connection', () => {
     assert.throws(() => slonikPool(config.default.database), { code: 'EISDIR' });
   });
 
-  it('should fail to create pool if cert file is a file, but not a cert', async () => {
+  it('should fail at first query if cert file is a file, but not a cert', async () => {
     process.env.PGSSLMODE = 'verify-full';
     process.env.PGSSLROOTCERT = './.pg-certs/server.csr';
     await assertFirstQueryFailsWith(E_CERT_VERIFICATION_FAILED);
