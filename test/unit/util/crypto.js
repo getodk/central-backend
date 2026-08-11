@@ -43,12 +43,12 @@ describe('util/crypto', () => {
 
     describe('password strength checks', () => {
       [
-        [ '1234567890', 'This is a top-100 common password' ],
-        [ '2026-04-27', 'Dates are often easy to guess' ],
-        [ 'aaaaaaaaaaaaaaaaaaa', 'Repeats like "aaa" are easy to guess' ],
-        [ 'batteryhorse', 'Add another word or two. Uncommon words are better.' ],
-        [ 'christopher', 'Names and surnames by themselves are easy to guess' ],
-        [ 'tumtumtumtum', 'Repeats like "abcabcabc" are only slightly harder to guess than "abc"' ],
+        [ '1234567890', 'The supplied password is too weak: this is a top-100 common password' ],
+        [ '2026-04-27', 'The supplied password is too weak: dates are often easy to guess' ],
+        [ 'aaaaaaaaaaaaaaaaaaa', 'The supplied password is too weak: repeats like "aaa" are easy to guess' ],
+        [ 'batteryhorse', 'The supplied password is too weak. Add another word or two. Uncommon words are better.' ],
+        [ 'christopher', 'The supplied password is too weak: names and surnames by themselves are easy to guess' ],
+        [ 'tumtumtumtum', 'The supplied password is too weak: repeats like "abcabcabc" are only slightly harder to guess than "abc"' ],
       ].forEach(([ password, expectedMessage ]) => {
         it(`should reject password '${password}' with message '${expectedMessage}'`, () =>
           hashPassword(password).should.be.rejectedWith(expectedMessage));
