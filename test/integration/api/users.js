@@ -846,7 +846,7 @@ describe('api: /users', () => {
                 .then(({ body }) => { // eslint-disable-line no-shadow
                   body.should.eql({
                     code: 400.44,
-                    message: 'This is similar to a commonly used password',
+                    message: 'The supplied password is too weak: this is similar to a commonly used password',
                     details: {
                       warning: 'This is similar to a commonly used password',
                       suggestions: [ 'Add another word or two. Uncommon words are better.' ],
