@@ -251,7 +251,7 @@ describe('api: /users', () => {
               ])))));
 
         [
-          [ 'too short',  'short' ], // eslint-disable-line no-multi-spaces
+          [ 'too short', 'short' ],
           [ 'too long',   'loooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooong' ], // eslint-disable-line no-multi-spaces
           [ 'object',     {} ], // eslint-disable-line no-multi-spaces
           [ 'array',      [] ], // eslint-disable-line no-multi-spaces
