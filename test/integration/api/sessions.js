@@ -57,8 +57,8 @@ describe('api: /sessions', () => {
         repeatN(4),
       ];
 
-      // ensure that the final test is for a password which exceeds the bcrypt truncation length,
-      // and is chopped part-way through the password itself, e.g. "secret\x00secret\x00...\x00se"
+      // Ensure that the final test is for a password which exceeds the bcrypt truncation length,
+      // and is chopped part-way through the password itself, e.g. "secret\x00secret\x00...\x00se".
       if (Buffer.byteLength(passwords.at(-1)) <= bcryptLengthCutoff) throw new Error(`
         Repeated password is too short, or fits exactly into the
         bcrypt truncation size of ${bcryptLengthCutoff} bytes.
