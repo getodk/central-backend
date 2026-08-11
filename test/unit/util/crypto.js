@@ -40,6 +40,27 @@ describe('util/crypto', () => {
       Buffer.byteLength(password).should.be.greaterThan(72);
       return hashPassword(password).should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.');
     });
+
+    describe('password strength checks', () => {
+      [
+        [ '1234567890', 'The supplied password is too weak: this is a top-100 common password' ],
+        [ '2026-04-27', 'The supplied password is too weak: dates are often easy to guess' ],
+        [ 'aaaaaaaaaaaaaaaaaaa', 'The supplied password is too weak: repeats like "aaa" are easy to guess' ],
+        [ 'batteryhorse', 'The supplied password is too weak. Add another word or two. Uncommon words are better.' ],
+        [ 'christopher', 'The supplied password is too weak: names and surnames by themselves are easy to guess' ],
+        [ 'tumtumtumtum', 'The supplied password is too weak: repeats like "abcabcabc" are only slightly harder to guess than "abc"' ],
+      ].forEach(([ password, expectedMessage ]) => {
+        it(`should reject password '${password}' with message '${expectedMessage}'`, () =>
+          hashPassword(password).should.be.rejectedWith(expectedMessage));
+      });
+    });
+
+    // Long strings cause terrible performance, and long strings which trigger backtracking are even worse.
+    // See: https://github.com/dropbox/zxcvbn/issues/327
+    it('should not take forever on horrible regex-exploding passwords', () => {
+      const password = 'x'.repeat(2000) + '!';
+      return hashPassword(password).should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.');
+    });
   });
 
   describe('verifyPassword()', () => {
