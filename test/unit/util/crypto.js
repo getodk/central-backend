@@ -54,6 +54,13 @@ describe('util/crypto', () => {
           hashPassword(password).should.be.rejectedWith(expectedMessage));
       });
     });
+
+    // Long strings cause terrible performance, and long strings which trigger backtracking are even worse.
+    // See: https://github.com/dropbox/zxcvbn/issues/327
+    it('should not take forever on horrible regex-exploding passwords', () => {
+      const password = 'x'.repeat(2000) + '!';
+      return hashPassword(password).should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.');
+    });
   });
 
   describe('verifyPassword()', () => {
