@@ -65,7 +65,7 @@ describe('task: accounts', () => {
         .catch((err) => {
           err.should.be.a.Problem();
           err.problemCode.should.eql(400.44);
-          err.message.should.eql('This is similar to a commonly used password');
+          err.message.should.eql('The supplied password is too weak: this is similar to a commonly used password');
           err.problemDetails.should.eql({
             warning: 'This is similar to a commonly used password',
             suggestions: [ 'Add another word or two. Uncommon words are better.' ],
@@ -128,7 +128,7 @@ describe('task: accounts', () => {
         .catch((err) => {
           err.should.be.a.Problem();
           err.problemCode.should.eql(400.44);
-          err.message.should.eql('This is similar to a commonly used password');
+          err.message.should.eql('The supplied password is too weak: this is similar to a commonly used password');
           err.problemDetails.should.eql({
             warning: 'This is similar to a commonly used password',
             suggestions: [ 'Add another word or two. Uncommon words are better.' ],
