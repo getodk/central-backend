@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { getFieldTree, getChildren } = require('../../../lib/formats/odata');
-const streamTest = require('streamtest').v2;
+const streamTest = require(appRoot + '/test/util/streamtest');
 const { serviceDocumentFor, edmxFor, rowStreamToOData, singleRowToOData, selectFields } = require(appRoot + '/lib/formats/odata');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');

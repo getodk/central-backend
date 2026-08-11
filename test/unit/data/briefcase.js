@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { v4: uuid } = require('uuid');
-const streamTest = require('streamtest').v2;
+const streamTest = require(appRoot + '/test/util/streamtest');
 const testData = require(appRoot + '/test/data/xml');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { fieldsFor } = require(appRoot + '/test/util/schema');
