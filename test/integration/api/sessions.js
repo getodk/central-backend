@@ -47,6 +47,7 @@ describe('api: /sessions', () => {
     // and reject them before passing the values to bcrypt.
     describe('weird bcrypt implementation details', () => {
       const bcryptLengthCutoff = 72;
+      const passLength = Buffer.byteLength(password4chelsea);
 
       const repeatN = n => new Array(n).fill(password4chelsea).join('\0');
 
@@ -57,10 +58,23 @@ describe('api: /sessions', () => {
         repeatN(4),
       ];
 
-      // Ensure that the final test is for a password which exceeds the bcrypt truncation length,
-      // and is chopped part-way through the password itself, e.g. "secret\x00secret\x00...\x00se".
-      if (Buffer.byteLength(passwords.at(-1)) <= bcryptLengthCutoff) throw new Error(`
-        Repeated password is too short, or fits exactly into the
+      // Ensure that all but the final test does NOT exceed the bcrypt truncation length:
+      if (Buffer.byteLength(passwords.at(-2)) >= bcryptLengthCutoff) throw new Error(`
+        Repeated password #${passwords.length-2} is too long, or fits exactly into the
+        bcrypt truncation size of ${bcryptLengthCutoff} bytes.
+
+        Please validate that this test works as originally intended.
+      `);
+
+      // Ensure that the final test is for a password which:
+      // 1. exceeds the bcrypt truncation length, and
+      // 2. truncates mid-password
+      if (
+        Buffer.byteLength(passwords.at(-1)) <= bcryptLengthCutoff ||
+        bcryptLengthCutoff % (passLength+1) === 0 ||
+        bcryptLengthCutoff % (passLength+1) === passLength
+      ) throw new Error(`
+        Repeated password #${passwords.length-1} is too short, or fits exactly into the
         bcrypt truncation size of ${bcryptLengthCutoff} bytes.
 
         Please validate that this test works as originally intended.
