@@ -357,7 +357,7 @@ describe('extracting and validating entities', () => {
 
       const { entityFields, structuralFields } = await entityRepeatFieldsFor(form);
       const result = await submissionXmlToEntityData(structuralFields, entityFields, sub);
-      should(result[0].data).eql({'denomination': 'property value'})
+      should(result[0].data).eql({ denomination: 'property value' });
       result[0].system.label.should.equal('entity label');
     });
   });
