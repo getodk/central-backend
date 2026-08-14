@@ -10,7 +10,7 @@ const Problem = require(appRoot + '/lib/util/problem');
 describe('util/db', () => {
 
   describe('unjoiner', () => {
-    const { unjoiner } = util;
+    const { unjoiner, specificFields } = util;
 
     const T = Frame.define(table('frames'), 'x', 'y');
     const U = Frame.define(into('extra'), 'z');
@@ -33,6 +33,76 @@ describe('util/db', () => {
       const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 });
       unjoined1.should.eql(new T({ x: 3, y: 4 }));
       unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined2.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #1', () => {
+      const unjoin = unjoiner(specificFields(T, 'x'), Option.of(U));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","z" as "z"`);
+
+      const unjoined1 = unjoin({ 'frames!x': 3, z: 5 });
+      unjoined1.should.eql(new T({ x: 3 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!x': 3 });
+      unjoined2.should.eql(new T({ x: 3 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #2', () => {
+      const unjoin = unjoiner(specificFields(T, 'y'), Option.of(U));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."y" as "frames!y","z" as "z"`);
+
+      const unjoined1 = unjoin({ 'frames!y': 4, z: 5 });
+      unjoined1.should.eql(new T({ y: 4 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!y': 4 });
+      unjoined2.should.eql(new T({ y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #3', () => {
+      const unjoin = unjoiner(specificFields(T, 'x', 'y'), Option.of(U));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+
+      const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 });
+      unjoined1.should.eql(new T({ x: 3, y: 4 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined2.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #4', () => {
+      const unjoin = unjoiner(T, Option.of(specificFields(U, 'z')));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y","z" as "z"`);
+
+      const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4, z: 5 });
+      unjoined1.should.eql(new T({ x: 3, y: 4 }));
+      unjoined1.aux.extra.should.eql(Option.of(new U({ z: 5 })));
+
+      const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined2.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined2.aux.extra).be.undefined();
+    });
+
+    it('should optionally exclude unwanted fields #5', () => {
+      const unjoin = unjoiner(T, Option.of(specificFields(U)));
+
+      sql`${unjoin.fields}`.should.eql(sql`"frames"."x" as "frames!x","frames"."y" as "frames!y"`);
+
+      const unjoined1 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
+      unjoined1.should.eql(new T({ x: 3, y: 4 }));
+      should(unjoined1.aux.extra).be.undefined();
 
       const unjoined2 = unjoin({ 'frames!x': 3, 'frames!y': 4 });
       unjoined2.should.eql(new T({ x: 3, y: 4 }));

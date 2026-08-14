@@ -6,8 +6,8 @@ const should = require('should');
 const { createReadStream } = require('fs');
 const { httpZipResponseToFiles } = require('../../util/zip');
 
-const appPath = require('app-root-path');
-const { exhaust } = require(appPath + '/lib/worker/worker');
+const appRoot = require('app-root-path');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 describe('query module submission purge', () => {
   describe('submission purge arguments', () => {
@@ -355,14 +355,14 @@ describe('query module submission purge', () => {
       // Send the submission with the client audit attachment
       await asAlice.post('/v1/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
-        .attach('audit.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'audit.csv' })
+        .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
         .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
         .expect(201);
 
       // Send a second submission
       await asAlice.post('/v1/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
-        .attach('log.csv', createReadStream(appPath + '/test/data/audit2.csv'), { filename: 'log.csv' })
+        .attach('log.csv', createReadStream(appRoot + '/test/data/audit2.csv'), { filename: 'log.csv' })
         .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
         .expect(201);
 
@@ -407,14 +407,14 @@ describe('query module submission purge', () => {
       // Send the submission with the client audit attachment
       await asAlice.post('/v1/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
-        .attach('audit.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'audit.csv' })
+        .attach('audit.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'audit.csv' })
         .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
         .expect(201);
 
       // Send a second submission
       await asAlice.post('/v1/projects/1/submission')
         .set('X-OpenRosa-Version', '1.0')
-        .attach('log.csv', createReadStream(appPath + '/test/data/audit.csv'), { filename: 'log.csv' })
+        .attach('log.csv', createReadStream(appRoot + '/test/data/audit.csv'), { filename: 'log.csv' })
         .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.two), { filename: 'data.xml' })
         .expect(201);
 

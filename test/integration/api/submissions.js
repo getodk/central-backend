@@ -11,6 +11,7 @@ const { hashPassword } = require('../../../lib/util/crypto');
 const { User, Actor } = require(appRoot + '/lib/model/frames');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { password4david } = require('../../util/passwords');
 
 // utilities used for versioning instances
 const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
@@ -3279,6 +3280,30 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
               body[0].should.be.an.ExtendedSubmission();
               body[0].submitter.displayName.should.equal('Alice');
             })))));
+
+    it('should support limit & offset params', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await Promise.all(Array.from({ length: 100 }, (_, idx) => asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(`<data id="simple"><meta><instanceID>instance-${idx}</instanceID></meta></data>`)
+        .set('Content-Type', 'text/xml')
+        .expect(200)));
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions?limit=7&offset=13')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(7);
+          body.map(s => s.instanceId).should.eql([
+            'instance-86',
+            'instance-85',
+            'instance-84',
+            'instance-83',
+            'instance-82',
+            'instance-81',
+            'instance-80',
+          ]);
+        });
+    }));
   });
 
   describe('[draft] GET', () => {
@@ -4665,7 +4690,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
         .send(testData.forms.binaryType)
         .expect(200);
 
-      const password = await hashPassword('password4david');
+      const password = await hashPassword(password4david);
 
       await Users.create(new User({ email: 'david@getodk.org', password }, { actor: new Actor({ type: 'user', displayName: 'David' }) }));
 

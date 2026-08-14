@@ -3,7 +3,7 @@ set -o pipefail
 
 serverUrl="http://localhost:8383"
 userEmail="x@example.com"
-userPassword="secret1234"
+userPassword="STR0NG-secret-1234?"
 
 log() { echo "[test/e2e/s3/run-tests] $*"; }
 
@@ -44,7 +44,7 @@ if [[ "${CI-}" = '' ]]; then
     !
     ! A quick fix for this could be:
     !
-    !   docker exec odk-postgres14 psql -U jubilant jubilant -c "TRUNCATE blobs CASCADE"
+    !   docker exec odk-central-backend-dev-postgres psql -U jubilant jubilant -c "TRUNCATE blobs CASCADE"
     !
     ! Press <enter> to continue...
 

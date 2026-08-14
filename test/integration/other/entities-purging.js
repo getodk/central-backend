@@ -5,10 +5,10 @@ const testData = require('../../data/xml');
 const { v4: uuid } = require('uuid');
 const xml2js = require('xml2js');
 
-const appPath = require('app-root-path');
+const appRoot = require('app-root-path');
 const Problem = require('../../../lib/util/problem');
 const { map } = require('ramda');
-const { exhaust } = require(appPath + '/lib/worker/worker');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { createProject, createDataset, createEntities, createBulkEntities, deleteEntities } = require('../../util/entities');
 
 const createEntitiesViaSubmissions = async (user, container, count) => {

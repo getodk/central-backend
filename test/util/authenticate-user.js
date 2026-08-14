@@ -3,6 +3,8 @@
 
 const { default: makeFetchCookie } = require('fetch-cookie');
 
+const { password4 } = require('./passwords');
+
 module.exports = async (service, user, includeCsrf) => {
   if (!user) throw new Error('Did you forget the **service** arg?');
   if (process.env.TEST_AUTH === 'oidc') {
@@ -15,7 +17,7 @@ module.exports = async (service, user, includeCsrf) => {
     return body.token;
   } else {
     const credentials = (typeof user === 'string')
-      ? { email: `${user}@getodk.org`, password: `password4${user}` }
+      ? { email: `${user}@getodk.org`, password: password4[user] }
       : user;
     const { body } = await service.post('/v1/sessions')
       .send(credentials)
