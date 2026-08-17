@@ -1,7 +1,7 @@
-const { createReadStream, readFileSync } = require('fs');
+const { createReadStream, readFileSync } = require('node:fs');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
-const assert = require('assert');
+const assert = require('node:assert');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const { Form } = require(appRoot + '/lib/model/frames');

@@ -4,7 +4,7 @@ const testData = require('../../data/xml');
 const { dissocPath, identity } = require('ramda');
 const { QueryOptions } = require('../../../lib/util/db');
 const should = require('should');
-const { URL } = require('url');
+const { URL } = require('node:url');
 const { url } = require('../../../lib/util/http');
 
 const validateAndFilterSubmissionDates = (res) => {

@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { KeyObject } = require('node:crypto');
 const appRoot = require('app-root-path');
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const should = require('should');
 const streamTest = require(appRoot + '/test/util/streamtest');
 const crypto = require(appRoot + '/lib/util/crypto');

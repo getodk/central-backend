@@ -1,6 +1,6 @@
 const should = require('should');
 const appRoot = require('app-root-path');
-const { promisify } = require('util');
+const { promisify } = require('node:util');
 const { DateTime, Duration } = require('luxon');
 const { sql } = require('slonik');
 const { testContainerFullTrx, testContainer } = require('../setup');

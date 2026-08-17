@@ -1,6 +1,6 @@
 const should = require('should');
 
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const testData = require('../../data/xml');
