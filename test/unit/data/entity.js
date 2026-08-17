@@ -310,43 +310,30 @@ describe('extracting and validating entities', () => {
 
     it('should save a form field with name label to an entity property (issue c#1970)', async () => {
       const form = `<?xml version="1.0"?>
-        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:ev="http://www.w3.org/2001/xml-events" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" xmlns:odk="http://www.opendatakit.org/xforms" xmlns:entities="http://www.opendatakit.org/xforms/entities">
-            <h:head>
-                <h:title>label_to_property</h:title>
-                <model odk:xforms-version="1.0.0" entities:entities-version="2024.1.0">
-                    <instance>
-                        <data id="label_to_property" version="5">
-                            <grp>
-                                <label/>
-                            </grp>
-                            <thing/>
-                            <thing_note/>
-                            <meta>
-                                <entity dataset="things" create="1" id="">
-                                    <label/>
-                                </entity>
-                                <instanceID/>
-                            </meta>
-                        </data>
-                    </instance>
-                    <instance id="things" src="jr://file-csv/things.csv"/>
-                    <bind nodeset="/data/grp/label" type="string" entities:saveto="denomination"/>
-                    <bind nodeset="/data/thing" type="string"/>
-                    <bind nodeset="/data/thing_note" readonly="true()" type="string"/>
-                    <bind nodeset="/data/meta/entity/@id" readonly="true()" type="string"/>
-                    <setvalue ref="/data/meta/entity/@id" event="odk-instance-first-load" value="uuid()"/>
-                    <bind nodeset="/data/meta/entity/label" calculate=" /data/grp/label " readonly="true()" type="string"/>
-                    <bind nodeset="/data/meta/instanceID" type="string" readonly="true()" jr:preload="uid"/>
-                </model>
-            </h:head>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+          <h:head>
+            <model entities:entities-version="2024.1.0">
+              <instance>
+                <data id="label_to_property" version="1">
+                  <grp>
+                    <label/>
+                  </grp>
+                  <meta>
+                    <entity dataset="people" id="" create="1">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind nodeset="/data/grp/label" type="string" entities:saveto="denomination"/>
+            </model>
+          </h:head>
         </h:html>`;
 
-      const sub = `<data id="label_to_property" version="5">
+      const sub = `<data id="label_to_property" version="1">
         <grp>
           <label>property value</label>
         </grp>
-        <thing/>
-        <thing_note/>
         <meta>
           <entity dataset="things" create="1" id="e9027bee-d4de-42d6-afde-4c6effcc16cb">
             <label>entity label</label>
