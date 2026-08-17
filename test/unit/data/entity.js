@@ -307,6 +307,46 @@ describe('extracting and validating entities', () => {
         });
       });
     });
+
+    it('should save a form field with name label to an entity property (issue c#1970)', async () => {
+      const form = `<?xml version="1.0"?>
+        <h:html xmlns="http://www.w3.org/2002/xforms" xmlns:orx="http://openrosa.org/xforms" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa" xmlns:entities="http://www.opendatakit.org/xforms/entities">
+          <h:head>
+            <model entities:entities-version="2024.1.0">
+              <instance>
+                <data id="label_to_property" version="1">
+                  <grp>
+                    <label/>
+                  </grp>
+                  <meta>
+                    <entity dataset="people" id="" create="1">
+                      <label/>
+                    </entity>
+                  </meta>
+                </data>
+              </instance>
+              <bind nodeset="/data/grp/label" type="string" entities:saveto="denomination"/>
+            </model>
+          </h:head>
+        </h:html>`;
+
+      const sub = `<data id="label_to_property" version="1">
+        <grp>
+          <label>property value</label>
+        </grp>
+        <meta>
+          <entity dataset="things" create="1" id="e9027bee-d4de-42d6-afde-4c6effcc16cb">
+            <label>entity label</label>
+          </entity>
+          <instanceID>uuid:a3eca9e7-d627-4d47-a399-2ab2cac80718</instanceID>
+        </meta>
+      </data>`;
+
+      const { entityFields, structuralFields } = await entityRepeatFieldsFor(form);
+      const result = await submissionXmlToEntityData(structuralFields, entityFields, sub);
+      should(result[0].data).eql({ denomination: 'property value' });
+      result[0].system.label.should.equal('entity label');
+    });
   });
 
   describe('extract multiple entities from submission with repeats', () => {
