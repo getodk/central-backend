@@ -1,9 +1,9 @@
-const assert = require('assert');
+const assert = require('node:assert');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
 const should = require('should');
-const { createReadStream } = require('fs');
+const { createReadStream } = require('node:fs');
 const { httpZipResponseToFiles } = require('../../util/zip');
 
 const appRoot = require('app-root-path');

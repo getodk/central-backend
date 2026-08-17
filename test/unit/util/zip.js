@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
-const { createWriteStream } = require('fs');
-const { Transform, Readable } = require('stream');
+const { createWriteStream } = require('node:fs');
+const { Transform, Readable } = require('node:stream');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
 const { zipPart, zipStreamFromParts } = require(appRoot + '/lib/util/zip');

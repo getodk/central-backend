@@ -1,4 +1,4 @@
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const appRoot = require('app-root-path');
 const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');

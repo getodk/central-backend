@@ -1,9 +1,9 @@
 const assert = require('node:assert/strict');
 const { execSync } = require('node:child_process');
 const appRoot = require('app-root-path');
-const { promisify } = require('util');
-const { readdir, readdirSync, readFile, statSync, unlinkSync, writeFile, createReadStream, createWriteStream } = require('fs');
-const { join, basename } = require('path');
+const { promisify } = require('node:util');
+const { readdir, readdirSync, readFile, statSync, unlinkSync, writeFile, createReadStream, createWriteStream } = require('node:fs');
+const { join, basename } = require('node:path');
 const tmp = require('tmp');
 const archiver = require('archiver');
 const { testTask } = require('../setup');

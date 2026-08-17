@@ -1,7 +1,7 @@
 const appRoot = require('app-root-path');
 const { ceil } = Math;
-const { createPublicKey, publicEncrypt, createHash, randomBytes, createCipheriv } = require('crypto');
-const { RSA_NO_PADDING } = require('crypto').constants;
+const { createPublicKey, publicEncrypt, createHash, randomBytes, createCipheriv } = require('node:crypto');
+const { RSA_NO_PADDING } = require('node:crypto').constants;
 const { getSubmissionIvs } = require(appRoot + '/lib/util/crypto');
 
 

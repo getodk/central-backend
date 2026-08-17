@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { Entity } = require(appRoot + '/lib/model/frames');
-const assert = require('assert');
+const assert = require('node:assert');
 
 
 describe('entity', () => {

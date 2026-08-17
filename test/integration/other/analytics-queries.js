@@ -1,10 +1,10 @@
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const { testService, testContainer } = require('../setup');
-const { createReadStream, readFileSync } = require('fs');
+const { createReadStream, readFileSync } = require('node:fs');
 const { v4: uuid } = require('uuid');
 
-const { promisify } = require('util');
+const { promisify } = require('node:util');
 const testData = require('../../data/xml');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust, workerQueue } = require(appRoot + '/lib/worker/worker');

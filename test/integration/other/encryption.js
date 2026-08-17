@@ -1,5 +1,5 @@
 const appRoot = require('app-root-path');
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const { sql } = require('slonik');
 const { toText } = require(appRoot + '/test/util/streamtest');
 const { testService, testContainerFullTrx, testContainer } = require(appRoot + '/test/integration/setup');

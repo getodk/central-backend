@@ -5,7 +5,7 @@
 // See: https://expressjs.com/en/api.html#app.settings.table
 // See: https://github.com/eugef/node-mocks-http/issues/299
 
-const { EventEmitter } = require('events');
+const { EventEmitter } = require('node:events');
 const querystring = require('node:querystring');
 const wrapped = require('node-mocks-http');
 

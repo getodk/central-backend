@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 const should = require('should');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');

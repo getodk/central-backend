@@ -1,6 +1,6 @@
 const should = require('should');
 const appRoot = require('app-root-path');
-const assert = require('assert');
+const assert = require('node:assert');
 const { ConflictType, submissionXmlToEntityData } = require('../../../lib/data/entity');
 const { Entity } = require('../../../lib/model/frames');
 const { entityRepeatFieldsFor } = require(appRoot + '/test/util/schema');
