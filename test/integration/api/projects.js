@@ -516,10 +516,10 @@ describe('api: /projects', () => {
           .send({ name: 'people' })
           .expect(200);
 
-        await asAlice.post('/v1/projects/1/forms')
-          .send(testData.forms.simpleEntity)
+        await asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
-          .expect(200);
+          .expect(200),
 
         await asAlice.get('/v1/projects/1?includeVerbs=true')
           .expect(200)
@@ -534,7 +534,7 @@ describe('api: /projects', () => {
           .expect(200)
           .then(({ body }) => {
             body.should.be.an.ExtendedProject();
-            body.forms.should.equal(3);
+            body.forms.should.equal(2);
             body.datasets.should.equal(1);
             body.lastSubmission.should.be.a.recentIsoDate();
           });
