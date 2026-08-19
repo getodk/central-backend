@@ -482,6 +482,39 @@ describe('api: /projects', () => {
                   'actor_property.list'
                 ]);
               }))))));
+
+    describe('query param: includeVerbs=true', () => {
+      it('should return verb information', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const { body: project } = await asAlice.get('/v1/projects/1?includeVerbs=true')
+          .expect(200);
+        project.verbs.should.be.an.Array();
+        const { body: admin } = await asAlice.get('/v1/roles/admin').expect(200);
+        project.verbs.should.eqlInAnyOrder(admin.verbs);
+        project.verbs.should.containDeep([ 'user.password.invalidate', 'project.delete' ]);
+      }));
+
+      it('should not return datasets unless metadata is requested', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1?includeVerbs=true')
+          .expect(200)
+          .then(({ body }) => {
+            should.not.exist(body.datasets);
+          });
+
+        await asAlice.get('/v1/projects/1?includeVerbs=true')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.datasets.should.equal(1);
+          });
+      }));
+    });
   });
 
   describe('/:id PATCH', () => {
