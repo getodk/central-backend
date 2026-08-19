@@ -519,7 +519,7 @@ describe('api: /projects', () => {
         await asAlice.post('/v1/projects/1/forms/simple/submissions')
           .send(testData.instances.simple.one)
           .set('Content-Type', 'application/xml')
-          .expect(200),
+          .expect(200);
 
         await asAlice.get('/v1/projects/1?includeVerbs=true')
           .expect(200)
