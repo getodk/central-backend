@@ -504,7 +504,7 @@ describe('api: /projects', () => {
                 ]);
               }))))));
 
-    describe('query param: includeVerbs=true', () => {
+    describe('query param: verbs=true', () => {
       it('should return verb information', testService(async (service) => {
         const asAlice = await service.login('alice');
 
@@ -512,7 +512,7 @@ describe('api: /projects', () => {
         const { body: { verbs: allAdminVerbs } } = await asAlice.get('/v1/roles/admin').expect(200);
 
 
-        await asAlice.get('/v1/projects/1?includeVerbs=true')
+        await asAlice.get('/v1/projects/1?verbs=true')
           .expect(200)
           .then(({ body }) => {
             body.verbs.should.be.an.Array();
@@ -520,7 +520,7 @@ describe('api: /projects', () => {
             body.verbs.should.containDeep(minimalExpectedVerbs);
           });
 
-        await asAlice.get('/v1/projects/1?includeVerbs=true')
+        await asAlice.get('/v1/projects/1?verbs=true')
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
@@ -542,7 +542,7 @@ describe('api: /projects', () => {
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        await asAlice.get('/v1/projects/1?includeVerbs=true')
+        await asAlice.get('/v1/projects/1?verbs=true')
           .expect(200)
           .then(({ body }) => {
             should.not.exist(body.forms);
@@ -550,7 +550,7 @@ describe('api: /projects', () => {
             should.not.exist(body.lastSubmission);
           });
 
-        await asAlice.get('/v1/projects/1?includeVerbs=true')
+        await asAlice.get('/v1/projects/1?verbs=true')
           .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
