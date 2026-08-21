@@ -9090,7 +9090,7 @@ paths:
           This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
         schema:
           type: number
-        example: "42"
+        example: 42
       responses:        
         "200":
           description: OK
