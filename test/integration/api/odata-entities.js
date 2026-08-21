@@ -894,6 +894,423 @@ describe('api: /datasets/:name.svc', () => {
     }));
   });
 
+  describe('GET /Entities with viewAs', () => {
+    it('should return all entities if dataset has no access filter', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity1' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity2' })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'App User' }).expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.value.length.should.eql(2);
+        });
+    }));
+
+    describe('invalid actorId', () => {
+      it('should return 404 if viewAs actor does not exist', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?viewAs=99999')
+          .expect(404);
+      }));
+
+      it('should return 400 if viewAs is not a numeric ID', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people.svc/Entities?viewAs=notanumber')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.eql(400.11);
+          });
+      }));
+    });
+
+    describe('viewAs with ownerOnly filter', () => {
+      it('should filter entities for ownerOnly dataset', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        // Set ownerOnly on the dataset
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: true })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User' }).expect(200);
+
+        // Create an entity as Alice (not the app user)
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'alice entity' })
+          .expect(200);
+
+        // Create one entity as the app user via submission
+        await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
+          .expect(200);
+        await service.post(`/v1/key/${appUser.token}/projects/1/forms/simpleEntity/submissions`)
+          .send(testData.instances.simpleEntity.one.replace(
+            '<entities:label>Alice (88)</entities:label>',
+            '<entities:label>Made By App User</entities:label>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        // viewAs the app user — should only see the entity they created
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+            body.value[0].label.should.eql('Made By App User');
+          });
+      }));
+
+      it('should return correct $count when filtered by ownerOnly', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: true })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User' }).expect(200);
+
+        // Two entities created by Alice
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'alice entity 1' }).expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'alice entity 2' }).expect(200);
+
+        // One entity created by app user via submission
+        await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
+          .expect(200);
+        await service.post(`/v1/key/${appUser.token}/projects/1/forms/simpleEntity/submissions`)
+          .send(testData.instances.simpleEntity.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$count=true`)
+          .expect(200)
+          .then(({ body }) => {
+            body['@odata.count'].should.eql(1);
+            body.value.length.should.eql(1);
+          });
+      }));
+
+      it('should apply ownerOnly filter for a web data collector', testService(async (service, container) => {
+        const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .set('Content-Type', 'application/xml')
+          .send(testData.forms.simpleEntity)
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: true })
+          .expect(200);
+
+        // Assign Chelsea the Data Collector (formfill) role on the project.
+        const chelseaId = await asChelsea.get('/v1/users/current')
+          .then(({ body }) => body.id);
+        await asAlice.post(`/v1/projects/1/assignments/formfill/${chelseaId}`)
+          .expect(200);
+
+        // Entity created by Alice
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'alice entity' })
+          .expect(200);
+        // Entity created by Chelsea via submission
+        await asChelsea.post('/v1/projects/1/forms/simpleEntity/submissions')
+          .send(testData.instances.simpleEntity.one.replace(
+            '<entities:label>Alice (88)</entities:label>',
+            '<entities:label>chelsea entity</entities:label>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        // viewAs Chelsea (a web data collector) on an ownerOnly dataset — only her entity
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${chelseaId}`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+            body.value[0].label.should.eql('chelsea entity');
+          });
+      }));
+    });
+
+    describe('viewAs with actor property filter rules', () => {
+      it('should filter entities based on actor property rules', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Dataset with a region property
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'region' })
+          .expect(200);
+
+        // Set up actor property and filter rule: entity.region must match actor.region
+        await asAlice.post('/v1/projects/1/actor-properties')
+          .send({ name: 'region' })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        // Two entities in 'north', one in 'south'
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north person 1', data: { region: 'north' } })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north person 2', data: { region: 'north' } })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'south person', data: { region: 'south' } })
+          .expect(200);
+
+        // App user assigned to 'north'
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'North Worker' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(2);
+            body.value.map(e => e.label).should.containDeep(['north person 1', 'north person 2']);
+          });
+      }));
+
+      it('should return correct $count with actor property filter', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'region' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/actor-properties')
+          .send({ name: 'region' })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north person', data: { region: 'north' } })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'south person 1', data: { region: 'south' } })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'south person 2', data: { region: 'south' } })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'South Worker' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'south' } })
+          .expect(200);
+
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$count=true`)
+          .expect(200)
+          .then(({ body }) => {
+            body['@odata.count'].should.eql(2);
+            body.value.length.should.eql(2);
+          });
+      }));
+
+      it('should return no entities for actor with no matching property values', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'region' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/actor-properties')
+          .send({ name: 'region' })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north person', data: { region: 'north' } })
+          .expect(200);
+
+        // App user with no region property set
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'Unassigned Worker' }).expect(200);
+
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(0);
+          });
+      }));
+
+      it('should reproduce filter behavior where actors with entity.list see all entities, unfiltered', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const asBob = await service.login('bob');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'region' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/actor-properties')
+          .send({ name: 'region' })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north person', data: { region: 'north' } })
+          .expect(200);
+
+        // Bob is a web user (project manager) with no actor property values
+        const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
+
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${bobId}`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+          });
+      }));
+    });
+
+    describe('viewAs combined with other query params', () => {
+      // shared setup: dataset with region property filter, app user assigned to north
+      // north entity 1 created by Alice, north entity 2 by Bob, south entity by Alice
+      const setupPropertyFilter = async (service, asAlice) => {
+        const asBob = await service.login('bob');
+
+        await asAlice.post('/v1/projects/1/datasets').send({ name: 'people' }).expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/properties').send({ name: 'region' }).expect(200);
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north entity 1', data: { region: 'north' } }).expect(200);
+        await asBob.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north entity 2', data: { region: 'north' } }).expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'south entity', data: { region: 'south' } }).expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'North Worker' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } }).expect(200);
+        return appUser;
+      };
+
+      it('should apply $filter alongside viewAs', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const appUser = await setupPropertyFilter(service, asAlice);
+
+        const aliceId = await asAlice.get('/v1/users/current').then(({ body }) => body.id);
+
+        // viewAs filters to 2 north entities; $filter by Alice's creatorId narrows to the 1 she created
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$filter=__system/creatorId eq ${aliceId}&$count=true`)
+          .expect(200)
+          .then(({ body }) => {
+            body['@odata.count'].should.eql(1);
+            body.value.length.should.eql(1);
+            body.value[0].label.should.eql('north entity 1');
+          });
+      }));
+
+      it('should apply $search alongside viewAs', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const appUser = await setupPropertyFilter(service, asAlice);
+
+        // viewAs filters to north entities; $search further narrows to only the matching label
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$search=entity+1`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+            body.value[0].label.should.eql('north entity 1');
+          });
+      }));
+
+      it('should not surface soft-deleted entities when using viewAs unless specified in the filter', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const appUser = await setupPropertyFilter(service, asAlice);
+
+        const uuids = [uuid(), uuid()];
+
+        // Add and delete a third entity that the app user would be able to see
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ uuid: uuids[0], label: 'north entity 3', data: { region: 'north' } }).expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
+          .expect(200);
+
+        // Add and delete another entity that the user cannot access
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ uuid: uuids[1], label: 'west entity 1', data: { region: 'west' } }).expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[1]}`)
+          .expect(200);
+
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(2);
+            body.value[0].label.should.eql('north entity 2');
+            body.value[1].label.should.eql('north entity 1');
+          });
+
+        // View only soft-deleted entities for the app user
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$filter=__system/deletedAt ne null`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+            body.value[0].label.should.eql('north entity 3');
+          });
+      }));
+    });
+  });
+
   describe('GET service document', () => {
     it('should return service document', testService(async (service) => {
 
