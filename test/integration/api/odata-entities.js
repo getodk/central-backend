@@ -1273,6 +1273,41 @@ describe('api: /datasets/:name.svc', () => {
             body.value[0].label.should.eql('north entity 1');
           });
       }));
+
+      it('should not surface soft-deleted entities when using viewAs unless specified in the filter', testService(async (service) => {
+        const asAlice = await service.login('alice');
+        const appUser = await setupPropertyFilter(service, asAlice);
+
+        const uuids = [uuid(), uuid()];
+
+        // Add and delete a third entity that the app user would be able to see
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ uuid: uuids[0], label: 'north entity 3', data: { region: 'north' } }).expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
+          .expect(200);
+
+        // Add and delete another entity that the user cannot access
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ uuid: uuids[1], label: 'west entity 1', data: { region: 'west' } }).expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[1]}`)
+          .expect(200);
+
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(2);
+            body.value[0].label.should.eql('north entity 2');
+            body.value[1].label.should.eql('north entity 1');
+          });
+
+        // View only soft-deleted entities for the app user
+        await asAlice.get(`/v1/projects/1/datasets/people.svc/Entities?viewAs=${appUser.id}&$filter=__system/deletedAt ne null`)
+          .expect(200)
+          .then(({ body }) => {
+            body.value.length.should.eql(1);
+            body.value[0].label.should.eql('north entity 3');
+          });
+      }));
     });
   });
 
