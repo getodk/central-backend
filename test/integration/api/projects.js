@@ -503,6 +503,64 @@ describe('api: /projects', () => {
                   'actor_property.list'
                 ]);
               }))))));
+
+    describe('query param: verbs=true', () => {
+      it('should return verb information', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        const minimalExpectedVerbs = [ 'user.password.invalidate', 'project.delete' ];
+        const { body: { verbs: allAdminVerbs } } = await asAlice.get('/v1/roles/admin').expect(200);
+
+
+        await asAlice.get('/v1/projects/1?verbs=true')
+          .expect(200)
+          .then(({ body }) => {
+            body.verbs.should.be.an.Array();
+            body.verbs.should.eqlInAnyOrder(allAdminVerbs);
+            body.verbs.should.containDeep(minimalExpectedVerbs);
+          });
+
+        await asAlice.get('/v1/projects/1?verbs=true')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.verbs.should.be.an.Array();
+            body.verbs.should.eqlInAnyOrder(allAdminVerbs);
+            body.verbs.should.containDeep(minimalExpectedVerbs);
+          });
+      }));
+
+      it('should not return other extended metadata unless requested', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simple/submissions')
+          .send(testData.instances.simple.one)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1?verbs=true')
+          .expect(200)
+          .then(({ body }) => {
+            should.not.exist(body.forms);
+            should.not.exist(body.datasets);
+            should.not.exist(body.lastSubmission);
+          });
+
+        await asAlice.get('/v1/projects/1?verbs=true')
+          .set('X-Extended-Metadata', 'true')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.an.ExtendedProject();
+            body.forms.should.equal(2);
+            body.datasets.should.equal(1);
+            body.lastSubmission.should.be.a.recentIsoDate();
+          });
+      }));
+    });
   });
 
   describe('/:id PATCH', () => {
