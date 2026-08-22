@@ -2642,7 +2642,7 @@ paths:
         example: "16"
       - name: verbs
         in: query
-        description: If set to `true`, will return allowed verbs for the current user on this project.  When extended metadata is requested, this parameter is ignored, and verbs are always included.
+        description: If set to `true`, will return allowed verbs for the current actor on this project.  When extended metadata is requested, this parameter is ignored, and verbs are always included.
         schema:
           type: boolean
         example: "true"
