@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const { extname } = require('node:path');
-const { Readable } = require('stream');
-const { finished } = require('stream/promises');
+const { Readable } = require('node:stream');
+const { finished } = require('node:stream/promises');
 
 async function apiClient(suiteName, { serverUrl, userEmail, userPassword, logPath }) {
   const log = require('./logger')(suiteName);

@@ -1,6 +1,6 @@
 const should = require('should');
 
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const appRoot = require('app-root-path');
 const { sql } = require('slonik');
 const testData = require('../../data/xml');
@@ -171,7 +171,7 @@ describe('blob query module', () => {
       });
   }));
 
-  it('should not recompute size when blob with same hash comes in', testService(async (service, container) => {
+  it('should recompute size when blob with same hash comes in if size was empty', testService(async (service, container) => {
     const asAlice = await service.login('alice');
     const bufferContent = Buffer.from('some,csv,data');
 
@@ -210,14 +210,14 @@ describe('blob query module', () => {
       .send(bufferContent)
       .expect(200)
       .then(({ body }) => {
-        should.not.exist(body.size);
+        body.size.should.equal(13);
       });
 
     await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft/attachments')
       .expect(200)
       .then(({ body }) => {
         body[0].name.should.equal('people.csv');
-        should.not.exist(body[0].size);
+        body[0].size.should.equal(13);
       });
   }));
 });

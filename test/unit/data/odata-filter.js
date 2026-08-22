@@ -8,7 +8,7 @@
 // except according to the terms contained in the LICENSE file.
 
 const appRoot = require('app-root-path');
-const assert = require('assert');
+const assert = require('node:assert');
 const should = require('should');
 const { sql } = require('slonik');
 const { odataFilter: _odataFilter, odataOrderBy: _odataOrderBy, odataExcludeDeleted: _odataExcludeDeleted } = require(appRoot + '/lib/data/odata-filter');

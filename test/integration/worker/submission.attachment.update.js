@@ -1,5 +1,5 @@
 const appRoot = require('app-root-path');
-const { createReadStream } = require('fs');
+const { createReadStream } = require('node:fs');
 const { sql } = require('slonik');
 const { testService } = require('../setup');
 const testData = require(appRoot + '/test/data/xml.js');

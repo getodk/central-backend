@@ -1,4 +1,4 @@
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const should = require('should');
 const config = require('config');
 const appRoot = require('app-root-path');

@@ -1,9 +1,9 @@
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const appRoot = require('app-root-path');
 const { mergeRight } = require('ramda');
 const { sql } = require('slonik');
-const { readdirSync } = require('fs');
-const { join } = require('path');
+const { readdirSync } = require('node:fs');
+const { join } = require('node:path');
 const request = require('supertest');
 const { noop } = require(appRoot + '/lib/util/util');
 const { task } = require(appRoot + '/lib/task/task');

@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const nock = require('nock');
-const querystring = require('querystring');
+const querystring = require('node:querystring');
 const { init } = require(appRoot + '/lib/external/enketo');
 const Problem = require(appRoot + '/lib/util/problem');
 

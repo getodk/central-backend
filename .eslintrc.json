@@ -76,6 +76,7 @@
     "implicit-arrow-linebreak": [ "off", "beside" ],
     "import/default": "off",
     "import/dynamic-import-chunkname": [ "off", { "importFunctions": [], "webpackChunknameFormat": "[0-9a-zA-Z-_/.]+" } ],
+    "import/enforce-node-protocol-usage": ["error", "always"],
     "import/export": "error",
     "import/exports-last": "off",
     "import/extensions": [ "error", "ignorePackages", { "js": "never", "jsx": "never", "mjs": "never" } ],

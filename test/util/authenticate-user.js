@@ -47,7 +47,7 @@ async function oidcAuthFor(service, user) {
   const location2 = await formActionFrom(res2);
 
   // TODO try replacing with FormData
-  const body = require('querystring').encode({
+  const body = require('node:querystring').encode({
     prompt: 'login',
     login: user,
     password: 'topSecret123',
@@ -59,7 +59,7 @@ async function oidcAuthFor(service, user) {
   });
 
   const location3 = await formActionFrom(res3);
-  const body2 = require('querystring').encode({ prompt: 'consent' });
+  const body2 = require('node:querystring').encode({ prompt: 'consent' });
   const res4 = await fetchC(location3, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
