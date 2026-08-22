@@ -31,6 +31,6 @@ jobs:
     - run: make run-docker-postgres-ssl
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
-    - run: make test-db-migrations
-    - run: make migrations
+    - run: make test-db-migrations # FIXME only one of these should be required
+    - run: make migrations # FIXME only one of these should be required
     - run: make test-db-ssl
