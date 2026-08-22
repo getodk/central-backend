@@ -1,0 +1,36 @@
+name: Database SSL Checks
+
+on:
+  pull_request:
+#    paths:    FIXME: ENABLE THIS BEFORE MERGE
+#    - lib/external/slonik.js
+#    - test/db-ssl/**
+  push:
+#    paths:    FIXME: ENABLE THIS BEFORE MERGE
+#    - lib/external/slonik.js
+#    - test/db-ssl/**
+
+jobs:
+  db-ssl-test:
+    timeout-minutes: 2
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres-version:
+          - "14.23"
+          - "18"
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set node version
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: package.json
+        cache: 'npm'
+    - run: npm ci
+    - run: make run-docker-postgres-ssl
+      env:
+        PG_VERSION: ${{ matrix.postgres-version }}
+    - run: make test-db-migrations # FIXME only one of these should be required
+    - run: make migrations # FIXME only one of these should be required
+    - run: make test-db-ssl
