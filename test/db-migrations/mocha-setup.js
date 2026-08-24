@@ -3,6 +3,8 @@ global.log = _log('[INFO]');
 
 const fs = require('node:fs');
 const slonik = require('slonik');
+
+const { slonikPool } = require('../../lib/external/slonik');
 const migrator = require('./migrator');
 
 async function mochaGlobalSetup() {
@@ -10,10 +12,8 @@ async function mochaGlobalSetup() {
 
   global.sql = slonik.sql;
 
-  const { user, password, host, database } = jsonFile('./config/db-migration-test.json').default.database; // eslint-disable-line no-use-before-define
-  const dbUrl = `postgres://${user}:${password}@${host}/${database}`;
-  log('dbUrl:', dbUrl);
-  global.db = slonik.createPool(dbUrl);
+  const dbConfig = jsonFile('./config/db-migration-test.json').default.database; // eslint-disable-line no-use-before-define
+  global.db = slonikPool(dbConfig);
 
   // Try to clean up the test database.  This should work unless you've used
   // different users to create/configure the DB.
