@@ -34,5 +34,4 @@ jobs:
     - run: PGSSLROOTCERT=./.pg-certs/ca.crt PGSSLMODE=verify-full make test-db-migrations # FIXME only one of these should be required
     - run: PGSSLROOTCERT=./.pg-certs/ca.crt PGSSLMODE=verify-full make migrations # FIXME only one of these should be required
     - run: make test-db-ssl
-    - run: ODK_BACKUP_PASSPHRASE='' openssl enc -chacha20 -pbkdf2 -pass env:ODK_BACKUP_PASSPHRASE <<<'PGDMP' > ./test/db-ssl/backup.pgdump.bin
     - run: node ./lib/bin/restore.js ./test/db-ssl/backup.pgdump.bin
