@@ -31,6 +31,7 @@ jobs:
     - run: make run-docker-postgres-ssl
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
+    - run: PGSSLROOTCERT=./.pg-certs/ca.crt PGSSLMODE=verify-full make test-db-migrations # TODO this can be removed before merge, i think
     - run: PGSSLROOTCERT=./.pg-certs/ca.crt PGSSLMODE=verify-full make migrations
     - run: make test-db-ssl
     - run: ./test/db-ssl/test-restore
