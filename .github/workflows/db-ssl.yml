@@ -32,5 +32,5 @@ jobs:
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
     - run: PGSSLROOTCERT=./.pg-certs/ca.crt PGSSLMODE=verify-full make test-db-migrations # FIXME only one of these should be required
-    - run: make migrations # FIXME only one of these should be required
+    - run: PGSSLROOTCERT=./.pg-certs/ca.crt PGSSLMODE=verify-full make test-db-migrations make migrations # FIXME only one of these should be required
     - run: make test-db-ssl
