@@ -61,11 +61,11 @@ describeMigration('20250910-02-backfill-last-login-at', ({ runMigrationBeingTest
 
   it('should backfill lastLoginAt with most recent login timestamp for users with login history', async () => {
     await assertTableContents('users',
-      // Alice should get her most recent login time (2025-01-15T14:30:00Z)
-      { actorId: 1, email: 'alice@test.com', lastLoginAt: 1736951400000 },
+      // Alice should get her most recent login time
+      { actorId: 1, email: 'alice@test.com', lastLoginAt: new Date('2025-01-15T14:30:00.000Z') },
 
-      // Bob should get his only login time (2025-01-08T16:45:00Z)
-      { actorId: 2, email: 'bob@test.com', lastLoginAt: 1736354700000 },
+      // Bob should get his only login time
+      { actorId: 2, email: 'bob@test.com', lastLoginAt: new Date('2025-01-08T16:45:00.000Z') },
 
       // Charlie should remain null (never logged in)
       { actorId: 3, email: 'charlie@test.com', lastLoginAt: null },
@@ -73,8 +73,8 @@ describeMigration('20250910-02-backfill-last-login-at', ({ runMigrationBeingTest
       // Dave should remain null because actor is deleted
       { actorId: 4, email: 'dave@test.com', lastLoginAt: null },
 
-      // New Dave should get his login time (2025-03-20T10:00:00Z)
-      { actorId: 5, email: 'dave@test.com', lastLoginAt: 1742464800000 },
+      // New Dave should get his login time
+      { actorId: 5, email: 'dave@test.com', lastLoginAt: new Date('2025-03-20T10:00:00.000Z') },
     );
   });
 });
