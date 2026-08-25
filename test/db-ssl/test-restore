@@ -26,25 +26,31 @@ expect_fail() {
   fi
 }
 
-log "Attempting to backup, without SSL verification..."
+log "Attempting to restore, without SSL verification..."
 expect_success
 
-log "Attempting to backup, with SSL verification..."
-PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/ca.crt expect_success
+log "Attempting to restore, with SSL verification..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/ca.crt \
+expect_success
 
-log "Attempting to backup with incorrect root cert..."
-PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/not-ca.crt expect_fail
+log "Attempting to restore with incorrect root cert..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/not-ca.crt \
+expect_fail
 
-log "Attempting to backup with non-existent root cert..."
-PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/not-file expect_fail
+log "Attempting to restore with non-existent root cert..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/not-file \
+expect_fail
 
-log "Attempting to backup with non-root-cert..."
-PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/server.key expect_fail
+log "Attempting to restore with non-root-cert..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/server.key \
+expect_fail
 
-log "Attempting to backup with directory..."
-PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs expect_fail
+log "Attempting to restore with directory..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs \
+expect_fail
 
-log "Attempting to backup with SSL disabled..."
-PGSSLMODE=disable expect_fail
+log "Attempting to restore with SSL disabled..."
+PGSSLMODE=disable \
+expect_fail
 
 log "Completed OK."
