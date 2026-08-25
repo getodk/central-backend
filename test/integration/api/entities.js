@@ -241,6 +241,163 @@ describe('Entities API', () => {
     }));
   });
 
+  describe('GET /datasets/:name/entities with viewAs', () => {
+    it('should return all entities if dataset has no access filter', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity1' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity2' })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'App User' }).expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(2);
+        });
+    }));
+
+    it('should return 404 if viewAs actor does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?viewAs=99999')
+        .expect(404);
+    }));
+
+    it('should return 400 if viewAs is not a numeric ID', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?viewAs=notanumber')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.eql(400.11);
+        });
+    }));
+
+    it('should return all entities if viewAs actor has full access', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity1' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity2' })
+        .expect(200);
+
+      // Bob is a project manager with full entity.list access so filtering is skipped
+      const asBob = await service.login('bob');
+      const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${bobId}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(2);
+        });
+    }));
+
+    it('should filter entities for ownerOnly dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'App User' }).expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'alice entity' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
+        .expect(200);
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/simpleEntity/submissions`)
+        .send(testData.instances.simpleEntity.one.replace(
+          '<entities:label>Alice (88)</entities:label>',
+          '<entities:label>Made By App User</entities:label>'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(1);
+          body[0].currentVersion.label.should.eql('Made By App User');
+        });
+    }));
+
+    it('should filter entities based on actor property rules', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'north person 1', data: { region: 'north' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'north person 2', data: { region: 'north' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'south person', data: { region: 'south' } })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'North Worker' }).expect(200);
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(2);
+          body.map(e => e.currentVersion.label).should.containDeep(['north person 1', 'north person 2']);
+        });
+    }));
+  });
+
   describe('GET /datasets/:name/entities/:uuid', () => {
 
     it('should strip uuid: prefix from query param in entity requests', testEntities(async (service) => {

@@ -43,6 +43,9 @@ info:
 
     ## ODK Central v2026.3
 
+    **Added**:
+    - [Entities OData](/central-api-odata-endpoints/#odata-dataset-service) and [GET Entities Metadata](/central-api-entity-management/#entities-metadata) now support a `viewAs` query parameter to preview the filtered Entity list for a specific Actor.
+
     **Changed**:
     - [GET /audits](/central-api-system-endpoints/#getting-audit-log-entries) now uses less-than when filtering with the `end` parameter.
     - [Form Attachment](/central-api-form-management/#listing-form-attachments) objects now include a `size` field (in bytes) when a file has been uploaded. The field is absent for dataset-linked attachments and empty slots, and may be `null` for blobs uploaded before this version.
@@ -9066,7 +9069,7 @@ paths:
       - Entity Management
       summary: Entities Metadata
       description: |-
-        This endpoint returns a list of the Entities of a Dataset. Please note that this endpoint only returns metadata of the entities not the data. If you want to get the data of all entities then please refer to [OData Dataset Service](/central-api-odata-endpoints/#odata-form-service)
+        This endpoint returns a list of the Entities of a Dataset. Please note that this endpoint only returns metadata of the entities not the data. If you want to get the data of all entities then please refer to [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service)
         You can provide `?deleted=true` to get only deleted entities.
       
       operationId: entitiesMetadata
@@ -9085,6 +9088,15 @@ paths:
         schema:
           type: string
         example: people
+      - name: viewAs
+        in: query
+        description: |-
+          If provided, filters the response to only the Entities that the specified Actor would be able to see, based on the Dataset's access filter (`ownerOnly` or property rules). The value must be a numeric Actor ID.
+
+          This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
+        schema:
+          type: number
+        example: 42
       responses:        
         "200":
           description: OK
@@ -11409,6 +11421,8 @@ paths:
         - Quoted text (e.g., `"quoted text"`) searches for entities containing the **exact** phrase.
         - A dash (`-`) before a word excludes entities that contain that word (logical NOT).
 
+        The `viewAs` query parameter can be used to preview what a specific Actor would receive, based on the Dataset's access filter (`ownerOnly` or property rules). Pass a numeric Actor ID as the value. This is intended to preview what an App User or Public Link would see when fetching these Entities as a Form Attachment. This parameter can be combined with other filters, e.g. to see the subset of an Actor's Entities that also match a given `$filter` or `$search` expression.
+
         As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
       operationId: dataDocumentForDataset
       parameters:
@@ -11474,6 +11488,15 @@ paths:
         description: Opaque cursor from `@odata.nextLink` used for paging.
         schema:
           type: string
+      - name: viewAs
+        in: query
+        description: |-
+          If provided, filters the response to only the Entities that the specified Actor would be able to see, based on the Dataset's access filter (`ownerOnly` or property rules). The value must be a numeric Actor ID.
+
+          This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
+        schema:
+          type: number
+        example: "42"
       responses:
         "200":
           description: Ok
