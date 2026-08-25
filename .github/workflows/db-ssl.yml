@@ -2,13 +2,7 @@ name: Database SSL Checks
 
 on:
   pull_request:
-#    paths:    FIXME: ENABLE THIS BEFORE MERGE
-#    - lib/external/slonik.js
-#    - test/db-ssl/**
   push:
-#    paths:    FIXME: ENABLE THIS BEFORE MERGE
-#    - lib/external/slonik.js
-#    - test/db-ssl/**
 
 jobs:
   db-ssl-test:
