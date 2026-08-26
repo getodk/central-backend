@@ -9,6 +9,24 @@ describe('api: /projects/:id/actor-properties', () => {
         .expect(403);
     }));
 
+    it('should reject if name is not allowed (using same name rules as dataset properties)', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: '__notallowed' })
+        .expect(400);
+    }));
+
+    it('should reject if name matches an existing name with with different case', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'REGION' })
+        .expect(409);
+    }));
+
     it('should create a actor property and return success', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/actor-properties')
