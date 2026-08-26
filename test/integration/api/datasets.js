@@ -1438,6 +1438,151 @@ describe('datasets and entities', () => {
     });
 
 
+    describe('viewAs on entities.csv', () => {
+      it('should return 404 if viewAs actor does not exist', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv?viewAs=99999')
+          .expect(404);
+      }));
+
+      it('should return 400 if viewAs is not a numeric ID', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv?viewAs=notanumber')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.eql(400.11);
+          });
+      }));
+
+      it('should return all entities if dataset has no access filter', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'entity 1' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'entity 2' })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User' }).expect(200);
+
+        await asAlice.get(`/v1/projects/1/datasets/people/entities.csv?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ text }) => {
+            text.split('\n').length.should.eql(4); // header + 2 entities + trailing newline
+          });
+      }));
+
+      it('should filter entities by ownerOnly for viewAs actor', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: true })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User' }).expect(200);
+
+        // Alice creates one entity
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'alice entity', data: { first_name: 'Alice' } })
+          .expect(200);
+
+        // App user creates one entity via submission
+        await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
+          .expect(200);
+        await service.post(`/v1/key/${appUser.token}/projects/1/forms/simpleEntity/submissions`)
+          .send(testData.instances.simpleEntity.one
+            .replace('<entities:label>Alice (88)</entities:label>', '<entities:label>App User Entity</entities:label>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        await asAlice.get(`/v1/projects/1/datasets/people/entities.csv?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ text }) => {
+            text.split('\n').length.should.eql(3); // header + 1 entity + trailing newline
+            text.should.containEql('App User Entity');
+            text.should.not.containEql('alice entity');
+          });
+      }));
+
+      it('should filter entities by property rules for viewAs actor', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'region' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/actor-properties')
+          .send({ name: 'region' })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north person', data: { region: 'north' } })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'south person', data: { region: 'south' } })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'North Worker' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        await asAlice.get(`/v1/projects/1/datasets/people/entities.csv?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ text }) => {
+            text.split('\n').length.should.eql(3); // header + 1 entity + trailing newline
+            text.should.containEql('north person');
+            text.should.not.containEql('south person');
+          });
+      }));
+
+      it('should skip ETag caching when viewAs is present', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User' }).expect(200);
+
+        const result = await asAlice.get(`/v1/projects/1/datasets/people/entities.csv?viewAs=${appUser.id}`)
+          .expect(200);
+
+        should.not.exist(result.get('ETag'));
+      }));
+    });
+
     describe('projects/:id/trash/datasets/:datasetId/entities.csv GET', () => {
       it('should reject if the user cannot access the deleted dataset', testEntities(async (service) => {
         const asAlice = await service.login('alice');
