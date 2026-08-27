@@ -1,0 +1,56 @@
+#!/bin/bash -eu
+set -o pipefail
+
+log() { echo >&2 "[$(basename "$0")] $*"; }
+
+backupFile=./test/db-ssl/backup.pgdump.bin
+
+log "Creating a tiny backup file at $backupFile ..."
+printf 'PGDMP\x01\x0c\x00\x04\x08\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00' \
+| ODK_BACKUP_PASSPHRASE='' openssl enc -chacha20 -pbkdf2 -pass env:ODK_BACKUP_PASSPHRASE \
+    >"$backupFile"
+
+do_restore() {
+  node ./lib/bin/restore.js "$backupFile"
+}
+expect_success() {
+  if ! do_restore >/dev/null; then
+    log "!!! This restore should have succeeded !!!"
+    exit 1
+  fi
+}
+expect_fail() {
+  if do_restore 2>/dev/null; then
+    log "!!! This restore should have failed !!!"
+    exit 1
+  fi
+}
+
+log "Attempting to restore, without SSL verification..."
+expect_success
+
+log "Attempting to restore, with SSL verification..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/ca.crt \
+expect_success
+
+log "Attempting to restore with incorrect root cert..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/not-ca.crt \
+expect_fail
+
+log "Attempting to restore with non-existent root cert..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/not-file \
+expect_fail
+
+log "Attempting to restore with non-root-cert..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs/server.key \
+expect_fail
+
+log "Attempting to restore with directory..."
+PGSSLMODE=verify-full PGSSLROOTCERT=./.pg-certs \
+expect_fail
+
+log "Attempting to restore with SSL disabled..."
+PGSSLMODE=disable \
+expect_fail
+
+log "Completed OK."

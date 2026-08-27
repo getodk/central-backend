@@ -110,6 +110,12 @@ test-db-migrations:
 	    --require test/db-migrations/mocha-setup.js \
 	    ./test/db-migrations/**/*.spec.js
 
+.PHONY: test-db-ssl
+test-db-ssl:
+	NODE_CONFIG_ENV=db-migration-test npx mocha --sort --timeout=20000 \
+	    --require test/db-ssl/mocha-setup.js \
+	    ./test/db-ssl/**/*.spec.js
+
 .PHONY: test-fast
 test-fast: node_version
 	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-unit
@@ -151,13 +157,52 @@ run-docker-postgres: stop-docker-postgres
 		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
 	)
 
+.PHONY: run-docker-postgres-ssl
+run-docker-postgres-ssl: stop-docker-postgres-ssl
+	mkdir -p .pg-certs && \
+	(cd .pg-certs && [[ -s ca.key     ]] || openssl genrsa -out     ca.key 2048) && \
+	(cd .pg-certs && [[ -s not-ca.key ]] || openssl genrsa -out not-ca.key 2048) && \
+	(cd .pg-certs && [[ -s ca.crt     ]] || openssl req -x509 -new -nodes -key     ca.key -sha256 -days 1 -out     ca.crt -subj "/CN=TestCA") && \
+	(cd .pg-certs && [[ -s not-ca.crt ]] || openssl req -x509 -new -nodes -key not-ca.key -sha256 -days 1 -out not-ca.crt -subj "/CN=NotTestCA") && \
+	(cd .pg-certs && [[ -s server.key ]] || openssl genrsa -out server.key 2048) && \
+	(cd .pg-certs && [[ -s server.csr ]] || openssl req -new -key server.key -out server.csr -subj "/CN=localhost") && \
+	(cd .pg-certs && [[ -s server.crt ]] || openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt -days 1 -sha256 -extfile <(printf "subjectAltName=DNS:localhost,IP:127.0.0.1")) && \
+	sudo chown -R 999:999 .pg-certs && \
+	sudo -k && \
+	docker start $(PG_IMG)-ssl || (\
+		docker run -d \
+			--name $(PG_IMG)-ssl \
+			--publish 127.0.0.1:5432:5432 \
+			--env POSTGRES_PASSWORD=odktest \
+			--volume $(PWD)/.pg-certs:/postgres-certs \
+			postgres:$(PG_VERSION) \
+				--shared_preload_libraries=pg_stat_statements \
+				--ssl=on \
+				--ssl_cert_file=/postgres-certs/server.crt \
+				--ssl_key_file=/postgres-certs/server.key \
+		&& sleep 2 \
+		&& docker exec $(PG_IMG)-ssl pg_isready --username=postgres --timeout=10 \
+		&& node lib/bin/create-docker-databases.js $(if $(CI),,--log) \
+		&& docker exec $(PG_IMG)-ssl bash -c "sed -i 's/^host\b/hostssl/' \$$PGDATA/pg_hba.conf" \
+		&& docker exec $(PG_IMG)-ssl psql -U postgres -c "SELECT pg_reload_conf();" \
+		&& docker exec $(PG_IMG)-ssl pg_isready --username=postgres --timeout=10 \
+	)
+
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
 	docker stop $(PG_IMG) || true
 
+.PHONY: stop-docker-postgres-ssl
+stop-docker-postgres-ssl:
+	docker stop $(PG_IMG)-ssl || true
+
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
 	docker rm $(PG_IMG) || true
+
+.PHONY: rm-docker-postgres-ssl
+rm-docker-postgres-ssl: stop-docker-postgres-ssl
+	docker rm $(PG_IMG)-ssl || true
 
 
 ################################################################################
