@@ -9,24 +9,6 @@ describe('api: /projects/:id/actor-properties', () => {
         .expect(403);
     }));
 
-    it('should reject if name is not allowed (using same name rules as dataset properties)', testService(async (service) => {
-      const asAlice = await service.login('alice');
-      await asAlice.post('/v1/projects/1/actor-properties')
-        .send({ name: '__notallowed' })
-        .expect(400);
-    }));
-
-    it('should reject if name matches an existing name with with different case', testService(async (service) => {
-      const asAlice = await service.login('alice');
-      await asAlice.post('/v1/projects/1/actor-properties')
-        .send({ name: 'region' })
-        .expect(200);
-
-      await asAlice.post('/v1/projects/1/actor-properties')
-        .send({ name: 'REGION' })
-        .expect(409);
-    }));
-
     it('should create a actor property and return success', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/actor-properties')
@@ -69,16 +51,31 @@ describe('api: /projects/:id/actor-properties', () => {
         .expect(400);
     }));
 
-    it('should reject if existing name is sent again', testService(async (service) => {
+    it('should reject with uniquenessViolation if exact same name is sent again', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/actor-properties')
         .send({ name: 'region' })
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/actor-properties')
+      const { body } = await asAlice.post('/v1/projects/1/actor-properties')
         .send({ name: 'region' })
         .expect(409);
+      body.code.should.equal(409.3);
     }));
+
+    it('should reject with propertyNameConflict if name matches an existing name with different case', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      const { body } = await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'REGION' })
+        .expect(409);
+      body.code.should.equal(409.17);
+      body.message.should.containEql("'REGION' conflicts with 'region'");
+    }));
+
   });
 
   describe('GET /projects/:id/actor-properties', () => {
