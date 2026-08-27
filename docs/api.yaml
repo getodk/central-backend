@@ -44,7 +44,7 @@ info:
     ## ODK Central v2026.3
 
     **Added**:
-    - [Entities OData](/central-api-odata-endpoints/#odata-dataset-service) and [GET Entities Metadata](/central-api-entity-management/#entities-metadata) now support a `viewAs` query parameter to preview the filtered Entity list for a specific Actor.
+    - [Entities OData](/central-api-odata-endpoints/#odata-dataset-service), [GET Entities Metadata](/central-api-entity-management/#entities-metadata), [Download Dataset](/central-api-dataset-management/#download-dataset), and [Entities Geodata](/central-api-entity-management/#entities-geodata) now support a `viewAs` query parameter to preview the filtered Entity list for a specific Actor.
 
     **Changed**:
     - [GET /audits](/central-api-system-endpoints/#getting-audit-log-entries) now uses less-than when filtering with the `end` parameter.
@@ -9007,6 +9007,15 @@ paths:
         schema:
           type: string
         example: john
+      - name: viewAs
+        in: query
+        description: |-
+          If provided, filters the response to only the Entities that the specified Actor would be able to see, based on the Dataset's access filter (`ownerOnly` or property rules). The value must be a numeric Actor ID.
+
+          This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
+        schema:
+          type: number
+        example: 42
       responses:
         "200":
           description: OK
@@ -9317,6 +9326,15 @@ paths:
         description: The `$search` querystring parameter can be used to search entity data (user-defined properties) and the `label` field, using the same search behavior as the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service).
         schema:
           type: string
+      - name: viewAs
+        in: query
+        description: |-
+          If provided, filters the response to only the Entities that the specified Actor would be able to see, based on the Dataset's access filter (`ownerOnly` or property rules). The value must be a numeric Actor ID.
+
+          This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
+        schema:
+          type: number
+        example: 42
       responses:
         "200":
           description: OK
