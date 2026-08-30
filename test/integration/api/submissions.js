@@ -2441,6 +2441,49 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
           .then(() => container.oneFirst(sql`select count(*) from client_audits`)
             .then((count) => { count.should.equal(8); })))));
 
+    // The event names, the order of the rows in the file, and the start
+    // timestamps are all deliberately different orderings here, so that this
+    // test can only pass if the export is actually ordered by start.
+    const unorderedAudit = `event,node,start,end
+a,/data/a,1700000000003,1700000000004
+b,/data/b,1700000000005,1700000000006
+c,/data/c,1700000000001,1700000000002
+d,/data/d,1700000000009,1700000000010
+e,/data/e,1700000000007,1700000000008
+`;
+
+    it('should order client audit log entries by start, whatever order the rows are stored in', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.clientAudits)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('audit.csv', Buffer.from(unorderedAudit), { filename: 'audit.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+        .expect(201);
+      await exhaust(container);
+
+      // Rewrite the rows so that their physical order in the table is the
+      // reverse of the order they were inserted in. Any UPDATE, VACUUM FULL or
+      // restore-from-dump can do this, which is why the export order was not
+      // reproducible before.
+      await container.run(sql`
+        with removed as (delete from client_audits returning *)
+        insert into client_audits ("blobId", event, node, start, "end")
+          select "blobId", event, node, start, "end" from removed order by start desc`);
+
+      const result = await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'));
+      result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,c,/data/c,1700000000001,1700000000002,,,,,,,
+one,a,/data/a,1700000000003,1700000000004,,,,,,,
+one,b,/data/b,1700000000005,1700000000006,,,,,,,
+one,e,/data/e,1700000000007,1700000000008,,,,,,,
+one,d,/data/d,1700000000009,1700000000010,,,,,,,
+`);
+    }));
+
     it('should return adhoc-processed consolidated client audit log attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
