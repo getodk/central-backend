@@ -3,7 +3,7 @@ set -e
 set -u
 set -o pipefail
 
-log() { echo >&2 "[start-postgres] $*"; }
+log() { echo >&2 "[docker-postgres] $*"; }
 
 imageName=odk-central-backend-dev-postgres
 PG_VERSION="${PG_VERSION-14}"
@@ -82,7 +82,7 @@ docker run \
 sleep 2
 docker exec "$imageName" pg_isready --username=postgres --timeout=10
 
-node lib/bin/create-docker-databases.js "${CI:+--log}"
+node lib/bin/create-docker-databases.js ${CI:+--log}
 
 if [[ "$enableSsl" = true ]]; then
   docker exec "$imageName" bash -c 'sed -i "s/^host\b/hostssl/" "$PGDATA/pg_hba.conf"'
