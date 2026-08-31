@@ -92,7 +92,7 @@ wait_for_postgres() {
     sleep 1
     retries=$((retries-1))
   done
-  printf >&2 '\n'
+  printf >&2 'OK.\n'
 }
 wait_for_postgres
 
