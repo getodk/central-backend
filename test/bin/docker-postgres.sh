@@ -80,10 +80,14 @@ docker run \
         ${enableSsl:+--ssl_key_file=/postgres-certs/server.key}
 
 wait_for_postgres() {
+  requireSsl=
+  if [[ "${1-}" = --require-ssl ]]; then
+    requireSsl=true
+  fi
   printf >&2 "[docker-postgres] Waiting for postgres..."
   maxTries=15
   retries=$((maxTries-1))
-  while ! docker exec "$imageName" psql -U postgres -c 'SELECT 1' >/dev/null 2>&1; do
+  while ! docker exec "$imageName" psql -U postgres ${requireSsl:+"sslmode=require"} -c 'SELECT 1' >/dev/null 2>&1; do
     if [[ "$retries" = 0 ]]; then
       log "!!! Failed: image '$imageName' not available after $maxTries attempts."
       exit 1
@@ -99,9 +103,12 @@ wait_for_postgres
 node lib/bin/create-docker-databases.js ${CI:+--log}
 
 if [[ "$enableSsl" = true ]]; then
+  log "Applying SSL config..."
   docker exec "$imageName" bash -c 'sed -i "s/^host\b/hostssl/" "$PGDATA/pg_hba.conf"'
-  docker exec "$imageName" psql -U postgres -c 'SELECT pg_reload_conf();'
-  wait_for_postgres
+  docker exec "$imageName" psql -U postgres -c 'SELECT pg_reload_conf();' >/dev/null
+  sleep 1 # allow connection-dumping after pg_reload_conf()
+  log "SSL config applied; restarting postgres..."
+  wait_for_postgres --require-ssl
 fi
 
 log "Fresh container started OK."
