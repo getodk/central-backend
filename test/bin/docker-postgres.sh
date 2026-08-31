@@ -3,7 +3,7 @@ set -e
 set -u
 set -o pipefail
 
-log() { echo >&2 "[start-postgres] $*"; }
+log() { echo >&2 "[docker-postgres] $*"; }
 
 imageName=odk-central-backend-dev-postgres
 PG_VERSION="${PG_VERSION-14}"
@@ -79,15 +79,30 @@ docker run \
         ${enableSsl:+--ssl_cert_file=/postgres-certs/server.crt} \
         ${enableSsl:+--ssl_key_file=/postgres-certs/server.key}
 
-sleep 2
-docker exec "$imageName" pg_isready --username=postgres --timeout=10
+wait_for_postgres() {
+  printf >&2 "[docker-postgres] Waiting for postgres..."
+  maxTries=15
+  retries=$((maxTries-1))
+  while ! docker exec "$imageName" pg_isready --quiet; do
+    if [[ "$retries" = 0 ]]; then
+      log "!!! Failed: image '$imageName' not available after $maxTries attempts."
+      exit 1
+    fi
+    printf >&2 .
+    sleep 1
+    retries=$((retries-1))
+  done
+  printf >&2 '\n'
+  sleep 2
+}
+wait_for_postgres
 
-node lib/bin/create-docker-databases.js "${CI:+--log}"
+node lib/bin/create-docker-databases.js ${CI:+--log}
 
 if [[ "$enableSsl" = true ]]; then
   docker exec "$imageName" bash -c 'sed -i "s/^host\b/hostssl/" "$PGDATA/pg_hba.conf"'
   docker exec "$imageName" psql -U postgres -c 'SELECT pg_reload_conf();'
-  docker exec "$imageName" pg_isready --username=postgres --timeout=10
+  wait_for_postgres
 fi
 
 log "Fresh container started OK."
