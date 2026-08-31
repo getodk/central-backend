@@ -83,7 +83,7 @@ wait_for_postgres() {
   printf >&2 "[docker-postgres] Waiting for postgres..."
   maxTries=15
   retries=$((maxTries-1))
-  while ! docker exec "$imageName" pg_isready --quiet; do
+  while ! docker exec "$imageName" psql -U postgres -c 'SELECT 1' >/dev/null 2>&1; do
     if [[ "$retries" = 0 ]]; then
       log "!!! Failed: image '$imageName' not available after $maxTries attempts."
       exit 1
@@ -93,7 +93,6 @@ wait_for_postgres() {
     retries=$((retries-1))
   done
   printf >&2 '\n'
-  sleep 2
 }
 wait_for_postgres
 
