@@ -345,6 +345,9 @@ describe('api: /datasets/:name.svc', () => {
           .then(({ body }) => {
             for (const [index, value] of body.value.entries()) {
               value.__id.should.be.eql(uuids[index*2 + idxOffset]);
+              if ([uuids[0], uuids[2], uuids[4]].includes(uuids[index*2 + idxOffset])) {
+                value.__system.deletedAt.should.be.an.isoDate();
+              }
             }
           });
       }));
