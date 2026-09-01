@@ -6808,6 +6808,28 @@ describe('datasets and entities', () => {
             });
         }));
 
+        it('should reject if property does not exist', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['region']);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'doesNotExist' }] } })
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.45);
+              body.message.should.be.eql('There was a problem with the dataset access filter. Access filter references a property that does not exist.');
+            });
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'doesNotExist', actorProperty: 'region' }] } })
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.45);
+              body.message.should.be.eql('There was a problem with the dataset access filter. Access filter references a property that does not exist.');
+            });
+        }));
+
         it('should log when a filter rule is added to a dataset', testService(async (service, { Audits }) => {
           const asAlice = await service.login('alice');
           await createDataset(asAlice, 1, 'trees', ['region']);
