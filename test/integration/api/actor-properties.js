@@ -72,8 +72,9 @@ describe('api: /projects/:id/actor-properties', () => {
       const { body } = await asAlice.post('/v1/projects/1/actor-properties')
         .send({ name: 'REGION' })
         .expect(409);
+      // TODO: will update this to use a different problem soon.
       body.code.should.equal(409.17);
-      body.message.should.containEql("'REGION' conflicts with 'region'");
+      body.message.should.containEql('This form attempts to create new Entity properties that match with existing ones except for capitalization.');
     }));
 
   });

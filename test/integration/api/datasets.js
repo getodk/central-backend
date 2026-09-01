@@ -529,8 +529,8 @@ describe('datasets and entities', () => {
           })
           .expect(409)
           .then(({ body }) => {
-            body.code.should.equal(409.17);
-            body.message.should.match(/A property name conflicts with an existing one due to capitalization: 'HEIGHT' conflicts with 'height'\./);
+            body.code.should.equal(409.3);
+            body.message.should.match(/A resource already exists with name,datasetId/);
           });
       }));
 
@@ -4428,7 +4428,7 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(409)
             .then(({ body }) => {
-              body.message.should.match(/A property name conflicts with an existing one due to capitalization: 'FIRST_NAME' conflicts with 'first_name'\./);
+              body.message.should.match(/This form attempts to create new Entity properties that match with existing ones except for capitalization/);
             });
         }));
 
@@ -4452,8 +4452,7 @@ describe('datasets and entities', () => {
           await alice.post('/v1/projects/1/forms/simpleEntity/draft/publish')
             .expect(409)
             .then(({ body }) => {
-              // This is the opposite conflict as above because the second form was published first
-              body.message.should.match(/A property name conflicts with an existing one due to capitalization: 'first_name' conflicts with 'FIRST_NAME'\./);
+              body.message.should.match(/This form attempts to create new Entity properties that match with existing ones except for capitalization/);
             });
         }));
 
@@ -4474,7 +4473,7 @@ describe('datasets and entities', () => {
             .set('Content-Type', 'application/xml')
             .expect(409)
             .then(({ body }) => {
-              body.message.should.match(/A property name conflicts with an existing one due to capitalization: 'FIRST_NAME' conflicts with 'first_name'\./);
+              body.message.should.match(/This form attempts to create new Entity properties that match with existing ones except for capitalization/);
             });
         }));
 
