@@ -63,7 +63,7 @@ describe('api: /projects/:id/actor-properties', () => {
       body.code.should.equal(409.3);
     }));
 
-    it('should reject with propertyNameConflict if name matches an existing name with different case', testService(async (service) => {
+    it('should reject with problem if name matches an existing name with different case', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/actor-properties')
         .send({ name: 'region' })
@@ -72,9 +72,8 @@ describe('api: /projects/:id/actor-properties', () => {
       const { body } = await asAlice.post('/v1/projects/1/actor-properties')
         .send({ name: 'REGION' })
         .expect(409);
-      // TODO: will update this to use a different problem soon.
-      body.code.should.equal(409.17);
-      body.message.should.containEql('This form attempts to create new Entity properties that match with existing ones except for capitalization.');
+      body.code.should.equal(409.24);
+      body.message.should.eql("A resource already exists with name 'region' and you provided 'REGION' with different capitalization.");
     }));
 
   });
