@@ -529,8 +529,104 @@ describe('datasets and entities', () => {
           })
           .expect(409)
           .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.match(/A resource already exists with name 'height' and you provided 'HEIGHT' with different capitalization./);
+          });
+      }));
+
+      it('should allow properties that conflict with draft form properties', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // set up dataset "people" first so it is already published
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        // uses people dataset with first_name
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // should allow this to be published because existing "first_name" is a draft
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'FIRST_NAME' })
+          .expect(200);
+
+        // Direct conflict with previous name
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'FIRST_NAME' })
+          .expect(409)
+          .then(({ body }) => {
             body.code.should.equal(409.3);
-            body.message.should.match(/A resource already exists with name,datasetId/);
+            body.message.should.startWith('A resource already exists with name,datasetId value(s) of FIRST_NAME');
+          });
+
+        // Case mistmatch with published property but matching draft property
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'first_name' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.eql("A resource already exists with name 'FIRST_NAME' and you provided 'first_name' with different capitalization.");
+          });
+
+        // Case mistmatch with published property and draft property
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'FiRsT_NaMe' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.eql("A resource already exists with name 'FIRST_NAME' and you provided 'FiRsT_NaMe' with different capitalization.");
+          });
+      }));
+
+      it('should allow properties that conflict with deleted properties but conflict with the current name if case differs', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'height' })
+          .expect(200);
+
+        // delete the property
+        await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+          .expect(200);
+
+        // remake with different case
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'HEIGHT' })
+          .expect(200);
+
+        // reject in different ways
+        // 1. Exact match with current version
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'HEIGHT' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.startWith('A resource already exists with name,datasetId value(s) of HEIGHT');
+          });
+
+        // 2. Match deleted property
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'height' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.eql("A resource already exists with name 'HEIGHT' and you provided 'height' with different capitalization.");
+          });
+
+        // 3. Don't match case of any past properties
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'hEiGhT' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.eql("A resource already exists with name 'HEIGHT' and you provided 'hEiGhT' with different capitalization.");
           });
       }));
 
