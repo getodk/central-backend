@@ -43,3 +43,6 @@ jobs:
       with:
         name: Playwright Test Report
         path: test/e2e/oidc/playwright-tests/results/html-report/
+    - name: PostgreSQL logs
+      if: always()
+      run: docker logs odk-central-backend-dev-postgres || docker logs odk-central-backend-dev-postgres-ssl

@@ -30,3 +30,6 @@ jobs:
     - name: Fake OIDC Server Logs
       if: always()
       run: "! [[ -f ./fake-oidc-server.log ]] || cat ./fake-oidc-server.log"
+    - name: PostgreSQL logs
+      if: always()
+      run: docker logs odk-central-backend-dev-postgres || docker logs odk-central-backend-dev-postgres-ssl

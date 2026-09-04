@@ -28,3 +28,6 @@ jobs:
     - run: PGSSLROOTCERT=./.pg-certs/ca.crt PGSSLMODE=verify-full make migrations
     - run: make test-db-ssl
     - run: ./test/db-ssl/test-restore
+    - name: PostgreSQL logs
+      if: always()
+      run: docker logs odk-central-backend-dev-postgres || docker logs odk-central-backend-dev-postgres-ssl

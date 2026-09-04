@@ -32,3 +32,6 @@ jobs:
     - name: Backend Logs
       if: always()
       run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+    - name: PostgreSQL logs
+      if: always()
+      run: docker logs odk-central-backend-dev-postgres || docker logs odk-central-backend-dev-postgres-ssl
