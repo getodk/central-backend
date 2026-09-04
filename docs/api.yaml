@@ -2266,7 +2266,7 @@ paths:
       description: |-
         Registers a new actor property name for this project. Once registered, the property can be set on any App User or Public Link within the project via `PATCH`.
 
-        Property names follow the same rules as Entity property names: they must be non-empty, may contain letters, digits, hyphens, and underscores, and the name `displayName` (case-insensitive) is reserved.
+        Property names follow the same rules as Entity property names: they must be non-empty, may contain letters, digits, hyphens, and underscores, and the name `displayName` (case-insensitive) is reserved. Property names must be unique within a project and the uniqueness check is case-insensitive, so `region` and `Region` cannot coexist.
 
         Requires `actor_property.update` permission.
       operationId: createActorProperty

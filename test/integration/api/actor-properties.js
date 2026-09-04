@@ -51,16 +51,31 @@ describe('api: /projects/:id/actor-properties', () => {
         .expect(400);
     }));
 
-    it('should reject if existing name is sent again', testService(async (service) => {
+    it('should reject with uniquenessViolation if exact same name is sent again', testService(async (service) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/actor-properties')
         .send({ name: 'region' })
         .expect(200);
 
-      await asAlice.post('/v1/projects/1/actor-properties')
+      const { body } = await asAlice.post('/v1/projects/1/actor-properties')
         .send({ name: 'region' })
         .expect(409);
+      body.code.should.equal(409.3);
     }));
+
+    it('should reject with problem if name matches an existing name with different case', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      const { body } = await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'REGION' })
+        .expect(409);
+      body.code.should.equal(409.24);
+      body.message.should.eql("A resource already exists with name 'region' and you provided 'REGION' with different capitalization.");
+    }));
+
   });
 
   describe('GET /projects/:id/actor-properties', () => {
