@@ -24,7 +24,7 @@ const exampleRequests = [
     },
     {
       cookies: null,
-      data: null,
+      data: '{"email":"test-email","password":"test-pass"}',
       headers: {
         host: 'localhost:8383',
         'user-agent': 'HTTPie/2.4.0',
@@ -58,7 +58,7 @@ const exampleRequests = [
     },
     {
       cookies: null,
-      data: null,
+      data: '{}',
       headers: {
         host: 'localhost:8383',
         'user-agent': 'HTTPie/2.4.0',
@@ -106,7 +106,7 @@ const exampleRequests = [
     },
     {
       cookies: null,
-      data: null,
+      data: '{}',
       headers: {
         'x-forwarded-proto': 'https',
         host: 'localhost:8383',
@@ -151,7 +151,7 @@ const exampleRequests = [
     },
     {
       cookies: null,
-      data: null,
+      data: '{}',
       headers: {
         host: 'localhost:8383',
         'user-agent': 'HTTPie/2.4.0',
@@ -187,7 +187,7 @@ const exampleRequests = [
     },
     {
       cookies: null,
-      data: null,
+      data: '{}',
       headers: {
         host: 'localhost:8383',
         'user-agent': 'HTTPie/2.4.0',
@@ -237,7 +237,7 @@ const exampleRequests = [
     ,
     {
       cookies: null,
-      data: null,
+      data: '{}',
       headers: {
         'x-forwarded-proto': 'https',
         host: 'localhost:8383',
@@ -302,7 +302,7 @@ const exampleRequests = [
     ,
     {
       cookies: null,
-      data: null,
+      data: '{"__csrf":"td..wQ"}',
       headers: {
         'x-forwarded-proto': 'https',
         host: 'localhost:8383',
@@ -356,7 +356,7 @@ const exampleRequests = [
     },
     {
       cookies: null,
-      data: null,
+      data: '{}',
       headers: {
         'x-forwarded-proto': 'https',
         host: 'localhost:8383',
@@ -409,7 +409,7 @@ const exampleRequests = [
     },
     {
       cookies: null,
-      data: null,
+      data: '{}',
       headers: {
         'x-forwarded-proto': 'https',
         host: 'localhost:8383',
@@ -462,7 +462,7 @@ const exampleRequests = [
     },
     {
       cookies: null,
-      data: null,
+      data: '{}',
       headers: {
         'x-forwarded-proto': 'https',
         host: 'localhost:8383',
@@ -499,7 +499,7 @@ const exampleRequests = [
     },
     {
       cookies: null,
-      data: null,
+      data: '{"displayName":"Test Display Name"}',
       headers: {
         host: 'localhost:8383',
         'user-agent': 'HTTPie/2.4.0',
