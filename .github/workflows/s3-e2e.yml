@@ -35,4 +35,4 @@ jobs:
       run: "! [[ -f ./server.log ]] || cat ./server.log"
     - name: PostgreSQL logs
       if: always()
-      run: docker logs odk-central-backend-dev-postgres || docker logs odk-central-backend-dev-postgres-ssl
+      run: docker logs odk-central-backend-dev-postgres
