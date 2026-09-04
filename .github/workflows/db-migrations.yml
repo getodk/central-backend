@@ -42,3 +42,6 @@ jobs:
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
     - run: make test-db-migrations
+    - name: PostgreSQL logs
+      if: always()
+      run: docker logs odk-central-backend-dev-postgres
