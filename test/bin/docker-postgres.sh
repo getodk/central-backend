@@ -31,6 +31,7 @@ case "$1" in
   remove) docker rm   "$imageName" || true; exit ;;
   stop)   docker stop "$imageName" || true; exit ;;
   start)  ;; # continue script
+  --help) usage 0 ;;
   *)      usage 1 ;;
 esac
 
