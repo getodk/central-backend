@@ -232,9 +232,7 @@ const cases = [
       method: 'GET',
       query_string: '%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null',
       url: 'http://localhost/v1/projects/3/forms/odata-fake-planets.svc/Submissions?%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null'
-    }
-    // eslint-disable-next-line comma-style
-    ,
+    },
     {
       cookies: null,
       data: null,
@@ -297,9 +295,7 @@ const cases = [
       method: 'POST',
       query_string: null,
       url: 'http://localhost/v1/projects/5/submission'
-    }
-    // eslint-disable-next-line comma-style
-    ,
+    },
     {
       cookies: null,
       data: null,
@@ -322,8 +318,7 @@ const cases = [
         'sec-fetch-site': 'same-origin',
         'sec-fetch-mode': 'cors',
         'sec-fetch-dest': 'empty',
-        // eslint-disable-next-line key-spacing
-        referer:  null,
+        referer: null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
         cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
@@ -555,15 +550,13 @@ describe('external: sanitize-sentry', () => {
 
   it('identifies sensitive URLs ', () => {
     for (const [method, url] of sensitiveEndpoints) {
-      // eslint-disable-next-line object-curly-spacing
-      isSensitiveEndpoint({url, method}).should.equal(true);
+      isSensitiveEndpoint({ url, method }).should.equal(true);
     }
   });
 
   it('identifies non-sensitive URLs ', () => {
     for (const [method, url] of nonSensitiveEndpoints) {
-      // eslint-disable-next-line object-curly-spacing
-      isSensitiveEndpoint({url, method}).should.equal(false);
+      isSensitiveEndpoint({ url, method }).should.equal(false);
     }
   });
 
