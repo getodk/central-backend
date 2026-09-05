@@ -6818,7 +6818,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.be.eql(400.45);
-              body.message.should.be.eql('There was a problem with the dataset access filter. Access filter references a property that does not exist.');
+              body.message.should.be.eql('There was a problem with the dataset access filter. Actor property \'doesNotExist\' does not exist.');
             });
 
           await asAlice.patch('/v1/projects/1/datasets/trees')
@@ -6826,7 +6826,7 @@ describe('datasets and entities', () => {
             .expect(400)
             .then(({ body }) => {
               body.code.should.be.eql(400.45);
-              body.message.should.be.eql('There was a problem with the dataset access filter. Access filter references a property that does not exist.');
+              body.message.should.be.eql('There was a problem with the dataset access filter. Dataset property \'doesNotExist\' does not exist.');
             });
         }));
 
