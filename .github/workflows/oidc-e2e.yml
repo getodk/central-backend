@@ -31,7 +31,7 @@ jobs:
       with:
         node-version-file: package.json
         cache: 'npm'
-    - run: npm ci
+    - run: npm ci --no-audit
     - run: make run-docker-postgres
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
