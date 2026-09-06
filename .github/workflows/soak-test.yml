@@ -21,7 +21,7 @@ jobs:
       with:
         node-version-file: package.json
         cache: 'npm'
-    - run: npm ci
+    - run: npm ci --no-audit
     - run: make run-docker-postgres
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
@@ -32,3 +32,6 @@ jobs:
     - name: Backend Logs
       if: always()
       run: "! [[ -f ./backend.log ]] || cat ./backend.log"
+    - name: PostgreSQL logs
+      if: always()
+      run: docker logs odk-central-backend-dev-postgres || true

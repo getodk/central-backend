@@ -21,7 +21,7 @@ jobs:
       with:
         node-version-file: package.json
         cache: 'npm'
-    - run: npm ci
+    - run: npm ci --no-audit
     - run: FAKE_OIDC_ROOT_URL=http://localhost:9898 make fake-oidc-server-ci > fake-oidc-server.log &
     - run: make run-docker-postgres
       env:
@@ -30,3 +30,6 @@ jobs:
     - name: Fake OIDC Server Logs
       if: always()
       run: "! [[ -f ./fake-oidc-server.log ]] || cat ./fake-oidc-server.log"
+    - name: PostgreSQL logs
+      if: always()
+      run: docker logs odk-central-backend-dev-postgres || true
