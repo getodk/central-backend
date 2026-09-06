@@ -22,9 +22,12 @@ jobs:
         node-version-file: package.json
         cache: 'npm'
     - run: make check-for-large-files
-    - run: npm ci
+    - run: npm ci --no-audit
     - run: make api-docs-lint
     - run: make run-docker-postgres
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
     - run: make test
+    - name: PostgreSQL logs
+      if: always()
+      run: docker logs odk-central-backend-dev-postgres || true

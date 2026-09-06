@@ -825,6 +825,61 @@ describe('analytics task queries @slow', function () {
       counts.total.should.equal(2); // 2 bulk delete operations total
       counts.recent.should.equal(1); // 1 recent bulk delete operation
     }));
+
+    it('should count submissions and edits by web client', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // 1 wf submission with 2 edits
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'odk-web-forms/1.0')
+        .attach('xml_submission_file', Buffer.from(simpleInstance('wf')), { filename: 'data.xml' });
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'odk-web-forms/1.0')
+        .attach('xml_submission_file', Buffer.from(withSimpleIds('wf', 'wf_updated').replace('Alice', 'Alyssa')), { filename: 'data.xml' });
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'odk-web-forms/1.0')
+        .attach('xml_submission_file', Buffer.from(withSimpleIds('wf_updated', 'wf_updated_again').replace('Alice', 'Alyssa')), { filename: 'data.xml' });
+
+      // 1 enketo submission with 1 edit
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'Enketo/1.0')
+        .attach('xml_submission_file', Buffer.from(simpleInstance('enk')), { filename: 'data.xml' });
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'Enketo/1.0')
+        .attach('xml_submission_file', Buffer.from(withSimpleIds('enk', 'enk_updated').replace('Alice', 'Alyssa')), { filename: 'data.xml' });
+
+      // Set these existing subs to be created in the past
+      await container.run(sql`UPDATE submission_defs SET "createdAt" = '1999-1-1T00:00:00Z' WHERE TRUE`);
+
+      // new wf submission and edit
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'odk-web-forms/1.0')
+        .attach('xml_submission_file', Buffer.from(simpleInstance('wf2')), { filename: 'data.xml' });
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'odk-web-forms/1.0')
+        .attach('xml_submission_file', Buffer.from(withSimpleIds('wf2', 'wf2_updated').replace('Alice', 'Alyssa')), { filename: 'data.xml' });
+
+      const counts = await container.Analytics.countSubmissionsByWebClient();
+      counts.wf_subs_total.should.equal(2);
+      counts.wf_subs_recent.should.equal(1);
+      counts.wf_edits_total.should.equal(3);
+      counts.wf_edits_recent.should.equal(1);
+      counts.enketo_subs_total.should.equal(1);
+      counts.enketo_subs_recent.should.equal(0);
+      counts.enketo_edits_total.should.equal(1);
+      counts.enketo_edits_recent.should.equal(0);
+    }));
   });
 
   describe('user metrics', () => {
@@ -2863,6 +2918,27 @@ describe('analytics task queries @slow', function () {
         .set('Content-Type', 'image/jpeg')
         .send('testimage')
         .expect(200);
+
+      // 2026.3 Web Forms and Enketo submission counts
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'odk-web-forms/1.0')
+        .attach('xml_submission_file', Buffer.from(simpleInstance('wf')), { filename: 'data.xml' });
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'odk-web-forms/1.0')
+        .attach('xml_submission_file', Buffer.from(withSimpleIds('wf', 'wf_updated').replace('Alice', 'Alyssa')), { filename: 'data.xml' });
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'Enketo/1.0')
+        .attach('xml_submission_file', Buffer.from(simpleInstance('enk')), { filename: 'data.xml' });
+
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .set('User-Agent', 'Enketo/1.0')
+        .attach('xml_submission_file', Buffer.from(withSimpleIds('enk', 'enk_updated').replace('Alice', 'Alyssa')), { filename: 'data.xml' });
 
       // ---- Add new behavior above ---
 
