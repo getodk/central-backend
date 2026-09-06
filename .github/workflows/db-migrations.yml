@@ -28,7 +28,8 @@ jobs:
       fail-fast: false
       matrix:
         postgres-version:
-          - "19"
+          - "14.23"
+          - "18"
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
