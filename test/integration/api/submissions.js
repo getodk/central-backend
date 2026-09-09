@@ -289,7 +289,7 @@ describe('api: /submission', () => {
     it('should decode the form version', testService(async (service) => {
       const asAlice = await service.login('alice');
 
-      // Adds a version string of <&> to XML after encoding it
+      // Adds a version string of <&@> to XML after encoding it
       const addVersion = (xml) =>
         xml.replace(/(<data id="simple")>/, '$1 version="&lt;&amp;&#64;&gt;">');
 
