@@ -286,10 +286,12 @@ describe('api: /submission', () => {
           .then(({ formDefId }) => one(sql`select * from form_defs where id=${formDefId}`))
           .then((formDef) => { formDef.version.should.equal('two'); }))));
 
+    // getodk/central#2219
     it('should decode the form version', testService(async (service) => {
       const asAlice = await service.login('alice');
 
-      // Adds a version string of <&@> to XML after encoding it
+      // Adds a version string of <&@> to XML after encoding it. @ doesn't
+      // strictly need to be encoded, but Collect currently does encode it.
       const addVersion = (xml) =>
         xml.replace(/(<data id="simple")>/, '$1 version="&lt;&amp;&#64;&gt;">');
 
