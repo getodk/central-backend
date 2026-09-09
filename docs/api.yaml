@@ -49,6 +49,7 @@ info:
     **Changed**:
     - [GET /audits](/central-api-system-endpoints/#getting-audit-log-entries) now uses less-than when filtering with the `end` parameter.
     - [Form Attachment](/central-api-form-management/#listing-form-attachments) objects now include a `size` field (in bytes) when a file has been uploaded. The field is absent for dataset-linked attachments and empty slots, and may be `null` for blobs uploaded before this version.
+    - [POST /projects/:id/actor-properties](/central-api-accounts-and-users/#registering-an-actor-property-name) now rejects names that differ only in letter case from an existing property, so `Region` cannot be registered when `region` already exists. See [Actor Properties](/central-api-accounts-and-users/#actor-properties) for the naming rules.
 
     ## ODK Central v2026.2
 
@@ -770,7 +771,7 @@ tags:
 
     Actor properties allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like region or supervisor, which can then be used to [filter Dataset access](/central-api-dataset-management/#update-dataset-access-filters-and-metadata).
 
-    Property names must be registered on the project before they can be set on individual App Users or Public Links. Property names follow the same rules as Entity property names, with the additional restriction that `displayName` (case-insensitive) is reserved.
+    Property names must be registered on the project before they can be set on individual App Users or Public Links. Property names follow the same rules as Entity property names, with the additional restriction that `displayName` (case-insensitive) is reserved. Property names must be unique within a project, even with different capitalization, so `region` and `Region` cannot both be registered.
 - name: App Users
   x-parent-tag: Accounts and Users
   description: |-
