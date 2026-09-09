@@ -291,7 +291,7 @@ describe('api: /submission', () => {
 
       // Adds a version string of <&> to XML after encoding it
       const addVersion = (xml) =>
-        xml.replace(/(<data id="simple")>/, '$1 version="&lt;&amp;&gt;">');
+        xml.replace(/(<data id="simple")>/, '$1 version="&lt;&amp;&#64;&gt;">');
 
       // Publish a new version of the form with an encoded version string.
       await asAlice.post('/v1/projects/1/forms/simple/draft')
@@ -303,7 +303,7 @@ describe('api: /submission', () => {
       await asAlice.get('/v1/projects/1/forms/simple')
         .expect(200)
         .then(({ body }) => {
-          body.version.should.equal('<&>');
+          body.version.should.equal('<&@>');
         });
 
       // Create a submission to the new version of the form.
@@ -320,7 +320,7 @@ describe('api: /submission', () => {
         .set('X-Extended-Metadata', 'true')
         .expect(200)
         .then(({ body }) => {
-          body.formVersion.should.equal('<&>');
+          body.formVersion.should.equal('<&@>');
         });
     }));
 
