@@ -50,6 +50,10 @@ info:
     - [GET /audits](/central-api-system-endpoints/#getting-audit-log-entries) now uses less-than when filtering with the `end` parameter.
     - [Form Attachment](/central-api-form-management/#listing-form-attachments) objects now include a `size` field (in bytes) when a file has been uploaded. The field is absent for dataset-linked attachments and empty slots, and may be `null` for blobs uploaded before this version.
 
+    **Fixed**:
+
+    - Central now decodes the Form `version` string in Submission XML. This can prevent a 404 error when a Submission is sent.
+
     ## ODK Central v2026.2
 
     **Added**:

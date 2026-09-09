@@ -286,6 +286,46 @@ describe('api: /submission', () => {
           .then(({ formDefId }) => one(sql`select * from form_defs where id=${formDefId}`))
           .then((formDef) => { formDef.version.should.equal('two'); }))));
 
+    // getodk/central#2219
+    it('should decode the form version', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Adds a version string of <&@> to XML after encoding it. @ doesn't
+      // strictly need to be encoded, but Collect currently does encode it.
+      const addVersion = (xml) =>
+        xml.replace(/(<data id="simple")>/, '$1 version="&lt;&amp;&#64;&gt;">');
+
+      // Publish a new version of the form with an encoded version string.
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .send(addVersion(testData.forms.simple))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+        .expect(200);
+      await asAlice.get('/v1/projects/1/forms/simple')
+        .expect(200)
+        .then(({ body }) => {
+          body.version.should.equal('<&@>');
+        });
+
+      // Create a submission to the new version of the form.
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach(
+          'xml_submission_file',
+          Buffer.from(addVersion(testData.instances.simple.one)),
+          { filename: 'data.xml' }
+        )
+        .expect(201);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.formVersion.should.equal('<&@>');
+        });
+    }));
+
     it('should store the correct formdef and actor ids', testService((service, { all, oneFirst }) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/submission')
