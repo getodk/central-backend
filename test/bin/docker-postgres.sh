@@ -85,18 +85,33 @@ wait_for_postgres() {
   if [[ "${1-}" = --require-ssl ]]; then
     requireSsl=true
   fi
+
   printf >&2 "[docker-postgres] Waiting for postgres..."
-  maxTries=15
+
+  maxTries=5
   retries=$((maxTries-1))
-  while ! docker exec "$imageName" psql -U postgres ${requireSsl:+"sslmode=require"} -c 'SELECT 1' >/dev/null 2>&1; do
+  while !  docker exec "$imageName" pg_isready --username=postgres >/dev/null; do
     if [[ "$retries" = 0 ]]; then
-      log "!!! Failed: image '$imageName' not available after $maxTries attempts."
+      log "!!! Failed: pg_isready failed after $maxTries attempts."
       exit 1
     fi
     printf >&2 .
     sleep 1
     retries=$((retries-1))
   done
+
+  maxTries=5
+  retries=$((maxTries-1))
+  while ! docker exec "$imageName" psql -U postgres ${requireSsl:+"sslmode=require"} -c 'SELECT 1' >/dev/null 2>&1; do
+    if [[ "$retries" = 0 ]]; then
+      log "!!! Failed: psql failed after $maxTries attempts."
+      exit 1
+    fi
+    printf >&2 .
+    sleep 1
+    retries=$((retries-1))
+  done
+
   printf >&2 'OK.\n'
 }
 wait_for_postgres
