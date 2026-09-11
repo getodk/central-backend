@@ -21,7 +21,7 @@ jobs:
       with:
         node-version-file: package.json
         cache: 'npm'
-    - run: npm ci
+    - run: npm ci --no-audit
     - run: make run-docker-postgres-ssl
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
@@ -30,4 +30,4 @@ jobs:
     - run: ./test/db-ssl/test-restore
     - name: PostgreSQL logs
       if: always()
-      run: docker logs odk-central-backend-dev-postgres-ssl
+      run: docker logs odk-central-backend-dev-postgres-ssl || true

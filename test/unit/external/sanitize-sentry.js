@@ -3,7 +3,7 @@ const appRoot = require('app-root-path');
 const { sanitizeEventRequest, isSensitiveEndpoint, filterTokenFromUrl } = require(appRoot + '/lib/external/sentry');
 
 // These cases are based on real requests!
-const cases = [
+const exampleRequests = [
   // Request body with sensitive data
   [
     {
@@ -232,9 +232,7 @@ const cases = [
       method: 'GET',
       query_string: '%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null',
       url: 'http://localhost/v1/projects/3/forms/odata-fake-planets.svc/Submissions?%24top=250&%24skip=0&%24count=true&%24wkt=true&%24filter=__system%2FsubmitterId+eq+48+and+__system%2FreviewState+eq+null'
-    }
-    // eslint-disable-next-line comma-style
-    ,
+    },
     {
       cookies: null,
       data: null,
@@ -297,9 +295,7 @@ const cases = [
       method: 'POST',
       query_string: null,
       url: 'http://localhost/v1/projects/5/submission'
-    }
-    // eslint-disable-next-line comma-style
-    ,
+    },
     {
       cookies: null,
       data: null,
@@ -322,8 +318,7 @@ const cases = [
         'sec-fetch-site': 'same-origin',
         'sec-fetch-mode': 'cors',
         'sec-fetch-dest': 'empty',
-        // eslint-disable-next-line key-spacing
-        referer:  null,
+        referer: null,
         'accept-encoding': 'gzip, deflate, br',
         'accept-language': 'en-US,en;q=0.9',
         cookie: 'csrftoken, __enketo_meta_deviceid, __csrf, session'
@@ -518,59 +513,69 @@ const cases = [
   ]
 ];
 
-// sensitive endpoints where querystrings need to be removed
-const sensitiveEndpoints = [
-  ['GET', '/v1/users?q=personal_name'],
-  ['GET', '/v1/projects/6/forms/formid/submissions.csv?keyid=pass'],
-  ['GET', '/v1/projects/6/forms/formid/submissions.csv.zip?keyid=pass'],
-  ['GET', '/v1/projects/6/forms/formid/draft/submissions.csv?keyid=pass'],
-  ['GET', '/v1/projects/6/forms/formid/draft/submissions.csv.zip?keyid=pass'],
-  ['HEAD', '/v1/projects/6/formList?formID=my_form_id&st=enketo_token'],
-  ['POST', '/v1/projects/6/submission?st=enketo_token']
-];
-
-// non-sensitive endpoints to send along useful querystrings
-const nonSensitiveEndpoints = [
-  ['GET', '/v1/users/reset/initiate?invalidate=true'],
-  ['POST', '/v1/projects/6/forms/formid/submissions.csv?attachments=false'],
-  ['POST', '/v1/projects/6/forms/formid/submissions.csv.zip?attachments=false'],
-  ['POST', '/v1/projects/6/forms/formid/draft/submissions.csv?attachments=false'],
-  ['POST', '/v1/projects/6/forms/formid/draft/submissions.csv.zip?attachments=false'],
-];
-
-const filteredTokenUrls = [
-  ['/v1/key/APP_USER_KEY/projects/3/formList', '/v1/key/[FILTERED]/projects/3/formList'],
-  ['/v1/test/DRAFT_TOKEN/projects/3/forms/draft/submission', '/v1/test/[FILTERED]/projects/3/forms/draft/submission'],
-  ['/v1/projects/2/forms/test/attachments', '/v1/projects/2/forms/test/attachments'], // the form ID is 'test' but doesn't get filtered
-  ['/v1/key/PUBLIC_ACCESS_KEY/projects/5/formList?formID=form_id&st=PUBLIC_ACCESS_KEY', '/v1/key/[FILTERED]/projects/5/formList?formID=form_id&st=PUBLIC_ACCESS_KEY'] // query string removal is not in the filtering step
-];
-
 describe('external: sanitize-sentry', () => {
-  it('removes sensitive data from request objects ', () => {
-
-    for (const [input, expectedOutput] of cases) {
-      sanitizeEventRequest({ request: input }).should.eql({ request: expectedOutput });
-    }
+  describe('sanitizeEventRequest()', () => {
+    exampleRequests.forEach(([ input, expectedOutput ], idx) => {
+      it(`should remove sensitive data from request object #${idx+1}`, () => {
+        sanitizeEventRequest({ request: input }).should.eql({ request: expectedOutput });
+      });
+    });
   });
 
-  it('identifies sensitive URLs ', () => {
-    for (const [method, url] of sensitiveEndpoints) {
-      // eslint-disable-next-line object-curly-spacing
-      isSensitiveEndpoint({url, method}).should.equal(true);
-    }
+  describe('isSensitiveEndpoint()', () => {
+    [
+      ['GET', '/v1/users?q=personal_name'],
+      ['GET', '/v1/projects/6/forms/formid/submissions.csv?keyid=pass'],
+      ['GET', '/v1/projects/6/forms/formid/submissions.csv.zip?keyid=pass'],
+      ['GET', '/v1/projects/6/forms/formid/draft/submissions.csv?keyid=pass'],
+      ['GET', '/v1/projects/6/forms/formid/draft/submissions.csv.zip?keyid=pass'],
+      ['HEAD', '/v1/projects/6/formList?formID=my_form_id&st=enketo_token'],
+      ['POST', '/v1/projects/6/submission?st=enketo_token'],
+    ].forEach(([ method, url ]) => {
+      it(`should correctly identify ${method} ${url} as sensitive`, () => {
+        isSensitiveEndpoint({ url, method }).should.equal(true);
+      });
+    });
+
+    it('identifies non-sensitive URLs ', () => {
+      [
+        ['GET', '/v1/users/reset/initiate?invalidate=true'],
+        ['POST', '/v1/projects/6/forms/formid/submissions.csv?attachments=false'],
+        ['POST', '/v1/projects/6/forms/formid/submissions.csv.zip?attachments=false'],
+        ['POST', '/v1/projects/6/forms/formid/draft/submissions.csv?attachments=false'],
+        ['POST', '/v1/projects/6/forms/formid/draft/submissions.csv.zip?attachments=false'],
+      ].forEach(([ method, url ]) => {
+        it(`should correctly identify ${method} ${url} as NOT sensitive`, () => {
+          isSensitiveEndpoint({ url, method }).should.equal(false);
+        });
+      });
+    });
   });
 
-  it('identifies non-sensitive URLs ', () => {
-    for (const [method, url] of nonSensitiveEndpoints) {
-      // eslint-disable-next-line object-curly-spacing
-      isSensitiveEndpoint({url, method}).should.equal(false);
-    }
-  });
-
-  it('filters app user and draft tokens from URLs', () => {
-    for (const [inputUrl, expectedUrl ] of filteredTokenUrls) {
-      filterTokenFromUrl(inputUrl).should.equal(expectedUrl);
-    }
+  describe('filterTokenFromUrl()', () => {
+    [
+      [
+        '/v1/key/APP_USER_KEY/projects/3/formList',
+        '/v1/key/[FILTERED]/projects/3/formList',
+      ],
+      [
+        '/v1/test/DRAFT_TOKEN/projects/3/forms/draft/submission',
+        '/v1/test/[FILTERED]/projects/3/forms/draft/submission',
+      ],
+      [
+        // the form ID is 'test' but doesn't get filtered
+        '/v1/projects/2/forms/test/attachments',
+        '/v1/projects/2/forms/test/attachments',
+      ],
+      [
+        // query string removal is not in the filtering step
+        '/v1/key/PUBLIC_ACCESS_KEY/projects/5/formList?formID=form_id&st=PUBLIC_ACCESS_KEY',
+        '/v1/key/[FILTERED]/projects/5/formList?formID=form_id&st=PUBLIC_ACCESS_KEY',
+      ],
+    ].forEach(([ inputUrl, expectedUrl ], idx) => {
+      it(`should correctly filter token(s) from example #${idx+1}`, () => {
+        filterTokenFromUrl(inputUrl).should.equal(expectedUrl);
+      });
+    });
   });
 });
-

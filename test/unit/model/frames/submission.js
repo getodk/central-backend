@@ -62,6 +62,12 @@ describe('Submission', () => {
       });
     });
 
+    it('should decode version', async () => {
+      const xml = '<data id="mycoolform" version="&lt;&amp;&#64;&gt;"><orx:meta><orx:instanceID>myinstance</orx:instanceID></orx:meta><field/></data>';
+      const partial = await Submission.fromXml(xml);
+      partial.def.version.should.equal('<&@>');
+    });
+
     it('should squash null version to empty-string', () => {
       const xml = '<data id="mycoolform"><orx:meta><orx:instanceID>myinstance</orx:instanceID></orx:meta><field/></data>';
       return Submission.fromXml(xml).then((partial) => {
