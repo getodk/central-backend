@@ -102,7 +102,7 @@ wait_for_postgres() {
 
   maxTries=5
   retries=$((maxTries-1))
-  while ! docker exec "$imageName" psql -U postgres ${requireSsl:+"sslmode=require"} -c 'SELECT 1' >/dev/null 2>&1; do
+  while ! [[ "$(docker exec "$imageName" psql -U postgres --no-align --tuples-only -c "SELECT NOT pg_is_in_recovery();")" = t ]]; do
     if [[ "$retries" = 0 ]]; then
       log "!!! Failed: psql failed after $maxTries attempts."
       exit 1
