@@ -1,28 +1,12 @@
-name: Database Migrations
+name: Soak Test
 
 on:
-  pull_request:
-    paths:
-    - .github/workflows/db-migrations.yml
-    - lib/bin/create-docker-databases.js
-    - lib/model/migrations/**
-    - test/db-migrations/**
-    - package.json
-    - package-lock.json
-    - Makefile
   push:
-    paths:
-    - .github/workflows/db-migrations.yml
-    - lib/bin/create-docker-databases.js
-    - lib/model/migrations/**
-    - test/db-migrations/**
-    - package.json
-    - package-lock.json
-    - Makefile
+    branches: master
 
 jobs:
-  db-migration-tests:
-    timeout-minutes: 2
+  soak-test:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -41,7 +25,13 @@ jobs:
     - run: make run-docker-postgres
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
-    - run: make test-db-migrations
+    - run: ./test/e2e/soak/ci/prepare-postgres.sh
+    - name: Soak Test
+      timeout-minutes: 10
+      run: ./test/e2e/soak/ci/run-tests.sh
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./backend.log ]] || cat ./backend.log"
     - name: PostgreSQL logs
       if: always()
       run: docker logs odk-central-backend-dev-postgres || true

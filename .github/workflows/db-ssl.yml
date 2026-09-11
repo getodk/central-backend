@@ -11,8 +11,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        x: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-        y: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
         postgres-version:
           - "14.23"
           - "18"

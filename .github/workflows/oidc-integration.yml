@@ -1,28 +1,12 @@
-name: Database Migrations
+name: OIDC integration tests
 
 on:
-  pull_request:
-    paths:
-    - .github/workflows/db-migrations.yml
-    - lib/bin/create-docker-databases.js
-    - lib/model/migrations/**
-    - test/db-migrations/**
-    - package.json
-    - package-lock.json
-    - Makefile
   push:
-    paths:
-    - .github/workflows/db-migrations.yml
-    - lib/bin/create-docker-databases.js
-    - lib/model/migrations/**
-    - test/db-migrations/**
-    - package.json
-    - package-lock.json
-    - Makefile
+  pull_request:
 
 jobs:
-  db-migration-tests:
-    timeout-minutes: 2
+  oidc-integration-test:
+    timeout-minutes: 6
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -38,10 +22,14 @@ jobs:
         node-version-file: package.json
         cache: 'npm'
     - run: npm ci --no-audit
+    - run: FAKE_OIDC_ROOT_URL=http://localhost:9898 make fake-oidc-server-ci > fake-oidc-server.log &
     - run: make run-docker-postgres
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
-    - run: make test-db-migrations
+    - run: make test-oidc-integration
+    - name: Fake OIDC Server Logs
+      if: always()
+      run: "! [[ -f ./fake-oidc-server.log ]] || cat ./fake-oidc-server.log"
     - name: PostgreSQL logs
       if: always()
       run: docker logs odk-central-backend-dev-postgres || true
