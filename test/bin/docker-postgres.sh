@@ -90,7 +90,7 @@ wait_for_postgres() {
 
   maxTries=5
   retries=$((maxTries-1))
-  while !  docker exec "$imageName" pg_isready --username=postgres >/dev/null; do
+  while ! docker exec "$imageName" pg_isready --username=postgres >/dev/null; do
     if [[ "$retries" = 0 ]]; then
       log "!!! Failed: pg_isready failed after $maxTries attempts."
       exit 1
