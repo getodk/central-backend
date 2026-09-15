@@ -122,7 +122,7 @@ if [[ "$enableSsl" = true ]]; then
   log "Applying SSL config..."
   docker exec "$imageName" bash -c 'sed -i "s/^host\b/hostssl/" "$PGDATA/pg_hba.conf"'
   log "SSL config applied; reloading postgres config..."
-  docker exec "$imageName" psql -U postgres -c 'SELECT pg_reload_conf();' >/dev/null
+  docker exec "$imageName" psql -U postgres -c 'SELECT pg_reload_conf()' >/dev/null
   wait_for_postgres --require-ssl
 fi
 
