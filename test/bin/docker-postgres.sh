@@ -81,11 +81,6 @@ docker run \
         ${enableSsl:+--ssl_key_file=/postgres-certs/server.key}
 
 wait_for_postgres() {
-  requireSsl=
-  if [[ "${1-}" = --require-ssl ]]; then
-    requireSsl=true
-  fi
-
   printf >&2 "[docker-postgres] Waiting for postgres..."
 
   maxTries=5
@@ -127,7 +122,7 @@ if [[ "$enableSsl" = true ]]; then
   docker exec "$imageName" bash -c 'sed -i "s/^host\b/hostssl/" "$PGDATA/pg_hba.conf"'
   log "SSL config applied; reloading postgres config..."
   docker exec "$imageName" psql -U postgres -c 'SELECT pg_reload_conf();' >/dev/null
-  wait_for_postgres --require-ssl
+  wait_for_postgres
 fi
 
 log "Fresh container started OK."
