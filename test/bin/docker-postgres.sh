@@ -81,9 +81,9 @@ docker run \
         ${enableSsl:+--ssl_key_file=/postgres-certs/server.key}
 
 wait_for_postgres() {
-  requireSsl=
+  connectionString="postgres://postgres:odktest@127.0.0.1"
   if [[ "${1-}" = --require-ssl ]]; then
-    requireSsl=true
+    connectionString="${connectionString}?sslmode=require"
   fi
 
   printf >&2 "[docker-postgres] Waiting for postgres..."
@@ -102,7 +102,7 @@ wait_for_postgres() {
 
   maxTries=5
   retries=$((maxTries-1))
-  while ! [[ "$(docker exec "$imageName" psql -U postgres --no-align --tuples-only -c "SELECT NOT pg_is_in_recovery();")" = t ]]; do
+  while ! [[ "$(docker exec "$imageName" psql "$connectionString" --no-align --tuples-only -c "SELECT NOT pg_is_in_recovery();")" = t ]]; do
     if [[ "$retries" = 0 ]]; then
       log "!!! Failed: psql failed after $maxTries attempts."
       exit 1
@@ -112,7 +112,7 @@ wait_for_postgres() {
     retries=$((retries-1))
   done
 
-  # Extra sleep for luck ¯\_(ツ)_/¯
+  # Extra sleep for luck ¯\_(ツ)_/¯ FIXME check if this can be removed before merge
   printf >&2 .
   sleep 1
 
