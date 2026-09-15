@@ -1,28 +1,12 @@
-name: Database Migrations
+name: S3 E2E Tests
 
 on:
-  pull_request:
-    paths:
-    - .github/workflows/db-migrations.yml
-    - lib/bin/create-docker-databases.js
-    - lib/model/migrations/**
-    - test/db-migrations/**
-    - package.json
-    - package-lock.json
-    - Makefile
   push:
-    paths:
-    - .github/workflows/db-migrations.yml
-    - lib/bin/create-docker-databases.js
-    - lib/model/migrations/**
-    - test/db-migrations/**
-    - package.json
-    - package-lock.json
-    - Makefile
+  pull_request:
 
 jobs:
-  db-migration-tests:
-    timeout-minutes: 2
+  s3-e2e:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -32,6 +16,7 @@ jobs:
           - "18"
     steps:
     - uses: actions/checkout@v6
+    - run: make fake-s3-server-persistent
     - name: Set node version
       uses: actions/setup-node@v6
       with:
@@ -41,7 +26,13 @@ jobs:
     - run: make run-docker-postgres
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
-    - run: make test-db-migrations
+    - run: sudo apt-get install wait-for-it
+    - name: E2E Test
+      timeout-minutes: 10
+      run: ./test/e2e/s3/run-tests.sh
+    - name: Backend Logs
+      if: always()
+      run: "! [[ -f ./server.log ]] || cat ./server.log"
     - name: PostgreSQL logs
       if: always()
       run: docker logs odk-central-backend-dev-postgres || true

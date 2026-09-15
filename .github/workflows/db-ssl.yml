@@ -14,8 +14,6 @@ jobs:
         postgres-version:
           - "14.23"
           - "18"
-        x: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
-        y: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
     steps:
     - uses: actions/checkout@v6
     - name: Set node version
