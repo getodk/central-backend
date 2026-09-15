@@ -112,10 +112,6 @@ wait_for_postgres() {
     retries=$((retries-1))
   done
 
-  # Extra sleep for luck ¯\_(ツ)_/¯ FIXME check if this can be removed before merge
-  printf >&2 .
-  sleep 1
-
   printf >&2 'OK.\n'
 }
 wait_for_postgres
