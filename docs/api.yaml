@@ -41,6 +41,12 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2026.4
+
+    **Fixed**:
+
+    - The OpenRosa [`formList`](/central-api-openrosa-endpoints/#openrosa-form-listing-api) now includes the Form version in the `<downloadUrl>` and `<manifestUrl>`.
+
     ## ODK Central v2026.3
 
     **Added**:
