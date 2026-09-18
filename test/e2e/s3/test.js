@@ -296,7 +296,7 @@ describe('s3 support', () => {
   });
 
   describe('with terminated silo', () => {
-    // N.B. THIS TEST KILLS THE MINIO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
+    // N.B. THIS TEST KILLS THE SILO SERVER, SO IT WILL NOT BE AVAILABLE TO SUBSEQUENT TESTS
     it('should handle s3 connection failing', async function() {
       this.timeout(TIMEOUT);
 
