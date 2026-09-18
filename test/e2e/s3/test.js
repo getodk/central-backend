@@ -35,7 +35,7 @@ describe('s3 support', () => {
     if(_minioTerminated) return;
 
     // It should be possible to use docker more precisely here, e.g.
-    //   docker stop $(docker ps --quiet --filter "ancestor=minio/minio")
+    //   docker stop $(docker ps --quiet --filter "ancestor=pgsty/silo")
     // However, the ancestor filter requries specifying the exact tag used.
     // See: https://docs.docker.com/reference/cli/docker/container/ls/#ancestor
     execSync(`docker ps | awk '/minio/ { print $1 }' | xargs docker kill`);
