@@ -41,10 +41,30 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2026.4
+
+    **Fixed**:
+
+    - The OpenRosa [`formList`](/central-api-openrosa-endpoints/#openrosa-form-listing-api) now includes the Form version in the `<downloadUrl>` and `<manifestUrl>`. This prevents certain race conditions. ([getodk/central#2251](https://github.com/getodk/central/issues/2251))
+
+    ## ODK Central v2026.3
+
+    **Added**:
+    - [Entities OData](/central-api-odata-endpoints/#odata-dataset-service), [GET Entities Metadata](/central-api-entity-management/#entities-metadata), [Download Dataset](/central-api-dataset-management/#download-dataset), and [Entities Geodata](/central-api-entity-management/#entities-geodata) now support a `viewAs` query parameter to preview the filtered Entity list for a specific Actor.
+
+    **Changed**:
+    - [GET /audits](/central-api-system-endpoints/#getting-audit-log-entries) now uses less-than when filtering with the `end` parameter.
+    - [Form Attachment](/central-api-form-management/#listing-form-attachments) objects now include a `size` field (in bytes) when a file has been uploaded. The field is absent for dataset-linked attachments and empty slots, and may be `null` for blobs uploaded before this version.
+    - [POST /projects/:id/actor-properties](/central-api-accounts-and-users/#registering-an-actor-property-name) now rejects names that differ only in letter case from an existing property, so `Region` cannot be registered when `region` already exists. See [Actor Properties](/central-api-accounts-and-users/#actor-properties) for the naming rules.
+
+    **Fixed**:
+
+    - Central now decodes the Form `version` string in Submission XML. This can prevent a 404 error when a Submission is sent.
+
     ## ODK Central v2026.2
 
     **Added**:
-    - [Actor Properties](/central-api-accounts-and-users/#actor-properties) allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like team, region or supervisor.
+    - [Actor Properties](/central-api-accounts-and-users/#actor-properties) allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like team, region or supervisor, which can then be used to [filter Dataset access](/central-api-dataset-management/#update-dataset-access-filters-and-metadata).
       - [POST /projects/:id/actor-properties](/central-api-accounts-and-users/#registering-an-actor-property-name) to register a new property name for a project.
       - [GET /projects/:id/actor-properties](/central-api-accounts-and-users/#listing-actor-property-names) to list property names. Use `X-Extended-Metadata: true` to also retrieve the distinct values currently in use.
       - [PATCH /projects/:id/app-users/:id](/central-api-accounts-and-users/#setting-actor-property-values-on-an-app-user) to set or unset property values on an App User.
@@ -58,6 +78,7 @@ info:
       - [POST /projects/:id/app-users](/central-api-accounts-and-users/#creating-a-new-app-user) now accepts an optional `properties` object to set property values at creation time.
       - [GET /projects/:id/forms/:xmlFormId/public-links](/central-api-form-management/#listing-all-links) and [GET /projects/:id/forms/:xmlFormId/public-links/:id](/central-api-form-management/#getting-link-details) now return a `properties` object in extended metadata.
       - [POST /projects/:id/forms/:xmlFormId/public-links](/central-api-form-management/#creating-a-link) now accepts an optional `properties` object to set property values at creation time.
+      - [PATCH /projects/:id/datasets/:name](/central-api-dataset-management/#update-dataset-access-filters-and-metadata) now supports an `accessFilter` field for controlling which Entities App Users and Public Links can see via Actor Properties.
 
     ## ODK Central v2026.1
 
@@ -758,9 +779,9 @@ tags:
   description: |-
     _(introduced: version 2026.2)_
 
-    Actor properties allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like region or supervisor for filtering entities.
+    Actor properties allow you to attach custom key/value metadata to App Users and Public Links within a project. This can be used to tag users with attributes like region or supervisor, which can then be used to [filter Dataset access](/central-api-dataset-management/#update-dataset-access-filters-and-metadata).
 
-    Property names must be registered on the project before they can be set on individual App Users or Public Links. Property names follow the same rules as Entity property names, with the additional restriction that `displayName` (case-insensitive) is reserved.
+    Property names must be registered on the project before they can be set on individual App Users or Public Links. Property names follow the same rules as Entity property names, with the additional restriction that `displayName` (case-insensitive) is reserved. Property names must be unique within a project, even with different capitalization, so `region` and `Region` cannot both be registered.
 - name: App Users
   x-parent-tag: Accounts and Users
   description: |-
@@ -2256,7 +2277,7 @@ paths:
       description: |-
         Registers a new actor property name for this project. Once registered, the property can be set on any App User or Public Link within the project via `PATCH`.
 
-        Property names follow the same rules as Entity property names: they must be non-empty, may contain letters, digits, hyphens, and underscores, and the name `displayName` (case-insensitive) is reserved.
+        Property names follow the same rules as Entity property names: they must be non-empty, may contain letters, digits, hyphens, and underscores, and the name `displayName` (case-insensitive) is reserved. Property names must be unique within a project and the uniqueness check is case-insensitive, so `region` and `Region` cannot coexist.
 
         Requires `actor_property.update` permission.
       operationId: createActorProperty
@@ -2633,6 +2654,12 @@ paths:
         schema:
           type: number
         example: "16"
+      - name: verbs
+        in: query
+        description: If set to `true`, will return allowed verbs for the current actor on this project.  When extended metadata is requested, this parameter is ignored, and verbs are always included.
+        schema:
+          type: boolean
+        example: "true"
       responses:
         "200":
           description: 'This is the Extended Metadata response, if requested via the
@@ -3934,6 +3961,7 @@ paths:
                 exists: true
                 blobExists: true
                 datasetExists: false
+                size: 4096
                 hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
   /v1/projects/{projectId}/forms/{xmlFormId}/attachments/{filename}:
@@ -4413,6 +4441,7 @@ paths:
                 exists: true
                 blobExists: true
                 datasetExists: false
+                size: 4096
                 hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
   /v1/projects/{projectId}/forms/{xmlFormId}/draft/attachments/{filename}:
@@ -5023,6 +5052,7 @@ paths:
                 exists: true
                 blobExists: true
                 datasetExists: false
+                size: 4096
                 hash: 'd41d8cd98f00b204e9800998ecf8427e'
                 updatedAt: 2018-03-21T12:45:02.312Z
   /v1/projects/{projectId}/forms/{xmlFormId}/versions/{version}/attachments/{filename}:
@@ -8652,14 +8682,22 @@ paths:
     patch:
       tags:
       - Dataset Management
-      summary: Update Dataset Metadata
+      summary: Update Dataset Access Filters and Metadata
       operationId: updateDatasetMetadata
       description: |-
-        You can use this endpoint to update `approvalRequired` and `ownerOnly`. However, you cannot update other properties, such as `name`.
+        You can use this endpoint to update `approvalRequired`, `ownerOnly`, and `accessFilter`. However, you cannot update other properties, such as `name`.
 
         The `approvalRequired` flag controls the Entity creation flow. If it is `true`, then the Submission must be approved before an Entity can be created from it. If it is `false`, then an Entity is created as soon as the Submission is received by ODK Central. By default, `approvalRequired` is `false` for Datasets created after v2023.3. Datasets created prior to that will have `approvalRequired` set to `true`.
 
-        The `ownerOnly` flag determines which Entities in the Dataset are included for download to an OpenRosa client. More specifically, it determines which Entities are included in a Form Attachment that has been linked to the Dataset. If `ownerOnly` is `true`, and the Actor using the OpenRosa client only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be included. This is true of App Users, Web Users with a role of Data Collector, and Public Access Links. If `ownerOnly` is `false`, or if the Actor has direct access to the Dataset CSV file, then all Entities will be included. Accessing the Dataset CSV file via linked Form Attachments using a [draftToken](/central-api-form-management/#draft-form) will also retrieve all Entities, this functionality assumes the `draftToken` is used by Actors with full dataset access, such as Project Managers and System Administrators. By default, `ownerOnly` is `false`.
+        The `accessFilter` field filters which Entities are visible to [App Users](/central-api-accounts-and-users/#app-users) and [Public Links](/central-api-form-management/#public-access-links) when they download the Dataset via a linked Form Attachment. When `accessFilter` is present, it takes precedence over the legacy `ownerOnly` flag.
+
+        | `accessFilter` value | Behavior |
+        | --- | --- |
+        | `null` | No restrictions; all Entities are visible. |
+        | `{ "type": "ownerOnly" }` | Each Actor only sees Entities they created. |
+        | `{ "type": "property", "rules": [...] }` | Each Actor only sees Entities where the specified Dataset property matches their [Actor property](/central-api-accounts-and-users/#actor-properties) value. Multiple rules are ANDed together. |
+
+        The legacy `ownerOnly` boolean field is still accepted when `accessFilter` is absent, and behaves as before. If `ownerOnly` is `true`, and the Actor using the OpenRosa client only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be included. This is true of App Users, Web Users with a role of Data Collector, and Public Access Links. If `ownerOnly` is `false`, or if the Actor has direct access to the Dataset CSV file, then all Entities will be included. Accessing the Dataset CSV file via linked Form Attachments using a [draftToken](/central-api-form-management/#draft-form) will also retrieve all Entities; this functionality assumes the `draftToken` is used by Actors with full dataset access, such as Project Managers and System Administrators. By default, `ownerOnly` is `false`.
       parameters:
         - name: projectId
           in: path
@@ -8687,10 +8725,44 @@ paths:
                   example: true
                 ownerOnly:
                   type: boolean
-                  description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
+                  description: Legacy flag. If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. Ignored when `accessFilter` is also present.
                   example: false
+                accessFilter:
+                  nullable: true
+                  description: Controls which Entities are visible to restricted Actors (App Users, Data Collectors, Public Links) via linked Form Attachments. Takes precedence over `ownerOnly` when present. Set to `null` to remove all restrictions.
+                  type: object
+                  required:
+                    - type
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                        - ownerOnly
+                        - property
+                      description: '`ownerOnly` restricts each Actor to Entities they created. `property` restricts based on matching dataset and actor property values.'
+                    rules:
+                      type: array
+                      description: Required when `type` is `property`. Each rule matches a Dataset property against an Actor property; all rules must match.
+                      items:
+                        type: object
+                        required:
+                          - datasetProperty
+                          - actorProperty
+                        properties:
+                          datasetProperty:
+                            type: string
+                            description: The name of a Dataset property to compare.
+                            example: state
+                          actorProperty:
+                            type: string
+                            description: The name of an Actor property to compare against.
+                            example: region
               example:
-                approvalRequired: true
+                accessFilter:
+                  type: property
+                  rules:
+                  - datasetProperty: state
+                    actorProperty: region
       responses:
         "200":
           description: OK
@@ -8946,6 +9018,15 @@ paths:
         schema:
           type: string
         example: john
+      - name: viewAs
+        in: query
+        description: |-
+          If provided, filters the response to only the Entities that the specified Actor would be able to see, based on the Dataset's access filter (`ownerOnly` or property rules). The value must be a numeric Actor ID.
+
+          This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
+        schema:
+          type: number
+        example: 42
       responses:
         "200":
           description: OK
@@ -9008,7 +9089,7 @@ paths:
       - Entity Management
       summary: Entities Metadata
       description: |-
-        This endpoint returns a list of the Entities of a Dataset. Please note that this endpoint only returns metadata of the entities not the data. If you want to get the data of all entities then please refer to [OData Dataset Service](/central-api-odata-endpoints/#odata-form-service)
+        This endpoint returns a list of the Entities of a Dataset. Please note that this endpoint only returns metadata of the entities not the data. If you want to get the data of all entities then please refer to [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service)
         You can provide `?deleted=true` to get only deleted entities.
       
       operationId: entitiesMetadata
@@ -9027,6 +9108,15 @@ paths:
         schema:
           type: string
         example: people
+      - name: viewAs
+        in: query
+        description: |-
+          If provided, filters the response to only the Entities that the specified Actor would be able to see, based on the Dataset's access filter (`ownerOnly` or property rules). The value must be a numeric Actor ID.
+
+          This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
+        schema:
+          type: number
+        example: 42
       responses:        
         "200":
           description: OK
@@ -9247,6 +9337,15 @@ paths:
         description: The `$search` querystring parameter can be used to search entity data (user-defined properties) and the `label` field, using the same search behavior as the [OData Dataset Service](/central-api-odata-endpoints/#odata-dataset-service).
         schema:
           type: string
+      - name: viewAs
+        in: query
+        description: |-
+          If provided, filters the response to only the Entities that the specified Actor would be able to see, based on the Dataset's access filter (`ownerOnly` or property rules). The value must be a numeric Actor ID.
+
+          This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
+        schema:
+          type: number
+        example: 42
       responses:
         "200":
           description: OK
@@ -10079,17 +10178,17 @@ paths:
                   <xform>
                     <formID>basic</formID>
                     <name>basic</name>
-                    <version></version>
+                    <version>v1</version>
                     <hash>md5:a64817a5688dd7c17563e32d4eb1cab2</hash>
-                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic.xml</downloadUrl>
-                    <manifestUrl>https://your.odk.server/v1/projects/7/forms/basic/manifest</manifestUrl>
+                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic/versions/v1.xml</downloadUrl>
+                    <manifestUrl>https://your.odk.server/v1/projects/7/forms/basic/versions/v1/manifest</manifestUrl>
                   </xform>
                   <xform>
                     <formID>simple</formID>
                     <name>Simple</name>
-                    <version></version>
+                    <version>v2</version>
                     <hash>md5:</hash>
-                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/simple.xml</downloadUrl>
+                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/simple/versions/v2.xml</downloadUrl>
                   </xform>
                 </xforms>
   /v1/projects/{projectId}/submission:
@@ -10818,9 +10917,9 @@ paths:
         | Review State                             | `reviewState` | `__system/reviewState`    |
         | Submission Delete Timestamp (v2024.3)    | `deletedAt`   | `__system/deletedAt`      |
 
-        You can use `$root` expression to filter subtables (repeats) by Submission Metadata, you'll have to prefix above fields by `$root/Submissions/` in the filter criteria. For example, to filter a repeat table by Submission Timestamp you can pass `$filter=$root/Submissions/__system/submissionDate gt 2020-01-31T23:59:59.999Z` in the query parameter.
+        You can use `$root` expression to filter subtables (repeats) by Submission Metadata, you'll have to prefix above fields by `$root/Submissions/` in the filter criteria. For example, to filter a repeat table by Submission Timestamp you can pass `$filter=$root/Submissions/__system/submissionDate ge 2020-02-01T00:00:00.000Z` in the query parameter.
 
-        Note that the `submissionDate` has a time component. This means that any comparisons you make need to account for the full time of the submission. It might seem like `$filter=__system/submissionDate le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only submissions made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/submissionDate le 2020-01-31T23:59:59.999Z` or `$filter=__system/submissionDate lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
+        Note that the `submissionDate` has a time component. This means that any comparisons you make need to account for the full time of the submission. It might seem like `$filter=__system/submissionDate le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only submissions made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/submissionDate lt 2020-02-01T00:00:00.000Z` or `$filter=__system/submissionDate lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
 
         Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
 
@@ -11336,7 +11435,7 @@ paths:
         | Entity Conflict         | `__system/conflict`  |
         | Entity Delete Timestamp | `__system/deletedAt` |
 
-        Note that `createdAt`, `updatedAt` and `deletedAt` are time components. This means that any comparisons you make need to account for the full time of the entity. It might seem like `$filter=__system/createdAt le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only entities made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/createdAt le 2020-01-31T23:59:59.999Z` or `$filter=__system/createdAt lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
+        Note that `createdAt`, `updatedAt` and `deletedAt` are time components. This means that any comparisons you make need to account for the full time of the entity. It might seem like `$filter=__system/createdAt le 2020-01-31` would return all results on or before 31 Jan 2020, but in fact only entities made before midnight of that day would be accepted. To include all of the month of January, you need to filter by either `$filter=__system/createdAt lt 2020-02-01T00:00:00.000Z` or `$filter=__system/createdAt lt 2020-02-01`. Remember also that you can [query by a specific timezone](https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC).
 
         Please see the [OData documentation](http://docs.oasis-open.org/odata/odata/v4.01/odata-v4.01-part1-protocol.html#_Toc31358948) on `$filter` [operations](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinFilterOperations) and [functions](http://docs.oasis-open.org/odata/odata/v4.01/cs01/part1-protocol/odata-v4.01-cs01-part1-protocol.html#sec_BuiltinQueryFunctions) for more information.
 
@@ -11350,6 +11449,8 @@ paths:
         - The `OR` keyword can be used to find entities that contain **any** of the searched words.
         - Quoted text (e.g., `"quoted text"`) searches for entities containing the **exact** phrase.
         - A dash (`-`) before a word excludes entities that contain that word (logical NOT).
+
+        The `viewAs` query parameter can be used to preview what a specific Actor would receive, based on the Dataset's access filter (`ownerOnly` or property rules). Pass a numeric Actor ID as the value. This is intended to preview what an App User or Public Link would see when fetching these Entities as a Form Attachment. This parameter can be combined with other filters, e.g. to see the subset of an Actor's Entities that also match a given `$filter` or `$search` expression.
 
         As the vast majority of clients only support the JSON OData format, that is the only format ODK Central offers.
       operationId: dataDocumentForDataset
@@ -11416,6 +11517,15 @@ paths:
         description: Opaque cursor from `@odata.nextLink` used for paging.
         schema:
           type: string
+      - name: viewAs
+        in: query
+        description: |-
+          If provided, filters the response to only the Entities that the specified Actor would be able to see, based on the Dataset's access filter (`ownerOnly` or property rules). The value must be a numeric Actor ID.
+
+          This is intended for previewing what a particular App User or Public Link would receive when downloading the Dataset via a linked Form Attachment.
+        schema:
+          type: number
+        example: "42"
       responses:
         "200":
           description: Ok
@@ -12203,7 +12313,7 @@ paths:
 
         For this reason, **we recommend always setting a timezone** when querying based on `start` and `end`: either by appending a `z` to indicate UTC (eg `2000-01-01z`) or by explicitly specifying a timezone per ISO 8601 (eg `2000-01-01+08`). The same applies for full timestamps (eg `2000-01-01T12:12:12z`, `2000-01-01T12:12:12+08`).
 
-        `start` may be given without `end`, and vice versa, in which case the timestamp filter will only be bounded on the specified side. They are both inclusive (`>=` and `<=`, respectively).
+        `start` may be given without `end`, and vice versa, in which case the timestamp filter will only be bounded on the specified side. `start` is inclusive, and `end` is exclusive (`>=` and `<`, respectively).
 
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to additionally expand the `actorId` into full `actor` details, and `acteeId` into full `actee` details. The `actor` will always be an Actor, but the `actee` may be an Actor, a Project, a Form, or some other type of object depending on the type of action.
       operationId: getAuditLogEntries
@@ -12222,10 +12332,10 @@ paths:
         example: 2000-01-01z
       - name: end
         in: query
-        description: The timestamp after which log entries are to be filtered out.
+        description: The timestamp from which log entries are to be filtered out.
         schema:
           type: string
-        example: 2000-12-31T23:59.999z
+        example: 2001-01-01T00:00.000z
       - name: limit
         in: query
         description: The maximum number of entries to return.
@@ -12985,11 +13095,16 @@ components:
         blobExists:
           type: boolean
           example: true
-          description: Whether the server has the file or not.
+          description: True only when a file has been uploaded for this attachment slot. False when no file has been uploaded, or when the attachment is linked to a Dataset instead of a file.
         datasetExists:
           type: boolean
           example: true
           description: Whether attachment is linked to a Dataset.
+        size:
+          type: integer
+          nullable: true
+          example: 4096
+          description: The size of the uploaded file in bytes. Only present when `blobExists` is `true`. May be `null` for files on external blob store uploaded before version 2026.3.
         updatedAt:
           type: string
           example: '2018-03-21T12:45:02.312Z'
@@ -13062,8 +13177,34 @@ components:
           example: true
         ownerOnly:
           type: boolean
-          description: If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. If `ownerOnly` is `false`, or if an Actor has direct access to the Dataset CSV file, then all Entities will be downloaded.
+          description: Legacy flag. If `ownerOnly` is `true`, and an Actor only has access to the Dataset CSV file via linked Form Attachments, then only Entities created by the Actor will be downloaded to the OpenRosa client. Superseded by `accessFilter` when set.
           example: false
+        accessFilter:
+          nullable: true
+          description: Controls which Entities are visible to restricted Actors (App Users, Data Collectors, Public Links) via linked Form Attachments. `null` means no restrictions. When present, supersedes `ownerOnly`.
+          type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+              enum:
+                - ownerOnly
+                - property
+              description: '`ownerOnly` restricts each Actor to Entities they created. `property` restricts based on matching dataset and actor property values.'
+              example: property
+            rules:
+              type: array
+              description: Present when `type` is `property`. Each rule specifies a Dataset property and an Actor property that must match.
+              items:
+                type: object
+                properties:
+                  datasetProperty:
+                    type: string
+                    example: state
+                  actorProperty:
+                    type: string
+                    example: region
     ExtendedDataset:
       allOf:
       - $ref: '#/components/schemas/Dataset'

@@ -1,4 +1,4 @@
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const appRoot = require('app-root-path');
 const should = require('should');
 const config = require('config');
@@ -1397,9 +1397,8 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
                   body[0].updatedAt.should.be.a.recentIsoDate();
                   // eslint-disable-next-line no-param-reassign
                   delete body[0].updatedAt;
-
                   body.should.eql([
-                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
+                    { name: 'goodone.csv', type: 'file', exists: true, blobExists: true, datasetExists: false, size: 12, hash: '2241de57bbec8144c8ad387e69b3a3ba' },
                     { name: 'goodtwo.mp3', type: 'audio', exists: false, blobExists: false, datasetExists: false, hash: null }
                   ]);
                 })))));

@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const nock = require('nock');
-const querystring = require('querystring');
+const querystring = require('node:querystring');
 const { init } = require(appRoot + '/lib/external/enketo');
 const Problem = require(appRoot + '/lib/util/problem');
 
@@ -74,7 +74,7 @@ describe('external/enketo', () => {
     it('should throw a Problem if the Enketo response code is unexpected', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey/all')
-        .reply(204, {});
+        .reply(209, {});
 
       return enketo.create(openRosaUrl, xmlFormId, null)
         .should.be.rejectedWith(Problem.internal.enketoUnexpectedResponse('wrong status code'));

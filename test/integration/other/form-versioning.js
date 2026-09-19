@@ -1,8 +1,8 @@
-const appPath = require('app-root-path');
+const appRoot = require('app-root-path');
 const should = require('should');
 const { testService } = require('../setup');
 const testData = require('../../data/xml');
-const { Blob, Form } = require(appPath + '/lib/model/frames');
+const { Blob, Form } = require(appRoot + '/lib/model/frames');
 
 describe('form forward versioning', () => {
   const force = (x) => x.get();

@@ -1,4 +1,4 @@
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const appRoot = require('app-root-path');
 const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
@@ -529,8 +529,104 @@ describe('datasets and entities', () => {
           })
           .expect(409)
           .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.match(/A resource already exists with name 'height' and you provided 'HEIGHT' with different capitalization./);
+          });
+      }));
+
+      it('should allow properties that conflict with draft form properties', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // set up dataset "people" first so it is already published
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        // uses people dataset with first_name
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        // should allow this to be published because existing "first_name" is a draft
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'FIRST_NAME' })
+          .expect(200);
+
+        // Direct conflict with previous name
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'FIRST_NAME' })
+          .expect(409)
+          .then(({ body }) => {
             body.code.should.equal(409.3);
-            body.message.should.match(/A resource already exists with name,datasetId/);
+            body.message.should.startWith('A resource already exists with name,datasetId value(s) of FIRST_NAME');
+          });
+
+        // Case mistmatch with published property but matching draft property
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'first_name' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.eql("A resource already exists with name 'FIRST_NAME' and you provided 'first_name' with different capitalization.");
+          });
+
+        // Case mistmatch with published property and draft property
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'FiRsT_NaMe' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.eql("A resource already exists with name 'FIRST_NAME' and you provided 'FiRsT_NaMe' with different capitalization.");
+          });
+      }));
+
+      it('should allow properties that conflict with deleted properties but conflict with the current name if case differs', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'trees' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'height' })
+          .expect(200);
+
+        // delete the property
+        await asAlice.delete('/v1/projects/1/datasets/trees/properties/height')
+          .expect(200);
+
+        // remake with different case
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'HEIGHT' })
+          .expect(200);
+
+        // reject in different ways
+        // 1. Exact match with current version
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'HEIGHT' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.3);
+            body.message.should.startWith('A resource already exists with name,datasetId value(s) of HEIGHT');
+          });
+
+        // 2. Match deleted property
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'height' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.eql("A resource already exists with name 'HEIGHT' and you provided 'height' with different capitalization.");
+          });
+
+        // 3. Don't match case of any past properties
+        await asAlice.post('/v1/projects/1/datasets/trees/properties')
+          .send({ name: 'hEiGhT' })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.24);
+            body.message.should.eql("A resource already exists with name 'HEIGHT' and you provided 'hEiGhT' with different capitalization.");
           });
       }));
 
@@ -1437,6 +1533,151 @@ describe('datasets and entities', () => {
       });
     });
 
+
+    describe('viewAs on entities.csv', () => {
+      it('should return 404 if viewAs actor does not exist', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv?viewAs=99999')
+          .expect(404);
+      }));
+
+      it('should return 400 if viewAs is not a numeric ID', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities.csv?viewAs=notanumber')
+          .expect(400)
+          .then(({ body }) => {
+            body.code.should.eql(400.11);
+          });
+      }));
+
+      it('should return all entities if dataset has no access filter', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'entity 1' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'entity 2' })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User' }).expect(200);
+
+        await asAlice.get(`/v1/projects/1/datasets/people/entities.csv?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ text }) => {
+            text.split('\n').length.should.eql(4); // header + 2 entities + trailing newline
+          });
+      }));
+
+      it('should filter entities by ownerOnly for viewAs actor', testService(async (service, container) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms?publish=true')
+          .send(testData.forms.simpleEntity)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ ownerOnly: true })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User' }).expect(200);
+
+        // Alice creates one entity
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'alice entity', data: { first_name: 'Alice' } })
+          .expect(200);
+
+        // App user creates one entity via submission
+        await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
+          .expect(200);
+        await service.post(`/v1/key/${appUser.token}/projects/1/forms/simpleEntity/submissions`)
+          .send(testData.instances.simpleEntity.one
+            .replace('<entities:label>Alice (88)</entities:label>', '<entities:label>App User Entity</entities:label>'))
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+        await exhaust(container);
+
+        await asAlice.get(`/v1/projects/1/datasets/people/entities.csv?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ text }) => {
+            text.split('\n').length.should.eql(3); // header + 1 entity + trailing newline
+            text.should.containEql('App User Entity');
+            text.should.not.containEql('alice entity');
+          });
+      }));
+
+      it('should filter entities by property rules for viewAs actor', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'region' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/actor-properties')
+          .send({ name: 'region' })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'north person', data: { region: 'north' } })
+          .expect(200);
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ label: 'south person', data: { region: 'south' } })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'North Worker' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+
+        await asAlice.get(`/v1/projects/1/datasets/people/entities.csv?viewAs=${appUser.id}`)
+          .expect(200)
+          .then(({ text }) => {
+            text.split('\n').length.should.eql(3); // header + 1 entity + trailing newline
+            text.should.containEql('north person');
+            text.should.not.containEql('south person');
+          });
+      }));
+
+      it('should skip ETag caching when viewAs is present', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+          .send({ displayName: 'App User' }).expect(200);
+
+        const result = await asAlice.get(`/v1/projects/1/datasets/people/entities.csv?viewAs=${appUser.id}`)
+          .expect(200);
+
+        should.not.exist(result.get('ETag'));
+      }));
+    });
 
     describe('projects/:id/trash/datasets/:datasetId/entities.csv GET', () => {
       it('should reject if the user cannot access the deleted dataset', testEntities(async (service) => {
@@ -4704,7 +4945,7 @@ describe('datasets and entities', () => {
 
       describe('dataset-specific verbs', () => {
         describe('dataset.create', () => {
-          it('should NOT allow a new form that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow a new form that creates a dataset without user having dataset.create verb @slow', testServiceFullTrx(async (service, { run }) => {
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
 
             const asBob = await service.login('bob');
@@ -4721,7 +4962,7 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          it('should NOT allow "creating" of a dataset when the dataset exists but unpublished', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow "creating" of a dataset when the dataset exists but unpublished @slow', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
@@ -4740,7 +4981,7 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          it('should NOT allow updating a form about an unpublished dataset, which is similar to creating that dataset', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow updating a form about an unpublished dataset, which is similar to creating that dataset @slow', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
@@ -4758,7 +4999,7 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          it('should NOT allow updating a draft that creates a dataset without user having dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow updating a draft that creates a dataset without user having dataset.create verb @slow', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
@@ -4776,7 +5017,7 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          it('should NOT allow unpublished dataset to be published on form publish if user does not have dataset.create verb', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow unpublished dataset to be published on form publish if user does not have dataset.create verb @slow', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.create') WHERE system in ('manager')`);
@@ -4794,7 +5035,7 @@ describe('datasets and entities', () => {
         });
 
         describe('dataset.update', () => {
-          it('should NOT allow a new form that updates a dataset without user having dataset.update verb', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow a new form that updates a dataset without user having dataset.update verb @slow', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
 
@@ -4818,7 +5059,7 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          it('should NOT allow update draft that updates a dataset without user having dataset.update verb', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow update draft that updates a dataset without user having dataset.update verb @slow', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
@@ -4835,7 +5076,7 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          it('should NOT allow unpublished properties to be published on form publish if user does not have dataset.update verb', testServiceFullTrx(async (service, { run }) => {
+          it('should NOT allow unpublished properties to be published on form publish if user does not have dataset.update verb @slow', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
@@ -4860,7 +5101,7 @@ describe('datasets and entities', () => {
               .expect(403);
           }));
 
-          it('should ALLOW update of form draft that does not modify existing dataset', testServiceFullTrx(async (service, { run }) => {
+          it('should ALLOW update of form draft that does not modify existing dataset @slow', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
@@ -4878,7 +5119,7 @@ describe('datasets and entities', () => {
               .expect(200);
           }));
 
-          it('should ALLOW new form about existing dataset that does not update it', testServiceFullTrx(async (service, { run }) => {
+          it('should ALLOW new form about existing dataset that does not update it @slow', testServiceFullTrx(async (service, { run }) => {
             const asAlice = await service.login('alice');
             const asBob = await service.login('bob');
             await run(sql`UPDATE roles SET verbs = (verbs - 'dataset.update') WHERE system in ('manager')`);
@@ -6567,6 +6808,28 @@ describe('datasets and entities', () => {
             });
         }));
 
+        it('should reject if property does not exist', testService(async (service) => {
+          const asAlice = await service.login('alice');
+          await createDataset(asAlice, 1, 'trees', ['region']);
+          await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'doesNotExist' }] } })
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.45);
+              body.message.should.be.eql('There was a problem with the dataset access filter. Actor property \'doesNotExist\' does not exist.');
+            });
+
+          await asAlice.patch('/v1/projects/1/datasets/trees')
+            .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'doesNotExist', actorProperty: 'region' }] } })
+            .expect(400)
+            .then(({ body }) => {
+              body.code.should.be.eql(400.45);
+              body.message.should.be.eql('There was a problem with the dataset access filter. Dataset property \'doesNotExist\' does not exist.');
+            });
+        }));
+
         it('should log when a filter rule is added to a dataset', testService(async (service, { Audits }) => {
           const asAlice = await service.login('alice');
           await createDataset(asAlice, 1, 'trees', ['region']);
@@ -7327,7 +7590,7 @@ describe('datasets and entities', () => {
         treeETagForAlice.should.equal(treeETagForChelsea);
       }));
 
-      it('changes hash after a data collector creates an entity', testServiceFullTrx(async (service, container) => {
+      it('changes hash after a data collector creates an entity @slow', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
@@ -7343,7 +7606,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.not.equal(originalHash);
       }));
 
-      it('does not change hash after someone else creates an entity', testServiceFullTrx(async (service) => {
+      it('does not change hash after someone else creates an entity @slow', testServiceFullTrx(async (service) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
@@ -7360,7 +7623,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.equal(originalHash);
       }));
 
-      it('changes hash after an entity is updated', testServiceFullTrx(async (service, container) => {
+      it('changes hash after an entity is updated @slow', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
@@ -7380,7 +7643,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.not.equal(originalHash);
       }));
 
-      it('changes hash after an entity is deleted', testServiceFullTrx(async (service, container) => {
+      it('changes hash after an entity is deleted @slow', testServiceFullTrx(async (service, container) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
@@ -7482,7 +7745,7 @@ describe('datasets and entities', () => {
         [hash1, hash2, hash3].should.be.unique();
       }));
 
-      it('changes hash after a dataset property is added', testServiceFullTrx(async (service) => {
+      it('changes hash after a dataset property is added @slow', testServiceFullTrx(async (service) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
@@ -7496,7 +7759,7 @@ describe('datasets and entities', () => {
         (await getHash(asChelsea)).should.not.equal(originalHash);
       }));
 
-      it('changes hash after a dataset property is deleted', testServiceFullTrx(async (service) => {
+      it('changes hash after a dataset property is deleted @slow', testServiceFullTrx(async (service) => {
         const [asAlice, asChelsea] = await service.login(['alice', 'chelsea']);
         await createData(asAlice);
         await assignToProject(asAlice, asChelsea, 'formfill');
@@ -7970,7 +8233,7 @@ describe('datasets and entities', () => {
         return { asAlice, appUser };
       };
 
-      it('hash changes for alice AND for app user when entity outside segment is added', testServiceFullTrx(async (service) => {
+      it('hash changes for alice AND for app user when entity outside segment is added @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Before the filter is applied, both see the same hash and all entities
@@ -8011,7 +8274,7 @@ describe('datasets and entities', () => {
         (await getHashAppUser(service, appUser.token)).should.not.equal(appUserHashAfterFilter);
       }));
 
-      it('hash changes for app user when filter rules are first added', testServiceFullTrx(async (service) => {
+      it('hash changes for app user when filter rules are first added @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up actor properties and assign region 'north' to the app user (no filter yet)
@@ -8038,7 +8301,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(1);
       }));
 
-      it('hash changes for app user when filter rules are removed', testServiceFullTrx(async (service) => {
+      it('hash changes for app user when filter rules are removed @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up actor properties, assign region 'north' to the app user, and apply filter
@@ -8068,7 +8331,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(2);
       }));
 
-      it('hash changes for app user when their actor property value changes', testServiceFullTrx(async (service) => {
+      it('hash changes for app user when their actor property value changes @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         await asAlice.post('/v1/projects/1/datasets/people/properties')
@@ -8105,7 +8368,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(1);
       }));
 
-      it('hash changes for app user when their actor property value is assigned for the first time', testServiceFullTrx(async (service) => {
+      it('hash changes for app user when their actor property value is assigned for the first time @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up actor properties and apply filter — but do NOT assign a value to the app user yet
@@ -8133,7 +8396,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(1);
       }));
 
-      it('two app users with different property values get different hashes', testServiceFullTrx(async (service) => {
+      it('two app users with different property values get different hashes @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser: northUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Create a second app user assigned to the same form
@@ -8163,7 +8426,7 @@ describe('datasets and entities', () => {
         northHash.should.not.equal(southHash);
       }));
 
-      it('when user has no property set, hash changes when filter is added AND ALSO when entities are added outside the empty segment', testServiceFullTrx(async (service) => {
+      it('when user has no property set, hash changes when filter is added AND ALSO when entities are added outside the empty segment @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Before filter: app user sees all entities
@@ -8194,7 +8457,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(0);
       }));
 
-      it('hash changes when an entity in the app user segment is updated', testServiceFullTrx(async (service) => {
+      it('hash changes when an entity in the app user segment is updated @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up actor properties, apply filter, assign 'north' to app user
@@ -8222,7 +8485,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(1);
       }));
 
-      it('hash DOES change when an entity outside the app user segment is updated', testServiceFullTrx(async (service) => {
+      it('hash DOES change when an entity outside the app user segment is updated @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up actor properties, apply filter, assign 'north' to app user
@@ -8250,7 +8513,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(1);
       }));
 
-      it('hash changes when the filter rule mapping is changed', testServiceFullTrx(async (service) => {
+      it('hash changes when the filter rule mapping is changed @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Add a second dataset property 'district' and a second actor property 'district'
@@ -8282,7 +8545,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(0);
       }));
 
-      it('hash changes for filtered app user when a new dataset property is added', testServiceFullTrx(async (service) => {
+      it('hash changes for filtered app user when a new dataset property is added @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up filter: region → region, assign 'north' to app user
@@ -8358,7 +8621,30 @@ describe('datasets and entities', () => {
         })));
       }));
 
-      it('changes hash in property-filtered after a dataset property is deleted', testServiceFullTrx(async (service) => {
+      it('changes hash in property-filtered after a dataset property is added @slow', testServiceFullTrx(async (service) => {
+        const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
+
+        // Set up actor properties, assign region 'north' to the app user, and apply filter
+        await asAlice.post('/v1/projects/1/actor-properties').send({ name: 'region' }).expect(200);
+        await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+          .send({ properties: { region: 'north' } })
+          .expect(200);
+        await asAlice.patch('/v1/projects/1/datasets/people')
+          .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+          .expect(200);
+
+        // Get original hash with
+        const originalHashWithFilter = await getHashAppUser(service, appUser.token);
+
+        // Add an entity property.
+        await asAlice.post('/v1/projects/1/datasets/people/properties')
+          .send({ name: 'foo' })
+          .expect(200);
+
+        (await getHashAppUser(service, appUser.token)).should.not.equal(originalHashWithFilter);
+      }));
+
+      it('changes hash in property-filtered after a dataset property is deleted @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up actor properties, assign region 'north' to the app user, and apply filter
@@ -8384,7 +8670,7 @@ describe('datasets and entities', () => {
         (await getHashAppUser(service, appUser.token)).should.not.equal(originalHashWithFilter);
       }));
 
-      it('hash changes and count changes when an entity in the segment is deleted', testServiceFullTrx(async (service) => {
+      it('hash changes and count changes when an entity in the segment is deleted @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up actor properties, apply filter, assign 'north' to app user
@@ -8411,7 +8697,7 @@ describe('datasets and entities', () => {
         (await countEntities(service, null, appUser.token)).should.equal(0);
       }));
 
-      it('hash changes even when count stays the same (delete one, add one in segment)', testServiceFullTrx(async (service) => {
+      it('hash changes even when count stays the same (delete one, add one in segment) @slow', testServiceFullTrx(async (service) => {
         const { asAlice, appUser } = await setupPeopleDatasetWithAppUser(service);
 
         // Set up actor properties, apply filter, assign 'north' to app user
@@ -8482,7 +8768,7 @@ describe('datasets and entities', () => {
       return hash;
     };
 
-    it('hash changes when an entity is added', testServiceFullTrx(async (service) => {
+    it('hash changes when an entity is added @slow', testServiceFullTrx(async (service) => {
       const { asAlice } = await setup(service);
 
       const hashBefore = await getHash(asAlice);
@@ -8494,7 +8780,7 @@ describe('datasets and entities', () => {
       (await getHash(asAlice)).should.not.equal(hashBefore);
     }));
 
-    it('hash changes when an entity is updated', testServiceFullTrx(async (service) => {
+    it('hash changes when an entity is updated @slow', testServiceFullTrx(async (service) => {
       const { asAlice, entityUuid } = await setup(service);
 
       const hashBefore = await getHash(asAlice);
@@ -8506,7 +8792,7 @@ describe('datasets and entities', () => {
       (await getHash(asAlice)).should.not.equal(hashBefore);
     }));
 
-    it('hash changes when an entity is deleted', testServiceFullTrx(async (service) => {
+    it('hash changes when an entity is deleted @slow', testServiceFullTrx(async (service) => {
       const { asAlice, entityUuid } = await setup(service);
 
       const hashBefore = await getHash(asAlice);
@@ -8517,7 +8803,7 @@ describe('datasets and entities', () => {
       (await getHash(asAlice)).should.not.equal(hashBefore);
     }));
 
-    it('two app users with no filter get the same hash', testServiceFullTrx(async (service) => {
+    it('two app users with no filter get the same hash @slow', testServiceFullTrx(async (service) => {
       const { asAlice } = await setup(service);
 
       const { body: appUserA } = await asAlice.post('/v1/projects/1/app-users')
@@ -8536,7 +8822,7 @@ describe('datasets and entities', () => {
       hashA.should.equal(hashB);
     }));
 
-    it('alice (manager) and an app user get the same hash when there is no filter', testServiceFullTrx(async (service) => {
+    it('alice (manager) and an app user get the same hash when there is no filter @slow', testServiceFullTrx(async (service) => {
       const { asAlice } = await setup(service);
 
       const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
@@ -9263,7 +9549,7 @@ describe('datasets and entities', () => {
         });
     }));
 
-    it('should reject if there is a draft Form consuming the dataset', testServiceFullTrx(async (service) => {
+    it('should reject if there is a draft Form consuming the dataset @slow', testServiceFullTrx(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets')

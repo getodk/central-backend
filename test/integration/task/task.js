@@ -1,9 +1,9 @@
 const appRoot = require('app-root-path');
 const { testTask } = require('../setup');
 const { sql } = require('slonik');
-const { writeFile, symlink } = require('fs');
-const { join } = require('path');
-const { exec } = require('child_process');
+const { writeFile, symlink } = require('node:fs');
+const { join } = require('node:path');
+const { exec } = require('node:child_process');
 const { identity } = require('ramda');
 const { auditing, emailing } = require(appRoot + '/lib/task/task');
 const Problem = require(appRoot + '/lib/util/problem');

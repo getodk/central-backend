@@ -1,8 +1,8 @@
 const should = require('should');
-const { EventEmitter } = require('events');
-const { Transform } = require('stream');
+const { EventEmitter } = require('node:events');
+const { Transform } = require('node:stream');
 const { createRequest, createResponse } = require('../../util/node-mocks-http');
-const streamTest = require('streamtest').v2;
+const streamTest = require('../../util/streamtest');
 const { always } = require('ramda');
 
 const appRoot = require('app-root-path');

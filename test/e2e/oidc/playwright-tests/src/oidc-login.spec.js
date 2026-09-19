@@ -108,3 +108,14 @@ test('aborted login', async ({ browserName, page }, testInfo) => {
   // > access_denied (End-User aborted interaction)
   await assertErrorRedirect(page, 'internal-server-error');
 });
+
+test('direct calls to /callback should fail gracefully', async ({ browserName, page }, testInfo) => {
+  // given
+  await initTest({ browserName, page }, testInfo);
+
+  // when
+  await page.goto(`${frontendUrl}/v1/oidc/callback`);
+
+  // then
+  await assertErrorRedirect(page, 'internal-server-error');
+});

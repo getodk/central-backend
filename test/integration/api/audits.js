@@ -546,13 +546,13 @@ describe('/audits', () => {
                 body[2].actee.displayName.should.equal('Alice');
               }))))));
 
-    it('should filter (inclusively) by end date', testService((service, { run }) =>
+    it('should filter (exclusively) by end date', testService((service, { run }) =>
       Promise.all(
         [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
           .map((day) => run(sql`insert into audits ("loggedAt", action) values (${`2000-01-${day}T00:00Z`}, ${`test.${day}`})`))
       )
         .then(() => service.login('alice', (asAlice) =>
-          asAlice.get('/v1/audits?end=2000-01-03Z')
+          asAlice.get('/v1/audits?end=2000-01-04Z')
             .expect(200)
             .then(({ body }) => {
               body.length.should.equal(3);

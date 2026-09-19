@@ -2,7 +2,7 @@
 set -o pipefail
 
 serverUrl=http://127.0.0.1:8383
-HTTP_AUTH='x@example.com:secret1234'
+HTTP_AUTH='x@example.com:STR0NG-secret-1234?'
 
 log() {
     echo "[test/e2e/standard/backup-abortstream] $*"

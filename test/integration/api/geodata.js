@@ -1010,3 +1010,99 @@ describe('api: entities-geodata', () => {
   }));
 
 });
+
+
+describe('api: entities-geodata viewAs', () => {
+
+  it('should return 404 if viewAs actor does not exist', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get('/v1/projects/1/datasets/geofun/entities.geojson?viewAs=99999')
+      .expect(404);
+  }));
+
+  it('should return 400 if viewAs is not a numeric ID', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    await asAlice.get('/v1/projects/1/datasets/geofun/entities.geojson?viewAs=notanumber')
+      .expect(400)
+      .then(({ body }) => {
+        body.code.should.eql(400.11);
+      });
+  }));
+
+  it('should return all entities if dataset has no access filter', testService(async (service, { db }) => {
+    const { asAlice } = await setupGeoEntities(service, db);
+
+    const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+      .send({ displayName: 'App User' }).expect(200);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?viewAs=${appUser.id}`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(3); // 5 entities, 2 with invalid geodata
+      });
+  }));
+
+  it('should filter entities by ownerOnly for viewAs actor', testService(async (service, { db }) => {
+    const { asAlice, asBob } = await setupGeoEntities(service, db);
+
+    // asBob created entity 'c'; demote Bob to formfill so he lacks entity.list
+    const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
+    await asAlice.delete(`/v1/projects/1/assignments/manager/${bobId}`).expect(200);
+    await asAlice.post(`/v1/projects/1/assignments/formfill/${bobId}`).expect(200);
+
+    await asAlice.patch('/v1/projects/1/datasets/geofun')
+      .send({ ownerOnly: true })
+      .expect(200);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?viewAs=${bobId}`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('12345678-1234-4123-8234-123456789aac');
+      });
+  }));
+
+  it('should filter entities by property rules for viewAs actor', testService(async (service) => {
+    const asAlice = await service.login('alice');
+
+    await asAlice.post('/v1/projects/1/datasets')
+      .send({ name: 'geofun' })
+      .expect(200);
+    await asAlice.post('/v1/projects/1/datasets/geofun/properties')
+      .send({ name: 'geometry' })
+      .expect(200);
+    await asAlice.post('/v1/projects/1/datasets/geofun/properties')
+      .send({ name: 'region' })
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/actor-properties')
+      .send({ name: 'region' })
+      .expect(200);
+    await asAlice.patch('/v1/projects/1/datasets/geofun')
+      .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+      .expect(200);
+
+    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+      .send({ uuid: '12345678-1234-4123-8234-123456789aaa', label: 'north point', data: { geometry: '1 2 3 0', region: 'north' } })
+      .expect(200);
+    await asAlice.post('/v1/projects/1/datasets/geofun/entities')
+      .send({ uuid: '12345678-1234-4123-8234-123456789aab', label: 'south point', data: { geometry: '1 2 3 0', region: 'south' } })
+      .expect(200);
+
+    const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+      .send({ displayName: 'North Worker' }).expect(200);
+    await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+      .send({ properties: { region: 'north' } })
+      .expect(200);
+
+    await asAlice.get(`/v1/projects/1/datasets/geofun/entities.geojson?viewAs=${appUser.id}`)
+      .expect(200)
+      .then(({ body }) => {
+        body.features.length.should.equal(1);
+        body.features[0].id.should.equal('12345678-1234-4123-8234-123456789aaa');
+      });
+  }));
+
+});

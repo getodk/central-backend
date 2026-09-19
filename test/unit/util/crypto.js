@@ -1,9 +1,9 @@
 const assert = require('node:assert/strict');
 const { KeyObject } = require('node:crypto');
 const appRoot = require('app-root-path');
-const { readFileSync } = require('fs');
+const { readFileSync } = require('node:fs');
 const should = require('should');
-const streamTest = require('streamtest').v2;
+const streamTest = require(appRoot + '/test/util/streamtest');
 const crypto = require(appRoot + '/lib/util/crypto');
 
 describe('util/crypto', () => {
@@ -38,6 +38,27 @@ describe('util/crypto', () => {
       const password = '❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️';
       password.length.should.be.lessThan(72);
       Buffer.byteLength(password).should.be.greaterThan(72);
+      return hashPassword(password).should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.');
+    });
+
+    describe('password strength checks', () => {
+      [
+        [ '1234567890', 'The supplied password is too weak: this is a top-100 common password' ],
+        [ '2026-04-27', 'The supplied password is too weak: dates are often easy to guess' ],
+        [ 'aaaaaaaaaaaaaaaaaaa', 'The supplied password is too weak: repeats like "aaa" are easy to guess' ],
+        [ 'batteryhorse', 'The supplied password is too weak. Add another word or two. Uncommon words are better.' ],
+        [ 'christopher', 'The supplied password is too weak: names and surnames by themselves are easy to guess' ],
+        [ 'tumtumtumtum', 'The supplied password is too weak: repeats like "abcabcabc" are only slightly harder to guess than "abc"' ],
+      ].forEach(([ password, expectedMessage ]) => {
+        it(`should reject password '${password}' with message '${expectedMessage}'`, () =>
+          hashPassword(password).should.be.rejectedWith(expectedMessage));
+      });
+    });
+
+    // Long strings cause terrible performance, and long strings which trigger backtracking are even worse.
+    // See: https://github.com/dropbox/zxcvbn/issues/327
+    it('should not take forever on horrible regex-exploding passwords', () => {
+      const password = 'x'.repeat(2000) + '!';
       return hashPassword(password).should.be.rejectedWith('The password or passphrase provided exceeds the maximum length.');
     });
   });
@@ -264,7 +285,7 @@ describe('util/crypto', () => {
       const ciphertext = Buffer.from('kMhJdk0mZOqvlxndUO3v4+UPvfYoc+bbkPmF3QmhoP7lP/QjHbzqw/IfZxQ54D328eCc4V6jtbrjeAXV+m1cWsCGGLW5KwTAxBjPBXzsZrUeY0RISVJ1g9BJoXfSRAjYMrFYOM907BFUIYYxMqpVWGy1lo8ljqY+Sgq1VphkQk/TQGgOVYFALHDLOYnLKuLHvwBLQQwK3lje8CwNlf/b2rY9qfGC4P1emoiP+YzkLp8eH6x/HfMvRIFoZEaom1i5s3SU4WVwe2Tno4jKD69ojMlQN6VKB7DK4xaRSs2C7zfDm63n1WCyyOAj8mASIFhb3sc3hD56HTJFUV/TH3UVlzP7oPm/Mm7nEcU3+HdSSwm3I1qFYhsXfVRym41IlbC4Twf660/kUZrugA7Zqd5K9Un3lOVTzYowaF+m5OIOO56wff3zPBxeOVjANDKR7V6/', 'base64');
       const plaintext = `<?xml version='1.0' ?><data id="encrypted" version="working3" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:h="http://www.w3.org/1999/xhtml" xmlns:jr="http://openrosa.org/javarosa"><meta><instanceID>uuid:99b303d9-6494-477b-a30d-d8aae8867335</instanceID></meta><name>bob</name><age>30</age><file>1561432532482.jpg</file></data>`;
 
-      it('should successfully decrypt data syncronously @slow', () => {
+      it('should successfully decrypt data synchronously @slow', () => {
         const aesKey = getSubmissionKey(priv, encAesKey);
         const ivs = getSubmissionIvs(instanceId, aesKey);
 

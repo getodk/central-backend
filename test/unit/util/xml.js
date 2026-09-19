@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
-const streamTest = require('streamtest').v2;
-const { Readable } = require('stream');
+const streamTest = require(appRoot + '/test/util/streamtest');
+const { Readable } = require('node:stream');
 const { always } = require('ramda');
 const { traverseXml, Traversal, applyTraversal, findOne, findAll, findAllWithPath, and, root, node, hasAttr, getAll, attr, text, tree, stripNamespacesFromPath } = require(appRoot + '/lib/util/xml');
 const Option = require(appRoot + '/lib/util/option');

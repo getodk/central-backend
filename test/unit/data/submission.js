@@ -1,7 +1,7 @@
 const should = require('should');
 const appRoot = require('app-root-path');
 const { filter } = require('ramda');
-const { toObjects } = require('streamtest').v2;
+const { toObjects } = require(appRoot + '/test/util/streamtest');
 const { submissionXmlToFieldStream, getSelectMultipleResponses, _hashedTree, _diffObj, _diffArray, diffSubmissions, _symbols } = require(appRoot + '/lib/data/submission');
 const { fieldsFor, MockField } = require(appRoot + '/test/util/schema');
 const testData = require(appRoot + '/test/data/xml');

@@ -3,7 +3,7 @@ set -o pipefail
 
 serverUrl="http://localhost:8383"
 userEmail="x@example.com"
-userPassword="secret1234"
+userPassword="STR0NG-secret-1234?"
 
 log() { echo >&2 "[test/e2e/soak/$(basename "$0" .sh)] $*"; }
 

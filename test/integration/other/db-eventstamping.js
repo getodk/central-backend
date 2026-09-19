@@ -1,7 +1,7 @@
 const { testService } = require('../setup');
 const { sql } = require('slonik');
 const { instances } = require('../../data/xml');
-const { URL } = require('url');
+const { URL } = require('node:url');
 
 
 describe('DB: Event stamping', () => {

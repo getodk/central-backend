@@ -241,6 +241,163 @@ describe('Entities API', () => {
     }));
   });
 
+  describe('GET /datasets/:name/entities with viewAs', () => {
+    it('should return all entities if dataset has no access filter', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity1' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity2' })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'App User' }).expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(2);
+        });
+    }));
+
+    it('should return 404 if viewAs actor does not exist', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?viewAs=99999')
+        .expect(404);
+    }));
+
+    it('should return 400 if viewAs is not a numeric ID', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities?viewAs=notanumber')
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.eql(400.11);
+        });
+    }));
+
+    it('should return all entities if viewAs actor has full access', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity1' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'entity2' })
+        .expect(200);
+
+      // Bob is a project manager with full entity.list access so filtering is skipped
+      const asBob = await service.login('bob');
+      const bobId = await asBob.get('/v1/users/current').then(({ body }) => body.id);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${bobId}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(2);
+        });
+    }));
+
+    it('should filter entities for ownerOnly dataset', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.simpleEntity)
+        .expect(200);
+
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ ownerOnly: true })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'App User' }).expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'alice entity' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/1/forms/simpleEntity/assignments/app-user/${appUser.id}`)
+        .expect(200);
+      await service.post(`/v1/key/${appUser.token}/projects/1/forms/simpleEntity/submissions`)
+        .send(testData.instances.simpleEntity.one.replace(
+          '<entities:label>Alice (88)</entities:label>',
+          '<entities:label>Made By App User</entities:label>'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await exhaust(container);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(1);
+          body[0].currentVersion.label.should.eql('Made By App User');
+        });
+    }));
+
+    it('should filter entities based on actor property rules', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'north person 1', data: { region: 'north' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'north person 2', data: { region: 'north' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'south person', data: { region: 'south' } })
+        .expect(200);
+
+      const { body: appUser } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'North Worker' }).expect(200);
+      await asAlice.patch(`/v1/projects/1/app-users/${appUser.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${appUser.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(2);
+          body.map(e => e.currentVersion.label).should.containDeep(['north person 1', 'north person 2']);
+        });
+    }));
+  });
+
   describe('GET /datasets/:name/entities/:uuid', () => {
 
     it('should strip uuid: prefix from query param in entity requests', testEntities(async (service) => {
@@ -2003,7 +2160,7 @@ describe('Entities API', () => {
     // `getById` creates an advisory lock which blocks other transactions to do the same.
     // Once first transaction updates the Entity, only then second transaction is able
     // to get the Entity.
-    it('should not allow parallel updates to the same Entity', testServiceFullTrx(async (service, container) => {
+    it('should not allow parallel updates to the same Entity @slow', testServiceFullTrx(async (service, container) => {
 
       const asAlice = await service.login('alice');
 
@@ -2554,7 +2711,7 @@ describe('Entities API', () => {
           });
       }));
 
-      it('should not create any entities there is a UUID collision', testServiceFullTrx(async (service) => {
+      it('should not create any entities there is a UUID collision @slow', testServiceFullTrx(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -2621,7 +2778,7 @@ describe('Entities API', () => {
           });
       }));
 
-      it('should not create any entities if there is a UUID collision with soft deleted Entity', testServiceFullTrx(async (service) => {
+      it('should not create any entities if there is a UUID collision with soft deleted Entity @slow', testServiceFullTrx(async (service) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -3078,6 +3235,130 @@ describe('Entities API', () => {
           audit.details.entity.uuid.should.be.eql('12345678-1234-4123-8234-123456789abc');
         });
     }));
+
+    // Following three tests are related to https://github.com/getodk/central/issues/2111
+    it('should return 403 when project manager tries to bulk delete entities from a dataset they do not have access to', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      // second project
+      const { body: project2 } = await asAlice.post('/v1/projects')
+        .send({ name: 'Second Project' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${project2.id}/datasets`)
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${project2.id}/datasets/people/entities`)
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Person 1' },
+            { uuid: '12345678-1234-4123-8234-123456789def', label: 'Person 2' }
+          ],
+          source: { name: 'people.csv', size: 100 }
+        })
+        .expect(200);
+
+      // Bob (PM of the first project) trying to delete entities of second project
+      await asBob.post(`/v1/projects/${project2.id}/datasets/people/entities/bulk-delete`)
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(403);
+    }));
+
+    it('should not delete entities that belong to a different dataset than the one in the URL', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create two datasets in the same project
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      // Create entities in the 'people' dataset
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Person 1' },
+            { uuid: '12345678-1234-4123-8234-123456789def', label: 'Person 2' }
+          ],
+          source: { name: 'people.csv', size: 100 }
+        })
+        .expect(200);
+
+      // Create entities in the 'trees' dataset
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-aaaaaaaaaaa1', label: 'Tree 1' },
+            { uuid: '12345678-1234-4123-8234-aaaaaaaaaaa2', label: 'Tree 2' }
+          ],
+          source: { name: 'trees.csv', size: 100 }
+        })
+        .expect(200);
+
+      // Bulk delete entities with wrong dataset name in the URL
+      await asAlice.post('/v1/projects/1/datasets/trees/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.equal(0);
+        });
+    }));
+
+    it('should not delete entities that belong to a different project than the one in the URL', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Person 1' },
+            { uuid: '12345678-1234-4123-8234-123456789def', label: 'Person 2' }
+          ],
+          source: { name: 'people.csv' }
+        })
+        .expect(200);
+
+      // same dataset in a new project
+      const { body: project2 } = await asAlice.post('/v1/projects')
+        .send({ name: 'Second Project' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${project2.id}/datasets`)
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${project2.id}/datasets/people/entities`)
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-aaaaaaaaaaa1', label: 'Person 1' },
+            { uuid: '12345678-1234-4123-8234-aaaaaaaaaaa2', label: 'Person 2' }
+          ],
+          source: { name: 'people.csv' }
+        })
+        .expect(200);
+
+      // Bulk delete entities in the first project with wrong project ID in the URL
+      await asAlice.post(`/v1/projects/${project2.id}/datasets/people/entities/bulk-delete`)
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.equal(0);
+        });
+    }));
   });
 
   // Bulk Restore API
@@ -3249,6 +3530,150 @@ describe('Entities API', () => {
           const bulkRestoreEvent = body.find(audit => audit.action === 'entity.bulk.restore');
           bulkRestoreEvent.should.not.be.undefined();
           bulkRestoreEvent.details.entityUuids.should.containEql('12345678-1234-4123-8234-123456789abc');
+        });
+    }));
+
+    it('should return 403 when project manager tries to bulk restore entities from a dataset they do not have access to', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+
+      // second project
+      const { body: project2 } = await asAlice.post('/v1/projects')
+        .send({ name: 'Second Project' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${project2.id}/datasets`)
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${project2.id}/datasets/people/entities`)
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Person 1' },
+            { uuid: '12345678-1234-4123-8234-123456789def', label: 'Person 2' }
+          ],
+          source: { name: 'people.csv', size: 100 }
+        })
+        .expect(200);
+
+      // Delete entities first
+      await asAlice.post(`/v1/projects/${project2.id}/datasets/people/entities/bulk-delete`)
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(200);
+
+      // Bob (PM of the first project) trying to restore entities of second project
+      await asBob.post(`/v1/projects/${project2.id}/datasets/people/entities/bulk-restore`)
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(403);
+    }));
+
+    it('should not restore entities that belong to a different dataset than the one in the URL', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create two datasets in the same project
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' })
+        .expect(200);
+
+      // Create entities in the 'people' dataset
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Person 1' },
+            { uuid: '12345678-1234-4123-8234-123456789def', label: 'Person 2' }
+          ],
+          source: { name: 'people.csv', size: 100 }
+        })
+        .expect(200);
+
+      // Create entities in the 'trees' dataset
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-aaaaaaaaaaa1', label: 'Tree 1' },
+            { uuid: '12345678-1234-4123-8234-aaaaaaaaaaa2', label: 'Tree 2' }
+          ],
+          source: { name: 'trees.csv', size: 100 }
+        })
+        .expect(200);
+
+      // Delete entities in 'people' dataset
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(200);
+
+      // Bulk restore entities with wrong dataset name in the URL
+      await asAlice.post('/v1/projects/1/datasets/trees/entities/bulk-restore')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.equal(0);
+        });
+    }));
+
+    it('should not restore entities that belong to a different project than the one in the URL', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Person 1' },
+            { uuid: '12345678-1234-4123-8234-123456789def', label: 'Person 2' }
+          ],
+          source: { name: 'people.csv' }
+        })
+        .expect(200);
+
+      // same dataset in a new project
+      const { body: project2 } = await asAlice.post('/v1/projects')
+        .send({ name: 'Second Project' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${project2.id}/datasets`)
+        .send({ name: 'people' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/${project2.id}/datasets/people/entities`)
+        .send({
+          entities: [
+            { uuid: '12345678-1234-4123-8234-aaaaaaaaaaa1', label: 'Person 1' },
+            { uuid: '12345678-1234-4123-8234-aaaaaaaaaaa2', label: 'Person 2' }
+          ],
+          source: { name: 'people.csv' }
+        })
+        .expect(200);
+
+      // Delete entities in the first project
+      await asAlice.post('/v1/projects/1/datasets/people/entities/bulk-delete')
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(200);
+
+      // Bulk restore entities in the first project with wrong project ID in the URL
+      await asAlice.post(`/v1/projects/${project2.id}/datasets/people/entities/bulk-restore`)
+        .send({
+          ids: ['12345678-1234-4123-8234-123456789abc', '12345678-1234-4123-8234-123456789def']
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.count.should.equal(0);
         });
     }));
   });

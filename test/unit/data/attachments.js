@@ -1,5 +1,5 @@
 const appRoot = require('app-root-path');
-const streamTest = require('streamtest').v2;
+const streamTest = require(appRoot + '/test/util/streamtest');
 const { zipStreamToFiles } = require(appRoot + '/test/util/zip');
 const { PartialPipe } = require(appRoot + '/lib/util/stream');
 const { streamAttachments } = require(appRoot + '/lib/data/attachments');

@@ -4,7 +4,7 @@
     <h:title>ODK Analytics</h:title>
     <model odk:xforms-version="1.0.0">
       <instance>
-        <data id="odk-analytics" version="v2026.2.0_1">
+        <data id="odk-analytics" version="v2026.3.0_1">
           <config>
             <email/>
             <organization/>
@@ -60,6 +60,22 @@
             </num_entity_bulk_deletes>
             <num_datasets_with_geometry/>
             <num_multi_entity_errors/>
+            <num_wf_submissions>
+              <recent/>
+              <total/>
+            </num_wf_submissions>
+            <num_enketo_submissions>
+              <recent/>
+              <total/>
+            </num_enketo_submissions>
+            <num_wf_submission_edits>
+              <recent/>
+              <total/>
+            </num_wf_submission_edits>
+            <num_enketo_submission_edits>
+              <recent/>
+              <total/>
+            </num_enketo_submission_edits>
           </system>
           <projects jr:template="">
             <id/>
@@ -456,6 +472,14 @@
       <bind nodeset="/data/system/num_entity_bulk_deletes/total" type="int"/>
       <bind nodeset="/data/system/num_datasets_with_geometry" type="int"/>
       <bind nodeset="/data/system/num_multi_entity_errors" type="int"/>
+      <bind nodeset="/data/system/num_wf_submissions/recent" type="int"/>
+      <bind nodeset="/data/system/num_wf_submissions/total" type="int"/>
+      <bind nodeset="/data/system/num_enketo_submissions/recent" type="int"/>
+      <bind nodeset="/data/system/num_enketo_submissions/total" type="int"/>
+      <bind nodeset="/data/system/num_wf_submission_edits/recent" type="int"/>
+      <bind nodeset="/data/system/num_wf_submission_edits/total" type="int"/>
+      <bind nodeset="/data/system/num_enketo_submission_edits/recent" type="int"/>
+      <bind nodeset="/data/system/num_enketo_submission_edits/total" type="int"/>
       <bind nodeset="/data/projects/id" type="string"/>
       <bind nodeset="/data/projects/users/num_managers/recent" type="int"/>
       <bind nodeset="/data/projects/users/num_managers/total" type="int"/>
@@ -700,6 +724,42 @@
       <input ref="/data/system/num_multi_entity_errors">
         <label>Number of errors from repeat Entities</label>
       </input>
+      <group ref="/data/system/num_wf_submissions">
+        <label>Number of Submissions with Web Forms</label>
+        <input ref="/data/system/num_wf_submissions/recent">
+          <label>in the past 45 days</label>
+        </input>
+        <input ref="/data/system/num_wf_submissions/total">
+          <label>Total</label>
+        </input>
+      </group>
+      <group ref="/data/system/num_enketo_submissions">
+        <label>Number of Submissions with Enketo</label>
+        <input ref="/data/system/num_enketo_submissions/recent">
+          <label>in the past 45 days</label>
+        </input>
+        <input ref="/data/system/num_enketo_submissions/total">
+          <label>Total</label>
+        </input>
+      </group>
+      <group ref="/data/system/num_wf_submission_edits">
+        <label>Number of Submission edits with Web Forms</label>
+        <input ref="/data/system/num_wf_submission_edits/recent">
+          <label>in the past 45 days</label>
+        </input>
+        <input ref="/data/system/num_wf_submission_edits/total">
+          <label>Total</label>
+        </input>
+      </group>
+      <group ref="/data/system/num_enketo_submission_edits">
+        <label>Number of Submission edits with Enketo</label>
+        <input ref="/data/system/num_enketo_submission_edits/recent">
+          <label>in the past 45 days</label>
+        </input>
+        <input ref="/data/system/num_enketo_submission_edits/total">
+          <label>Total</label>
+        </input>
+      </group>
     </group>
     <group ref="/data/projects">
       <label>Project Details</label>

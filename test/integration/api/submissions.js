@@ -2,7 +2,7 @@ const appRoot = require('app-root-path');
 const should = require('should');
 const { v4: uuid } = require('uuid');
 const { sql } = require('slonik');
-const { createReadStream, readFileSync } = require('fs');
+const { createReadStream, readFileSync } = require('node:fs');
 const { testService, testServiceFullTrx } = require('../setup');
 const testData = require('../../data/xml');
 const { httpZipResponseToFiles } = require('../../util/zip');
@@ -11,6 +11,7 @@ const { hashPassword } = require('../../../lib/util/crypto');
 const { User, Actor } = require(appRoot + '/lib/model/frames');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
+const { password4david } = require('../../util/passwords');
 
 // utilities used for versioning instances
 const withSimpleIds = (deprecatedId, instanceId) => testData.instances.simple.one
@@ -284,6 +285,46 @@ describe('api: /submission', () => {
           .then((o) => o.get())
           .then(({ formDefId }) => one(sql`select * from form_defs where id=${formDefId}`))
           .then((formDef) => { formDef.version.should.equal('two'); }))));
+
+    // getodk/central#2219
+    it('should decode the form version', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Adds a version string of <&@> to XML after encoding it. @ doesn't
+      // strictly need to be encoded, but Collect currently does encode it.
+      const addVersion = (xml) =>
+        xml.replace(/(<data id="simple")>/, '$1 version="&lt;&amp;&#64;&gt;">');
+
+      // Publish a new version of the form with an encoded version string.
+      await asAlice.post('/v1/projects/1/forms/simple/draft')
+        .send(addVersion(testData.forms.simple))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+      await asAlice.post('/v1/projects/1/forms/simple/draft/publish')
+        .expect(200);
+      await asAlice.get('/v1/projects/1/forms/simple')
+        .expect(200)
+        .then(({ body }) => {
+          body.version.should.equal('<&@>');
+        });
+
+      // Create a submission to the new version of the form.
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach(
+          'xml_submission_file',
+          Buffer.from(addVersion(testData.instances.simple.one)),
+          { filename: 'data.xml' }
+        )
+        .expect(201);
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions/one/versions/one')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200)
+        .then(({ body }) => {
+          body.formVersion.should.equal('<&@>');
+        });
+    }));
 
     it('should store the correct formdef and actor ids', testService((service, { all, oneFirst }) =>
       service.login('alice', (asAlice) =>
@@ -1693,7 +1734,7 @@ describe('api: /forms/:id/submissions', () => {
         .expect(404);
     }));
 
-    it('should not let a submission with the same instanceId as a deleted submission be sent', testServiceFullTrx(async (service, { Submissions }) => {
+    it('should not let a submission with the same instanceId as a deleted submission be sent @slow', testServiceFullTrx(async (service, { Submissions }) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms/simple/submissions')
@@ -3279,6 +3320,30 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
               body[0].should.be.an.ExtendedSubmission();
               body[0].submitter.displayName.should.equal('Alice');
             })))));
+
+    it('should support limit & offset params', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await Promise.all(Array.from({ length: 100 }, (_, idx) => asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(`<data id="simple"><meta><instanceID>instance-${idx}</instanceID></meta></data>`)
+        .set('Content-Type', 'text/xml')
+        .expect(200)));
+
+      await asAlice.get('/v1/projects/1/forms/simple/submissions?limit=7&offset=13')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(7);
+          body.map(s => s.instanceId).should.eql([
+            'instance-86',
+            'instance-85',
+            'instance-84',
+            'instance-83',
+            'instance-82',
+            'instance-81',
+            'instance-80',
+          ]);
+        });
+    }));
   });
 
   describe('[draft] GET', () => {
@@ -4665,7 +4730,7 @@ one,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
         .send(testData.forms.binaryType)
         .expect(200);
 
-      const password = await hashPassword('password4david');
+      const password = await hashPassword(password4david);
 
       await Users.create(new User({ email: 'david@getodk.org', password }, { actor: new Actor({ type: 'user', displayName: 'David' }) }));
 

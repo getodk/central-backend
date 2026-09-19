@@ -1,5 +1,7 @@
 default: base
 
+SHELL := /usr/bin/env bash
+
 NODE_CONFIG_ENV ?= test
 export PGAPPNAME ?= odkcentral
 
@@ -18,10 +20,6 @@ node_version: node_modules
 .PHONY: test-oidc-integration
 test-oidc-integration: node_version
 	TEST_AUTH=oidc NODE_CONFIG_ENV=oidc-integration-test make test-integration
-
-.PHONY: test-oidc-e2e
-test-oidc-e2e: node_version
-	test/e2e/oidc/run-tests.sh
 
 .PHONY: dev-oidc
 dev-oidc: base
@@ -109,6 +107,12 @@ test-db-migrations:
 	    --require test/db-migrations/mocha-setup.js \
 	    ./test/db-migrations/**/*.spec.js
 
+.PHONY: test-db-ssl
+test-db-ssl:
+	NODE_CONFIG_ENV=db-migration-test npx mocha --sort --timeout=20000 \
+	    --require test/db-ssl/mocha-setup.js \
+	    ./test/db-ssl/**/*.spec.js
+
 .PHONY: test-fast
 test-fast: node_version
 	MOCHA_OPTIONS="--fgrep @slow --invert" $(MAKE) test-unit
@@ -128,7 +132,9 @@ test-coverage: node_version
 
 .PHONY: lint
 lint: node_version
-	npx eslint --cache --max-warnings 0 .
+	ESLINT_USE_FLAT_CONFIG=false \
+	npx eslint --cache --max-warnings 0 . \
+	2> >(grep -Ev 'ESLintRCWarning|--trace-warnings' >&2) # filter eslintrc deprecation warning
 
 
 ################################################################################
@@ -136,19 +142,27 @@ lint: node_version
 
 .PHONY: run-docker-postgres
 run-docker-postgres: stop-docker-postgres
-	docker start odk-postgres14 || (\
-		docker run -d --name odk-postgres14 -p 127.0.0.1:5432:5432 -e POSTGRES_PASSWORD=odktest postgres:14.20-alpine \
-		&& sleep 5 \
-		&& node lib/bin/create-docker-databases.js --log \
-	)
+	test/bin/docker-postgres.sh start
+
+.PHONY: run-docker-postgres-ssl
+run-docker-postgres-ssl: stop-docker-postgres-ssl
+	test/bin/docker-postgres.sh --ssl start
 
 .PHONY: stop-docker-postgres
 stop-docker-postgres:
-	docker stop odk-postgres14 || true
+	test/bin/docker-postgres.sh stop
+
+.PHONY: stop-docker-postgres-ssl
+stop-docker-postgres-ssl:
+	test/bin/docker-postgres.sh --ssl stop
 
 .PHONY: rm-docker-postgres
 rm-docker-postgres: stop-docker-postgres
-	docker rm odk-postgres14 || true
+	test/bin/docker-postgres.sh remove
+
+.PHONY: rm-docker-postgres-ssl
+rm-docker-postgres-ssl: stop-docker-postgres-ssl
+	test/bin/docker-postgres.sh --ssl remove
 
 
 ################################################################################

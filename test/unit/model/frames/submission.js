@@ -1,6 +1,6 @@
 const appRoot = require('app-root-path');
 const { Submission } = require(appRoot + '/lib/model/frames');
-const streamTest = require('streamtest').v2;
+const streamTest = require(appRoot + '/test/util/streamtest');
 
 describe('Submission', () => {
   describe('fromXml', () => {
@@ -60,6 +60,12 @@ describe('Submission', () => {
       return Submission.fromXml(xml).then((partial) => {
         partial.def.instanceName.should.equal('my name');
       });
+    });
+
+    it('should decode version', async () => {
+      const xml = '<data id="mycoolform" version="&lt;&amp;&#64;&gt;"><orx:meta><orx:instanceID>myinstance</orx:instanceID></orx:meta><field/></data>';
+      const partial = await Submission.fromXml(xml);
+      partial.def.version.should.equal('<&@>');
     });
 
     it('should squash null version to empty-string', () => {

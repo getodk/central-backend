@@ -217,7 +217,7 @@ should.Assertion.add('ExtendedForm', function() {
 should.Assertion.add('FormAttachment', function() {
   this.params = { operator: 'to be a Form Attachment' };
 
-  Object.keys(this.obj).should.be.a.subsetOf([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'hash', 'updatedAt' ]);
+  Object.keys(this.obj).should.be.a.subsetOf([ 'name', 'type', 'blobExists', 'datasetExists', 'exists', 'size', 'hash', 'updatedAt' ]);
   this.obj.name.should.be.a.String();
   this.obj.type.should.be.a.String();
   const { blobExists, datasetExists, exists, hash } = this.obj;
@@ -227,6 +227,10 @@ should.Assertion.add('FormAttachment', function() {
   exists.should.equal(blobExists || datasetExists);
   (hash != null).should.equal(blobExists);
   if (hash != null) hash.should.be.an.md5Sum();
+  if (this.obj.size != null) {
+    this.obj.size.should.be.a.Number();
+    this.obj.blobExists.should.be.true();
+  }
   if (this.obj.updatedAt != null) this.obj.updatedAt.should.be.an.isoDate();
 });
 
