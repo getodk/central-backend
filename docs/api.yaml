@@ -45,7 +45,7 @@ info:
 
     **Fixed**:
 
-    - The OpenRosa [`formList`](/central-api-openrosa-endpoints/#openrosa-form-listing-api) now includes the Form version in the `<downloadUrl>` and `<manifestUrl>`.
+    - The OpenRosa [`formList`](/central-api-openrosa-endpoints/#openrosa-form-listing-api) now includes the Form version in the `<downloadUrl>` and `<manifestUrl>`. This prevents certain race conditions. ([getodk/central#2251](https://github.com/getodk/central/issues/2251))
 
     ## ODK Central v2026.3
 
