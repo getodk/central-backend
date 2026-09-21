@@ -139,14 +139,14 @@ describe('api: /projects/:id/forms (listing forms)', () => {
       <name>Simple</name>
       <version></version>
       <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/simple.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/simple/versions/___.xml</downloadUrl>
     </xform>
     <xform>
       <formID>withrepeat</formID>
       <name>withrepeat</name>
       <version>1.0</version>
       <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat/versions/1.0.xml</downloadUrl>
     </xform>
   </xforms>`);
           }))));
@@ -168,7 +168,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
       <name>withrepeat</name>
       <version>1.0</version>
       <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat/versions/1.0.xml</downloadUrl>
     </xform>
   </xforms>`);
           }))));
@@ -210,7 +210,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
       <name>withrepeat</name>
       <version>1.0</version>
       <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
-      <downloadUrl>${domain}/v1/key/${fk.token}/projects/1/forms/withrepeat.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/key/${fk.token}/projects/1/forms/withrepeat/versions/1.0.xml</downloadUrl>
     </xform>
   </xforms>`);
               }))))));
@@ -238,7 +238,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
       <name>withrepeat</name>
       <version>1.0</version>
       <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
-      <downloadUrl>${domain}/v1/key/${fk.token}/projects/1/forms/withrepeat.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/key/${fk.token}/projects/1/forms/withrepeat/versions/1.0.xml</downloadUrl>
     </xform>
   </xforms>`);
               }))))));
@@ -292,7 +292,13 @@ describe('api: /projects/:id/forms (listing forms)', () => {
     it('should escape illegal characters in url', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.withAttachments.replace('withAttachments', 'with attachments'))
+          .send(testData.forms.withAttachments.replace(
+            '<data id="withAttachments">',
+            // The version string contains characters that need to be encoded
+            // for XML (< & >), plus another character that needs to be
+            // URL-encoded (space).
+            '<data id="with attachments" version="&lt;x &amp; y&gt;">'
+          ))
           .set('Content-Type', 'application/xml')
           .expect(200)
           .then(() => asAlice.get('/v1/projects/1/formList')
@@ -300,8 +306,8 @@ describe('api: /projects/:id/forms (listing forms)', () => {
             .expect(200)
             .then(({ text }) => {
               const domain = config.get('default.env.domain');
-              text.should.containEql(`<downloadUrl>${domain}/v1/projects/1/forms/with%20attachments.xml</downloadUrl>`);
-              text.should.containEql(`<manifestUrl>${domain}/v1/projects/1/forms/with%20attachments/manifest</manifestUrl>`);
+              text.should.containEql(`<downloadUrl>${domain}/v1/projects/1/forms/with%20attachments/versions/%3Cx%20%26%20y%3E.xml</downloadUrl>`);
+              text.should.containEql(`<manifestUrl>${domain}/v1/projects/1/forms/with%20attachments/versions/%3Cx%20%26%20y%3E/manifest</manifestUrl>`);
             })))));
 
     it('should include a manifest node for forms with attachments', testService((service) =>
@@ -322,22 +328,22 @@ describe('api: /projects/:id/forms (listing forms)', () => {
       <name>Simple</name>
       <version></version>
       <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/simple.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/simple/versions/___.xml</downloadUrl>
     </xform>
     <xform>
       <formID>withAttachments</formID>
       <name>withAttachments</name>
       <version></version>
       <hash>md5:dda89055c8fec222458f702aead30a83</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments.xml</downloadUrl>
-      <manifestUrl>${domain}/v1/projects/1/forms/withAttachments/manifest</manifestUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withAttachments/versions/___.xml</downloadUrl>
+      <manifestUrl>${domain}/v1/projects/1/forms/withAttachments/versions/___/manifest</manifestUrl>
     </xform>
     <xform>
       <formID>withrepeat</formID>
       <name>withrepeat</name>
       <version>1.0</version>
       <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat/versions/1.0.xml</downloadUrl>
     </xform>
   </xforms>`);
             })))));
@@ -365,14 +371,14 @@ describe('api: /projects/:id/forms (listing forms)', () => {
       <name>Simple</name>
       <version></version>
       <hash>md5:5c09c21d4c71f2f13f6aa26227b2d133</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/simple.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/simple/versions/___.xml</downloadUrl>
     </xform>
     <xform>
       <formID>withrepeat</formID>
       <name>withrepeat</name>
       <version>1.0</version>
       <hash>md5:e7e9e6b3f11fca713ff09742f4312029</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/withrepeat/versions/1.0.xml</downloadUrl>
     </xform>
   </xforms>`);
                 }),
@@ -388,7 +394,7 @@ describe('api: /projects/:id/forms (listing forms)', () => {
       <name>Simple</name>
       <version>two</version>
       <hash>md5:8240cdc372a373170ee87c1eab2c60bc</hash>
-      <downloadUrl>${domain}/v1/projects/${projectTwoId}/forms/simple.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/${projectTwoId}/forms/simple/versions/two.xml</downloadUrl>
     </xform>
   </xforms>`);
                 })

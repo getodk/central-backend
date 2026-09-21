@@ -383,7 +383,7 @@ describe('Update / migrate entities-version within form', () => {
       <name>updateEntity</name>
       <version>1.0</version>
       <hash>md5:83792255bc7ad6b67822b7847a7f749b</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/updateEntity.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/updateEntity/versions/1.0.xml</downloadUrl>
     </xform>`));
 
       await asAlice.get(`/v1/test/${token}/projects/1/forms/updateEntity/draft/formList`)
@@ -411,7 +411,7 @@ describe('Update / migrate entities-version within form', () => {
       <name>updateEntity</name>
       <version>1.0[upgrade]</version>
       <hash>md5:71f0896cc4c502ae5fa2cc6b0a55f5e6</hash>
-      <downloadUrl>${domain}/v1/projects/1/forms/updateEntity.xml</downloadUrl>
+      <downloadUrl>${domain}/v1/projects/1/forms/updateEntity/versions/1.0%5Bupgrade%5D.xml</downloadUrl>
     </xform>`));
 
       await asAlice.get(`/v1/test/${token}/projects/1/forms/updateEntity/draft/formList`)
