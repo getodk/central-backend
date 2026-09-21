@@ -51,7 +51,7 @@ dev-s3: fake-s3-accounts base
 #   See: https://hub.docker.com/r/pgsty/silo/
 # MINIO_KMS_SECRET_KEY, MINIO_KMS_AUTO_ENCRYPTION enable encryption - this changes how s3 ETags are generated.
 #   See: https://docs.aws.amazon.com/AmazonS3/latest/API/API_Object.html
-#   See: https://github.com/pgsty/silo/discussions/19012
+#   See: https://github.com/minio/minio/discussions/19012
 S3_SERVER_ARGS := -p 127.0.0.1:9000:9000 -p 127.0.0.1:9001:9001 \
 		-e MINIO_ROOT_USER=odk-central-dev \
 		-e MINIO_ROOT_PASSWORD=topSecret123 \
