@@ -41,6 +41,12 @@ info:
 
     Here major and breaking changes to the API are listed by version.
 
+    ## ODK Central v2026.4
+
+    **Fixed**:
+
+    - The OpenRosa [`formList`](/central-api-openrosa-endpoints/#openrosa-form-listing-api) now includes the Form version in the `<downloadUrl>` and `<manifestUrl>`. This prevents certain race conditions. ([getodk/central#2251](https://github.com/getodk/central/issues/2251))
+
     ## ODK Central v2026.3
 
     **Added**:
@@ -10172,17 +10178,17 @@ paths:
                   <xform>
                     <formID>basic</formID>
                     <name>basic</name>
-                    <version></version>
+                    <version>v1</version>
                     <hash>md5:a64817a5688dd7c17563e32d4eb1cab2</hash>
-                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic.xml</downloadUrl>
-                    <manifestUrl>https://your.odk.server/v1/projects/7/forms/basic/manifest</manifestUrl>
+                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/basic/versions/v1.xml</downloadUrl>
+                    <manifestUrl>https://your.odk.server/v1/projects/7/forms/basic/versions/v1/manifest</manifestUrl>
                   </xform>
                   <xform>
                     <formID>simple</formID>
                     <name>Simple</name>
-                    <version></version>
+                    <version>v2</version>
                     <hash>md5:</hash>
-                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/simple.xml</downloadUrl>
+                    <downloadUrl>https://your.odk.server/v1/projects/7/forms/simple/versions/v2.xml</downloadUrl>
                   </xform>
                 </xforms>
   /v1/projects/{projectId}/submission:
