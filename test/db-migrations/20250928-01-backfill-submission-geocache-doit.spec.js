@@ -9,7 +9,7 @@ describeMigration('20250928-01-backfill-submission-geocache-doit', ({ runMigrati
     // Create actees.
     const projectActeeId = uuid();
     const formActeeId = uuid();
-    rowsExistFor('actees',
+    await rowsExistFor('actees',
       { id: projectActeeId, species: 'project' },
       { id: formActeeId, species: 'form' }
     );
