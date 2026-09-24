@@ -279,7 +279,7 @@ describe('db: geodata parsing functions', () => {
     });
   });
 
-  it('odk2geojson_helper_point()', testContainer(async ({ db }) => {
+  it('odk2geojson_helper_point()', testService(async (_, { db }) => {
     const cases = [
       ['', null],
       [null, null],
@@ -320,7 +320,7 @@ describe('db: geodata parsing functions', () => {
   }));
 
 
-  it('odk2geojson_helper_linestring', testContainer(async ({ db }) => {
+  it('odk2geojson_helper_linestring', testService(async (_, { db }) => {
     // This uses odk2geojson_helper_point, so we don't need to repeat every linestring-variant of its
     // test cases. We want to test just the point splitting.
     // Unless, of course, this function is changed to not use odk2geojson_helper_point anymore...
@@ -341,7 +341,7 @@ describe('db: geodata parsing functions', () => {
   }));
 
 
-  it('odk2geojson_helper_polygon', testContainer(async ({ db }) => {
+  it('odk2geojson_helper_polygon', testService(async (_, { db }) => {
     // This uses odk2geojson_helper_linestring, so we don't need to repeat every polygon-variant of its
     // test cases. We want to test just the polygon-specific part.
     // Unless, of course, this function is changed to not use odk2geojson_helper_linestring anymore...
@@ -356,7 +356,7 @@ describe('db: geodata parsing functions', () => {
   }));
 
 
-  it('odk2geojson_ducktyped', testContainer(async ({ db }) => {
+  it('odk2geojson_ducktyped', testService(async (_, { db }) => {
     // This is used when we don't know the geotype up front (as with entities).
     // It uses all the odk2geojson_helper_linestring* functions,
     // so we will not repeat every one of their cases.
