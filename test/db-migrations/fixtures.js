@@ -1,5 +1,4 @@
 const { hash, randomBytes } = require('node:crypto');
-const { last } = require('ramda');
 
 const aFormDefWith = (props) => {
   const { xml } = props;
@@ -14,7 +13,7 @@ const aFormDefWith = (props) => {
 const formFieldsWith = (sharedProps, ...fields) => fields.map((props, i) => {
   const result = { order: i, ...sharedProps, ...props };
   if (result.name == null && result.path != null)
-    result.name = last(result.path.split('/'));
+    result.name = result.path.split('/').at(-1);
   return result;
 });
 
