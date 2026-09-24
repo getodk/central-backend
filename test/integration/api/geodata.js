@@ -256,19 +256,28 @@ const runDBFuncTests = (db, fn, cases) =>
 
 
 describe('db: geodata parsing functions', () => {
-  it('safe_to_xml()', testContainer(async ({ db }) => {
-    const cases = [
-      // Valid XML document
-      ['<foo/>', '<foo/>'],
-      // Invalid XML
-      ['<>', null],
-      // XML content fragments: see getodk/central#2261.
-      ['foo', null],
-      ['<foo/><bar/>', null]
-    ];
+  describe('safe_to_xml()', () => {
+    it('should return an xml value', testContainer(async ({ db }) => {
+      const result = await db.one(sql`SELECT
+        pg_typeof(safe_to_xml('<foo/>')) AS type,
+        safe_to_xml('<foo/>') AS value
+      `);
+      result.should.eql({ type: 'xml', value: '<foo/>' });
+    }));
 
-    return runDBFuncTests(db, 'safe_to_xml', cases);
-  }));
+    [
+      // Invalid XML
+      '<>',
+      // XML content fragments: see getodk/central#2261.
+      'foo',
+      '<foo/><bar/>'
+    ].forEach(input => {
+      it(`should return null for '${input}'`, testContainer(async ({ db }) => {
+        const value = await db.oneFirst(sql`SELECT safe_to_xml(${input})`);
+        should.not.exist(value);
+      }));
+    });
+  });
 
   it('odk2geojson_helper_point()', testContainer(async ({ db }) => {
     const cases = [
