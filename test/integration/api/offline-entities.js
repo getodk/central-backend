@@ -1924,6 +1924,10 @@ describe('Offline Entities', () => {
   });
 
   describe('locking an entity while processing a related submission @slow', function() {
+    // TODO if this test
+    // 1. times out: there is likely a serious underlying issue
+    // 2. gets close to timeout: that's also very weird
+    // See: https://github.com/getodk/central/issues/2258
     this.timeout(120_000);
 
     // https://github.com/getodk/central/issues/705
