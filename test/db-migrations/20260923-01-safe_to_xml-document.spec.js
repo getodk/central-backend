@@ -3,9 +3,9 @@ const assert = require('node:assert/strict');
 const { describeMigration, getFunctionDef } = require('./utils');
 
 describeMigration('20260923-01-safe_to_xml-document', ({ runMigrationBeingTested }) => {
-  let defBefore;
+  let defBeforeModification;
   before(async () => {
-    defBefore = await getFunctionDef('safe_to_xml');
+    defBeforeModification = await getFunctionDef('safe_to_xml');
 
     // This is the old, unpatched definition of safe_to_xml() before we modified
     // it as part of getodk/central#2261. We modify it here to mimic the case
@@ -30,13 +30,16 @@ IMMUTABLE
 PARALLEL SAFE
 `);
     const unpatchedDef = await getFunctionDef('safe_to_xml');
-    assert.equal(unpatchedDef, defBefore.replace('XMLPARSE(DOCUMENT input)', 'input::xml'));
+    assert.equal(
+      unpatchedDef,
+      defBeforeModification.replace('XMLPARSE(DOCUMENT input)', 'input::xml')
+    );
 
     await runMigrationBeingTested();
   });
 
-  it('should replace the function', async () => {
+  it('should override the modified function definition', async () => {
     const defAfter = await getFunctionDef('safe_to_xml');
-    assert.equal(defAfter, defBefore);
+    assert.equal(defAfter, defBeforeModification);
   });
 });
