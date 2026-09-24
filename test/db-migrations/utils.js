@@ -191,5 +191,5 @@ module.exports = {
 
   rowsExistFor,
 
-  getFunctionDef
+  getFunctionDef,
 };
