@@ -1,8 +1,9 @@
-const { testService } = require('../setup');
+const { testContainer, testService } = require('../setup');
 const { forms: { geoTypes } } = require('../../data/xml');
 const { sql } = require('slonik');
 const { palatableGeoJSON } = require('../../formats/palatable-geojson');
 const should = require('should');
+const { url } = require('../../../lib/util/http');
 
 
 function sortGeoJson(theGeoJSON) {
@@ -255,6 +256,25 @@ const runDBFuncTests = (db, fn, cases) =>
 
 
 describe('db: geodata parsing functions', () => {
+  describe('safe_to_xml()', () => {
+    it('should return an xml value', testContainer(async ({ db }) => {
+      const result = await db.one(sql`SELECT
+        pg_typeof(safe_to_xml('<foo/>')) AS type,
+        safe_to_xml('<foo/>') AS value
+      `);
+      result.should.eql({ type: 'xml', value: '<foo/>' });
+    }));
+
+    [
+      // Invalid XML
+      '<>',
+    ].forEach(input => {
+      it(`should return null for '${input}'`, testContainer(async ({ db }) => {
+        const value = await db.oneFirst(sql`SELECT safe_to_xml(${input})`);
+        should.not.exist(value);
+      }));
+    });
+  });
 
   it('odk2geojson_helper_point()', testService(async (_, { db }) => {
     const cases = [
@@ -492,6 +512,50 @@ describe('api: submission-geodata', () => {
     );
 
   }));
+
+  describe('XML that Postgres cannot parse', () => {
+    [
+      [
+        'invalid XML',
+        // This XML is invalid in that the closing tag does not match the
+        // opening tag. Central accepts such XML, but Postgres is unable to
+        // parse it. Related:
+        // https://github.com/getodk/central/issues/260#issuecomment-971893551
+        makeSubmission({ instanceID: '2' }).replace('</input_geopoint>', '</mismatched_tag>')
+      ],
+    ].forEach(([description, xml]) => {
+      it(`should not extract geodata from ${description}`, testService(async (service, { db }) => {
+        const { asAlice } = await setupGeoSubmissions(service, db);
+
+        const instanceId = await asAlice.post('/v1/projects/1/forms/geotest/submissions')
+          .set('Content-Type', 'application/xml')
+          .send(xml)
+          .expect(200)
+          .then(({ body }) => body.instanceId);
+
+        // The new submission should not appear in the GeoJSON.
+        await asAlice.get('/v1/projects/1/forms/geotest/submissions.geojson')
+          .expect(200)
+          .then(({ body }) => {
+            palatableGeoJSON(body);
+            const { type, features } = body;
+            type.should.equal('FeatureCollection');
+            features.length.should.equal(1);
+            features[0].should.containEql({ type: 'Feature', id: '1' });
+          });
+
+        // The new submission should not have GeoJSON.
+        await asAlice.get(url`/v1/projects/1/forms/geotest/submissions/${instanceId}.geojson`)
+          .expect(200)
+          .then(({ body }) => {
+            body.should.eql(palatableGeoJSON({
+              type: 'FeatureCollection',
+              features: []
+            }));
+          });
+      }));
+    });
+  });
 
   it('submissionID filter does its job', testService(async (service, { db }) => {
     const { asAlice } = await setupGeoSubmissions(service, db, true);
