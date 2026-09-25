@@ -120,16 +120,17 @@ async function rowsExistFor(tableName, ...rows) {
 
   assertAllHaveSameProps(rows); // eslint-disable-line no-use-before-define
   const colNames = Object.keys(rows[0]);
-  if (!colNames.length) throw new Error(`Attempted to insert data with 0 defined columns`);
 
   const table = sql.identifier([tableName]);
-  const cols = sql.join(colNames.map(k => sql.identifier([k])), sql`,`);
+  const cols = colNames.length ? sql.join(colNames.map(k => sql.identifier([k])), sql`,`) : sql``;
+  const colsInParens = colNames.length ? sql`(${cols})` : sql``;
 
-  return db.query(
+  return db.any(
     sql`
-      INSERT INTO ${table} (${cols})
+      INSERT INTO ${table} ${colsInParens}
         SELECT ${cols}
           FROM JSON_POPULATE_RECORDSET(NULL::${table}, ${JSON.stringify(rows)})
+      RETURNING *
     `,
   );
 }
