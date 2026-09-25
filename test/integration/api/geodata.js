@@ -305,9 +305,9 @@ describe('db: geodata parsing functions', () => {
     });
 
     it('preserves precision', testContainer(async ({ db }) => {
-      // To test whether precision is preserved, inside PG we cast from json to
-      // text since the DB adapter molests the json numbers by reading them as a
-      // double, with loss of precision.
+      // Here, we test whether precision is preserved. To test this, inside PG
+      // we cast from json to text since the DB adapter molests the json numbers
+      // by reading them as a double, with loss of precision.
       const lat = '89.99999999999999999999999999999999999999999999999999';
       const lon = '179.99999999999999999999999999999999999999999999999999';
       const value = await db.oneFirst(sql`SELECT odk2geojson_helper_point(${lat + ' ' + lon})::text`);
