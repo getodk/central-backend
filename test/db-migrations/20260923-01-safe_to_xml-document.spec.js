@@ -25,7 +25,7 @@ $$
 LANGUAGE plpgsql
 `);
     const defAfterModification = await getFunctionDef('safe_to_xml');
-    assert.notStrictEqual(defAfterModification, defBeforeModification);
+    assert.notEqual(defAfterModification, defBeforeModification);
 
     await runMigrationBeingTested();
   });
