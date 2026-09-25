@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { v4: uuid } = require('uuid');
 
-const { describeMigration, rowsExistFor } = require('./utils');
+const { assertTableContents, describeMigration, rowsExistFor } = require('./utils');
 const { aFormDefWith, formFieldsWith } = require('./fixtures');
 
 describeMigration('20250928-01-backfill-submission-geocache-doit', ({ runMigrationBeingTested }) => {
@@ -86,6 +86,9 @@ describeMigration('20250928-01-backfill-submission-geocache-doit', ({ runMigrati
       );
       /* eslint-enable no-await-in-loop */
     }
+
+    // The table to backfill is empty before the migration.
+    await assertTableContents('submission_field_extract_geo_cache' /* no rows */);
 
     await runMigrationBeingTested();
   });
