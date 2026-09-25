@@ -24,12 +24,14 @@ END;
 $$
 LANGUAGE plpgsql
 `);
+    const defAfterModification = await getFunctionDef('safe_to_xml');
+    assert.notStrictEqual(defAfterModification, defBeforeModification);
 
     await runMigrationBeingTested();
   });
 
   it('should override the modified function definition', async () => {
-    const defAfter = await getFunctionDef('safe_to_xml');
-    assert.equal(defAfter, defBeforeModification);
+    const defAfterMigration = await getFunctionDef('safe_to_xml');
+    assert.equal(defAfterMigration, defBeforeModification);
   });
 });
