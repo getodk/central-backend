@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { v4: uuid } = require('uuid');
 
-const { describeMigration, rowsExistFor } = require('./utils');
+const { assertTableContents, describeMigration, rowsExistFor } = require('./utils');
 const { aFormDefWith, formFieldsWith } = require('./fixtures');
 
 describeMigration('20250928-01-backfill-submission-geocache-doit', ({ runMigrationBeingTested }) => {
@@ -67,7 +67,7 @@ describeMigration('20250928-01-backfill-submission-geocache-doit', ({ runMigrati
       makeSubmission('valid', '1 2 3 4'),
       makeSubmission('empty', ''),
       makeSubmission('invalid_value', 'foo'),
-      // This XML is invalid in that the closing tag does not match the opening
+      // This XML is invalid in that a closing tag does not match its opening
       // tag. Central accepts such XML, but Postgres is unable to parse it.
       // Related: https://github.com/getodk/central/issues/260#issuecomment-971893551
       makeSubmission('invalid_xml', '1 2 3 4').replace('</input_geopoint>', '</mismatched_tag>'),
@@ -90,6 +90,9 @@ describeMigration('20250928-01-backfill-submission-geocache-doit', ({ runMigrati
       );
       /* eslint-enable no-await-in-loop */
     }
+
+    // The table to backfill is empty before the migration.
+    await assertTableContents('submission_field_extract_geo_cache' /* no rows */);
 
     await runMigrationBeingTested();
   });

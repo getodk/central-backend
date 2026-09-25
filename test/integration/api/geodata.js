@@ -520,10 +520,9 @@ describe('api: submission-geodata', () => {
     [
       [
         'invalid XML',
-        // This XML is invalid in that the closing tag does not match the
-        // opening tag. Central accepts such XML, but Postgres is unable to
-        // parse it. Related:
-        // https://github.com/getodk/central/issues/260#issuecomment-971893551
+        // This XML is invalid in that a closing tag does not match its opening
+        // tag. Central accepts such XML, but Postgres is unable to parse it.
+        // Related: https://github.com/getodk/central/issues/260#issuecomment-971893551
         makeSubmission({ instanceID: '2' }).replace('</input_geopoint>', '</mismatched_tag>')
       ],
       [
