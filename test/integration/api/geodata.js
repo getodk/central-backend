@@ -256,6 +256,9 @@ describe('db: geodata parsing functions', () => {
     [
       // Invalid XML
       '<>',
+      // XML content fragments: see getodk/central#2261.
+      'foo',
+      '<foo/><bar/>'
     ].forEach(input => {
       it(`should return null for '${input}'`, testContainer(async ({ db }) => {
         const value = await db.oneFirst(sql`SELECT safe_to_xml(${input})`);
@@ -526,6 +529,12 @@ describe('api: submission-geodata', () => {
         // Related: https://github.com/getodk/central/issues/260#issuecomment-971893551
         makeSubmission({ instanceID: '2' }).replace('</input_geopoint>', '</mismatched_tag>')
       ],
+      [
+        'XML content fragment',
+        // This XML has two root nodes. Central will accept it, but Postgres
+        // will consider it an XML content fragment. See getodk/central#2261.
+        makeSubmission({ instanceID: '2' }) + '<foo/>'
+      ]
     ].forEach(([description, xml]) => {
       it(`should not extract geodata from ${description}`, testService(async (service, { db }) => {
         const { asAlice } = await setupGeoSubmissions(service, db);
