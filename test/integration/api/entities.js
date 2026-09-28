@@ -3129,16 +3129,33 @@ describe('Entities API', () => {
 
   // Bulk Update API
   describe('POST /datasets/:name/entities (bulk update)', () => {
+    it.skip('should reject bulk update if UUID not provided for an entity to be updated', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 1, 1, 'people', [], null, 'v1 label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [
+            {
+              label: `v2 label ${uuids[0]}`,
+            }
+          ]
+        })
+        .expect(400);
+    }));
+
     it('should update Entities in bulk', testDataset(async (service) => {
       const asAlice = await service.login('alice');
-      // people dataset already exists
-      // label of each entity is set
       const uuids = await createEntities(asAlice, 3, 1, 'people', [], null, 'v1 label');
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
           source: {
-            name: 'people_updatde.csv',
+            name: 'people_update.csv',
             size: 100,
           },
           updates: [
@@ -3171,14 +3188,12 @@ describe('Entities API', () => {
 
     it('should update and create Entities in bulk', testDataset(async (service) => {
       const asAlice = await service.login('alice');
-      // people dataset already exists
-      // label of each entity is set
       const uuids = await createEntities(asAlice, 3, 1, 'people', [], null, 'v1 label');
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
           source: {
-            name: 'people_updatde.csv',
+            name: 'people_update.csv',
             size: 100,
           },
           updates: [
