@@ -116,7 +116,7 @@ RETURNS xml AS
     DECLARE hopefully_xml xml DEFAULT NULL;
     BEGIN
         BEGIN
-            hopefully_xml := input::xml;
+            hopefully_xml := XMLPARSE(DOCUMENT input);
         EXCEPTION WHEN OTHERS THEN
             RETURN NULL;
         END;
