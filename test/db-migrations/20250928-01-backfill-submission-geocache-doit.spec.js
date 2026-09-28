@@ -71,6 +71,10 @@ describeMigration('20250928-01-backfill-submission-geocache-doit', ({ runMigrati
       // tag. Central accepts such XML, but Postgres is unable to parse it.
       // Related: https://github.com/getodk/central/issues/260#issuecomment-971893551
       makeSubmission('invalid_xml', '1 2 3 4').replace('</input_geopoint>', '</mismatched_tag>'),
+      // This XML has two root nodes. Postgres will consider it a content
+      // fragment, so we will not be able to backfill its geodata. See
+      // getodk/central#2261.
+      makeSubmission('content', '1 2 3 4') + '<foo/>'
     ];
     for (const xml of submissionXml) {
       const idMatch = xml.match(/<instanceID>(.+)<\/instanceID>/);
@@ -108,6 +112,7 @@ describeMigration('20250928-01-backfill-submission-geocache-doit', ({ runMigrati
       { instanceId: 'empty', geovalue: null },
       { instanceId: 'invalid_value', geovalue: null },
       { instanceId: 'invalid_xml', geovalue: null },
+      { instanceId: 'content', geovalue: null }
     ]);
   });
 });
