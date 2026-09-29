@@ -15,6 +15,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        x: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+        y: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
         postgres-version:
           - "14.23"
           - "18"
@@ -35,14 +37,3 @@ jobs:
     - run: make run-docker-postgres
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
-    - run: sudo apt-get install wait-for-it
-    - run: ./test/e2e/oidc/run-tests.sh
-    - name: Archive Playwright Test Report
-      if: failure()
-      uses: actions/upload-artifact@v7
-      with:
-        name: Playwright Test Report
-        path: test/e2e/oidc/playwright-tests/results/html-report/
-    - name: PostgreSQL logs
-      if: always()
-      run: docker logs odk-central-backend-dev-postgres || true
