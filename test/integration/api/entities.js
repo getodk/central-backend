@@ -2448,8 +2448,25 @@ describe('Entities API', () => {
         .expect(400)
         .then(({ body }) => {
           body.code.should.equal(400.31);
-          body.message.should.equal('Expected parameters: (entities: [...]). Got (empty array).');
+          body.message.should.equal('Expected parameters: (entities: [...] or updates: [...]). Got (empty array).');
         });
+    }));
+
+    it('should accept empty entities array when updates are provided', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const uuids = await createEntities(asAlice, 1, 1, 'people');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [],
+          updates: [{
+            uuid: uuids[0],
+            data: { first_name: 'Jane' }
+          }],
+          source: { name: 'people.csv', size: 1 }
+        })
+        .expect(200);
     }));
 
     it('should create Entities in bulk', testDataset(async (service) => {
@@ -3129,7 +3146,7 @@ describe('Entities API', () => {
 
   // Bulk Update API
   describe('POST /datasets/:name/entities (bulk update)', () => {
-    it.skip('should reject bulk update if UUID not provided for an entity to be updated', testDataset(async (service) => {
+    it('should reject bulk update if UUID not provided for an entity to be updated', testDataset(async (service) => {
       const asAlice = await service.login('alice');
       const uuids = await createEntities(asAlice, 1, 1, 'people', [], null, 'v1 label');
 
@@ -3145,7 +3162,10 @@ describe('Entities API', () => {
             }
           ]
         })
-        .expect(400);
+        .then(({ body }) => {
+          body.code.should.equal(400.2);
+          body.message.should.equal('Required parameter uuid missing.');
+        });
     }));
 
     it('should update Entities in bulk', testDataset(async (service) => {

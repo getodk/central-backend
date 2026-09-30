@@ -97,5 +97,34 @@ describe('entity', () => {
       });
     });
   });
+
+  describe('fromJsonUpdate', () => {
+    const dataset = { id: 1, name: 'people' };
+    const properties = [{ name: 'age' }];
+
+    it('should parse an update without a label or existing entity data', () => {
+      const partial = Entity.fromJsonUpdate({
+        uuid: '12345678-1234-4123-8234-abcd56789abc',
+        data: { age: '89' }
+      }, properties, dataset);
+
+      partial.should.be.an.instanceOf(Entity.Partial);
+      partial.uuid.should.equal('12345678-1234-4123-8234-abcd56789abc');
+      partial.datasetId.should.equal(1);
+      partial.aux.def.should.be.eql(new Entity.Def({
+        data: { age: '89' },
+        dataReceived: { age: '89' }
+      }));
+      partial.aux.dataset.should.equal('people');
+    });
+
+    it('should require an update UUID', () => {
+      assert.throws(() => { Entity.fromJsonUpdate({ data: { age: '89' } }, properties, dataset); }, (err) => {
+        err.problemCode.should.equal(400.2);
+        err.message.should.equal('Required parameter uuid missing.');
+        return true;
+      });
+    });
+  });
 });
 
