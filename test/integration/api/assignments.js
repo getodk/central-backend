@@ -69,6 +69,10 @@ describe('api: /projects/:id/assignments/forms', () => {
       doAssigns(service, '/v1/projects/1/assignments/forms', '')
         .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
           result.length.should.equal(3);
+          Object.keys(result[0]).should.eqlInAnyOrder([
+            'actorId', 'roleId', 'xmlFormId', 'sessionActive'
+          ]);
+          result.forEach((assignment) => assignment.sessionActive.should.equal(true));
 
           verify(result, chelsea.id, 'simple', managerRoleId);
           verify(result, david.id, 'simple', appUserRoleId);
@@ -79,6 +83,10 @@ describe('api: /projects/:id/assignments/forms', () => {
       doAssigns(service, '/v1/projects/1/assignments/forms', true)
         .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
           result.length.should.equal(3);
+          Object.keys(result[0]).should.eqlInAnyOrder([
+            'actorId', 'roleId', 'xmlFormId', 'sessionActive', 'actor'
+          ]);
+          result.forEach((assignment) => assignment.sessionActive.should.equal(true));
 
           for (const assignment of result) assignment.actor.should.be.an.Actor();
 
@@ -163,6 +171,8 @@ describe('api: /projects/:id/assignments/forms', () => {
           .then(({ body }) => {
             body.length.should.eql(2);
             body.map(p => p.xmlFormId).should.eql(['simple', 'withrepeat']);
+            body.find(p => p.xmlFormId === 'simple').sessionActive.should.equal(false);
+            body.find(p => p.xmlFormId === 'withrepeat').sessionActive.should.equal(true);
           });
 
         // Delete the public link
