@@ -2524,6 +2524,34 @@ one,d,/data/d,1700000000009,1700000000010,,,,,,,
 `);
     }));
 
+    it('should order client audit log entries by start when they are read from the attachment', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .set('Content-Type', 'application/xml')
+        .send(testData.forms.clientAudits)
+        .expect(200);
+      await asAlice.post('/v1/projects/1/submission')
+        .set('X-OpenRosa-Version', '1.0')
+        .attach('audit.csv', Buffer.from(unorderedAudit), { filename: 'audit.csv' })
+        .attach('xml_submission_file', Buffer.from(testData.instances.clientAudits.one), { filename: 'data.xml' })
+        .expect(201);
+      await exhaust(container);
+
+      // With no rows in the table the export parses the attachment instead, so
+      // this covers the other half of the export: entries that never reach the
+      // client_audits table at all.
+      await container.run(sql`delete from client_audits`);
+
+      const result = await httpZipResponseToFiles(asAlice.get('/v1/projects/1/forms/audits/submissions.csv.zip'));
+      result.files.get('audits - audit.csv').should.equal(`instance ID,event,node,start,end,latitude,longitude,accuracy,old-value,new-value,user,change-reason
+one,c,/data/c,1700000000001,1700000000002,,,,,,,
+one,a,/data/a,1700000000003,1700000000004,,,,,,,
+one,b,/data/b,1700000000005,1700000000006,,,,,,,
+one,e,/data/e,1700000000007,1700000000008,,,,,,,
+one,d,/data/d,1700000000009,1700000000010,,,,,,,
+`);
+    }));
+
     it('should return adhoc-processed consolidated client audit log attachments', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms?publish=true')
