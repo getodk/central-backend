@@ -46,6 +46,7 @@ info:
     **Fixed**:
 
     - The OpenRosa [`formList`](/central-api-openrosa-endpoints/#openrosa-form-listing-api) now includes the Form version in the `<downloadUrl>` and `<manifestUrl>`. This prevents certain race conditions. ([getodk/central#2251](https://github.com/getodk/central/issues/2251))
+    - The consolidated audit log in a [Submissions CSV export](/central-api-submission-management/#exporting-form-submissions-to-csv) is now ordered by each entry's `start` within a Submission. It previously followed physical row order, so it was not reproducible. ([getodk/central#1243](https://github.com/getodk/central/issues/1243))
 
     ## ODK Central v2026.3.1
 
@@ -6593,6 +6594,8 @@ paths:
         To export all the `Submission` data associated with a `Form`, just add `.csv.zip` to the end of the listing URL. The response will be a ZIP file containing one or more CSV files, as well as all multimedia attachments associated with the included Submissions.
 
         You can exclude the media attachments from the ZIP file by specifying `?attachments=false`.
+
+        If the Form collects an audit log, the ZIP file also contains a consolidated audit CSV. Its entries are grouped by Submission, in the order the Submissions were created, and within each Submission they are ordered by the entry's `start`. Entries that share a `start` have no defined order relative to each other.
 
         If [Project Managed Encryption](/central-api-encryption) is being used, additional querystring parameters may be provided in the format `{keyId}={passphrase}` for any number of keys (eg `1=secret&4=password`). This will decrypt any records encrypted under those managed keys. Submissions encrypted under self-supplied keys will not be decrypted. **Note**: if you are building a browser-based application, please consider the alternative `POST` endpoint, described in the following section.
 
