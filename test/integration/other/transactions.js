@@ -39,6 +39,15 @@ describe('transaction integration', () => {
 // resolves in ms ms
 const sometime = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
+const waitFor = async ({ timeout=1000, step=50, timeoutError='timed out' }, fn) => {
+  const deadline = Date.now() + timeout;
+  while (true) {
+    if (Date.now() > deadline) throw new Error(timeoutError);
+    if (await fn()) return; // eslint-disable-line no-await-in-loop
+    await sometime(step); // eslint-disable-line no-await-in-loop
+  }
+};
+
 describe('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     let flush;
@@ -58,7 +67,16 @@ describe('enketo worker transaction', () => {
       Forms.update(simple, { state: 'closed' });
 
       // now we wait to see if we have deadlocked, which we want.
-      await sometime(400);
+      await waitFor({ timeout: 400, step: 20, timeoutError: 'failed to establish db lock' }, () => oneFirst(sql`
+        SELECT EXISTS(
+          SELECT 1
+            FROM pg_stat_activity
+            WHERE query ILIKE '%UPDATE%forms%'
+              AND wait_event_type = 'Lock'
+              AND pid != pg_backend_pid()
+        )
+      `));
+
       (await Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)).get()
         .state.should.equal('open');
     } finally {
@@ -72,4 +90,3 @@ describe('enketo worker transaction', () => {
     }
   }));
 });
-
