@@ -44,7 +44,7 @@ const waitFor = async ({ timeout=1000, step=50, timeoutError='timed out' }, fn) 
   while (true) {
     if (Date.now() > deadline) throw new Error(timeoutError);
     if (await fn()) return; // eslint-disable-line no-await-in-loop
-    await sometime(step); // eslint-disable-line no-await-in-loop
+    await new Promise(resolve => setTimeout(resolve, step)); // eslint-disable-line no-await-in-loop
   }
 };
 
