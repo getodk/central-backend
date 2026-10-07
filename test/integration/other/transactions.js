@@ -73,7 +73,7 @@ describe('enketo worker transaction', () => {
             FROM pg_stat_activity
             WHERE query ILIKE '%UPDATE%forms%'
               AND wait_event_type = 'Lock'
-              AND pid != pg_backend_pid()
+              AND pid != pg_backend_pid() -- avoid selecting self
         )
       `));
 
