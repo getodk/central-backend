@@ -8,6 +8,7 @@ const { getById, createVersion } = require('../../../lib/model/query/entities');
 const { log } = require('../../../lib/model/query/audits');
 const Option = require('../../../lib/util/option');
 const { Entity } = require('../../../lib/model/frames');
+const { createEntities } = require('../../util/entities');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -2395,7 +2396,7 @@ describe('Entities API', () => {
     }));
   });
 
-  // Bulk API operations
+  // Bulk Create API
   describe('POST /datasets/:name/entities (bulk creation)', () => {
     // Tests that one would expect to find here are found above because this is additional
     // functionality of an existing endpoint:
@@ -2447,8 +2448,25 @@ describe('Entities API', () => {
         .expect(400)
         .then(({ body }) => {
           body.code.should.equal(400.31);
-          body.message.should.equal('Expected parameters: (entities: [...]). Got (empty array).');
+          body.message.should.equal('Expected parameters: (entities: [...] or updates: [...]). Got (no entities or updates).');
         });
+    }));
+
+    it('should accept empty entities array when updates are provided', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      const uuids = await createEntities(asAlice, 1, 1, 'people');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [],
+          updates: [{
+            uuid: uuids[0],
+            data: { first_name: 'Jane' }
+          }],
+          source: { name: 'people.csv', size: 1 }
+        })
+        .expect(200);
     }));
 
     it('should create Entities in bulk', testDataset(async (service) => {
@@ -3124,6 +3142,123 @@ describe('Entities API', () => {
           });
       }));
     });
+  });
+
+  // Bulk Update API
+  describe('POST /datasets/:name/entities (bulk update)', () => {
+    it('should reject bulk update if UUID not provided for an entity to be updated', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 1, 1, 'people', [], null, 'v1 label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [
+            {
+              label: `v2 label ${uuids[0]}`,
+            }
+          ]
+        })
+        .then(({ body }) => {
+          body.code.should.equal(400.2);
+          body.message.should.equal('Required parameter uuid missing.');
+        });
+    }));
+
+    it('should update Entities in bulk', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 3, 1, 'people', [], null, 'v1 label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [
+            {
+              uuid: uuids[0],
+              label: `v2 label ${uuids[0]}`,
+            },
+            {
+              uuid: uuids[1],
+              label: `v2 label ${uuids[1]}`,
+            },
+          ]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          const summary = body.map((e) => [e.currentVersion.label, e.currentVersion.version]);
+          summary.should.containEql(
+            [`v2 label ${uuids[0]}`, 2],
+            [`v2 label ${uuids[1]}`, 2],
+            ['v1 label', 1],
+          );
+          body.length.should.equal(3);
+        });
+    }));
+
+    it('should update and create Entities in bulk', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 3, 1, 'people', [], null, 'v1 label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [
+            {
+              uuid: uuids[0],
+              label: `v2 label ${uuids[0]}`,
+              data: {
+                first_name: 'Mary'
+              }
+            },
+            {
+              uuid: uuids[1],
+              label: `v2 label ${uuids[1]}`,
+            },
+          ],
+          entities: [
+            {
+              label: 'v1 label - bulk create',
+              data: {
+                first_name: 'Steve'
+              }
+            },
+            {
+              label: 'v1 label - bulk create'
+            }
+          ]
+        })
+        .expect(200)
+        .then(({ body }) => {
+          body.success.should.be.true();
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .then(({ body }) => {
+          const summary = body.map((e) => [e.currentVersion.label, e.currentVersion.version]);
+          summary.should.containEql(
+            [`v2 label ${uuids[0]}`, 2],
+            [`v2 label ${uuids[1]}`, 2],
+            ['v1 label', 1],
+            ['v1 label - bulk create', 1],
+            ['v1 label - bulk create', 1],
+          );
+          body.length.should.equal(5);
+        });
+    }));
   });
 
   // Bulk Delete API
