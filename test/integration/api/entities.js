@@ -2208,7 +2208,7 @@ describe('Entities API', () => {
             r.should.not.be.null();
           });
 
-        const updatedEntity = Entity.fromJson({ label: 'Jane', data: { first_name: 'Jane' } }, [{ name: 'first_name' }], dataset, entity);
+        const updatedEntity = Entity.fromJsonUpdate({ label: 'Jane', data: { first_name: 'Jane' } }, [{ name: 'first_name' }], dataset, entity);
 
         const savedEntity = await createVersion(dataset, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx1);
         console.log('Tx1: entity updated');
@@ -2239,7 +2239,7 @@ describe('Entities API', () => {
             console.log('Tx2: entity fetched');
 
             entity.aux.currentVersion.version.should.be.eql(2);
-            const updatedEntity = Entity.fromJson({ label: 'Robert', data: { first_name: 'Robert' } }, [{ name: 'first_name' }], dataset, entity);
+            const updatedEntity = Entity.fromJsonUpdate({ label: 'Robert', data: { first_name: 'Robert' } }, [{ name: 'first_name' }], dataset, entity);
 
             const savedEntity = await createVersion(dataset, updatedEntity, null, entity.aux.currentVersion.version + 1, null, 1)(containerTx2);
 
