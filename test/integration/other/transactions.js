@@ -52,6 +52,7 @@ describe('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     let flush;
     let workerTicket;
+    let updatePromise;
 
     const { Audits, Forms, oneFirst } = container;
 
@@ -64,7 +65,7 @@ describe('enketo worker transaction', () => {
       // eslint-disable-next-line no-await-in-loop
       while (flush == null) await sometime(50);
 
-      Forms.update(simple, { state: 'closed' });
+      updatePromise = Forms.update(simple, { state: 'closed' });
 
       // now we wait to see if we have deadlocked, which we want.
       await waitFor({ timeout: 400, step: 20, timeoutError: 'failed to establish db lock' }, () => oneFirst(sql`
@@ -83,10 +84,12 @@ describe('enketo worker transaction', () => {
       // now finally resolve the locks.
       flush?.();
       if (workerTicket) await workerTicket;
-      await sometime(100); // TODO: oh NO why is this necessary now?
 
-      (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
-        .should.equal('closed');
+      if (updatePromise) {
+        await updatePromise;
+        (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
+          .should.equal('closed');
+      }
     }
   }));
 });
