@@ -9,7 +9,10 @@ const { normalizeUuid,
   extractBaseVersionFromSubmission,
   extractBranchIdFromSubmission,
   extractTrunkVersionFromSubmission,
-  extractEntity,
+  parseEntityDataFromJson,
+  extractLabelFromJson,
+  extractUuidFromJson,
+  mergeWithExistingEntity,
   extractBulkSource,
   extractSelectedProperties,
   selectFields,
@@ -975,7 +978,7 @@ describe('extracting and validating entities', () => {
     });
   });
 
-  describe('extract entity from API request: extractEntity', () => {
+  describe('extract entity from API request', () => {
     // Used to compare entity structure when Object.create(null) used.
     beforeEach(() => {
       should.config.checkProtoEql = false;
@@ -984,22 +987,22 @@ describe('extracting and validating entities', () => {
       should.config.checkProtoEql = true;
     });
 
-    it('should reject if extra fields passed to body', () => {
-      const body = {
-        uuid: '12345678-1234-4123-8234-123456789abc',
-        label: 'Alice (88)',
-        data: { first_name: 'Alice' },
-        extra: 'field'
-      };
-      const propertyNames = ['first_name'];
-      assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
-        err.problemCode.should.equal(400.31);
-        err.message.should.equal('Expected parameters: (label, uuid, data). Got (uuid, label, data, extra).');
-        return true;
+    describe('parseEntityDataFromJson', () => {
+      it('should reject if extra fields passed to body', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 'Alice (88)',
+          data: { first_name: 'Alice' },
+          extra: 'field'
+        };
+        const propertyNames = ['first_name'];
+        assert.throws(() => { parseEntityDataFromJson(body, propertyNames); }, (err) => {
+          err.problemCode.should.equal(400.31);
+          err.message.should.equal('Expected parameters: (label, uuid, data). Got (uuid, label, data, extra).');
+          return true;
+        });
       });
-    });
 
-    describe('new entities', () => {
       it('should parse new entity data', () => {
         const body = {
           uuid: '12345678-1234-4123-8234-123456789abc',
@@ -1007,14 +1010,8 @@ describe('extracting and validating entities', () => {
           data: { age: '88', first_name: 'Alice' }
         };
         const propertyNames = ['age', 'first_name'];
-        const entity = extractEntity(body, propertyNames);
-        should(entity).eql({
-          system: {
-            label: 'Alice (88)',
-            uuid: '12345678-1234-4123-8234-123456789abc'
-          },
-          data: { age: '88', first_name: 'Alice' }
-        });
+        const entityData = parseEntityDataFromJson(body, propertyNames);
+        should(entityData).eql({ age: '88', first_name: 'Alice' });
       });
 
       it('should parse subset of dataset properties and leave the rest undefined', () => {
@@ -1024,14 +1021,8 @@ describe('extracting and validating entities', () => {
           data: { first_name: 'Alice' }
         };
         const propertyNames = ['age', 'first_name'];
-        const entity = extractEntity(body, propertyNames);
-        should(entity).eql({
-          system: {
-            label: 'Alice (88)',
-            uuid: '12345678-1234-4123-8234-123456789abc'
-          },
-          data: { first_name: 'Alice' }
-        });
+        const entityData = parseEntityDataFromJson(body, propertyNames);
+        should(entityData).eql({ first_name: 'Alice' });
       });
 
       it('should reject if data contains unknown properties', () => {
@@ -1041,36 +1032,9 @@ describe('extracting and validating entities', () => {
           data: { age: '88', favorite_food: 'pizza' }
         };
         const propertyNames = ['age'];
-        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
+        assert.throws(() => { parseEntityDataFromJson(body, propertyNames); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.equal('The entity is invalid. You specified the dataset property [favorite_food] which does not exist.');
-          return true;
-        });
-      });
-
-      it('should reject if label is blank', () => {
-        const body = {
-          uuid: '12345678-1234-4123-8234-123456789abc',
-          label: '',
-          data: { age: '88' }
-        };
-        const propertyNames = ['age'];
-        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
-          err.problemCode.should.equal(400.8);
-          err.message.should.equal('Unexpected label value (empty string); Label cannot be blank.');
-          return true;
-        });
-      });
-
-      it('should reject if label is missing AND in create case (no existingEntity)', () => {
-        const body = {
-          uuid: '12345678-1234-4123-8234-123456789abc',
-          data: { age: '88' }
-        };
-        const propertyNames = ['age'];
-        assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
-          err.problemCode.should.equal(400.2);
-          err.message.should.equal('Required parameter label missing.');
           return true;
         });
       });
@@ -1078,11 +1042,6 @@ describe('extracting and validating entities', () => {
       it('should reject if required part of the request is null or not a string in create', () => {
         // These are JSON entity validation errors so they use a newer 400 bad request problem
         const requests = [
-          [
-            { uuid: '12345678-1234-4123-8234-123456789abc', label: 1234, data: { first_name: 'Alice' } },
-            400.11,
-            'Invalid input data type: expected (label) to be (string)'
-          ],
           [
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: 99 } },
             400.11,
@@ -1092,16 +1051,11 @@ describe('extracting and validating entities', () => {
             { uuid: '12345678-1234-4123-8234-123456789abc', label: 'Label', data: { first_name: 'Alice', age: null } },
             400.11,
             'Invalid input data type: expected (age) to be (string)'
-          ],
-          [
-            { uuid: 123, label: 'Label', data: { first_name: 'Alice', age: 99 } },
-            400.11,
-            'Invalid input data type: expected (uuid) to be (string)'
           ]
         ];
         const propertyNames = ['age', 'first_name'];
         for (const [body, code, message] of requests) {
-          assert.throws(() => { extractEntity(body, propertyNames); }, (err) => {
+          assert.throws(() => { parseEntityDataFromJson(body, propertyNames); }, (err) => {
             err.problemCode.should.equal(code);
             err.message.should.match(message);
             return true;
@@ -1110,140 +1064,252 @@ describe('extracting and validating entities', () => {
       });
     });
 
-    describe('updated entities', () => {
-      it('should parse updated entity data', () => {
-        const existingEntity = {
-          system: {
-            uuid: '12345678-1234-4123-8234-123456789abc',
-            label: 'Alice (88)',
-          },
-          data: { age: '88', first_name: 'Alice' }
-        };
-        const newData = {
-          data: { age: '99', first_name: 'Alice' },
-          label: 'New Label'
-        };
-        const propertyNames = ['age', 'first_name'];
-        const entity = extractEntity(newData, propertyNames, existingEntity);
-        should(entity).eql({
-          system: {
-            label: 'New Label',
-            uuid: '12345678-1234-4123-8234-123456789abc'
-          },
-          data: { age: '99', first_name: 'Alice' }
-        });
-      });
-
-      it('should allow updating properties not included in earlier version of entity', () => {
-        const existingEntity = {
-          system: {
-            uuid: '12345678-1234-4123-8234-123456789abc',
-            label: 'Label',
-          },
-          data: { first_name: 'Alice' }
-        };
-        const newData = {
-          data: { age: '99' }
-        };
-        const propertyNames = ['age', 'first_name'];
-        const entity = extractEntity(newData, propertyNames, existingEntity);
-        should(entity).eql({
-          system: {
-            label: 'Label',
-            uuid: '12345678-1234-4123-8234-123456789abc'
-          },
-          data: { age: '99', first_name: 'Alice' }
-        });
-      });
-
-      it('should allow only label to be updated without changing data', () => {
-        const existingEntity = {
-          system: {
-            uuid: '12345678-1234-4123-8234-123456789abc',
-            label: 'Alice (88)',
-          },
-          data: { first_name: 'Alice' }
-        };
-        const body = {
-          label: 'New Label'
-        };
-        const propertyNames = ['first_name'];
-        const entity = extractEntity(body, propertyNames, existingEntity);
-        should(entity).eql({
-          system: {
-            label: 'New Label',
-            uuid: '12345678-1234-4123-8234-123456789abc'
-          },
-          data: { first_name: 'Alice' }
-        });
-      });
-
-      it('should allow label to be missing and use label of existing entity', () => {
-        const existingEntity = { system: { uuid: '12345678-1234-4123-8234-123456789abc', label: 'previous_label' }, data: {} };
+    describe('extractLabelFromJson', () => {
+      it('should extract the label', () => {
         const body = {
           uuid: '12345678-1234-4123-8234-123456789abc',
-          data: { age: '88' }
+          label: 'the label',
+          data: { first_name: 'Alice' }
         };
-        const propertyNames = ['age'];
-        const entity = extractEntity(body, propertyNames, existingEntity);
-        should(entity).eql({
-          system: {
-            label: 'previous_label',
-            uuid: '12345678-1234-4123-8234-123456789abc'
-          },
-          data: { age: '88' }
-        });
+        const label = extractLabelFromJson(body, true);
+        should(label).eql('the label');
       });
 
-      it('should reject if blank label provided in update', () => {
-        const existingEntity = { system: { uuid: '12345678-1234-4123-8234-123456789abc', label: 'previous_label' }, data: {} };
+      it('should not trim whitespace from the label', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: '  whitespace around this  ',
+          data: { first_name: 'Alice' }
+        };
+        const label = extractLabelFromJson(body, true);
+        should(label).eql('  whitespace around this  ');
+      });
+
+      it('should not reject missing label if the label is not required', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          data: { first_name: 'Alice' }
+        };
+        const label = extractLabelFromJson(body, false);
+        should(label).eql(null);
+      });
+
+      it('should reject if label is empty string', () => {
         const body = {
           uuid: '12345678-1234-4123-8234-123456789abc',
           label: '',
           data: { age: '88' }
         };
-        const propertyNames = ['age'];
-        assert.throws(() => { extractEntity(body, propertyNames, existingEntity); }, (err) => {
+        assert.throws(() => { extractLabelFromJson(body, true); }, (err) => {
           err.problemCode.should.equal(400.8);
-          err.message.should.match('Unexpected label value (empty string); Label cannot be blank.');
+          err.message.should.equal('Unexpected label value (empty string); Label cannot be blank.');
           return true;
         });
       });
 
-      it('should reject if required part of the request is missing or not a string in update', () => {
-        const requests = [
-          [
-            {},
-            400.28, 'The entity is invalid. No entity data or label provided.'
-          ],
-          [
-            { label: null },
-            400.28, 'The entity is invalid. No entity data or label provided.'
-          ],
-          [
-            { data: { first_name: 'Alice', age: 99 } },
-            400.11, 'Invalid input data type: expected (age) to be (string)'
-          ],
-          [
-            { data: { first_name: 'Alice', age: null } },
-            400.11, 'Invalid input data type: expected (age) to be (string)'
-          ],
-        ];
-        const existingEntity = {
-          system: {
-            uuid: '12345678-1234-4123-8234-123456789abc',
-            label: 'Alice (88)',
-          },
-          data: { first_name: 'Alice' }
+      it('should reject if label is multiple whitespaces', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: '  ',
+          data: { age: '88' }
+        };
+        assert.throws(() => { extractLabelFromJson(body, true); }, (err) => {
+          err.problemCode.should.equal(400.8);
+          err.message.should.equal('Unexpected label value (empty string); Label cannot be blank.');
+          return true;
+        });
+      });
+
+      it('should reject empty string label even if it is not required', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: '',
+          data: { age: '88' }
+        };
+        assert.throws(() => { extractLabelFromJson(body, true); }, (err) => {
+          err.problemCode.should.equal(400.8);
+          err.message.should.equal('Unexpected label value (empty string); Label cannot be blank.');
+          return true;
+        });
+      });
+
+      it('should reject if label is missing and required', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          data: { age: '88' }
+        };
+        assert.throws(() => { extractLabelFromJson(body, true); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter label missing.');
+          return true;
+        });
+      });
+
+      it('should reject label that is not type string', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          label: 1234,
+          data: { age: '88' }
+        };
+        assert.throws(() => { extractLabelFromJson(body, true); }, (err) => {
+          err.problemCode.should.equal(400.11);
+          err.message.should.equal('Invalid input data type: expected (label) to be (string)');
+          return true;
+        });
+      });
+    });
+
+    describe('extractUuidFromJson', () => {
+      const { validate: isUuid, version: uuidVersion } = require('uuid');
+
+      it('should extract provided uuid (regardless of flag to generate missing uuid)', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc'
+        };
+        const uuid1 = extractUuidFromJson(body, true);
+        should(uuid1).eql('12345678-1234-4123-8234-123456789abc');
+        const uuid2 = extractUuidFromJson(body, false);
+        should(uuid2).eql('12345678-1234-4123-8234-123456789abc');
+      });
+
+      it('should generate UUID if empty string is provided', () => {
+        const body = { uuid: '' };
+        const uuid = extractUuidFromJson(body, true);
+        should(isUuid(uuid)).be.true();
+        should(uuidVersion(uuid)).equal(4);
+      });
+
+      it('should generate UUID if empty string with multiple whitespaces is provided', () => {
+        const body = { uuid: '  ' };
+        const uuid = extractUuidFromJson(body, true);
+        should(isUuid(uuid)).be.true();
+        should(uuidVersion(uuid)).equal(4);
+      });
+
+      it('should generate UUID if none is provided', () => {
+        const body = {};
+        const uuid = extractUuidFromJson(body, true);
+        should(isUuid(uuid)).be.true();
+        should(uuidVersion(uuid)).equal(4);
+      });
+
+      it('should reject if uuid is not provided and generateUuid is false', () => {
+        const body = {};
+        assert.throws(() => { extractUuidFromJson(body, false); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter uuid missing.');
+          return true;
+        });
+      });
+
+      it('should reject if uuid empty string and generateUuid is false', () => {
+        const body = { uuid: '' };
+        assert.throws(() => { extractUuidFromJson(body, false); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter uuid missing.');
+          return true;
+        });
+      });
+
+      it('should reject if uuid empty string with multiple whitespaces and generateUuid is false', () => {
+        const body = { uuid: '  ' };
+        assert.throws(() => { extractUuidFromJson(body, false); }, (err) => {
+          err.problemCode.should.equal(400.2);
+          err.message.should.equal('Required parameter uuid missing.');
+          return true;
+        });
+      });
+
+      it('should reject if uuid is not a string', () => {
+        const body = { uuid: 1234 };
+        assert.throws(() => { extractUuidFromJson(body, false); }, (err) => {
+          err.problemCode.should.equal(400.11);
+          err.message.should.equal('Invalid input data type: expected (uuid) to be (string)');
+          return true;
+        });
+      });
+    });
+
+    describe('updated entities: mergeWithExistingEntity', () => {
+      it('should parse updated entity data and take new data and label', () => {
+        const currentVersion = {
+          label: 'Alice (88)',
+          data: { age: '88', first_name: 'Alice' }
+        };
+        const body = {
+          data: { age: '99', first_name: 'Alice' },
+          label: 'New Label'
         };
         const propertyNames = ['age', 'first_name'];
-        for (const [body, errorCode, message] of requests) {
-          assert.throws(() => { extractEntity(body, propertyNames, existingEntity); }, (err) => {
-            err.problemCode.should.equal(errorCode);
-            err.message.should.match(message);
-            return true;
-          });
-        }
+        const newData = parseEntityDataFromJson(body, propertyNames);
+        const newLabel = extractLabelFromJson(body);
+        const { data, label } = mergeWithExistingEntity(newData, newLabel, currentVersion);
+        should(data).eql({ age: '99', first_name: 'Alice' });
+        should(label).eql('New Label');
+      });
+
+      it('should allow updating properties not included in earlier version of entity', () => {
+        const currentVersion = {
+          label: 'Alice (88)',
+          data: { first_name: 'Alice' }
+        };
+        const body = {
+          data: { age: '99' }
+        };
+        const propertyNames = ['age', 'first_name'];
+        const newData = parseEntityDataFromJson(body, propertyNames);
+        const newLabel = extractLabelFromJson(body);
+        const { data, label } = mergeWithExistingEntity(newData, newLabel, currentVersion);
+        should(data).eql({ age: '99', first_name: 'Alice' });
+        should(label).eql('Alice (88)');
+      });
+
+      it('should allow only label to be updated without changing data', () => {
+        const currentVersion = {
+          label: 'Alice (88)',
+          data: { first_name: 'Alice' }
+        };
+        const body = {
+          label: 'New Label Only'
+        };
+        const propertyNames = ['age', 'first_name'];
+        const newData = parseEntityDataFromJson(body, propertyNames);
+        const newLabel = extractLabelFromJson(body);
+        const { data, label } = mergeWithExistingEntity(newData, newLabel, currentVersion);
+        should(data).eql({ first_name: 'Alice' });
+        should(label).eql('New Label Only');
+      });
+
+      it('should reject if no new data or label is passed in', () => {
+        const currentVersion = {
+          label: 'Alice (88)',
+          data: { first_name: 'Alice' }
+        };
+        const body = {};
+        const propertyNames = ['age', 'first_name'];
+        const newData = parseEntityDataFromJson(body, propertyNames);
+        const newLabel = extractLabelFromJson(body);
+        assert.throws(() => { mergeWithExistingEntity(newData, newLabel, currentVersion); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.match('The entity is invalid. No entity data or label provided.');
+          return true;
+        });
+      });
+
+      it('should reject if null label is passed in', () => {
+        const currentVersion = {
+          label: 'Alice (88)',
+          data: { first_name: 'Alice' }
+        };
+        const body = { label: null };
+        const propertyNames = ['age', 'first_name'];
+        const newData = parseEntityDataFromJson(body, propertyNames);
+        const newLabel = extractLabelFromJson(body);
+        assert.throws(() => { mergeWithExistingEntity(newData, newLabel, currentVersion); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.match('The entity is invalid. No entity data or label provided.');
+          return true;
+        });
       });
     });
   });
