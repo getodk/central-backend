@@ -356,7 +356,7 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should filter entities based on actor property rules', testService(async (service) => {
+    it('should filter entities for app users based on actor property rules', testService(async (service) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/datasets')
@@ -395,6 +395,73 @@ describe('Entities API', () => {
           body.length.should.eql(2);
           body.map(e => e.currentVersion.label).should.containDeep(['north person 1', 'north person 2']);
         });
+    }));
+
+    it('should filter entities for public links based on actor property rules', testService(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/properties')
+        .send({ name: 'region' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/actor-properties')
+        .send({ name: 'region' })
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ accessFilter: { type: 'property', rules: [{ datasetProperty: 'region', actorProperty: 'region' }] } })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'north person 1', data: { region: 'north' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'north person 2', data: { region: 'north' } })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ label: 'south person', data: { region: 'south' } })
+        .expect(200);
+
+      // Publish a form that consumes people dataset
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.consumeDatasets)
+        .set('Content-Type', 'application/xml').expect(200);
+
+      const { body: pubLink } = await asAlice.post('/v1/projects/1/forms/consumeDatasets/public-links')
+        .send({ displayName: 'North public link' }).expect(200);
+
+      await asAlice.patch(`/v1/projects/1/forms/consumeDatasets/public-links/${pubLink.id}`)
+        .send({ properties: { region: 'north' } })
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${pubLink.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(2);
+          body.map(e => e.currentVersion.label).should.containDeep(['north person 1', 'north person 2']);
+        });
+
+      // Revoke the public link session
+      await asAlice.delete(`/v1/sessions/${pubLink.token}`)
+        .expect(200);
+
+      // Revoking the session doesn't change access to entities, but without a session, there's no way to access anything
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${pubLink.id}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.eql(2);
+          body.map(e => e.currentVersion.label).should.containDeep(['north person 1', 'north person 2']);
+        });
+
+      // Delete the public link
+      await asAlice.delete(`/v1/projects/1/forms/consumeDatasets/public-links/${pubLink.id}`)
+        .expect(200);
+
+      // Actor id can no longer be used to filter entities
+      await asAlice.get(`/v1/projects/1/datasets/people/entities?viewAs=${pubLink.id}`)
+        .expect(404);
     }));
   });
 
