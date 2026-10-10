@@ -27,6 +27,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        x: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
+        y: [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ]
         postgres-version:
           - "14.23"
           - "18"
@@ -41,7 +43,3 @@ jobs:
     - run: make run-docker-postgres
       env:
         PG_VERSION: ${{ matrix.postgres-version }}
-    - run: make test-db-migrations
-    - name: PostgreSQL logs
-      if: always()
-      run: docker logs odk-central-backend-dev-postgres || true
