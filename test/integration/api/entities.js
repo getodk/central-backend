@@ -2452,6 +2452,33 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should reject empty updates array', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ updates: [] })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (entities: [...] or updates: [...]). Got (no entities or updates).');
+        });
+    }));
+
+    it('should reject empty entities and updates arrays', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [],
+          updates: []
+        })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.31);
+          body.message.should.equal('Expected parameters: (entities: [...] or updates: [...]). Got (no entities or updates).');
+        });
+    }));
+
     it('should accept empty entities array when updates are provided', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
