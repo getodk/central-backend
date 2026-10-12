@@ -1559,6 +1559,26 @@ describe('api: /forms/:id/submissions', () => {
                 { name: 'my_file1.mp4', exists: true }
               ]);
             })))));
+
+    // getodk/central#1091
+    it('should update the submission when the form is closed', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await asAlice.post('/v1/projects/1/forms/simple/submissions')
+        .send(testData.instances.simple.one)
+        .set('Content-Type', 'text/xml')
+        .expect(200);
+      await asAlice.patch('/v1/projects/1/forms/simple')
+        .send({ state: 'closed' })
+        .expect(200);
+      await asAlice.put('/v1/projects/1/forms/simple/submissions/one')
+        .send(withSimpleIds('one', 'two'))
+        .set('Content-Type', 'text/xml')
+        .expect(200)
+        .then(({ body }) => {
+          body.should.be.a.Submission();
+          body.currentVersion.instanceId.should.equal('two');
+        });
+    }));
   });
 
   describe('/:instanceId/edit GET', () => {
