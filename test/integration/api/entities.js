@@ -3342,6 +3342,81 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should share one source between bulk creates and updates', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 1, 1, 'people', [], { first_name: 'Alice' }, 'v1 label');
+      const createdUuid = '12345678-1234-4123-8234-111111111aaa';
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [{
+            uuid: uuids[0],
+            data: { first_name: 'Mary' }
+          }],
+          entities: [{
+            uuid: createdUuid,
+            label: 'v1 label - bulk create'
+          }]
+        })
+        .expect(200);
+
+      const updatedSource = await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}/versions`)
+        .then(({ body: versions }) => versions[1].source);
+      const createdSource = await asAlice.get(`/v1/projects/1/datasets/people/entities/${createdUuid}/versions`)
+        .then(({ body: versions }) => versions[0].source);
+
+      updatedSource.should.eql({
+        name: 'people_update.csv',
+        size: 100,
+        count: 2,
+        userAgent: null
+      });
+      createdSource.should.eql(updatedSource);
+    }));
+
+    it('should increment the version in the bulk update', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 1, 1, 'people', [], { first_name: 'Alice' }, 'v1 label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [{
+            uuid: uuids[0],
+            label: 'v2 label'
+          }]
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [{
+            uuid: uuids[0],
+            label: 'v3 label',
+            data: { first_name: 'Mary' }
+          }]
+        })
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(3);
+          body.currentVersion.label.should.equal('v3 label');
+          body.currentVersion.data.should.eql({ first_name: 'Mary' });
+        });
+    }));
+
     it('should update Entities in bulk', testDataset(async (service) => {
       const asAlice = await service.login('alice');
       const uuids = await createEntities(asAlice, 3, 1, 'people', [], null, 'v1 label');
