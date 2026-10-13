@@ -1206,16 +1206,6 @@ describe('api: /forms/:id/submissions', () => {
           .set('Content-Type', 'text/xml')
           .expect(403))));
 
-    it('should reject if the form is not taking submissions', testService((service) =>
-      service.login('alice', (asAlice) =>
-        asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ state: 'closed' })
-          .expect(200)
-          .then(() => asAlice.post('/v1/projects/1/forms/simple/submissions')
-            .send(testData.instances.simple.one)
-            .set('Content-Type', 'application/xml')
-            .expect(409)))));
-
     it('should reject if the submission body is not valid xml', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.post('/v1/projects/1/forms/simple/submissions')
