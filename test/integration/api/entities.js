@@ -2025,6 +2025,32 @@ describe('Entities API', () => {
         await exhaust(container);
       };
 
+      it('should preserve conflict state during bulk update', testService(async (service, container) => {
+        await createConflict(service, container);
+
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({
+            source: {
+              name: 'people_update.csv',
+              size: 100,
+            },
+            updates: [{
+              uuid: '12345678-1234-4123-8234-123456789abc',
+              data: { age: '10' }
+            }]
+          })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200)
+          .then(({ body }) => {
+            body.currentVersion.data.should.eql({ first_name: 'Alicia', age: '10' });
+            should(body.conflict).not.be.null();
+          });
+      }));
+
       it('should resolve the conflict without updating data', testService(async (service, container) => {
         await createConflict(service, container);
 
