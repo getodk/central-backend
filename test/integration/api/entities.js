@@ -2430,6 +2430,18 @@ describe('Entities API', () => {
     // - should reject if the user cannot write
     // - should reject creating new entity if dataset not yet published
 
+    it('should reject bulk create if the user cannot create entities', testDataset(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [{
+            label: 'Unauthorized entity'
+          }]
+        })
+        .expect(403);
+    }));
+
     it('should reject malformed entity object json', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -3199,6 +3211,35 @@ describe('Entities API', () => {
 
   // Bulk Update API
   describe('POST /datasets/:name/entities (bulk update)', () => {
+    it('should reject bulk update if the user cannot update entities', testDataset(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          updates: [{
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Unauthorized update'
+          }]
+        })
+        .expect(403);
+    }));
+
+    it('should reject mixed bulk operations if the user cannot create or update entities', testDataset(async (service) => {
+      const asChelsea = await service.login('chelsea');
+
+      await asChelsea.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          entities: [{
+            label: 'Unauthorized entity'
+          }],
+          updates: [{
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            label: 'Unauthorized update'
+          }]
+        })
+        .expect(403);
+    }));
+
     it('should reject bulk update if UUID not provided for an entity to be updated', testDataset(async (service) => {
       const asAlice = await service.login('alice');
       const uuids = await createEntities(asAlice, 1, 1, 'people', [], null, 'v1 label');
