@@ -2521,6 +2521,76 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should stream progress while creating 50 entities in batches', function() {
+      this.timeout(5000);
+      return testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+        const entities = Array.from({ length: 50 }, (_, index) => ({
+          uuid: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+          label: `Person ${index + 1}`,
+          data: { first_name: `Person ${index + 1}` }
+        }));
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('Accept', 'text/event-stream')
+          .send({
+            source: { name: 'people.csv', size: 50 },
+            entities
+          })
+          .expect(200)
+          .expect('Content-Type', /text\/event-stream/)
+          .then(({ text }) => {
+            text.should.containEql('event: progress\ndata: {"completed":0,"total":50,"batch":0,"batchCount":5}');
+            text.should.containEql('event: progress\ndata: {"completed":50,"total":50,"batch":5,"batchCount":5}');
+            text.should.containEql('event: complete\ndata: {"success":true,"total":50}');
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .then(({ body }) => {
+            body.length.should.equal(50);
+          });
+      })();
+    });
+
+    it('should send progress before completing a bulk create response', function() {
+      this.timeout(5000);
+      return testDataset(async (service) => {
+        const asAlice = await service.login('alice');
+        const entities = Array.from({ length: 20 }, (_, index) => ({
+          uuid: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+          label: `Person ${index + 1}`,
+          data: { first_name: `Person ${index + 1}` }
+        }));
+        let responseEnded = false;
+        let progressReceivedBeforeEnd = false;
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .set('Accept', 'text/event-stream')
+          .send({
+            source: { name: 'people.csv', size: 20 },
+            entities
+          })
+          .buffer(false)
+          .parse((response, callback) => {
+            let text = '';
+            response.setEncoding('utf8');
+            response.on('data', (chunk) => {
+              text += chunk;
+              if (text.includes('event: progress\ndata: {"completed":0,"total":20,"batch":0,"batchCount":2}'))
+                progressReceivedBeforeEnd = !responseEnded;
+            });
+            response.on('end', () => {
+              responseEnded = true;
+              callback(null, text);
+            });
+          })
+          .expect(200)
+          .expect('Content-Type', /text\/event-stream/);
+
+        progressReceivedBeforeEnd.should.equal(true);
+      })();
+    });
+
     it('should generate uuids for entities when no uuid is provided', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
