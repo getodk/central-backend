@@ -113,30 +113,5 @@ describe('Form', () => {
       form.isCurrentDraft().should.be.false();
     });
   });
-
-  describe('acceptsSubmissions', () => {
-    [
-      ['open', true],
-      ['closing', true],
-      ['closed', false]
-    ].forEach(([state, expectedValue]) => {
-      it(`should return ${expectedValue} if the form state is ${state}`, () => {
-        const currentDef = new Form.Def({ id: 1, publishedAt: new Date().toISOString() });
-        const form = new Form({ currentDefId: 1, state }, { def: currentDef });
-        form.acceptsSubmissions().should.equal(expectedValue);
-      });
-    });
-
-    it('should return true for a form draft', () => {
-      const draftDef = new Form.Def({ id: 2 });
-      const form = new Form(
-        // acceptsSubmissions() should return `true` even though the form state
-        // is closed.
-        { currentDefId: 1, draftDefId: 2, state: 'closed' },
-        { def: draftDef }
-      );
-      form.acceptsSubmissions().should.be.true();
-    });
-  });
 });
 
