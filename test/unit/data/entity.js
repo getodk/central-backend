@@ -1085,10 +1085,20 @@ describe('extracting and validating entities', () => {
         should(label).eql('  whitespace around this  ');
       });
 
-      it('should not reject missing label if the label is not required', () => {
+      it('should return null if no label is passed in and the label is not required', () => {
         const body = {
           uuid: '12345678-1234-4123-8234-123456789abc',
           data: { first_name: 'Alice' }
+        };
+        const label = extractLabelFromJson(body, false);
+        should(label).eql(null);
+      });
+
+      it('should return null if label is null and the label is not required', () => {
+        const body = {
+          uuid: '12345678-1234-4123-8234-123456789abc',
+          data: { first_name: 'Alice' },
+          label: null
         };
         const label = extractLabelFromJson(body, false);
         should(label).eql(null);
@@ -1126,7 +1136,7 @@ describe('extracting and validating entities', () => {
           label: '',
           data: { age: '88' }
         };
-        assert.throws(() => { extractLabelFromJson(body, true); }, (err) => {
+        assert.throws(() => { extractLabelFromJson(body, false); }, (err) => {
           err.problemCode.should.equal(400.8);
           err.message.should.equal('Unexpected label value (empty string); Label cannot be blank.');
           return true;
@@ -1231,80 +1241,73 @@ describe('extracting and validating entities', () => {
     });
 
     describe('updated entities: mergeWithExistingEntity', () => {
-      it('should parse updated entity data and take new data and label', () => {
+      it('should take new data and label', () => {
         const currentVersion = {
-          label: 'Alice (88)',
-          data: { age: '88', first_name: 'Alice' }
+          label: 'Old Label',
+          data: { age: '1', first_name: 'Alice' }
         };
-        const body = {
-          data: { age: '99', first_name: 'Alice' },
-          label: 'New Label'
-        };
-        const propertyNames = ['age', 'first_name'];
-        const newData = parseEntityDataFromJson(body, propertyNames);
-        const newLabel = extractLabelFromJson(body);
+        const newData = { age: '2', first_name: 'Bob' };
+        const newLabel = 'New Label';
         const { data, label } = mergeWithExistingEntity(newData, newLabel, currentVersion);
-        should(data).eql({ age: '99', first_name: 'Alice' });
+        should(data).eql({ age: '2', first_name: 'Bob' });
         should(label).eql('New Label');
+      });
+
+      it('should update only the subset of data without updating the label', () => {
+        const currentVersion = {
+          label: 'Old Label',
+          data: { age: '1', first_name: 'Alice' }
+        };
+        const newData = { age: '2' };
+        const newLabel = null;
+        const { data, label } = mergeWithExistingEntity(newData, newLabel, currentVersion);
+        should(data).eql({ age: '2', first_name: 'Alice' });
+        should(label).eql('Old Label');
       });
 
       it('should allow updating properties not included in earlier version of entity', () => {
         const currentVersion = {
-          label: 'Alice (88)',
+          label: 'Old Label',
           data: { first_name: 'Alice' }
         };
-        const body = {
-          data: { age: '99' }
-        };
-        const propertyNames = ['age', 'first_name'];
-        const newData = parseEntityDataFromJson(body, propertyNames);
-        const newLabel = extractLabelFromJson(body);
+        const newData = { age: '2' };
+        const newLabel = 'New Label';
         const { data, label } = mergeWithExistingEntity(newData, newLabel, currentVersion);
-        should(data).eql({ age: '99', first_name: 'Alice' });
-        should(label).eql('Alice (88)');
+        should(data).eql({ age: '2', first_name: 'Alice' });
+        should(label).eql('New Label');
       });
 
-      it('should allow only label to be updated without changing data', () => {
+      it('should allow only label to be updated without changing data (empty data object)', () => {
         const currentVersion = {
-          label: 'Alice (88)',
+          label: 'Old Label',
           data: { first_name: 'Alice' }
         };
-        const body = {
-          label: 'New Label Only'
-        };
-        const propertyNames = ['age', 'first_name'];
-        const newData = parseEntityDataFromJson(body, propertyNames);
-        const newLabel = extractLabelFromJson(body);
+        const newData = {};
+        const newLabel = 'New Label';
         const { data, label } = mergeWithExistingEntity(newData, newLabel, currentVersion);
         should(data).eql({ first_name: 'Alice' });
-        should(label).eql('New Label Only');
+        should(label).eql('New Label');
       });
 
-      it('should reject if no new data or label is passed in', () => {
+      it('should allow only label to be updated when new data is null', () => {
         const currentVersion = {
-          label: 'Alice (88)',
+          label: 'Old Label',
           data: { first_name: 'Alice' }
         };
-        const body = {};
-        const propertyNames = ['age', 'first_name'];
-        const newData = parseEntityDataFromJson(body, propertyNames);
-        const newLabel = extractLabelFromJson(body);
-        assert.throws(() => { mergeWithExistingEntity(newData, newLabel, currentVersion); }, (err) => {
-          err.problemCode.should.equal(400.28);
-          err.message.should.match('The entity is invalid. No entity data or label provided.');
-          return true;
-        });
+        const newData = null;
+        const newLabel = 'New Label';
+        const { data, label } = mergeWithExistingEntity(newData, newLabel, currentVersion);
+        should(data).eql({ first_name: 'Alice' });
+        should(label).eql('New Label');
       });
 
-      it('should reject if null label is passed in', () => {
+      it('should reject empty data object and null label is passed in', () => {
         const currentVersion = {
-          label: 'Alice (88)',
+          label: 'Old Label',
           data: { first_name: 'Alice' }
         };
-        const body = { label: null };
-        const propertyNames = ['age', 'first_name'];
-        const newData = parseEntityDataFromJson(body, propertyNames);
-        const newLabel = extractLabelFromJson(body);
+        const newData = {};
+        const newLabel = null;
         assert.throws(() => { mergeWithExistingEntity(newData, newLabel, currentVersion); }, (err) => {
           err.problemCode.should.equal(400.28);
           err.message.should.match('The entity is invalid. No entity data or label provided.');

@@ -149,38 +149,50 @@ describe('entity', () => {
     const oldEntity = {
       id: 2,
       uuid: '12345678-1234-4123-8234-abcd56789abc',
-      conflict: null,
+      conflict: 'hard',
       aux: {
         currentVersion: {
-          data: { age: '32', city: 'London' },
-          label: 'Jane'
+          data: { age: '11', city: 'Atlanta' },
+          label: 'Old Label'
         }
       }
     };
 
     it('should merge updated data with the existing entity', () => {
       const partial = Entity.fromJsonUpdate({
-        data: { age: '89' },
-        label: 'Jane (89)'
+        data: { age: '22' },
+        label: 'New Label'
       }, properties, dataset, oldEntity);
 
       partial.should.be.an.instanceOf(Entity.Partial);
       partial.uuid.should.equal(oldEntity.uuid);
       partial.id.should.equal(oldEntity.id);
       partial.datasetId.should.equal(1);
-      partial.aux.def.label.should.equal('Jane (89)');
-      partial.aux.def.dataReceived.should.eql({ age: '89', label: 'Jane (89)' });
-      ({ ...partial.aux.def.data }).should.eql({ age: '89', city: 'London' });
+      partial.conflict.should.equal('hard');
+      partial.aux.def.label.should.equal('New Label');
+      partial.aux.def.dataReceived.should.eql({ age: '22', label: 'New Label' });
+      ({ ...partial.aux.def.data }).should.eql({ age: '22', city: 'Atlanta' });
     });
 
     it('should update only the label', () => {
       const partial = Entity.fromJsonUpdate({
-        label: 'Jane (89)'
+        label: 'New Label'
       }, properties, dataset, oldEntity);
 
-      partial.aux.def.label.should.equal('Jane (89)');
-      partial.aux.def.dataReceived.should.eql({ label: 'Jane (89)' });
-      ({ ...partial.aux.def.data }).should.eql({ age: '32', city: 'London' });
+      partial.aux.def.label.should.equal('New Label');
+      partial.aux.def.dataReceived.should.eql({ label: 'New Label' });
+      ({ ...partial.aux.def.data }).should.eql({ age: '11', city: 'Atlanta' });
+    });
+
+    it('should accept empty data object and update only the label', () => {
+      const partial = Entity.fromJsonUpdate({
+        label: 'New Label',
+        data: {}
+      }, properties, dataset, oldEntity);
+
+      partial.aux.def.label.should.equal('New Label');
+      partial.aux.def.dataReceived.should.eql({ label: 'New Label' });
+      ({ ...partial.aux.def.data }).should.eql({ age: '11', city: 'Atlanta' });
     });
 
     it('should add a new property to the existing data', () => {
@@ -189,7 +201,7 @@ describe('entity', () => {
       }, properties, dataset, oldEntity);
 
       partial.aux.def.dataReceived.should.eql({ favorite_food: 'pizza' });
-      ({ ...partial.aux.def.data }).should.eql({ age: '32', city: 'London', favorite_food: 'pizza' });
+      ({ ...partial.aux.def.data }).should.eql({ age: '11', city: 'Atlanta', favorite_food: 'pizza' });
     });
 
     it('should reject an update with no data or label', () => {
