@@ -8,7 +8,7 @@ const { getById, createVersion } = require('../../../lib/model/query/entities');
 const { log } = require('../../../lib/model/query/audits');
 const Option = require('../../../lib/util/option');
 const { Entity } = require('../../../lib/model/frames');
-const { createEntities } = require('../../util/entities');
+const { createEntities, createConflict } = require('../../util/entities');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -1991,66 +1991,6 @@ describe('Entities API', () => {
     }));
 
     describe('resolve conflict', () => {
-
-      const createConflict = async (service, container) => {
-        const asAlice = await service.login('alice');
-
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.simpleEntity)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-          .send(testData.instances.simpleEntity.one)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await exhaust(container);
-
-        await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
-          .send({ data: { age: '99' } })
-          .expect(200);
-
-        await asAlice.post('/v1/projects/1/forms?publish=true')
-          .send(testData.forms.updateEntity)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        // all properties changed
-        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
-          .send(testData.instances.updateEntity.one)
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await exhaust(container);
-      };
-
-      it('should preserve conflict state during bulk update', testService(async (service, container) => {
-        await createConflict(service, container);
-
-        const asAlice = await service.login('alice');
-
-        await asAlice.post('/v1/projects/1/datasets/people/entities')
-          .send({
-            source: {
-              name: 'people_update.csv',
-              size: 100,
-            },
-            updates: [{
-              uuid: '12345678-1234-4123-8234-123456789abc',
-              data: { age: '10' }
-            }]
-          })
-          .expect(200);
-
-        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
-          .expect(200)
-          .then(({ body }) => {
-            body.currentVersion.data.should.eql({ first_name: 'Alicia', age: '10' });
-            should(body.conflict).not.be.null();
-          });
-      }));
-
       it('should resolve the conflict without updating data', testService(async (service, container) => {
         await createConflict(service, container);
 
@@ -3571,6 +3511,32 @@ describe('Entities API', () => {
             ['v1 label - bulk create', 1],
           );
           body.length.should.equal(5);
+        });
+    }));
+
+    it('should preserve conflict state during bulk update', testService(async (service, container) => {
+      await createConflict(service, container);
+
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [{
+            uuid: '12345678-1234-4123-8234-123456789abc',
+            data: { age: '10' }
+          }]
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.data.should.eql({ first_name: 'Alicia', age: '10' });
+          should(body.conflict).not.be.null();
         });
     }));
   });
