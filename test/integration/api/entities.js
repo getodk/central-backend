@@ -3309,6 +3309,30 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should reject bulk update with no label and empty data object', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 1, 1, 'people', [], null, 'v1 label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [
+            {
+              uuid: uuids[0],
+              data: {}
+            }
+          ]
+        })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.28);
+          body.message.should.equal('The entity is invalid. No entity data or label provided.');
+        });
+    }));
+
     it('should update data and label in bulk', testDataset(async (service) => {
       const asAlice = await service.login('alice');
       const uuids = await createEntities(asAlice, 1, 1, 'people', [], { first_name: 'Alice', age: '88' }, 'v1 label');
