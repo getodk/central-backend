@@ -45,6 +45,7 @@ info:
 
     **Fixed**:
 
+    - It is now possible to edit a submission even when the form state is `closed`. It can be edited via the [REST API](/central-api-submission-management/#updating-submission-data) or the [OpenRosa API](/central-api-openrosa-endpoints/#openrosa-form-submission-api). Previously, it was only possible to edit a submission when the form state was `open` or `closing`. ([getodk/central#1091](https://github.com/getodk/central/issues/1091))
     - The OpenRosa [`formList`](/central-api-openrosa-endpoints/#openrosa-form-listing-api) now includes the Form version in the `<downloadUrl>` and `<manifestUrl>`. This prevents certain race conditions. ([getodk/central#2251](https://github.com/getodk/central/issues/2251))
 
     ## ODK Central v2026.3.1
