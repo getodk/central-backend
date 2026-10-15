@@ -3300,6 +3300,33 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should set userAgent and creatorId when updating entities in bulk', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const asBob = await service.login('bob');
+      const uuids = await createEntities(asAlice, 1, 1, 'people', [], { first_name: 'Alice' }, 'v1 label');
+
+      await asBob.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [{
+            uuid: uuids[0],
+            label: 'v2 label',
+          }]
+        })
+        .set('User-Agent', 'central/tests')
+        .expect(200);
+
+      await asBob.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.creatorId.should.equal(6); // bob
+          person.currentVersion.userAgent.should.equal('central/tests');
+        });
+    }));
+
     it('should preserve existing label when updating data in bulk', testDataset(async (service) => {
       const asAlice = await service.login('alice');
       const uuids = await createEntities(asAlice, 1, 1, 'people', [], { first_name: 'Alice', age: '88' }, 'v1 label');
@@ -3322,6 +3349,49 @@ describe('Entities API', () => {
           body.currentVersion.label.should.equal('v1 label');
           body.currentVersion.data.should.eql({ first_name: 'Mary', age: '88' });
           body.currentVersion.version.should.equal(2);
+        });
+    }));
+
+    it('should not update deleted entities in bulk', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 2, 1, 'people', [], null, 'v1 label');
+
+      await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: {
+            name: 'people_update.csv',
+            size: 100,
+          },
+          updates: [
+            {
+              uuid: uuids[0],
+              label: 'deleted entity update',
+            },
+            {
+              uuid: uuids[1],
+              label: 'active entity update',
+            }
+          ]
+        })
+        .expect(200);
+      // Note: This request currently succeeds but the deleted entity silently fails to update.
+      // In a future PR, we'll reject the above request when it refrences a deleted UUID.
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}?deleted=true`)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.label.should.equal('v1 label');
+          person.currentVersion.version.should.equal(1);
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[1]}`)
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.label.should.equal('active entity update');
+          person.currentVersion.version.should.equal(2);
         });
     }));
 
