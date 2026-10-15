@@ -80,15 +80,51 @@ docker run \
         ${enableSsl:+--ssl_cert_file=/postgres-certs/server.crt} \
         ${enableSsl:+--ssl_key_file=/postgres-certs/server.key}
 
-sleep 2
-docker exec "$imageName" pg_isready --username=postgres --timeout=10
+wait_for_postgres() {
+  connectionString="postgres://postgres:odktest@127.0.0.1"
+  if [[ "${1-}" = --require-ssl ]]; then
+    connectionString="${connectionString}?sslmode=require"
+  fi
+
+  printf >&2 "[docker-postgres] Waiting for postgres..."
+
+  maxTries=5
+  retries=$((maxTries-1))
+  while ! docker exec "$imageName" pg_isready --username=postgres >/dev/null; do
+    if [[ "$retries" = 0 ]]; then
+      log "!!! Failed: pg_isready failed after $maxTries attempts."
+      exit 1
+    fi
+    printf >&2 .
+    sleep 1
+    retries=$((retries-1))
+  done
+
+  maxTries=5
+  retries=$((maxTries-1))
+  while ! [[ "$(docker exec "$imageName" psql "$connectionString" --no-align --tuples-only -c "SELECT 1")" = 1 ]]; do
+    if [[ "$retries" = 0 ]]; then
+      log "!!! Failed: psql failed after $maxTries attempts."
+      exit 1
+    fi
+    printf >&2 .
+    sleep 1
+    retries=$((retries-1))
+  done
+
+  printf >&2 'OK.\n'
+}
+wait_for_postgres
 
 node lib/bin/create-docker-databases.js ${CI:+--log}
 
 if [[ "$enableSsl" = true ]]; then
+  log "Applying SSL config..."
   docker exec "$imageName" bash -c 'sed -i "s/^host\b/hostssl/" "$PGDATA/pg_hba.conf"'
-  docker exec "$imageName" psql -U postgres -c 'SELECT pg_reload_conf();'
-  docker exec "$imageName" pg_isready --username=postgres --timeout=10
+
+  log "SSL config applied; reloading postgres config..."
+  docker exec "$imageName" psql -U postgres -c 'SELECT pg_reload_conf()' >/dev/null
+  wait_for_postgres --require-ssl
 fi
 
 log "Fresh container started OK."
