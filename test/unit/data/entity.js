@@ -12,6 +12,7 @@ const { normalizeUuid,
   parseEntityDataFromJson,
   extractLabelFromJson,
   extractUuidFromJson,
+  validateEntityUpdate,
   mergeWithExistingEntity,
   extractBulkSource,
   extractSelectedProperties,
@@ -1240,6 +1241,34 @@ describe('extracting and validating entities', () => {
       });
     });
 
+    describe('updated entities: validateEntityUpdate', () => {
+      it('should accept data and label', () => {
+        const newData = { first_name: 'Alice' };
+        const newLabel = 'New Label';
+        assert.doesNotThrow(() => { validateEntityUpdate(newData, newLabel); });
+      });
+
+      it('should reject empty data object and null label', () => {
+        const newData = {};
+        const newLabel = null;
+        assert.throws(() => { validateEntityUpdate(newData, newLabel); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.match('The entity is invalid. No entity data or label provided.');
+          return true;
+        });
+      });
+
+      it('should reject null data and null label', () => {
+        const newData = null;
+        const newLabel = null;
+        assert.throws(() => { validateEntityUpdate(newData, newLabel); }, (err) => {
+          err.problemCode.should.equal(400.28);
+          err.message.should.match('The entity is invalid. No entity data or label provided.');
+          return true;
+        });
+      });
+    });
+
     describe('updated entities: mergeWithExistingEntity', () => {
       it('should take new data and label', () => {
         const currentVersion = {
@@ -1299,20 +1328,6 @@ describe('extracting and validating entities', () => {
         const { data, label } = mergeWithExistingEntity(newData, newLabel, currentVersion);
         should(data).eql({ first_name: 'Alice' });
         should(label).eql('New Label');
-      });
-
-      it('should reject empty data object and null label is passed in', () => {
-        const currentVersion = {
-          label: 'Old Label',
-          data: { first_name: 'Alice' }
-        };
-        const newData = {};
-        const newLabel = null;
-        assert.throws(() => { mergeWithExistingEntity(newData, newLabel, currentVersion); }, (err) => {
-          err.problemCode.should.equal(400.28);
-          err.message.should.match('The entity is invalid. No entity data or label provided.');
-          return true;
-        });
       });
     });
   });

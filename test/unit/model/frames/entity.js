@@ -214,4 +214,61 @@ describe('entity', () => {
       });
     });
   });
+
+  describe('fromJsonBulkUpdate', () => {
+    const properties = [{ name: 'age' }, { name: 'first_name' }];
+    const uuid = '12345678-1234-4123-8234-abcd56789abc';
+
+    it('should parse a bulk update with data and label', () => {
+      const partial = Entity.fromJsonBulkUpdate({
+        uuid,
+        label: 'New Label',
+        data: { age: '22', first_name: 'Alice' }
+      }, properties);
+
+      partial.should.be.an.instanceOf(Entity.Partial);
+      partial.uuid.should.equal(uuid);
+      partial.aux.def.dataReceived.should.eql({ age: '22', first_name: 'Alice', label: 'New Label' });
+    });
+
+    it('should parse a bulk update with data and no label', () => {
+      const partial = Entity.fromJsonBulkUpdate({
+        uuid,
+        data: { age: '22', first_name: 'Alice' }
+      }, properties);
+
+      partial.aux.def.should.not.have.property('label');
+      partial.aux.def.dataReceived.should.eql({ age: '22', first_name: 'Alice' });
+    });
+
+    it('should accept a null data object with a label', () => {
+      const partial = Entity.fromJsonBulkUpdate({
+        uuid,
+        label: 'New Label',
+        data: null
+      }, properties);
+
+      partial.aux.def.dataReceived.should.eql({ label: 'New Label' });
+    });
+
+    it('should accept an empty data object with a label', () => {
+      const partial = Entity.fromJsonBulkUpdate({
+        uuid,
+        label: 'New Label',
+        data: {}
+      }, properties);
+
+      partial.aux.def.dataReceived.should.eql({ label: 'New Label' });
+    });
+
+    it('should reject an update with no data or label', () => {
+      assert.throws(() => {
+        Entity.fromJsonBulkUpdate({ uuid }, properties);
+      }, (err) => {
+        err.problemCode.should.equal(400.28);
+        err.message.should.equal('The entity is invalid. No entity data or label provided.');
+        return true;
+      });
+    });
+  });
 });
