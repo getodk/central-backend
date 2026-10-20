@@ -13,15 +13,13 @@ const config = require('config');
 const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
 const { Actor, Config } = require(appRoot + '/lib/model/frames');
-const { withKnex, KnexMigrationSource } = require(appRoot + '/lib/model/knex-migrator');
+const { withKnex, migrationSource } = require(appRoot + '/lib/model/knex-migrator');
 
 const testData = require('../../data/xml');
 const populateUsers = require('../fixtures/01-users');
 const { getFormFields } = require('../../../lib/data/schema');
 
 const withTestDatabase = withKnex(config.get('test.database'));
-const migrationsDir = appRoot + '/lib/model/migrations';
-const migrationSource = new KnexMigrationSource(migrationsDir);
 const upToMigration = (toName, inclusive = true) => withTestDatabase(async (migrator) => {
   await migrator.raw('drop owned by current_user');
   const [ , pending ] = await migrator.migrate.list({ migrationSource });

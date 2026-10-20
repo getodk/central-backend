@@ -12,7 +12,7 @@ const testData = require('../data/xml');
 
 // knex things.
 const config = require('config');
-const { knexConnect, KnexMigrationSource } = require(appRoot + '/lib/model/knex-migrator');
+const { knexConnect, migrationSource } = require(appRoot + '/lib/model/knex-migrator');
 
 // slonik connection pool
 const { slonikPool } = require(appRoot + '/lib/external/slonik');
@@ -82,7 +82,6 @@ const initialize = async () => {
     await migrator.raw('drop owned by current_user');
     // Silence logging from migrations.
     console.log = noop; // eslint-disable-line no-console
-    const migrationSource = new KnexMigrationSource(appRoot + '/lib/model/migrations');
     await migrator.migrate.latest({ migrationSource });
   } finally {
     console.log = log; // eslint-disable-line no-console
