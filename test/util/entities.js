@@ -1,6 +1,8 @@
+const appRoot = require('app-root-path');
 const { v4: uuid } = require('uuid');
 
 const testData = require('../data/xml');
+const { exhaust } = require(appRoot + '/lib/worker/worker');
 
 const createProject = (user) => user.post('/v1/projects')
   .send({ name: 'a project ' + new Date().getTime() })
@@ -65,6 +67,39 @@ const createEntities = async (user, count, projectId, datasetName, properties = 
   return uuids;
 };
 
+const createConflict = async (service, container) => {
+  const asAlice = await service.login('alice');
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.simpleEntity)
+    .set('Content-Type', 'application/xml')
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
+    .send(testData.instances.simpleEntity.one)
+    .set('Content-Type', 'application/xml')
+    .expect(200);
+
+  await exhaust(container);
+
+  await asAlice.patch('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc?force=true')
+    .send({ data: { age: '99' } })
+    .expect(200);
+
+  await asAlice.post('/v1/projects/1/forms?publish=true')
+    .send(testData.forms.updateEntity)
+    .set('Content-Type', 'application/xml')
+    .expect(200);
+
+  // all properties changed
+  await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
+    .send(testData.instances.updateEntity.one)
+    .set('Content-Type', 'application/xml')
+    .expect(200);
+
+  await exhaust(container);
+};
+
 const createBulkEntities = async (user, count, projectId, datasetName) => {
   const entities = [];
   const uuids = [];
@@ -96,6 +131,7 @@ module.exports = {
   createDatasetFromForm,
   deleteDatasets,
   createEntities,
+  createConflict,
   createBulkEntities,
   deleteEntities
 };
