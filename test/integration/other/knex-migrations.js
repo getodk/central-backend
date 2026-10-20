@@ -13,7 +13,7 @@ const config = require('config');
 const { testContainerFullTrx, testServiceFullTrx } = require('../setup');
 const { sql } = require('slonik');
 const { Actor, Config } = require(appRoot + '/lib/model/frames');
-const { withKnex } = require(appRoot + '/lib/model/knex-migrator');
+const { withKnex, KnexMigrationSource } = require(appRoot + '/lib/model/knex-migrator');
 
 const testData = require('../../data/xml');
 const populateUsers = require('../fixtures/01-users');
@@ -21,22 +21,22 @@ const { getFormFields } = require('../../../lib/data/schema');
 
 const withTestDatabase = withKnex(config.get('test.database'));
 const migrationsDir = appRoot + '/lib/model/migrations';
+const migrationSource = new KnexMigrationSource(migrationsDir);
 const upToMigration = (toName, inclusive = true) => withTestDatabase(async (migrator) => {
   await migrator.raw('drop owned by current_user');
-  const migrations = await migrator.migrate.list({ directory: migrationsDir });
-  const pending = migrations[1].map(({ file }) => file);
+  const [ , pending ] = await migrator.migrate.list({ migrationSource });
   const index = pending.indexOf(toName);
   if (index === -1) throw new Error(`Could not find migration ${toName}`);
   const end = inclusive ? index + 1 : index;
   for (let i = 0; i < end; i += 1)
     // eslint-disable-next-line no-await-in-loop
-    await migrator.migrate.up({ directory: migrationsDir });
+    await migrator.migrate.up({ migrationSource });
   // Confirm that the migrations completed as expected.
-  const [completed] = await migrator.migrate.list({ directory: migrationsDir });
+  const [completed] = await migrator.migrate.list({ migrationSource });
   completed.should.eql(pending.slice(0, end));
 });
 const up = () => withTestDatabase((migrator) =>
-  migrator.migrate.up({ directory: migrationsDir }));
+  migrator.migrate.up({ migrationSource }));
 
 const testMigration = (filename, tests, options = {}) => {
   const { only = false, skip = false } = options;
