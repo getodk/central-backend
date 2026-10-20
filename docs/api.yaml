@@ -43,6 +43,10 @@ info:
 
     ## ODK Central v2026.4
 
+    **Changed**:
+
+    - The `entity.bulk.create` audit action has been renamed to `entity.bulk.upsert`, including in existing audit log entries.
+
     **Fixed**:
 
     - The OpenRosa [`formList`](/central-api-openrosa-endpoints/#openrosa-form-listing-api) now includes the Form version in the `<downloadUrl>` and `<manifestUrl>`. This prevents certain race conditions. ([getodk/central#2251](https://github.com/getodk/central/issues/2251))
@@ -1026,6 +1030,7 @@ tags:
     * `entity.delete` when an Entity is deleted.
     * `entity.restore` when a deleted Entity is restored.
     * `entity.purge` when a deleted Entity is purged (ppermanently deleted).
+    * `entity.bulk.upsert` when Entities are created or updated in bulk.
     * `entity.bulk.delete` when Entities are deleted in bulk.
     * `entity.bulk.restore` when Entities are restored in bulk.
     * `config.set` when a system configuration is set.

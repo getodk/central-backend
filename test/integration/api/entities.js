@@ -2538,7 +2538,7 @@ describe('Entities API', () => {
       // Most recent event IS bulk create
       await asAlice.get('/v1/audits')
         .then(({ body }) => {
-          body[0].action.should.equal('entity.bulk.create');
+          body[0].action.should.equal('entity.bulk.upsert');
           // the main item stored in the event details is a reference to the entity source id.
           body[0].details.should.have.property('sourceId');
         });
@@ -2634,7 +2634,7 @@ describe('Entities API', () => {
         // Most recent event is not a bulk create event
         await asAlice.get('/v1/audits')
           .then(({ body }) => {
-            body[0].action.should.not.equal('entity.bulk.create');
+            body[0].action.should.not.equal('entity.bulk.upsert');
           });
       }));
 
@@ -2682,7 +2682,7 @@ describe('Entities API', () => {
         // Most recent event is not a bulk create event
         await asAlice.get('/v1/audits')
           .then(({ body }) => {
-            body[0].action.should.not.equal('entity.bulk.create');
+            body[0].action.should.not.equal('entity.bulk.upsert');
           });
       }));
 
@@ -2730,7 +2730,7 @@ describe('Entities API', () => {
         // Most recent event is not a bulk create event
         await asAlice.get('/v1/audits')
           .then(({ body }) => {
-            body[0].action.should.not.equal('entity.bulk.create');
+            body[0].action.should.not.equal('entity.bulk.upsert');
           });
       }));
 
@@ -2797,7 +2797,7 @@ describe('Entities API', () => {
         // Most recent event is not a bulk create event
         await asAlice.get('/v1/audits')
           .then(({ body }) => {
-            body[0].action.should.not.equal('entity.bulk.create');
+            body[0].action.should.not.equal('entity.bulk.upsert');
           });
       }));
 
@@ -2867,7 +2867,7 @@ describe('Entities API', () => {
         // Most recent event is not a bulk create event
         await asAlice.get('/v1/audits')
           .then(({ body }) => {
-            body[0].action.should.not.equal('entity.bulk.create');
+            body[0].action.should.not.equal('entity.bulk.upsert');
           });
       }));
     });
@@ -3035,7 +3035,7 @@ describe('Entities API', () => {
             logs[0].details.entity.should.eql({ uuid: '12345678-1234-4123-8234-111111111aaa', dataset: 'people' });
 
             // bulk create event
-            logs[1].action.should.equal('entity.bulk.create');
+            logs[1].action.should.equal('entity.bulk.upsert');
             logs[1].details.source.should.eql({ name: 'people.csv', size: 100, count: 2, userAgent: 'central/tests' });
 
             logs.length.should.equal(2);
