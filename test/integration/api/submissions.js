@@ -2484,15 +2484,19 @@ two,h,/data/h,2000-01-01T00:06,2000-01-01T00:07,-5,-6,,ee,ff,,
     // The event names, the order of the rows in the file, and the start
     // timestamps are all deliberately different orderings here, so that this
     // test can only pass if the export is actually ordered by start.
+    // b, g and f share a start, and are listed here in an order that is neither
+    // the order they sort in nor the reverse of it.
     const unorderedAudit = `event,node,start,end
 a,/data/a,1700000000003,1700000000004
 b,/data/b,1700000000005,1700000000006
 c,/data/c,1700000000001,1700000000002
 d,/data/d,1700000000009,1700000000010
+g,/data/g,1700000000005,1700000000006
 e,/data/e,1700000000007,1700000000008
+f,/data/f,1700000000005,1700000000006
 `;
 
-    it('should order client audit log entries by start, whatever order the rows are stored in', testService(async (service, container) => {
+    it('should order client audit log entries by start and event, whatever order the rows are stored in', testService(async (service, container) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -2519,12 +2523,14 @@ e,/data/e,1700000000007,1700000000008
 one,c,/data/c,1700000000001,1700000000002,,,,,,,
 one,a,/data/a,1700000000003,1700000000004,,,,,,,
 one,b,/data/b,1700000000005,1700000000006,,,,,,,
+one,f,/data/f,1700000000005,1700000000006,,,,,,,
+one,g,/data/g,1700000000005,1700000000006,,,,,,,
 one,e,/data/e,1700000000007,1700000000008,,,,,,,
 one,d,/data/d,1700000000009,1700000000010,,,,,,,
 `);
     }));
 
-    it('should order client audit log entries by start when they are read from the attachment', testService(async (service, container) => {
+    it('should order client audit log entries by start and event when they are read from the attachment', testService(async (service, container) => {
       const asAlice = await service.login('alice');
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .set('Content-Type', 'application/xml')
@@ -2547,6 +2553,8 @@ one,d,/data/d,1700000000009,1700000000010,,,,,,,
 one,c,/data/c,1700000000001,1700000000002,,,,,,,
 one,a,/data/a,1700000000003,1700000000004,,,,,,,
 one,b,/data/b,1700000000005,1700000000006,,,,,,,
+one,f,/data/f,1700000000005,1700000000006,,,,,,,
+one,g,/data/g,1700000000005,1700000000006,,,,,,,
 one,e,/data/e,1700000000007,1700000000008,,,,,,,
 one,d,/data/d,1700000000009,1700000000010,,,,,,,
 `);
