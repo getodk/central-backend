@@ -1,4 +1,4 @@
-FROM sphinxdoc/sphinx
+FROM sphinxdoc/sphinx:8.2.3
 
 RUN apt-get update && apt-get install -y libenchant-2-2 git
 

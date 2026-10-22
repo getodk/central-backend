@@ -83,5 +83,48 @@ describe('Form', () => {
       });
     });
   });
+
+  describe('isCurrentDraft', () => {
+    it('should return true if the id of the def is the same as the draftDefId', () => {
+      const draftDef = new Form.Def({ id: 1 });
+      const form = new Form({ draftDefId: 1 }, { def: draftDef });
+      form.isCurrentDraft().should.be.true();
+    });
+
+    it('should return false if the id of the def differs from the draftDefId', () => {
+      const currentDef = new Form.Def({ id: 1, publishedAt: new Date().toISOString() });
+      const form = new Form({ currentDefId: 1, draftDefId: 2 }, { def: currentDef });
+      form.isCurrentDraft().should.be.false();
+    });
+
+    it('should return false if the form does not have a draftDefId', () => {
+      const currentDef = new Form.Def({ id: 1, publishedAt: new Date().toISOString() });
+      const form = new Form({ currentDefId: 1 }, { def: currentDef });
+      form.isCurrentDraft().should.be.false();
+    });
+
+    it('should return false if the form has a draftDefId, but does not have a def', () => {
+      const form = new Form({ draftDefId: 1 });
+      form.isCurrentDraft().should.be.false();
+    });
+
+    it('should return false if the form has neither a def nor draftDefId', () => {
+      const form = new Form({ currentDefId: 1 });
+      form.isCurrentDraft().should.be.false();
+    });
+  });
+
+  describe('acceptsSubmissions', () => {
+    [
+      ['open', true],
+      ['closing', true],
+      ['closed', false]
+    ].forEach(([state, expectedValue]) => {
+      it(`should return ${expectedValue} if the form state is ${state}`, () => {
+        const form = new Form({ state });
+        form.acceptsSubmissions().should.equal(expectedValue);
+      });
+    });
+  });
 });
 

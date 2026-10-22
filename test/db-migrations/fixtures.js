@@ -1,5 +1,22 @@
 const { hash, randomBytes } = require('node:crypto');
 
+const aFormDefWith = (props) => {
+  const { xml } = props;
+  const hashes = xml != null
+    ? { hash: hash('md5', xml), sha: hash('sha1', xml), sha256: hash('sha256', xml) }
+    : null;
+  return { version: '', ...hashes, ...props };
+};
+
+// Returns fixtures for multiple form_fields that are part of a single, shared
+// schema.
+const formFieldsWith = (sharedProps, ...fields) => fields.map((props, i) => {
+  const result = { order: i, ...sharedProps, ...props };
+  if (result.name == null && result.path != null)
+    result.name = result.path.split('/').at(-1);
+  return result;
+});
+
 const aBlobWith = props => {
   const randomContent = randomBytes(100);
   const md5 = hash('md5',  randomContent); // eslint-disable-line no-multi-spaces
@@ -9,6 +26,8 @@ const aBlobWith = props => {
 const aBlob = () => aBlobWith({});
 
 module.exports = {
+  aFormDefWith,
+  formFieldsWith,
   aBlob,
   aBlobWith
 };

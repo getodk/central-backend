@@ -47,6 +47,12 @@ info:
 
     - The OpenRosa [`formList`](/central-api-openrosa-endpoints/#openrosa-form-listing-api) now includes the Form version in the `<downloadUrl>` and `<manifestUrl>`. This prevents certain race conditions. ([getodk/central#2251](https://github.com/getodk/central/issues/2251))
 
+    ## ODK Central v2026.3.1
+
+    **Fixed**:
+
+    - The parsing of [Submission geodata](/central-api-submission-management/#retrieving-submissions-geodata) is now more resilient. It will not fail for XML content fragments. ([getodk/central#2261](https://github.com/getodk/central/issues/2261))
+
     ## ODK Central v2026.3
 
     **Added**:
