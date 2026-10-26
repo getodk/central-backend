@@ -1,5 +1,5 @@
-const _log = level => (...args) => console.log(level, ...args); // eslint-disable-line no-console
-global.log = _log('[INFO]');
+const _log = level => (...args) => console.log(new Date().toISOString(), level, ...args); // eslint-disable-line no-console
+global.log = _log('[test/db-migrations]');
 
 const fs = require('node:fs');
 const slonik = require('slonik');
