@@ -39,10 +39,20 @@ describe('transaction integration', () => {
 // resolves in ms ms
 const sometime = (ms) => new Promise((done) => { setTimeout(done, ms); });
 
+const waitFor = async ({ timeout=1000, step=50, timeoutError='timed out' }, fn) => {
+  const deadline = Date.now() + timeout;
+  while (true) {
+    if (Date.now() > deadline) throw new Error(timeoutError);
+    if (await fn()) return; // eslint-disable-line no-await-in-loop
+    await new Promise(resolve => { setTimeout(resolve, step); }); // eslint-disable-line no-await-in-loop
+  }
+};
+
 describe('enketo worker transaction', () => {
   it('should not allow a write conflict @slow', testContainerFullTrx(async (container) => {
     let flush;
     let workerTicket;
+    let updatePromise;
 
     const { Audits, Forms, oneFirst } = container;
 
@@ -55,20 +65,31 @@ describe('enketo worker transaction', () => {
       // eslint-disable-next-line no-await-in-loop
       while (flush == null) await sometime(50);
 
-      Forms.update(simple, { state: 'closed' });
+      updatePromise = Forms.update(simple, { state: 'closed' });
 
       // now we wait to see if we have deadlocked, which we want.
-      await sometime(400);
+      await waitFor({ timeout: 400, step: 20, timeoutError: 'failed to establish db lock' }, () => oneFirst(sql`
+        SELECT EXISTS(
+          SELECT 1
+            FROM pg_stat_activity
+            WHERE query ILIKE '%UPDATE%forms%'
+              AND wait_event_type = 'Lock'
+              AND pid != pg_backend_pid() -- avoid selecting self
+        )
+      `));
+
       (await Forms.getByProjectAndXmlFormId(1, 'simple', Form.WithoutDef)).get()
         .state.should.equal('open');
     } finally {
       // now finally resolve the locks.
       flush?.();
       if (workerTicket) await workerTicket;
-      await sometime(100); // TODO: oh NO why is this necessary now?
 
-      (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
-        .should.equal('closed');
+      if (updatePromise) {
+        await updatePromise;
+        (await oneFirst(sql`select state from forms where "projectId"=1 and "xmlFormId"='simple'`))
+          .should.equal('closed');
+      }
     }
   }));
 });

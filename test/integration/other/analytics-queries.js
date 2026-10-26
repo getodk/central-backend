@@ -1628,7 +1628,7 @@ describe('analytics task queries @slow', function () {
         .expect(200);
 
       // let's set date of entity update to long time ago
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action in ('entity.create', 'entity.bulk.create')`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action in ('entity.create', 'entity.bulk.upsert')`);
 
       // Create more recent entities
       await submitToForm(service, 'alice', 1, 'simpleEntity', testData.instances.simpleEntity.two);
@@ -1814,7 +1814,7 @@ describe('analytics task queries @slow', function () {
 
     }));
 
-    it('should return recent and total entity.bulk.create events per dataset', testService(async (service, container) => {
+    it('should return recent and total entity.bulk.upsert events per dataset', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       // First dataset in first project: "people"
@@ -1846,7 +1846,7 @@ describe('analytics task queries @slow', function () {
         .expect(200);
 
       // Make existing audits in the distant past
-      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.bulk.create'`);
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.bulk.upsert'`);
 
       // Recent bulk upload with 1 row in "people"
       await asAlice.post('/v1/projects/1/datasets/people/entities')

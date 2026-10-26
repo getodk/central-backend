@@ -680,8 +680,9 @@ describe('/audits', () => {
       await asAlice.get('/v1/audits?action=nonverbose')
         .expect(200)
         .then(({ body }) => {
-          body.length.should.equal(4);
+          body.length.should.equal(5);
           body.map(a => a.action).should.eql([
+            'entity.bulk.upsert',
             'form.update.publish',
             'dataset.create',
             'form.create',
