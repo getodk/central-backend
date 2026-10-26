@@ -88,7 +88,7 @@ wait_for_postgres() {
 
   printf >&2 "[docker-postgres] Waiting for postgres..."
 
-  maxTries=5
+  maxTries=20
   retries=$((maxTries-1))
   while ! docker exec "$imageName" pg_isready --username=postgres >/dev/null; do
     if [[ "$retries" = 0 ]]; then
@@ -100,7 +100,7 @@ wait_for_postgres() {
     retries=$((retries-1))
   done
 
-  maxTries=5
+  maxTries=20
   retries=$((maxTries-1))
   while ! [[ "$(docker exec "$imageName" psql "$connectionString" --no-align --tuples-only -c "SELECT 1")" = 1 ]]; do
     if [[ "$retries" = 0 ]]; then
