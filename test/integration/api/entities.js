@@ -428,10 +428,12 @@ describe('Entities API', () => {
       // Publish a form that consumes people dataset
       await asAlice.post('/v1/projects/1/forms?publish=true')
         .send(testData.forms.consumeDatasets)
-        .set('Content-Type', 'application/xml').expect(200);
+        .set('Content-Type', 'application/xml')
+        .expect(200);
 
       const { body: pubLink } = await asAlice.post('/v1/projects/1/forms/consumeDatasets/public-links')
-        .send({ displayName: 'North public link' }).expect(200);
+        .send({ displayName: 'North public link' })
+        .expect(200);
 
       await asAlice.patch(`/v1/projects/1/forms/consumeDatasets/public-links/${pubLink.id}`)
         .send({ properties: { region: 'north' } })
@@ -441,7 +443,7 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body }) => {
           body.length.should.eql(2);
-          body.map(e => e.currentVersion.label).should.containDeep(['north person 1', 'north person 2']);
+          body.map(e => e.currentVersion.label).should.eql(['north person 2', 'north person 1']);
         });
 
       // Revoke the public link session
@@ -453,7 +455,7 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body }) => {
           body.length.should.eql(2);
-          body.map(e => e.currentVersion.label).should.containDeep(['north person 1', 'north person 2']);
+          body.map(e => e.currentVersion.label).should.eql(['north person 2', 'north person 1']);
         });
 
       // Delete the public link
