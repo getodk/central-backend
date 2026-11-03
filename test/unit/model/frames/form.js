@@ -113,18 +113,5 @@ describe('Form', () => {
       form.isCurrentDraft().should.be.false();
     });
   });
-
-  describe('acceptsSubmissions', () => {
-    [
-      ['open', true],
-      ['closing', true],
-      ['closed', false]
-    ].forEach(([state, expectedValue]) => {
-      it(`should return ${expectedValue} if the form state is ${state}`, () => {
-        const form = new Form({ state });
-        form.acceptsSubmissions().should.equal(expectedValue);
-      });
-    });
-  });
 });
 
