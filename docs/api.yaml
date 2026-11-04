@@ -46,6 +46,7 @@ info:
     **Added**:
 
     - `autosaveEnabled` boolean flag is added to [Forms](/central-api-form-management) APIs to allow enabling and disabling whether Web Forms stores submission data in the browser.
+    - The extended metadata responses of [GET /projects/:id/assignments/forms](/central-api-project-management/#seeing-all-form-assignments-within-a-project) and [GET /projects/:id/assignments/forms/:roleId](/central-api-project-management/#seeing-role-specific-form-assignments-within-a-project) now include a `tokenActive` boolean.
 
     **Changed**:
 
@@ -3217,6 +3218,8 @@ paths:
         Returns a summary of all _Form-specific_ Assignments within this Project. This endpoint is meant to simplify the task of summarizing all Form permissions within a Project at a glance and in one transactional request. Because it is necessary to specify which Form each Assignment is attached to, returned results form this endpoint include an `xmlFormId` field.
 
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID and the Form reference remains a string ID.
+
+        Extended responses also include a `tokenActive` boolean, which is `true` if the Actor has an active token (only true for App Users and Public Links). Revoking the token of an App User or Public Link makes it `false`. It is always `false` for other types of Actors.
       operationId: getProjectFormAssignments
       parameters:
       - name: projectId
@@ -3254,6 +3257,7 @@ paths:
                   deletedAt: 2018-04-18T23:42:11.406Z
                 xmlFormId: simple
                 roleId: 4
+                tokenActive: false
   /v1/projects/{projectId}/assignments/forms/{roleId}:
     get:
       tags:
@@ -3263,6 +3267,8 @@ paths:
         Like the [Form Assignments summary API](/central-api-form-management/#listing-all-form-assignments), but filtered by some `roleId`.
 
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID and the Form reference remains a string ID.
+
+        Extended responses also include a `tokenActive` boolean, which is `true` if the Actor has an active token. Revoking the token of an App User or Public Link makes it `false`. It is always `false` for Actors that do not have tokens, such as Users.
       operationId: getRoleSpecificProjectFormAssignments
       parameters:
       - name: projectId
@@ -3307,6 +3313,7 @@ paths:
                   deletedAt: 2018-04-18T23:42:11.406Z
                 xmlFormId: simple
                 roleId: 4
+                tokenActive: false
   /v1/projects/{projectId}/forms:
     get:
       tags:
@@ -12609,6 +12616,7 @@ components:
         - actor
         - xmlFormId
         - roleId
+        - tokenActive
       properties:
         actor:
           $ref: '#/components/schemas/Actor'
@@ -12621,6 +12629,10 @@ components:
           type: number
           example: 4
           description: The numeric Role ID being assigned.
+        tokenActive:
+          type: boolean
+          example: true
+          description: Whether the Actor currently has an active token. This is `true` for App Users and Public Links unless they have been revoked. It is always `false` for other types of Actors.
     Project:
       type: object
       required:
