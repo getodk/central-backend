@@ -43,10 +43,13 @@ info:
 
     ## ODK Central v2026.4
 
+    **Added**:
+
+    - `autosaveEnabled` boolean flag is added to [Forms](/central-api-form-management) APIs to allow enabling and disabling whether Web Forms stores submission data in the browser.
+
     **Changed**:
 
     - The `entity.bulk.create` audit action has been renamed to `entity.bulk.upsert`, including in existing audit log entries.
-    - `autosaveEnabled` boolean flag is added to [Forms](/central-api-form-management) APIs to allow enabling and disabling whether Web Forms stores submission data in the browser.
 
     **Fixed**:
 

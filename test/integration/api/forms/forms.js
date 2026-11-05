@@ -91,6 +91,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
             body.name.should.equal('Simple 2');
             body.version.should.equal('2.1');
             body.hash.should.equal('07ed8a51cc3f6472b7dfdc14c2005861');
+            body.autosaveEnabled.should.equal(true);
           }))));
 
     it('should decode html entities in the value of form version - getodk/central#1470', testService((service) =>
@@ -358,6 +359,20 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               .then(({ body }) => {
                 body.map((a) => a.action).should.eql(['form.update.publish', 'form.create']);
               }))))));
+
+    it('should disable autosave for encrypted forms', testService((service) =>
+      service.login('alice', (asAlice) =>
+        asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.encrypted)
+          .set('Content-Type', 'application/xml')
+          .expect(200)
+          .then(({ body }) => {
+            body.should.be.a.Form();
+            body.name.should.equal('Encrypted');
+            body.version.should.equal('working3');
+            body.hash.should.equal('b614f5d46f64eb33e0ef02d71c72907b');
+            body.autosaveEnabled.should.equal(false);
+          }))));
 
     describe('Enketo ID for draft', () => {
       it('should request an enketoId', testService(async (service, { env }) => {
@@ -1756,12 +1771,13 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
     it('should update allowed fields', testService((service) =>
       service.login('alice', (asAlice) =>
         asAlice.patch('/v1/projects/1/forms/simple')
-          .send({ state: 'closing', webformsEnabled: true })
+          .send({ state: 'closing', webformsEnabled: true, autosaveEnabled: false })
           .expect(200)
           .then(({ body }) => {
             body.should.be.a.Form();
             body.state.should.equal('closing');
             body.webformsEnabled.should.equal(true);
+            body.autosaveEnabled.should.equal(false);
           })
           .then(() => asAlice.get('/v1/projects/1/forms/simple')
             .expect(200)
@@ -1769,6 +1785,7 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
               body.should.be.a.Form();
               body.state.should.equal('closing');
               body.webformsEnabled.should.equal(true);
+              body.autosaveEnabled.should.equal(false);
             })))));
 
     it('should reject if state is invalid', testService((service) =>
