@@ -44,8 +44,8 @@ if [[ "$enableSsl" = true ]]; then
 
     [[ -s ca.key     ]] || openssl genrsa -out     ca.key 2048
     [[ -s not-ca.key ]] || openssl genrsa -out not-ca.key 2048
-    [[ -s ca.crt     ]] || openssl req -x509 -new -nodes -key     ca.key -sha256 -days 1 -out     ca.crt -subj "/CN=TestCA"
-    [[ -s not-ca.crt ]] || openssl req -x509 -new -nodes -key not-ca.key -sha256 -days 1 -out not-ca.crt -subj "/CN=NotTestCA"
+    [[ -s ca.crt     ]] || openssl req -x509 -new -nodes -key     ca.key -sha256 -days 999999 -out     ca.crt -subj "/CN=TestCA"
+    [[ -s not-ca.crt ]] || openssl req -x509 -new -nodes -key not-ca.key -sha256 -days 999999 -out not-ca.crt -subj "/CN=NotTestCA"
     [[ -s server.key ]] || openssl genrsa -out server.key 2048
     [[ -s server.csr ]] || openssl req -new -key server.key -out server.csr -subj "/CN=localhost"
     [[ -s server.crt ]] || openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial \

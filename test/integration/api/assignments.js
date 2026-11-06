@@ -118,6 +118,65 @@ describe('api: /projects/:id/assignments/forms', () => {
           verifyExtended(result, david.id, 'simple', appUserRoleId);
           verifyExtended(result, eleanor.id, 'withrepeat', appUserRoleId);
         })));
+
+    describe('public-link role', () => {
+      it('should return projects assignments for public links with associated forms', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'Simple link 1' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'Simple link 2' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withrepeat/public-links')
+          .send({ displayName: 'With Repeat link 1' })
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/assignments/forms/pub-link')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.eql(3);
+            body.map(p => p.xmlFormId).should.eql(['simple', 'simple', 'withrepeat']);
+          });
+      }));
+
+      it('should return revoked session public links', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        const { body: pubLink } = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+          .send({ displayName: 'Simple link 1' })
+          .expect(200);
+
+        await asAlice.post('/v1/projects/1/forms/withrepeat/public-links')
+          .send({ displayName: 'With repeat link 1' })
+          .expect(200);
+
+        // Revoke the public link session (does not change assignment)
+        await asAlice.delete(`/v1/sessions/${pubLink.token}`)
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/assignments/forms/pub-link')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.eql(2);
+            body.map(p => p.xmlFormId).should.eql(['simple', 'withrepeat']);
+          });
+
+        // Delete the public link
+        await asAlice.delete(`/v1/projects/1/forms/simple/public-links/${pubLink.id}`)
+          .expect(200);
+
+        await asAlice.get('/v1/projects/1/assignments/forms/pub-link')
+          .expect(200)
+          .then(({ body }) => {
+            body.length.should.eql(1);
+            body.map(p => p.xmlFormId).should.eql(['withrepeat']);
+          });
+      }));
+    });
   });
 });
 
