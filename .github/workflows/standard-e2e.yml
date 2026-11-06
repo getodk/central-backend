@@ -15,8 +15,6 @@ jobs:
       fail-fast: false
       matrix:
         postgres-version:
-          - full: "14.23"
-            major: 14
           - full: "18"
             major: 18
     steps:
