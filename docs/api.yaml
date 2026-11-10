@@ -3219,7 +3219,7 @@ paths:
 
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID and the Form reference remains a string ID.
 
-        Extended responses also include a `tokenActive` boolean, which is `true` if the Actor has an active token (only true for App Users and Public Links). Revoking the token of an App User or Public Link makes it `false`. It is always `false` for other types of Actors.
+        Extended responses also include a `tokenActive` boolean indicating whether the Actor currently has an active token. This is `true` for App Users and Public Links unless they have been revoked. It is always `false` for other types of Actors.
       operationId: getProjectFormAssignments
       parameters:
       - name: projectId
@@ -3268,7 +3268,7 @@ paths:
 
         This endpoint supports retrieving extended metadata; provide a header `X-Extended-Metadata: true` to expand the `actorId` into a full `actor` objects. The Role reference remains a numeric ID and the Form reference remains a string ID.
 
-        Extended responses also include a `tokenActive` boolean, which is `true` if the Actor has an active token. Revoking the token of an App User or Public Link makes it `false`. It is always `false` for Actors that do not have tokens, such as Users.
+        Extended responses also include a `tokenActive` boolean indicating whether the Actor currently has an active token. This is `true` for App Users and Public Links unless they have been revoked. It is always `false` for other types of Actors.
       operationId: getRoleSpecificProjectFormAssignments
       parameters:
       - name: projectId
