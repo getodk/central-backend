@@ -10,7 +10,7 @@ env:
 jobs:
   standard-e2e:
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:

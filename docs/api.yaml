@@ -43,6 +43,10 @@ info:
 
     ## ODK Central v2026.4
 
+    **Added**:
+
+    - `autosaveEnabled` boolean flag is added to [Forms](/central-api-form-management) APIs to allow enabling and disabling whether Web Forms stores submission data in the browser.
+
     **Changed**:
 
     - The `entity.bulk.create` audit action has been renamed to `entity.bulk.upsert`, including in existing audit log entries.
@@ -13025,6 +13029,9 @@ components:
         webformsEnabled:
           type: boolean
           description: Enables use of ODK Web Forms instead of Enketo for filling Forms via web browsers.
+        autosaveEnabled:
+          type: boolean
+          description: Enables ODK Web Forms to store submission data in the browser.
     ExtendedForm:
       allOf:
         - $ref: '#/components/schemas/Form'
