@@ -12,7 +12,6 @@ jobs:
       fail-fast: false
       matrix:
         postgres-version:
-          - "14.23"
           - "18"
     steps:
     - uses: actions/checkout@v6
