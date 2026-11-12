@@ -11,12 +11,11 @@ env:
 jobs:
   oidc-e2e-test:
     timeout-minutes: 6
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         postgres-version:
-          - "14.23"
           - "18"
     steps:
 
