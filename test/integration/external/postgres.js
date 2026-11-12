@@ -2,10 +2,17 @@ const { testContainer, testService } = require('../setup');
 
 const { validateDb } = require('../../../lib/external/postgres');
 
-describe('postgres', () => {
+describe('external/postgres', () => {
   describe('validateDb()', () => {
     it('should succeed with expected logging for correctly-configured db', testContainer(async ({ oneFirst }) => {
       // given
+      const mockProcess = {
+        exit(statusCode) {
+          if(statusCode === 0) return;
+          throw new Error(`process.exit() called with non-zero status code: '${statusCode}'`);
+        }
+      };
+
       const mockConsole = {
         logged: [],
         error(timestamp, prefix, ...message) {
@@ -16,7 +23,7 @@ describe('postgres', () => {
       };
 
       // when
-      await validateDb(mockConsole, { oneFirst });
+      await validateDb(mockProcess, mockConsole, { oneFirst });
 
       // then
       mockConsole.logged.should.deepEqual([
