@@ -1,4 +1,4 @@
-const { testContainer, testService } = require('../setup');
+const { testContainer } = require('../setup');
 
 const { validateDb } = require('../../../lib/external/postgres');
 
@@ -8,7 +8,7 @@ describe('external/postgres', () => {
       // given
       const mockProcess = {
         exit(statusCode) {
-          if(statusCode === 0) return;
+          if (statusCode === 0) return;
           throw new Error(`process.exit() called with non-zero status code: '${statusCode}'`);
         }
       };

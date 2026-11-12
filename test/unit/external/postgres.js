@@ -1,4 +1,18 @@
+const should = require('should');
+
 const { validateDb } = require('../../../lib/external/postgres');
+
+function mockPostgresWithVersion(version) {
+  return {
+    async oneFirst(query) {
+      switch (query.sql) {
+        case 'SELECT 1': return 1;
+        case `SELECT current_setting('server_version_num')::INT`: return version;
+        default: throw new Error('Unexpected query: ' + JSON.stringify(query));
+      }
+    }
+  };
+}
 
 describe.only('external/postgres', () => {
   describe('validateDb()', () => {
@@ -8,7 +22,7 @@ describe.only('external/postgres', () => {
     beforeEach(() => {
       mockProcess = {
         exit(statusCode) {
-          if(this.exitCode !== undefined) throw new Error('process.exit() called multiple times');
+          if (this.exitCode !== undefined) throw new Error('process.exit() called multiple times');
           this.exitCode = statusCode;
           throw new Error(`process.exit(${statusCode})`);
         }
@@ -18,9 +32,9 @@ describe.only('external/postgres', () => {
         logged: [],
         error(timestamp, prefix, ...message) {
           if (prefix === undefined) {
-            const lines = timestamp
+            timestamp
               .split('\n')
-              .map(line => {
+              .forEach(line => {
                 const [ _ts, _prefix, ..._message ] = line.split(' ');
                 this._appendLogLine(_ts, _prefix, _message);
               });
@@ -30,7 +44,6 @@ describe.only('external/postgres', () => {
         },
 
         _appendLogLine(timestamp, prefix, message) {
-          console.log('mockConsole._appendLogLine()', { timestamp, prefix, message });
           timestamp.should.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
           prefix.should.eql('[central-backend|validateDb]');
           this.logged.push(message.join(' '));
@@ -39,7 +52,7 @@ describe.only('external/postgres', () => {
     });
 
     it('should exit with error if simple query fails', async () => {
-      await validateDb(mockProcess, mockConsole, { async oneFirst(...args) { console.log('oneFirst()', args); throw new Error('connection failed') } })
+      await validateDb(mockProcess, mockConsole, { async oneFirst() { throw new Error('connection failed'); } })
         .should
         .be
         .rejectedWith('process.exit(1)');
@@ -59,7 +72,7 @@ describe.only('external/postgres', () => {
     it('should exit cleanly if version check fails', async () => {
       await validateDb(mockProcess, mockConsole, {
         async oneFirst(query) {
-          if(query.sql === 'SELECT 1') return 1;
+          if (query.sql === 'SELECT 1') return 1;
           else throw new Error('unexpected DB error');
         }
       })
@@ -161,15 +174,3 @@ describe.only('external/postgres', () => {
     });
   });
 });
-
-function mockPostgresWithVersion(version) {
-  return {
-    async oneFirst(query) {
-      switch(query.sql) {
-        case 'SELECT 1': return 1;
-        case `SELECT current_setting('server_version_num')::INT`: return version;
-        default: throw new Error('Unexpected query: ' + JSON.stringify(query));
-      }
-    }
-  };
-}
