@@ -56,6 +56,31 @@ describe.only('external/postgres', () => {
       should(mockProcess.exitCode).eql(1);
     });
 
+    it('should exit cleanly if version check fails', async () => {
+      await validateDb(mockProcess, mockConsole, {
+        async oneFirst(query) {
+          if(query.sql === 'SELECT 1') return 1;
+          else throw new Error('unexpected DB error');
+        }
+      })
+        .should
+        .be
+        .rejectedWith('process.exit(1)');
+
+      mockConsole.logged.should.deepEqual([
+        'Testing database connection...',
+        'Connection OK.',
+        'Checking PostgreSQL version...',
+        '',
+        'ERROR: startup failed:',
+        '',
+        'unexpected DB error',
+        '',
+      ]);
+
+      should(mockProcess.exitCode).eql(1);
+    });
+
     it('should exit with error if major version is too low', async () => {
       await validateDb(mockProcess, mockConsole, mockPostgresWithVersion(120034))
         .should
