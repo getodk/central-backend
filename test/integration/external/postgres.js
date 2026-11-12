@@ -2,7 +2,7 @@ const { testContainer } = require('../setup');
 
 const { validateDb } = require('../../../lib/external/postgres');
 
-describe('external/postgres', () => {
+describe.only('external/postgres', () => {
   describe('validateDb()', () => {
     it('should succeed with expected logging for correctly-configured db', testContainer(async ({ oneFirst }) => {
       // given
