@@ -120,6 +120,20 @@ describe.only('external/postgres', () => {
 
       should(mockProcess.exitCode).be.undefined();
     });
+
+    it('should not warn if expected value is found', async () => {
+      await validateDb(mockProcess, mockConsole, mockPostgresWithVersion(140023));
+
+      mockConsole.logged.should.deepEqual([
+        'Testing database connection...',
+        'Connection OK.',
+        'Checking PostgreSQL version...',
+        'PostgreSQL version OK.',
+        '',
+      ]);
+
+      should(mockProcess.exitCode).be.undefined();
+    });
   });
 });
 
