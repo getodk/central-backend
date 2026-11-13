@@ -127,16 +127,14 @@ describe.only('external/postgres', () => {
       should(mockProcess.exitCode).be.undefined();
     });
 
-    it('should warn if minor version is too high', async () => {
+    it('should not warn if minor version is too high', async () => {
       await validateDb(mockProcess, mockConsole, mockPostgresWithVersion(140024));
 
       mockConsole.logged.should.deepEqual([
         'Testing database connection...',
         'Connection OK.',
         'Checking PostgreSQL version...',
-        '',
-        'Expected PostgreSQL v14.23 but found NEWER version: v14.24.',
-        '',
+        'PostgreSQL version OK.',
       ]);
 
       should(mockProcess.exitCode).be.undefined();
@@ -149,9 +147,7 @@ describe.only('external/postgres', () => {
         'Testing database connection...',
         'Connection OK.',
         'Checking PostgreSQL version...',
-        '',
-        'Expected PostgreSQL v14.23 but found NEWER version: v15.12.',
-        '',
+        'WARN: Expected PostgreSQL v14.23 but found NEWER version: v15.12.  This may have unexpected effects.',
       ]);
 
       should(mockProcess.exitCode).be.undefined();
@@ -165,7 +161,6 @@ describe.only('external/postgres', () => {
         'Connection OK.',
         'Checking PostgreSQL version...',
         'PostgreSQL version OK.',
-        '',
       ]);
 
       should(mockProcess.exitCode).be.undefined();
