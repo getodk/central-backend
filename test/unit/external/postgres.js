@@ -98,8 +98,8 @@ describe('external/postgres', () => {
 
     describe('OK versions', () => {
       [
-        [ 140023, 'correct version' ],
-        [ 140024, 'minor version higher than expected' ],
+        [ 180006, 'correct version' ],
+        [ 180007, 'minor version higher than expected' ],
       ].forEach(([ version, description ]) => {
         it(`should not warn if ${description} (${version})`, async () => {
           await validateDb(mockProcess, mockConsole, mockPostgresWithVersion(version));
@@ -118,8 +118,8 @@ describe('external/postgres', () => {
 
     describe('Warnable versions', () => {
       [
-        [ 140022, 'OLDER version: v14.22.  Please upgrade to the expected version.', 'minor version too low' ],
-        [ 150012, 'NEWER version: v15.12.  This may have unexpected effects.', 'major version higher than expected' ],
+        [ 180005, 'OLDER version: v18.5.  Please upgrade to the expected version.', 'minor version too low' ],
+        [ 190012, 'NEWER version: v19.12.  This may have unexpected effects.', 'major version higher than expected' ],
       ].forEach(([ version, warning, description ]) => {
         it(`should not warn if ${description} (${version})`, async () => {
           await validateDb(mockProcess, mockConsole, mockPostgresWithVersion(version));
@@ -128,7 +128,7 @@ describe('external/postgres', () => {
             'Testing database connection...',
             'Connection OK.',
             'Checking PostgreSQL version...',
-            `WARN: Expected PostgreSQL v14.23 but found ${warning}`,
+            `WARN: Expected PostgreSQL v18.6 but found ${warning}`,
           ]);
 
           should(mockProcess.exitCode).be.undefined();
@@ -150,7 +150,7 @@ describe('external/postgres', () => {
           '',
           'ERROR:',
           '',
-          '    Expected PostgreSQL v14.23 but found OLDER version: v12.34.  Please upgrade to the expected version.',
+          '    Expected PostgreSQL v18.6 but found OLDER version: v12.34.  Please upgrade to the expected version.',
           '',
         ]);
 
