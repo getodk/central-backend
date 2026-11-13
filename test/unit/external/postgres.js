@@ -121,9 +121,7 @@ describe.only('external/postgres', () => {
         'Testing database connection...',
         'Connection OK.',
         'Checking PostgreSQL version...',
-        '',
-        'Expected PostgreSQL v14.23 but found OLDER version: v14.1.  Please upgrade to the expected version.',
-        '',
+        'WARN: Expected PostgreSQL v14.23 but found OLDER version: v14.1.  Please upgrade to the expected version.',
       ]);
 
       should(mockProcess.exitCode).be.undefined();
