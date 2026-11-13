@@ -6,7 +6,7 @@ set -o pipefail
 log() { echo >&2 "[docker-postgres] $*"; }
 
 imageName=odk-central-backend-dev-postgres
-PG_VERSION="${PG_VERSION-18}"
+PG_VERSION="${PG_VERSION-18.4}"
 
 enableSsl=
 if [[ "${1-}" = --ssl ]]; then

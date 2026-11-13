@@ -30,7 +30,7 @@ describe('external/postgres', () => {
         'Testing database connection...',
         'Connection OK.',
         'Checking PostgreSQL version...',
-        'WARN: Expected PostgreSQL v14.23 but found NEWER version: v18.6.  This may have unexpected effects.',
+        'PostgreSQL version OK.',
       ]);
     }));
   });

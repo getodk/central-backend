@@ -118,7 +118,7 @@ describe('external/postgres', () => {
 
     describe('Warnable versions', () => {
       [
-        [ 180003, 'OLDER version: v18.5.  Please upgrade to the expected version.', 'minor version too low' ],
+        [ 180003, 'OLDER version: v18.3.  Please upgrade to the expected version.', 'minor version too low' ],
         [ 190012, 'NEWER version: v19.12.  This may have unexpected effects.', 'major version higher than expected' ],
       ].forEach(([ version, warning, description ]) => {
         it(`should not warn if ${description} (${version})`, async () => {
