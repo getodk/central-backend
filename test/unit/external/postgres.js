@@ -60,16 +60,16 @@ describe.only('external/postgres', () => {
       mockConsole.logged.should.deepEqual([
         'Testing database connection...',
         '',
-        'ERROR: startup failed:',
+        'ERROR:',
         '',
-        'Failed to connect to database: connection failed',
+        '    connection failed',
         '',
       ]);
 
       should(mockProcess.exitCode).eql(1);
     });
 
-    it('should exit cleanly if version check fails', async () => {
+    it('should exit with error if version check query throws', async () => {
       await validateDb(mockProcess, mockConsole, {
         async oneFirst(query) {
           if (query.sql === 'SELECT 1') return 1;
@@ -85,9 +85,9 @@ describe.only('external/postgres', () => {
         'Connection OK.',
         'Checking PostgreSQL version...',
         '',
-        'ERROR: startup failed:',
+        'ERROR:',
         '',
-        'unexpected DB error',
+        '    unexpected DB error',
         '',
       ]);
 
@@ -105,9 +105,9 @@ describe.only('external/postgres', () => {
         'Connection OK.',
         'Checking PostgreSQL version...',
         '',
-        'ERROR: startup failed:',
+        'ERROR:',
         '',
-        'Expected PostgreSQL v14.23 but found OLDER version: v12.34.  Please upgrade to the expected version.',
+        '    Expected PostgreSQL v14.23 but found OLDER version: v12.34.  Please upgrade to the expected version.',
         '',
       ]);
 
