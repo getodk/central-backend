@@ -14,7 +14,7 @@ function mockPostgresWithVersion(version) {
   };
 }
 
-describe.only('external/postgres', () => {
+describe('external/postgres', () => {
   describe('validateDb()', () => {
     let mockProcess;
     let mockConsole;
