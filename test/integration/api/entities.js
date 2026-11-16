@@ -3449,8 +3449,9 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should reject bulk updates including a deleted entity', testDataset(async (service) => {
+    it('should reject bulk updates including a deleted entity', testServiceFullTrx(async (service) => {
       const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
       const uuids = await createEntities(asAlice, 2, 1, 'people', [], null, 'v1 label');
 
       await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
@@ -3473,9 +3474,11 @@ describe('Entities API', () => {
             }
           ]
         })
-        .expect(200);
-      // Note: This request currently succeeds but the deleted entity silently fails to update.
-      // In a future PR, we'll reject the above request when it refrences a deleted UUID.
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.25);
+          body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
+        });
 
       // Deleted entity was skipped
       await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}?deleted=true`)
@@ -3485,12 +3488,12 @@ describe('Entities API', () => {
           person.currentVersion.version.should.equal(1);
         });
 
-      // Active entity was still updated
+      // Active entity was also not updated
       await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[1]}`)
         .expect(200)
         .then(({ body: person }) => {
-          person.currentVersion.label.should.equal('active entity update');
-          person.currentVersion.version.should.equal(2);
+          person.currentVersion.label.should.equal('v1 label');
+          person.currentVersion.version.should.equal(1);
         });
     }));
 
@@ -3527,9 +3530,11 @@ describe('Entities API', () => {
           source: { name: 'update.csv' },
           updates: [{ uuid, label: 'Updated flower label' }]
         })
-        .expect(200);
-      // TODO: return an error instead when attempting to update an entity in the wrong dataset
-      // currently, it just skips that entity.
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.25);
+          body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
+        });
 
       await asAlice.get(`/v1/projects/1/datasets/flowers/entities/${uuid}`)
         .expect(200)
