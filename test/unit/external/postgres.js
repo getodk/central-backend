@@ -6,18 +6,20 @@ const {
   validateDb,
 } = require('../../../lib/external/postgres');
 
+const fromDb = extensions => extensions.map(([ name, version ]) => ({ name, version }));
+
 function mockPostgresWithVersion(version) {
   return {
-    async oneFirst(query) {
+    oneFirst(query) {
       switch (query.sql) {
         case 'SELECT 1': return 1;
         case `SELECT current_setting('server_version_num')::INT`: return version;
         default: throw new Error('Unexpected query: ' + JSON.stringify(query));
       }
     },
-    async any(query) {
+    any(query) {
       switch (query.sql) {
-        case 'SELECT extname AS name, extversion AS version FROM pg_extension': return _expectedExtensions;
+        case 'SELECT extname AS name, extversion AS version FROM pg_extension': return fromDb(_expectedExtensions);
         default: throw new Error('Unexpected query: ' + JSON.stringify(query));
       }
     },
@@ -60,7 +62,7 @@ describe.only('external/postgres', () => {
     };
   });
 
-  const mockActualExtensions = extensions => () => extensions.map(([ name, version ]) => ({ name, version }));
+  const mockActualExtensions = extensions => () => fromDb(extensions);
 
   describe('_checkExtensionVersions()', () => {
     [
@@ -162,6 +164,9 @@ describe.only('external/postgres', () => {
             'Connection OK.',
             'Checking PostgreSQL version...',
             'PostgreSQL version OK.',
+            'Checking PostgreSQL extensions...',
+            'All expected extensions were found; checking version numbers...',
+            'PostgreSQL extensions look OK.',
           ]);
 
           should(mockProcess.exitCode).be.undefined();
@@ -182,6 +187,9 @@ describe.only('external/postgres', () => {
             'Connection OK.',
             'Checking PostgreSQL version...',
             `WARN: Expected PostgreSQL v18.4 but found ${warning}`,
+            'Checking PostgreSQL extensions...',
+            'All expected extensions were found; checking version numbers...',
+            'PostgreSQL extensions look OK.',
           ]);
 
           should(mockProcess.exitCode).be.undefined();
