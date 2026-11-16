@@ -75,12 +75,30 @@ describe('api: /projects/:id/assignments/forms', () => {
           verify(result, eleanor.id, 'withrepeat', appUserRoleId);
         })));
 
+    it('should report tokenActive as false for a web user despite an active session', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: alice } = await asAlice.get('/v1/users/current').expect(200);
+
+      await asAlice.post(`/v1/projects/1/forms/simple/assignments/manager/${alice.id}`)
+        .expect(200);
+
+      const { body } = await asAlice.get('/v1/projects/1/assignments/forms')
+        .set('X-Extended-Metadata', true)
+        .expect(200);
+      const assignment = body.find(({ actor }) => actor.id === alice.id);
+
+      assignment.should.not.equal(undefined);
+      assignment.tokenActive.should.equal(false);
+    }));
+
     it('should return extended assignments on forms', testService((service) =>
       doAssigns(service, '/v1/projects/1/assignments/forms', true)
         .then(({ chelsea, david, eleanor, appUserRoleId, managerRoleId, result }) => {
           result.length.should.equal(3);
-
-          for (const assignment of result) assignment.actor.should.be.an.Actor();
+          for (const assignment of result) {
+            assignment.actor.should.be.an.Actor();
+            assignment.should.have.property('tokenActive');
+          }
 
           verifyExtended(result, chelsea.id, 'simple', managerRoleId);
           verifyExtended(result, david.id, 'simple', appUserRoleId);
@@ -118,6 +136,30 @@ describe('api: /projects/:id/assignments/forms', () => {
           verifyExtended(result, david.id, 'simple', appUserRoleId);
           verifyExtended(result, eleanor.id, 'withrepeat', appUserRoleId);
         })));
+
+    it('should report token status for active and revoked app users', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      const { body: david } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'david' })
+        .expect(200);
+      const { body: eleanor } = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'eleanor' })
+        .expect(200);
+
+      await asAlice.post(`/v1/projects/1/forms/simple/assignments/app-user/${david.id}`)
+        .expect(200);
+      await asAlice.post(`/v1/projects/1/forms/withrepeat/assignments/app-user/${eleanor.id}`)
+        .expect(200);
+
+      await asAlice.delete(`/v1/sessions/${david.token}`).expect(200);
+
+      const { body } = await asAlice.get('/v1/projects/1/assignments/forms/app-user')
+        .set('X-Extended-Metadata', 'true')
+        .expect(200);
+      body.length.should.equal(2);
+      body.find(({ actor }) => actor.id === david.id).tokenActive.should.equal(false);
+      body.find(({ actor }) => actor.id === eleanor.id).tokenActive.should.equal(true);
+    }));
 
     describe('public-link role', () => {
       it('should return projects assignments for public links with associated forms', testService(async (service) => {
@@ -159,10 +201,13 @@ describe('api: /projects/:id/assignments/forms', () => {
           .expect(200);
 
         await asAlice.get('/v1/projects/1/assignments/forms/pub-link')
+          .set('X-Extended-Metadata', 'true')
           .expect(200)
           .then(({ body }) => {
             body.length.should.eql(2);
             body.map(p => p.xmlFormId).should.eql(['simple', 'withrepeat']);
+            body.find(p => p.xmlFormId === 'simple').tokenActive.should.equal(false);
+            body.find(p => p.xmlFormId === 'withrepeat').tokenActive.should.equal(true);
           });
 
         // Delete the public link

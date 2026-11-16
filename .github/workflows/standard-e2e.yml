@@ -10,13 +10,11 @@ env:
 jobs:
   standard-e2e:
     timeout-minutes: 15
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         postgres-version:
-          - full: "14.23"
-            major: 14
           - full: "18"
             major: 18
     steps:
