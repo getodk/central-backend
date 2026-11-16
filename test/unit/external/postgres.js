@@ -1,6 +1,10 @@
 const should = require('should');
 
-const { validateDb } = require('../../../lib/external/postgres');
+const {
+  _expectedExtensions,
+  _checkExtensionVersions,
+  validateDb,
+} = require('../../../lib/external/postgres');
 
 function mockPostgresWithVersion(version) {
   return {
@@ -10,53 +14,110 @@ function mockPostgresWithVersion(version) {
         case `SELECT current_setting('server_version_num')::INT`: return version;
         default: throw new Error('Unexpected query: ' + JSON.stringify(query));
       }
-    }
+    },
+    async any(query) {
+      switch (query.sql) {
+        case 'SELECT extname AS name, extversion AS version FROM pg_extension': return _expectedExtensions;
+        default: throw new Error('Unexpected query: ' + JSON.stringify(query));
+      }
+    },
   };
 }
 
-describe('external/postgres', () => {
-  describe('validateDb()', () => {
-    let mockProcess;
-    let mockConsole;
+describe.only('external/postgres', () => {
+  let mockProcess;
+  let mockConsole;
 
-    beforeEach(() => {
-      mockProcess = {
-        exit(statusCode) {
-          if (this.exitCode !== undefined) throw new Error('process.exit() called multiple times');
-          this.exitCode = statusCode;
-          throw new Error(`process.exit(${statusCode})`);
+  beforeEach(() => {
+    mockProcess = {
+      exit(statusCode) {
+        if (this.exitCode !== undefined) throw new Error('process.exit() called multiple times');
+        this.exitCode = statusCode;
+        throw new Error(`process.exit(${statusCode})`);
+      }
+    };
+
+    mockConsole = {
+      logged: [],
+      error(timestamp, prefix, ...message) {
+        if (prefix === undefined) {
+          timestamp
+            .split('\n')
+            .forEach(line => {
+              const [ _ts, _prefix, ..._message ] = line.split(' ');
+              this._appendLogLine(_ts, _prefix, _message);
+            });
+        } else {
+          this._appendLogLine(timestamp, prefix, message);
         }
-      };
+      },
 
-      mockConsole = {
-        logged: [],
-        error(timestamp, prefix, ...message) {
-          if (prefix === undefined) {
-            timestamp
-              .split('\n')
-              .forEach(line => {
-                const [ _ts, _prefix, ..._message ] = line.split(' ');
-                this._appendLogLine(_ts, _prefix, _message);
-              });
-          } else {
-            this._appendLogLine(timestamp, prefix, message);
-          }
-        },
+      _appendLogLine(timestamp, prefix, message) {
+        timestamp.should.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+        prefix.should.eql('[central-backend|validateDb]');
+        this.logged.push(message.join(' '));
+      },
+    };
+  });
 
-        _appendLogLine(timestamp, prefix, message) {
-          timestamp.should.match(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
-          prefix.should.eql('[central-backend|validateDb]');
-          this.logged.push(message.join(' '));
-        },
-      };
+  const mockActualExtensions = extensions => () => extensions.map(([ name, version ]) => ({ name, version }));
+
+  describe('_checkExtensionVersions()', () => {
+    [
+      [],
+      _expectedExtensions,
+    ].forEach((extensions, idx) => {
+      it(`should be OK if all extensions exactly match expectations (Example #${idx+1})`, async () => {
+        await _checkExtensionVersions(
+          mockProcess,
+          mockConsole,
+          mockActualExtensions(extensions),
+          extensions,
+        );
+
+        mockConsole.logged.should.deepEqual([
+          'Checking PostgreSQL extensions...',
+          'All expected extensions were found; checking version numbers...',
+          'PostgreSQL extensions look OK.',
+        ]);
+
+        should(mockProcess.exitCode).be.undefined();
+      });
+    });
+    [
+      //|         expected          |     actual     | missing
+      [ [ ['a','1.2']              ], [],              [ 'a' ] ],
+      [ [ ['a','1.2'], ['b','3.4'] ], [],              [ 'a', 'b' ] ],
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.2'] ], [ 'b' ] ],
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['b','3.4'] ], [ 'a' ] ],
+    ].forEach(([ expected, actual, missing ], idx) => {
+      it(`should ___ if expected extension(s) are missing (Example #${idx+1})`, async () => {
+        await _checkExtensionVersions(
+          mockProcess,
+          mockConsole,
+          mockActualExtensions(actual),
+          expected,
+        )
+          .should.be.rejectedWith('process.exit(1)');
+
+        mockConsole.logged.should.deepEqual([
+          'Checking PostgreSQL extensions...',
+          'ERROR: Missing expected PostgreSQL extension(s):\n\n' + missing.map(name => `  * ${name}`).join('\n'),
+        ]);
+
+        should(mockProcess.exitCode).eql(1);
+      });
     });
 
+  });
+
+  describe('validateDb()', () => {
     describe('fatal errors', () => {
       it('should exit with error if simple query fails', async () => {
         await validateDb(mockProcess, mockConsole, {
           async oneFirst() {
             throw new Error('connection failed');
-          }
+          },
         })
           .should.be.rejectedWith('process.exit(1)');
 
