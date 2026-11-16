@@ -8,7 +8,7 @@ const { getById, createVersion } = require('../../../lib/model/query/entities');
 const { log } = require('../../../lib/model/query/audits');
 const Option = require('../../../lib/util/option');
 const { Entity } = require('../../../lib/model/frames');
-const { createEntities, createConflict } = require('../../util/entities');
+const { createDataset, createEntities, createConflict } = require('../../util/entities');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -2613,6 +2613,34 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should create more than one batch of Entities in bulk', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const entities = Array.from({ length: 1001 }, (_, index) => ({
+        uuid: `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`,
+        label: `Person ${index + 1}`
+      }));
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ source: { name: 'people.csv' }, entities })
+        .expect(200)
+        .then(({ body }) => { body.success.should.be.true(); });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1001);
+          const labels = new Map(body.map(entity => [entity.uuid, entity.currentVersion.label]));
+          entities.forEach(({ uuid, label }) => { labels.get(uuid).should.equal(label); });
+        });
+
+      await asAlice.get('/v1/audits')
+        .expect(200)
+        .then(({ body }) => {
+          body.filter(audit => audit.action === 'entity.bulk.upsert').length.should.equal(1);
+        });
+    }));
+
     it('should generate uuids for entities when no uuid is provided', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -3421,7 +3449,7 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should not update deleted entities in bulk', testDataset(async (service) => {
+    it('should reject bulk updates including a deleted entity', testDataset(async (service) => {
       const asAlice = await service.login('alice');
       const uuids = await createEntities(asAlice, 2, 1, 'people', [], null, 'v1 label');
 
@@ -3449,6 +3477,7 @@ describe('Entities API', () => {
       // Note: This request currently succeeds but the deleted entity silently fails to update.
       // In a future PR, we'll reject the above request when it refrences a deleted UUID.
 
+      // Deleted entity was skipped
       await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}?deleted=true`)
         .expect(200)
         .then(({ body: person }) => {
@@ -3456,6 +3485,7 @@ describe('Entities API', () => {
           person.currentVersion.version.should.equal(1);
         });
 
+      // Active entity was still updated
       await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[1]}`)
         .expect(200)
         .then(({ body: person }) => {
@@ -3484,6 +3514,33 @@ describe('Entities API', () => {
           body.code.should.equal(400.28);
           body.message.should.equal('The entity is invalid. You specified the dataset property [favorite_candy] which does not exist.');
         });
+    }));
+
+    it('should not update an entity in a different dataset by UUID', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'trees');
+      await createDataset(asAlice, 1, 'flowers');
+      const [uuid] = await createEntities(asAlice, 1, 1, 'flowers', [], null, 'Flower label');
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          source: { name: 'update.csv' },
+          updates: [{ uuid, label: 'Updated flower label' }]
+        })
+        .expect(200);
+      // TODO: return an error instead when attempting to update an entity in the wrong dataset
+      // currently, it just skips that entity.
+
+      await asAlice.get(`/v1/projects/1/datasets/flowers/entities/${uuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.label.should.equal('Flower label');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .expect(200)
+        .then(({ body }) => { body.length.should.equal(0); });
     }));
 
     it('should share one source between bulk creates and updates', testDataset(async (service) => {
@@ -3520,6 +3577,39 @@ describe('Entities API', () => {
         userAgent: null
       });
       createdSource.should.eql(updatedSource);
+    }));
+
+    it('should create one bulk upsert audit event for creates, updates, and mixed requests', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 2, 1, 'people', [], { first_name: 'Alice' }, 'Original label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people_create.csv' },
+          entities: [{ label: 'Created one' }, { label: 'Created two' }]
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people_update.csv' },
+          updates: [{ uuid: uuids[0], label: 'Updated one' }, { uuid: uuids[1], label: 'Updated two' }]
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people_mixed.csv' },
+          entities: [{ label: 'Mixed create' }],
+          updates: [{ uuid: uuids[0], label: 'Mixed update' }]
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=entity.bulk.upsert')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(3);
+        });
     }));
 
     it('should increment the version in the bulk update', testDataset(async (service) => {
