@@ -62,11 +62,7 @@ describe('external/postgres', () => {
 
         mockConsole.logged.should.deepEqual([
           'Testing database connection...',
-          '',
-          'ERROR:',
-          '',
-          '    connection failed',
-          '',
+          'ERROR: connection failed',
         ]);
 
         should(mockProcess.exitCode).eql(1);
@@ -85,11 +81,7 @@ describe('external/postgres', () => {
           'Testing database connection...',
           'Connection OK.',
           'Checking PostgreSQL version...',
-          '',
-          'ERROR:',
-          '',
-          '    unexpected DB error',
-          '',
+          'ERROR: unexpected DB error',
         ]);
 
         should(mockProcess.exitCode).eql(1);
@@ -147,11 +139,7 @@ describe('external/postgres', () => {
           'Testing database connection...',
           'Connection OK.',
           'Checking PostgreSQL version...',
-          '',
-          'ERROR:',
-          '',
-          '    Expected PostgreSQL v18.4 but found OLDER version: v12.34.  Please upgrade to the expected version.',
-          '',
+          'ERROR: Expected PostgreSQL v18.4 but found OLDER version: v12.34.  Please upgrade to the expected version.',
         ]);
 
         should(mockProcess.exitCode).eql(1);
