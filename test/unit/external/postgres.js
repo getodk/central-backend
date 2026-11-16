@@ -111,6 +111,8 @@ describe.only('external/postgres', () => {
       });
     });
 
+    // TODO test out of date
+    // TODO test too new
   });
 
   describe('validateDb()', () => {
