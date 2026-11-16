@@ -2967,6 +2967,42 @@ describe('Entities API', () => {
             body[0].action.should.not.equal('entity.bulk.upsert');
           });
       }));
+
+      it('should roll back bulk creates if a later batch has a soft-deleted UUID', testServiceFullTrx(async (service) => {
+        const asAlice = await service.login('alice');
+        await createDataset(asAlice, 1, 'people');
+        const deletedUuid = '12345678-1234-4123-8234-123456789abc';
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ uuid: deletedUuid, label: 'Deleted entity' })
+          .expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${deletedUuid}`)
+          .expect(200);
+
+        const entities = Array.from({ length: 1000 }, (_, index) => ({
+          uuid: `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`,
+          label: `Person ${index + 1}`
+        }));
+        entities.push({ uuid: deletedUuid, label: 'Person 1001' });
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ source: { name: 'people.csv' }, entities })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.19);
+            body.message.should.equal(`The following UUID(s) cannot be used because they are associated with deleted Entities: (${deletedUuid}).`);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => { body.should.be.empty(); });
+        await asAlice.get(`/v1/projects/1/datasets/people/entities/${deletedUuid}?deleted=true`)
+          .expect(200)
+          .then(({ body: entity }) => {
+            entity.currentVersion.label.should.equal('Deleted entity');
+            entity.currentVersion.version.should.equal(1);
+          });
+      }));
     });
 
     describe('entity source when created through bulk append', () => {
@@ -3497,6 +3533,75 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should reject bulk updates including a non-existent entity and roll back other updates', testServiceFullTrx(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const [uuid] = await createEntities(asAlice, 1, 1, 'people', [], null, 'v1 label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people_update.csv' },
+          updates: [
+            { uuid, label: 'Updated entity' },
+            { uuid: NONEXISTENT_ENTITY, label: 'Non-existent entity' }
+          ]
+        })
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.25);
+          body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuid}`)
+        .expect(200)
+        .then(({ body: entity }) => {
+          entity.currentVersion.label.should.equal('v1 label');
+          entity.currentVersion.version.should.equal(1);
+        });
+    }));
+
+    it('should roll back bulk updates when a non-existent UUID is in a later batch', testServiceFullTrx(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+
+      // Create 1000 entities to be able to update them later
+      const uuids = Array.from({ length: 1000 }, (_, index) =>
+        `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`);
+      const entities = uuids.map((uuid, index) => ({
+        uuid,
+        label: `Original ${index + 1}`
+      }));
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ source: { name: 'people_create.csv' }, entities })
+        .expect(200);
+
+      // Update all 1000 entitites including one non-existent one (processed in a second batch)
+      const updates = uuids.map((uuid, index) => ({
+        uuid,
+        label: `Updated ${index + 1}`
+      }));
+      updates.push({ uuid: NONEXISTENT_ENTITY, label: 'Non-existent entity' });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ source: { name: 'people_update.csv' }, updates })
+        .expect(409)
+        .then(({ body }) => {
+          body.code.should.equal(409.25);
+          body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1000);
+          const currentVersions = new Map(body.map(({ uuid, currentVersion }) =>
+            [uuid, [currentVersion.label, currentVersion.version]]));
+          entities.forEach(({ uuid, label }) => {
+            currentVersions.get(uuid).should.eql([label, 1]);
+          });
+        });
+    }));
+
     it('should reject bulk update with a property not in the dataset', testDataset(async (service) => {
       const asAlice = await service.login('alice');
       const uuids = await createEntities(asAlice, 1, 1, 'people', [], null, 'v1 label');
@@ -3772,6 +3877,87 @@ describe('Entities API', () => {
           body.currentVersion.data.should.eql({ first_name: 'Alicia', age: '10' });
           should(body.conflict).not.be.null();
         });
+    }));
+  });
+
+  describe('POST /datasets/:name/entities (bulk UUID validation)', () => {
+    it('should reject duplicate create UUIDs', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const uuid = '12345678-1234-4123-8234-123456789abc';
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv' },
+          entities: [
+            { uuid, label: 'First Entity' },
+            { uuid: `UUID:${uuid.toUpperCase()}`, label: 'Second Entity' }
+          ]
+        })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.28);
+          body.message.should.containEql(`UUID (${uuid}) appears more than once in creates`);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => { body.should.eql([]); });
+    }));
+
+    it('should reject duplicate update UUIDs', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const uuid = '12345678-1234-4123-8234-123456789abc';
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid, label: 'Original' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv' },
+          entities: [{ label: 'New Entity' }],
+          updates: [
+            { uuid, label: 'First update' },
+            { uuid: `UUID:${uuid.toUpperCase()}`, label: 'Second update' }
+          ]
+        })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.28);
+          body.message.should.containEql(`UUID (${uuid}) appears more than once`);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          body[0].uuid.should.equal(uuid);
+          body[0].currentVersion.label.should.equal('Original');
+        });
+    }));
+
+    it('should reject UUIDs appearing in both creates and updates', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const uuid = '12345678-1234-4123-8234-123456789abc';
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv' },
+          entities: [{ uuid, label: 'New Entity' }],
+          updates: [{ uuid: `UUID:${uuid.toUpperCase()}`, label: 'Updated Entity' }]
+        })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.28);
+          body.message.should.containEql(`UUID (${uuid}) appears in both creates and updates`);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => { body.should.eql([]); });
     }));
   });
 
