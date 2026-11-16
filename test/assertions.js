@@ -201,6 +201,8 @@ should.Assertion.add('Form', function() {
   if (this.obj.name != null) this.obj.name.should.be.a.String();
   if (this.obj.version != null) this.obj.version.should.be.a.String();
   this.obj.hash.should.be.an.md5Sum();
+  this.obj.autosaveEnabled.should.be.a.Boolean();
+  this.obj.webformsEnabled.should.be.a.Boolean();
 });
 
 should.Assertion.add('ExtendedForm', function() {
