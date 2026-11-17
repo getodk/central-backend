@@ -19,6 +19,7 @@ jobs:
             major: 18
     steps:
     - uses: actions/checkout@v6
+    - uses: ./.github/actions/relegate-azure-mirrors
     - name: Set node version
       uses: actions/setup-node@v6
       with:
