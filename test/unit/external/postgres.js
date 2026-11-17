@@ -1,10 +1,10 @@
 const should = require('should');
 
-const {
+const { // eslint-disable-line object-curly-newline
   _expectedExtensions,
   _checkExtensionVersions,
   validateDb,
-} = require('../../../lib/external/postgres');
+} = require('../../../lib/external/postgres'); // eslint-disable-line object-curly-newline
 
 const fromDb = extensions => extensions.map(([ name, version ]) => ({ name, version }));
 
@@ -26,7 +26,7 @@ function mockPostgresWithVersion(version) {
   };
 }
 
-describe.only('external/postgres', () => {
+describe('external/postgres', () => {
   let mockProcess;
   let mockConsole;
 
@@ -89,10 +89,10 @@ describe.only('external/postgres', () => {
 
     [
       //|         expected          |     actual     | missing
-      [ [ ['a','1.2']              ], [],              [ 'a' ] ],
-      [ [ ['a','1.2'], ['b','3.4'] ], [],              [ 'a', 'b' ] ],
-      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.2'] ], [ 'b' ] ],
-      [ [ ['a','1.2'], ['b','3.4'] ], [ ['b','3.4'] ], [ 'a' ] ],
+      [ [ ['a','1.2']              ], [],              [ 'a' ] ],      // eslint-disable-line comma-spacing,no-multi-spaces
+      [ [ ['a','1.2'], ['b','3.4'] ], [],              [ 'a', 'b' ] ], // eslint-disable-line comma-spacing,no-multi-spaces
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.2'] ], [ 'b' ] ],      // eslint-disable-line comma-spacing,no-multi-spaces
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['b','3.4'] ], [ 'a' ] ],      // eslint-disable-line comma-spacing,no-multi-spaces
     ].forEach(([ expected, actual, missing ], idx) => {
       it(`should fail if expected extension(s) are missing (Example #${idx+1})`, async () => {
         await _checkExtensionVersions(
@@ -114,10 +114,10 @@ describe.only('external/postgres', () => {
 
     [
       //|         expected          |            actual            |        out-of-date
-      [ [ ['a','1.2']              ], [ ['a','1.1'] ],               [ [ 'a', '1.2', '1.1' ] ] ],
-      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.1'], ['b', '3.4'] ], [ [ 'a', '1.2', '1.1' ] ] ],
-      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.2'], ['b', '3.3'] ], [ [ 'b', '3.4', '3.3' ] ] ],
-      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.1'], ['b', '3.3'] ], [ [ 'a', '1.2', '1.1' ], [ 'b', '3.4', '3.3' ] ] ],
+      [ [ ['a','1.2']              ], [ ['a','1.1'] ],               [ [ 'a', '1.2', '1.1' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.1'], ['b', '3.4'] ], [ [ 'a', '1.2', '1.1' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.2'], ['b', '3.3'] ], [ [ 'b', '3.4', '3.3' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.1'], ['b', '3.3'] ], [ [ 'a', '1.2', '1.1' ], [ 'b', '3.4', '3.3' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
     ].forEach(([ expected, actual, outOfDate ], idx) => {
       it(`should fail if expected extension(s) are out-of-date (Example #${idx+1})`, async () => {
         await _checkExtensionVersions(
@@ -143,10 +143,10 @@ describe.only('external/postgres', () => {
 
     [
       //|         expected          |             actual             |        too-fresh
-      [ [ ['a','1.2']              ], [ ['a','1.12'] ],                [ [ 'a', '1.2', '1.12' ] ] ],
-      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.12'], ['b', '3.4']  ], [ [ 'a', '1.2', '1.12' ] ] ],
-      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.2'],  ['b', '3.13'] ], [ [ 'b', '3.4', '3.13' ] ] ],
-      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.12'], ['b', '3.13'] ], [ [ 'a', '1.2', '1.12' ], [ 'b', '3.4', '3.13' ] ] ],
+      [ [ ['a','1.2']              ], [ ['a','1.12'] ],                [ [ 'a', '1.2', '1.12' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.12'], ['b', '3.4']  ], [ [ 'a', '1.2', '1.12' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.2'],  ['b', '3.13'] ], [ [ 'b', '3.4', '3.13' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
+      [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.12'], ['b', '3.13'] ], [ [ 'a', '1.2', '1.12' ], [ 'b', '3.4', '3.13' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
     ].forEach(([ expected, actual, tooFresh ], idx) => {
       it(`should warn if expected extension(s) are out-of-date (Example #${idx+1})`, async () => {
         await _checkExtensionVersions(
