@@ -567,7 +567,7 @@ describe('Entities from Repeats', () => {
         });
     }));
 
-    it('does not create an entity on approval when the submission already updated another entity', testService(async (service, container) => {
+    it('creates an entity on approval when the submission already updated another entity', testService(async (service, container) => {
       const asAlice = await service.login('alice');
       const existingUuid = '11111111-1111-4111-8111-111111111111';
       const newUuid = '22222222-2222-4222-8222-222222222222';
@@ -637,15 +637,19 @@ describe('Entities from Repeats', () => {
 
       await exhaust(container);
 
-      // The existing entity action prevents the submission from being processed again.
+      // Approval creates the new entity without applying the update again.
       await asAlice.get(`/v1/projects/1/datasets/trees/entities/${newUuid}`)
-        .expect(404);
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.label.should.equal('Chestnut');
+        });
       await asAlice.get(`/v1/projects/1/datasets/trees/entities/${existingUuid}`)
         .expect(200)
         .then(({ body }) => body.currentVersion.version.should.equal(2));
     }));
 
-    it('does not create an approval-required entity when the submission already created one in another list', testService(async (service, container) => {
+    it('creates an approval-required entity when the submission already created one in another list', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       // Creates farms and famers datasets
@@ -681,11 +685,12 @@ describe('Entities from Repeats', () => {
 
       await exhaust(container);
 
-      // Approval does not create the farm because the submission already created the farmer.
+      // Approval creates the farm without creating the farmer again.
       await asAlice.get('/v1/projects/1/datasets/farms/entities/94ca23e4-6050-4699-97cc-2588ca6c1a0e')
-        .expect(404);
+        .expect(200)
+        .then(({ body }) => body.currentVersion.label.should.equal('Farm 123'));
 
-      // Switching to creation on receipt and converting pending submissions does not create it either.
+      // Switching to creation on receipt does not create a duplicate.
       await asAlice.patch('/v1/projects/1/datasets/farms?convert=true')
         .send({ approvalRequired: false })
         .expect(200);
@@ -693,7 +698,8 @@ describe('Entities from Repeats', () => {
       await exhaust(container);
 
       await asAlice.get('/v1/projects/1/datasets/farms/entities/94ca23e4-6050-4699-97cc-2588ca6c1a0e')
-        .expect(404);
+        .expect(200)
+        .then(({ body }) => body.currentVersion.version.should.equal(1));
       await asAlice.get('/v1/projects/1/datasets/farmers/entities/fcdb2759-69ef-4b47-b7fd-75170d326c80')
         .expect(200)
         .then(({ body }) => body.currentVersion.version.should.equal(1));
