@@ -566,6 +566,138 @@ describe('Entities from Repeats', () => {
           body.currentVersion.label.should.eql('Chestnut');
         });
     }));
+
+    it('does not create an entity on approval when the submission already updated another entity', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const existingUuid = '11111111-1111-4111-8111-111111111111';
+      const newUuid = '22222222-2222-4222-8222-222222222222';
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Creation requires approval, but updates are applied on submission receipt.
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Create entity to be updated in the submission
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: existingUuid,
+          label: 'Pine',
+          data: { species: 'pine', circumference: '12' }
+        })
+        .expect(200);
+
+      // The first repeat creates a new entity; the second updates the existing one.
+      const submission = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="repeatEntityTrees" version="1">
+        <plot_id>1</plot_id>
+        <tree>
+          <species>chestnut</species>
+          <circumference>22</circumference>
+          <meta>
+            <entity dataset="trees" create="1" id="${newUuid}">
+              <label>Chestnut</label>
+            </entity>
+          </meta>
+        </tree>
+        <tree>
+          <circumference>13</circumference>
+          <meta>
+            <entity dataset="trees" update="1" id="${existingUuid}" baseVersion="1" trunkVersion="" branchId="">
+              <label>Pine - Updated</label>
+            </entity>
+          </meta>
+        </tree>
+        <meta><instanceID>one</instanceID></meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(submission)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Before approval, only the update has been applied.
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${existingUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.label.should.equal('Pine - Updated');
+        });
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${newUuid}`)
+        .expect(404);
+
+      await asAlice.patch('/v1/projects/1/forms/repeatEntityTrees/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      // The existing entity action prevents the submission from being processed again.
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${newUuid}`)
+        .expect(404);
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${existingUuid}`)
+        .expect(200)
+        .then(({ body }) => body.currentVersion.version.should.equal(2));
+    }));
+
+    it('does not create an approval-required entity when the submission already created one in another list', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Creates farms and famers datasets
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.multiEntityFarm)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Farms require approval; farmers are created as soon as the submission arrives.
+      await asAlice.patch('/v1/projects/1/datasets/farms')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // This submission creates one entity in each list.
+      await asAlice.post('/v1/projects/1/forms/multiEntityFarm/submissions')
+        .send(testData.instances.multiEntityFarm.one
+          .replace('<instanceID>uuid:fccb4433-27cc-487c-9d4c-98786a20c5b6</instanceID>', '<instanceID>one</instanceID>'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Only the farmer is created on submission receipt.
+      await asAlice.get('/v1/projects/1/datasets/farmers/entities/fcdb2759-69ef-4b47-b7fd-75170d326c80')
+        .expect(200)
+        .then(({ body }) => body.currentVersion.label.should.equal('Farmer Barb'));
+      await asAlice.get('/v1/projects/1/datasets/farms/entities/94ca23e4-6050-4699-97cc-2588ca6c1a0e')
+        .expect(404);
+
+      await asAlice.patch('/v1/projects/1/forms/multiEntityFarm/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      // Approval does not create the farm because the submission already created the farmer.
+      await asAlice.get('/v1/projects/1/datasets/farms/entities/94ca23e4-6050-4699-97cc-2588ca6c1a0e')
+        .expect(404);
+
+      // Switching to creation on receipt and converting pending submissions does not create it either.
+      await asAlice.patch('/v1/projects/1/datasets/farms?convert=true')
+        .send({ approvalRequired: false })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/farms/entities/94ca23e4-6050-4699-97cc-2588ca6c1a0e')
+        .expect(404);
+      await asAlice.get('/v1/projects/1/datasets/farmers/entities/fcdb2759-69ef-4b47-b7fd-75170d326c80')
+        .expect(200)
+        .then(({ body }) => body.currentVersion.version.should.equal(1));
+    }));
   });
 
   describe('errors, entity sources and backlog', () => {
