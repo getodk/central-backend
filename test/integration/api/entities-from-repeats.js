@@ -922,28 +922,43 @@ describe('Entities from Repeats', () => {
 
       await asAlice.get('/v1/projects/1/forms/repeatEntityTrees/submissions/two/audits')
         .then(({ body }) => {
+          body.length.should.equal(3);
           body[0].action.should.equal('entity.create');
           body[1].action.should.equal('submission.backlog.hold');
+          body[2].action.should.equal('submission.create');
         });
 
       // Submission made 1 entity but also was held in the backlog
       await asAlice.get('/v1/projects/1/datasets/trees/entities')
-        .then(({ body }) => { body.length.should.equal(1); });
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          body[0].uuid.should.equal('f50cdbaf-95af-499c-a3e5-d0aea64248d9'); // freshly created
+        });
 
+      // The submission is in the backlog because the entity to update didn't have a base version
+      // but by processing the backlog, it forces that entity to be processed again as a create.
       await container.Entities.processBacklog(true);
 
       await asAlice.get('/v1/projects/1/forms/repeatEntityTrees/submissions/two/audits')
         .then(({ body }) => {
-          body[0].action.should.equal('submission.backlog.force');
+          body.length.should.equal(5);
+          body[0].action.should.equal('entity.create');
+          body[1].action.should.equal('submission.backlog.force');
+          body[2].action.should.equal('entity.create');
+          body[3].action.should.equal('submission.backlog.hold');
+          body[4].action.should.equal('submission.create');
         });
 
-      // Still only ends up with 1 entity because the other one in the submission
-      // was skipped during the force processing because a submission had already
-      // been used to make a different entity.
-      // This isn't necessarily what we want, but this whole scenario is also
-      // hopefully an edge case.
+      // Now there are two entities because the update has been processed
       await asAlice.get('/v1/projects/1/datasets/trees/entities')
-        .then(({ body }) => { body.length.should.equal(1); });
+        .then(({ body }) => { body.length.should.equal(2); });
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/f73ea0a0-f51f-4d13-a7cb-c2123ba06f34')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.label.should.equal('Pine - Updated');
+        });
     }));
   });
 });

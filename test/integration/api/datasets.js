@@ -7050,7 +7050,7 @@ describe('datasets and entities', () => {
     }));
 
     describe('central issue #547, reprocessing submissions that had previous entity errors', () => {
-      it('should not reprocess submission that previously generated entity.error', testService(async (service, container) => {
+      it('should not reprocess submission that only had metadata (review state changed) after previously generated entity.error', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         // Upload form that creates an entity list and publish it
@@ -7247,6 +7247,10 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
+        // Observe that the entity has now been created by reprocessing the creation sub
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+          .expect(200);
+
         // Observe that the submission that failed to update an entity has not been reprocessed
         await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
           .expect(200)
@@ -7259,6 +7263,9 @@ describe('datasets and entities', () => {
           .then(({ body: versions }) => {
             versions.length.should.equal(1);
           });
+
+        // The update submission is not held in the backlog because it does specify a baseVersion
+        // so it needs a specific event to trigger reprocessing it.
 
         // Edit the submission so the new def will update the entity
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
