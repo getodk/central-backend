@@ -3510,7 +3510,7 @@ describe('Entities API', () => {
             }
           ]
         })
-        .expect(409)
+        .expect(404)
         .then(({ body }) => {
           body.code.should.equal(404.12);
           body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
@@ -3546,7 +3546,7 @@ describe('Entities API', () => {
             { uuid: NONEXISTENT_ENTITY, label: 'Non-existent entity' }
           ]
         })
-        .expect(409)
+        .expect(404)
         .then(({ body }) => {
           body.code.should.equal(404.12);
           body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
@@ -3633,7 +3633,7 @@ describe('Entities API', () => {
           source: { name: 'update.csv' },
           updates: [{ uuid, label: 'Updated flower label' }]
         })
-        .expect(409)
+        .expect(404)
         .then(({ body }) => {
           body.code.should.equal(404.12);
           body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
