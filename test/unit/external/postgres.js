@@ -148,7 +148,7 @@ describe('external/postgres', () => {
       [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.2'],  ['b', '3.13'] ], [ [ 'b', '3.4', '3.13' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
       [ [ ['a','1.2'], ['b','3.4'] ], [ ['a','1.12'], ['b', '3.13'] ], [ [ 'a', '1.2', '1.12' ], [ 'b', '3.4', '3.13' ] ] ], // eslint-disable-line comma-spacing,no-multi-spaces
     ].forEach(([ expected, actual, tooFresh ], idx) => {
-      it(`should warn if expected extension(s) are out-of-date (Example #${idx+1})`, async () => {
+      it(`should warn if expected extension(s) are too new (Example #${idx+1})`, async () => {
         await _checkExtensionVersions(
           mockProcess,
           mockConsole,
