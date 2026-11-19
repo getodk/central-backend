@@ -35,7 +35,6 @@ describe('external/postgres', () => {
         'Checking PostgreSQL extensions...',
         'All expected extensions were found; checking version numbers...',
         'PostgreSQL extensions look OK.',
-
       ]);
     }));
   });
