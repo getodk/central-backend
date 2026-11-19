@@ -71,7 +71,6 @@ describe('external/postgres', () => {
     ].forEach((extensions, idx) => {
       it(`should be OK if all extensions exactly match expectations (Example #${idx+1})`, async () => {
         await _checkExtensionVersions(
-          mockProcess,
           mockConsole,
           mockActualExtensions(extensions),
           extensions,
@@ -82,8 +81,6 @@ describe('external/postgres', () => {
           'All expected extensions were found; checking version numbers...',
           'PostgreSQL extensions look OK.',
         ]);
-
-        should(mockProcess.exitCode).be.undefined();
       });
     });
 
@@ -96,19 +93,15 @@ describe('external/postgres', () => {
     ].forEach(([ expected, actual, missing ], idx) => {
       it(`should fail if expected extension(s) are missing (Example #${idx+1})`, async () => {
         await _checkExtensionVersions(
-          mockProcess,
           mockConsole,
           mockActualExtensions(actual),
           expected,
         )
-          .should.be.rejectedWith('process.exit(1)');
+          .should.be.rejectedWith('Missing expected PostgreSQL extension(s):\n\n' + missing.map(name => `  * ${name}`).join('\n'));
 
         mockConsole.logged.should.deepEqual([
           'Checking PostgreSQL extensions...',
-          'ERROR: Missing expected PostgreSQL extension(s):\n\n' + missing.map(name => `  * ${name}`).join('\n'),
         ]);
-
-        should(mockProcess.exitCode).eql(1);
       });
     });
 
@@ -121,23 +114,21 @@ describe('external/postgres', () => {
     ].forEach(([ expected, actual, outOfDate ], idx) => {
       it(`should fail if expected extension(s) are out-of-date (Example #${idx+1})`, async () => {
         await _checkExtensionVersions(
-          mockProcess,
           mockConsole,
           mockActualExtensions(actual),
           expected,
         )
-          .should.be.rejectedWith('process.exit(1)');
+          .should.be.rejectedWith([
+            'Out-of-date PostgreSQL extension version(s):\n\n' +
+                outOfDate.map(([extension, expectedVersion, actualVersion]) => `  * ${JSON.stringify({ extension, expectedVersion, actualVersion })}`).join('\n') +
+            '\n\n  To update to the latest extension version(s):\n\n' +
+                outOfDate.map(([name]) => `      ALTER EXTENSION "${name}" UPDATE;`).join('\n'),
+          ].join('\n'));
 
         mockConsole.logged.should.deepEqual([
           'Checking PostgreSQL extensions...',
           'All expected extensions were found; checking version numbers...',
-          'ERROR: Out-of-date PostgreSQL extension version(s):\n\n' +
-              outOfDate.map(([extension, expectedVersion, actualVersion]) => `  * ${JSON.stringify({ extension, expectedVersion, actualVersion })}`).join('\n') +
-          '\n\n  To update to the latest extension version(s):\n\n' +
-              outOfDate.map(([name]) => `      ALTER EXTENSION "${name}" UPDATE;`).join('\n'),
         ]);
-
-        should(mockProcess.exitCode).eql(1);
       });
     });
 
@@ -150,7 +141,6 @@ describe('external/postgres', () => {
     ].forEach(([ expected, actual, tooFresh ], idx) => {
       it(`should warn if expected extension(s) are too new (Example #${idx+1})`, async () => {
         await _checkExtensionVersions(
-          mockProcess,
           mockConsole,
           mockActualExtensions(actual),
           expected,
