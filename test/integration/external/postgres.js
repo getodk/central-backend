@@ -4,7 +4,7 @@ const { validateDb } = require('../../../lib/external/postgres');
 
 describe('external/postgres', () => {
   describe('validateDb()', () => {
-    it('should succeed with expected logging for correctly-configured db', testContainer(async ({ db }) => {
+    it('should succeed with expected logging for correctly-configured db', testContainer(async container => {
       // given
       const mockProcess = {
         exit(statusCode) {
@@ -24,7 +24,7 @@ describe('external/postgres', () => {
       };
 
       // when
-      await validateDb(mockProcess, mockConsole, db);
+      await validateDb(mockProcess, mockConsole, container.db);
 
       // then
       mockConsole.logged.should.deepEqual([
