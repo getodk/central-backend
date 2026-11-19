@@ -379,6 +379,16 @@ describe('api: /sessions', () => {
       await service.delete(`/v1/key/${appUser.token}/sessions/current`)
         .expect(403);
     }));
+
+    it('should not allow public links to delete their own sessions', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const publicLinkToken = await asAlice.post('/v1/projects/1/forms/simple/public-links')
+        .send({ displayName: 'test1' })
+        .expect(200)
+        .then(({ body }) => body.token);
+      await service.delete(`/v1/key/${publicLinkToken}/sessions/current`)
+        .expect(403);
+    }));
   });
 
   // this isn't exactly the right place for this but i just want to check the
