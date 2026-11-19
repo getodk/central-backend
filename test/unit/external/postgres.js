@@ -174,7 +174,7 @@ describe('external/postgres', () => {
         await validateDb(mockProcess, mockConsole, {
           async oneFirst() {
             throw new Error('connection failed');
-          },
+          }
         })
           .should.be.rejectedWith('process.exit(1)');
 
