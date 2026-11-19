@@ -118,12 +118,12 @@ describe('external/postgres', () => {
           mockActualExtensions(actual),
           expected,
         )
-          .should.be.rejectedWith([
+          .should.be.rejectedWith(
             'Out-of-date PostgreSQL extension version(s):\n\n' +
                 outOfDate.map(([extension, expectedVersion, actualVersion]) => `  * ${JSON.stringify({ extension, expectedVersion, actualVersion })}`).join('\n') +
             '\n\n  To update to the latest extension version(s):\n\n' +
                 outOfDate.map(([name]) => `      ALTER EXTENSION "${name}" UPDATE;`).join('\n'),
-          ].join('\n'));
+          );
 
         mockConsole.logged.should.deepEqual([
           'Checking PostgreSQL extensions...',
