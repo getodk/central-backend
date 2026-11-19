@@ -380,7 +380,7 @@ describe('api: /sessions', () => {
         .expect(403);
     }));
 
-    it('should not allow public links to delete their own sessions', testService(async (service, container) => {
+    it('should not allow public links to delete their own sessions', testService(async (service) => {
       const asAlice = await service.login('alice');
       const publicLinkToken = await asAlice.post('/v1/projects/1/forms/simple/public-links')
         .send({ displayName: 'test1' })
