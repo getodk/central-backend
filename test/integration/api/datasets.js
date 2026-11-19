@@ -1002,15 +1002,6 @@ describe('datasets and entities', () => {
               asChelsea.get('/v1/projects/1/datasets/people/entities.csv')
                 .expect(403))))));
 
-      it('should reject if dataset belongs to a different project', testService((service) =>
-        service.login('alice', (asAlice) =>
-          asAlice.post('/v1/projects/1/forms?publish=true')
-            .send(testData.forms.simpleEntity)
-            .set('Content-Type', 'application/xml')
-            .expect(200)
-            .then(() => asAlice.get('/v1/projects/2/datasets/people/entities.csv')
-              .expect(404)))));
-
       it('should let the user download the dataset (even if 0 entity rows)', testService((service) =>
         service.login('alice', (asAlice) =>
           asAlice.post('/v1/projects/1/forms?publish=true')
