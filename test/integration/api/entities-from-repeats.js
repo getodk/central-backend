@@ -567,6 +567,7 @@ describe('Entities from Repeats', () => {
         });
     }));
 
+    // getodk/central#2031 (except with manual approval instead of bulk convert)
     it('creates an entity on approval when the submission already updated another entity', testService(async (service, container) => {
       const asAlice = await service.login('alice');
       const existingUuid = '11111111-1111-4111-8111-111111111111';
@@ -649,6 +650,7 @@ describe('Entities from Repeats', () => {
         .then(({ body }) => body.currentVersion.version.should.equal(2));
     }));
 
+    // getodk/central#2031
     it('creates an entity on automatic converting all pending submissions when the submission already updated another entity', testService(async (service, container) => {
       const asAlice = await service.login('alice');
       const existingUuid = '11111111-1111-4111-8111-111111111111';
@@ -733,6 +735,7 @@ describe('Entities from Repeats', () => {
     }));
 
 
+    // getodk/central#1887 (two datasets in one submission)
     it('creates an approval-required entity when the submission already created one in another list', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
