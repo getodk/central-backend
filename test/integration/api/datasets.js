@@ -1692,6 +1692,25 @@ describe('datasets and entities', () => {
           .expect(403);
       }));
 
+      it('should reject if the dataset belongs to a different project', testEntities(async (service) => {
+        const asAlice = await service.login('alice');
+
+        const project2 = await asAlice.post('/v1/projects')
+          .set('Content-Type', 'application/json')
+          .send({ name: 'Additional Project' })
+          .expect(200)
+          .then(({ body }) => body);
+
+        await asAlice.delete('/v1/projects/1/datasets/people')
+          .expect(200);
+
+        const datasetId = await asAlice.get('/v1/projects/1/datasets?deleted=true')
+          .expect(200)
+          .then(({ body }) => body[0].id);
+        await asAlice.get(`/v1/projects/${project2.id}/trash/datasets/${datasetId}/entities.csv`)
+          .expect(404);
+      }));
+
       it('should reject if the dataset is not deleted', testEntities(async (service, container) => {
         const asAlice = await service.login('alice');
         const datasetId = await container.oneFirst(sql`select id from datasets where "name" = 'people'`);
