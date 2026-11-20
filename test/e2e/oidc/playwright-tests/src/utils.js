@@ -27,9 +27,9 @@ const { frontendUrl } = require('./config');
 const SESSION_COOKIE = (frontendUrl.startsWith('https://') ? '__Host-' : '') + 'session';
 
 async function assertErrorRedirect(page, expectedErrorCode) {
-  await page.waitForFunction(expected => {
+  const actualErrorCode = await page.waitForFunction(expectedErrorCode => {
     const { href, hash, search } = window.location;
-    const actual = new URLSearchParams(search).get('oidcError');
+    const errorCode = new URLSearchParams(search).get('oidcError');
 
     console.log(`
       assertErrorRedirect()
@@ -38,8 +38,11 @@ async function assertErrorRedirect(page, expectedErrorCode) {
          expected error code: ${expected}
            actual error code: ${actual}
     `);
-    return actual === expected;
+
+    return errorCode;
   }, expectedErrorCode);
+
+  expect(actualErrorCode).toEqual(expectedErrorCode);
 }
 
 function assertLocation(page, expectedLocation) {
