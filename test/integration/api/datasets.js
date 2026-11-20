@@ -6453,17 +6453,18 @@ describe('datasets and entities', () => {
           .expect(200);
 
         await asAlice.post('/v1/projects/1/forms/simpleEntity/submissions')
-          .send(testData.instances.simpleEntity.two)
+          .send(testData.instances.simpleEntity.two) // uses UUID ending in 'aaa'
           .expect(200);
 
         // send update submissions!
         // this is an update so it will be processed without needing to be approved.
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
-          .send(testData.instances.updateEntity.three)
+          .send(testData.instances.updateEntity.three) // uses UUID ending in 'abc' created above with REST API
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        // this will also process the create entity submission, but it wont make an entity
+        // this will also process the create entity submission, but it wont make an entity because
+        // it hasn't been approved
         await exhaust(container);
 
         // at this point, the main entity has been updated
@@ -6474,34 +6475,36 @@ describe('datasets and entities', () => {
             person.currentVersion.version.should.equal(2);
           });
 
-        // the second entity has not yet been created because it needs submission approval
+        // the entity from simpleEntity.two has not yet been created because it needs submission approval
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
           .expect(404);
 
-        // send next two submission
+        // send next update submission
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
           .send(testData.instances.updateEntity.three
-            .replace('<instanceID>three</instanceID>', '<instanceID>four</instanceID>')
+            .replace('<instanceID>three</instanceID>', '<instanceID>three-2</instanceID>')
             .replace('<age>55</age>', '<age>66</age>'))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        // send next submission
+        // send next update submission
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
           .send(testData.instances.updateEntity.three
-            .replace('<instanceID>three</instanceID>', '<instanceID>five</instanceID>')
+            .replace('<instanceID>three</instanceID>', '<instanceID>three-3</instanceID>')
             .replace('<age>55</age>', '<age>77</age>'))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
-        // exhaust hasn't run yet so the one create submission and two update submissions count as pending
-        // central has no way to know if a submission is a create or update until it reads the submission
+        // exhaust hasn't run yet so the one create submission and three update submissions count as pending
+        // central has no way to know if a submission is a create or update until it reads the submission.
+        // even though one update submission has been applied, it still gets counted and gets another change
+        // to be reprocessed.
         await asAlice.patch('/v1/projects/1/datasets/people')
           .send({ approvalRequired: false })
           .expect(400)
           .then(({ body }) => {
             body.code.should.be.eql(400.29);
-            body.details.count.should.be.eql(3);
+            body.details.count.should.be.eql(4);
           });
 
         await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
@@ -6509,16 +6512,16 @@ describe('datasets and entities', () => {
           .expect(200)
           .then(({ body }) => body.approvalRequired.should.be.false());
 
-        // send another submission
+        // send another update submission
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
           .send(testData.instances.updateEntity.three
-            .replace('<instanceID>three</instanceID>', '<instanceID>six</instanceID>')
+            .replace('<instanceID>three</instanceID>', '<instanceID>three-4</instanceID>')
             .replace('<age>55</age>', '<age>888</age>'))
           .set('Content-Type', 'application/xml')
           .expect(200);
 
         // at this point, none of the new submissions have been processed
-        // the unprocessed audit log looks like this with the datset.update event between some submission events
+        // the unprocessed audit log looks like this with the dataset.update event between some submission events
         const unprocessedAudits = await container.Audits.get(new QueryOptions({ condition: { processed: null } }));
         unprocessedAudits.map(a => a.action).should.eql([
           'submission.create',
@@ -6538,7 +6541,7 @@ describe('datasets and entities', () => {
             updateDetails.length.should.equal(4);
             updateDetails.filter(d => d.source.event.action === 'submission.create').length.should.equal(4);
             updateDetails.map(d => d.source.submission.instanceId).should.eql([
-              'six', 'five', 'four', 'three'
+              'three-4', 'three-3', 'three-2', 'three'
             ]);
           });
 
@@ -7024,6 +7027,16 @@ describe('datasets and entities', () => {
           person.currentVersion.version.should.equal(2);
         });
 
+      // The submission is part of this count because it's not approved
+      // (don't convert yet)
+      await asAlice.patch('/v1/projects/1/datasets/people')
+        .send({ approvalRequired: false })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.29);
+          body.details.count.should.equal(1);
+        });
+
       // Edit the submission
       await asAlice.patch('/v1/projects/1/forms/updateEntity/submissions/one')
         .send(testData.instances.updateEntity.one
@@ -7043,10 +7056,27 @@ describe('datasets and entities', () => {
           person.currentVersion.version.should.equal(2);
         });
 
-      // count return 200 instead of 400 error with pending submission count
+      // The submission is still part of the count
       await asAlice.patch('/v1/projects/1/datasets/people')
         .send({ approvalRequired: false })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.29);
+          body.details.count.should.equal(1);
+        });
+
+      // Convert the submission
+      await asAlice.patch('/v1/projects/1/datasets/people?convert=true')
+        .send({ approvalRequired: false })
         .expect(200);
+
+      // Observe that even though the submission got processed again, nothing changed with the entity
+      await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        .expect(200)
+        .then(({ body: person }) => {
+          person.currentVersion.data.age.should.equal('85');
+          person.currentVersion.version.should.equal(2);
+        });
     }));
 
     describe('central issue #547, reprocessing submissions that had previous entity errors', () => {
