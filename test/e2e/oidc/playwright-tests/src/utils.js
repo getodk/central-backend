@@ -43,7 +43,6 @@ async function assertErrorRedirect(page, expectedErrorCode) {
   }, expectedErrorCode);
 
   const actualErrorCode = await result.jsonValue();
-  result.dispose();
 
   expect(actualErrorCode).toEqual(expectedErrorCode);
 }
