@@ -77,12 +77,12 @@ test('/callback should not trigger Content-Security-Policy', async ({ browserNam
 
 test.describe('redirected errors', () => {
   [
-    [ 'user unknown by central',                'bob',     'auth-ok-user-not-found' ],   // eslint-disable-line no-multi-spaces
-    [ `no 'email' claim provided`,              'dave',    'email-claim-not-provided' ], // eslint-disable-line no-multi-spaces
-    [ `claim 'email_verified' has value false`, 'charlie', 'email-not-verified' ],       // eslint-disable-line no-multi-spaces
-    [ `claim 'email_verified' has value false`, 'esme',    'email-not-verified' ],       // eslint-disable-line no-multi-spaces
-    [ `claim 'email_verified' has value false`, 'fred',    'email-not-verified' ],       // eslint-disable-line no-multi-spaces
-    [ `claim 'email_verified' has value false`, 'geri',    'email-not-verified' ],       // eslint-disable-line no-multi-spaces
+    [ 'user unknown by central',                  'bob',     'auth-ok-user-not-found' ],   // eslint-disable-line no-multi-spaces
+    [ `no 'email' claim provided`,                'dave',    'email-claim-not-provided' ], // eslint-disable-line no-multi-spaces
+    [ `claim 'email_verified' has value false`,   'charlie', 'email-not-verified' ],       // eslint-disable-line no-multi-spaces
+    [ `claim 'email_verified' has value "false"`, 'esme',    'email-not-verified' ],       // eslint-disable-line no-multi-spaces
+    [ `claim 'email_verified' has value 1`,       'fred',    'email-not-verified' ],       // eslint-disable-line no-multi-spaces
+    [ `claim 'email_verified' has value "TRUE"`,  'geri',    'email-not-verified' ],       // eslint-disable-line no-multi-spaces
   ].forEach(([ description, username, expectedError ]) => {
     test(`successful authN, but ${description}`, async ({ browserName, page }, testInfo) => {
       // given
