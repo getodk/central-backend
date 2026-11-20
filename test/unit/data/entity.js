@@ -1656,22 +1656,11 @@ describe('extracting and validating entities', () => {
 
     it('should return source object', () => {
       const source = { name: 'myfile.csv', size: 300 };
-      const count = 99;
-      const userAgent = 'ua';
-      extractBulkSource(source, count, userAgent).should.eql({ name: 'myfile.csv', size: 300, count: 99, userAgent: 'ua' });
-    });
-
-    it('should turn userAgent to null if empty string or null', () => {
-      const source = { name: 'myfile.csv', size: 300 };
-      const count = 99;
-
-      should(extractBulkSource(source, count, '').userAgent).be.null();
-      should(extractBulkSource(source, count, null).userAgent).be.null();
-      extractBulkSource(source, count, ' ').userAgent.should.eql(' ');
+      extractBulkSource(source).should.eql({ name: 'myfile.csv', size: 300 });
     });
 
     it('should reject if source is null', () =>
-      assert.throws(() => { extractBulkSource(null, 0, null); }, (err) => {
+      assert.throws(() => { extractBulkSource(null); }, (err) => {
         err.problemCode.should.equal(400.2);
         err.message.should.equal('Required parameter source missing.');
         return true;
@@ -1679,7 +1668,7 @@ describe('extracting and validating entities', () => {
 
     it('should reject if source does not have a name field', () => {
       const source = { something: 'not name' };
-      assert.throws(() => { extractBulkSource(source, 1, null); }, (err) => {
+      assert.throws(() => { extractBulkSource(source); }, (err) => {
         err.problemCode.should.equal(400.2);
         err.message.should.equal('Required parameter source.name missing.');
         return true;
@@ -1688,7 +1677,7 @@ describe('extracting and validating entities', () => {
 
     it('should reject if source name is not a string', () => {
       const source = { name: 123 };
-      assert.throws(() => { extractBulkSource(source, 1, null); }, (err) => {
+      assert.throws(() => { extractBulkSource(source); }, (err) => {
         err.problemCode.should.equal(400.11);
         err.message.should.equal('Invalid input data type: expected (name) to be (string)');
         return true;
@@ -1697,7 +1686,7 @@ describe('extracting and validating entities', () => {
 
     it('should reject if source size is not a number', () => {
       const source = { name: 'myfile.csv', size: '123' };
-      assert.throws(() => { extractBulkSource(source, 1, null); }, (err) => {
+      assert.throws(() => { extractBulkSource(source); }, (err) => {
         err.problemCode.should.equal(400.11);
         err.message.should.equal('Invalid input data type: expected (size) to be (number)');
         return true;
@@ -1706,7 +1695,7 @@ describe('extracting and validating entities', () => {
 
     it('should allow size to be optional', () => {
       const source = { name: 'myfile.csv' };
-      extractBulkSource(source, 1, 'ua').should.eql({ name: 'myfile.csv', count: 1, userAgent: 'ua' });
+      extractBulkSource(source).should.eql({ name: 'myfile.csv' });
     });
   });
 });
