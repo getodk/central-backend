@@ -6982,7 +6982,7 @@ describe('datasets and entities', () => {
       });
     });
 
-    it('should not let submission edits get caught in pending submission count', testService(async (service, container) => {
+    it('should include submission edits in pending submission count', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       // Upload form that creates an entity list and publish it
@@ -7080,7 +7080,7 @@ describe('datasets and entities', () => {
     }));
 
     describe('central issue #547, reprocessing submissions that had previous entity errors', () => {
-      it('should not reprocess submission that only had metadata (review state changed) after previously generated entity.error', testService(async (service, container) => {
+      it('should reprocess submission that only had metadata (review state changed) after previously generated entity.error', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         // Upload form that creates an entity list and publish it
@@ -7126,15 +7126,16 @@ describe('datasets and entities', () => {
 
         await exhaust(container);
 
-        // Observe that the submission that failed to create an entity has NOT been reprocessed.
-        // There is only one entity.error before the update.
+        // Observe that the submission that failed to create an entity has been reprocessed.
+        // There are now two entity.errors
         await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs.filter((log => log.action === 'entity.error')).length.should.equal(1);
+            logs.filter((log => log.action === 'entity.error')).length.should.equal(2);
 
             const actions = logs.map(log => log.action);
             actions.should.eql([
+              'entity.error', // second processing
               'submission.update', // set to hasIssue
               'entity.error', // first processing
               'submission.update', // approval
@@ -7224,7 +7225,7 @@ describe('datasets and entities', () => {
           });
       }));
 
-      it('should not reprocessed an update caught up in the pending submission scenario ', testService(async (service, container) => {
+      it('should reprocessed an update caught up in the pending submission scenario ', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         // Upload form that creates an entity list and publish it
@@ -7281,48 +7282,18 @@ describe('datasets and entities', () => {
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .expect(200);
 
-        // Observe that the submission that failed to update an entity has not been reprocessed
+        // Observe that the submission that failed to update an entity has been reprocessed successfully
         await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].action.should.equal('entity.error');
+            logs[0].action.should.equal('entity.update.version');
+            logs[1].action.should.equal('entity.error');
           });
 
-        // There was no second update attempt because the entity was not reprocessed
-        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
-          .then(({ body: versions }) => {
-            versions.length.should.equal(1);
-          });
-
-        // The update submission is not held in the backlog because it does specify a baseVersion
-        // so it needs a specific event to trigger reprocessing it.
-
-        // Edit the submission so the new def will update the entity
-        await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
-          .send(testData.instances.updateEntity.one
-            .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
-          .set('Content-Type', 'application/xml')
-          .expect(200);
-
-        await exhaust(container);
-
-        // Observe that now the entity has been updated
+        // There is a second update because the entity was reprocessed
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/versions')
           .then(({ body: versions }) => {
             versions.length.should.equal(2);
-          });
-
-        // Observe that the entity's audit says it was updated by the new edited submission
-        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc/audits')
-          .then(({ body: logs }) => {
-            logs[0].details.source.submission.instanceId.should.equal('one2');
-          });
-
-        // Observe that the submission's audit log makes sense
-        await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one2/audits')
-          .expect(200)
-          .then(({ body: logs }) => {
-            logs[0].action.should.equal('entity.update.version');
           });
       }));
     });
