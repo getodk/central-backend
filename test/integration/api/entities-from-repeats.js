@@ -566,6 +566,231 @@ describe('Entities from Repeats', () => {
           body.currentVersion.label.should.eql('Chestnut');
         });
     }));
+
+    // getodk/central#2031 (except with manual approval instead of bulk convert)
+    it('creates an entity on approval when the submission already updated another entity', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const existingUuid = '11111111-1111-4111-8111-111111111111';
+      const newUuid = '22222222-2222-4222-8222-222222222222';
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Creation requires approval, but updates are applied on submission receipt.
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Create entity to be updated in the submission
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: existingUuid,
+          label: 'Pine',
+          data: { species: 'pine', circumference: '12' }
+        })
+        .expect(200);
+
+      // The first repeat creates a new entity; the second updates the existing one.
+      const submission = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="repeatEntityTrees" version="1">
+        <plot_id>1</plot_id>
+        <tree>
+          <species>chestnut</species>
+          <circumference>22</circumference>
+          <meta>
+            <entity dataset="trees" create="1" id="${newUuid}">
+              <label>Chestnut</label>
+            </entity>
+          </meta>
+        </tree>
+        <tree>
+          <circumference>13</circumference>
+          <meta>
+            <entity dataset="trees" update="1" id="${existingUuid}" baseVersion="1" trunkVersion="" branchId="">
+              <label>Pine - Updated</label>
+            </entity>
+          </meta>
+        </tree>
+        <meta><instanceID>one</instanceID></meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(submission)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Before approval, only the update has been applied.
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${existingUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.label.should.equal('Pine - Updated');
+        });
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${newUuid}`)
+        .expect(404);
+
+      await asAlice.patch('/v1/projects/1/forms/repeatEntityTrees/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      // Approval creates the new entity without applying the update again.
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${newUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.label.should.equal('Chestnut');
+        });
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${existingUuid}`)
+        .expect(200)
+        .then(({ body }) => body.currentVersion.version.should.equal(2));
+    }));
+
+    // getodk/central#2031
+    it('creates an entity on automatic converting all pending submissions when the submission already updated another entity', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const existingUuid = '11111111-1111-4111-8111-111111111111';
+      const newUuid = '22222222-2222-4222-8222-222222222222';
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.repeatEntityTrees)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Creation requires approval, but updates are applied on submission receipt.
+      await asAlice.patch('/v1/projects/1/datasets/trees')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // Create entity to be updated in the submission
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          uuid: existingUuid,
+          label: 'Pine',
+          data: { species: 'pine', circumference: '12' }
+        })
+        .expect(200);
+
+      // The first repeat creates a new entity; the second updates the existing one.
+      const submission = `<data xmlns:jr="http://openrosa.org/javarosa" xmlns:orx="http://openrosa.org/xforms" id="repeatEntityTrees" version="1">
+        <plot_id>1</plot_id>
+        <tree>
+          <species>chestnut</species>
+          <circumference>22</circumference>
+          <meta>
+            <entity dataset="trees" create="1" id="${newUuid}">
+              <label>Chestnut</label>
+            </entity>
+          </meta>
+        </tree>
+        <tree>
+          <circumference>13</circumference>
+          <meta>
+            <entity dataset="trees" update="1" id="${existingUuid}" baseVersion="1" trunkVersion="" branchId="">
+              <label>Pine - Updated</label>
+            </entity>
+          </meta>
+        </tree>
+        <meta><instanceID>one</instanceID></meta>
+      </data>`;
+
+      await asAlice.post('/v1/projects/1/forms/repeatEntityTrees/submissions')
+        .send(submission)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Before approval, only the update has been applied.
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${existingUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(2);
+          body.currentVersion.label.should.equal('Pine - Updated');
+        });
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${newUuid}`)
+        .expect(404);
+
+      // reprocess pending submissions
+      await asAlice.patch('/v1/projects/1/datasets/trees?convert=true')
+        .send({ approvalRequired: false })
+        .expect(200);
+
+      await exhaust(container);
+
+      // Approval creates the new entity without applying the update again.
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${newUuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.label.should.equal('Chestnut');
+        });
+      await asAlice.get(`/v1/projects/1/datasets/trees/entities/${existingUuid}`)
+        .expect(200)
+        .then(({ body }) => body.currentVersion.version.should.equal(2));
+    }));
+
+
+    // getodk/central#1887 (two datasets in one submission)
+    it('creates an approval-required entity when the submission already created one in another list', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+
+      // Creates farms and famers datasets
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.multiEntityFarm)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Farms require approval; farmers are created as soon as the submission arrives.
+      await asAlice.patch('/v1/projects/1/datasets/farms')
+        .send({ approvalRequired: true })
+        .expect(200);
+
+      // This submission creates one entity in each list.
+      await asAlice.post('/v1/projects/1/forms/multiEntityFarm/submissions')
+        .send(testData.instances.multiEntityFarm.one
+          .replace('<instanceID>uuid:fccb4433-27cc-487c-9d4c-98786a20c5b6</instanceID>', '<instanceID>one</instanceID>'))
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      await exhaust(container);
+
+      // Only the farmer is created on submission receipt.
+      await asAlice.get('/v1/projects/1/datasets/farmers/entities/fcdb2759-69ef-4b47-b7fd-75170d326c80')
+        .expect(200)
+        .then(({ body }) => body.currentVersion.label.should.equal('Farmer Barb'));
+      await asAlice.get('/v1/projects/1/datasets/farms/entities/94ca23e4-6050-4699-97cc-2588ca6c1a0e')
+        .expect(404);
+
+      await asAlice.patch('/v1/projects/1/forms/multiEntityFarm/submissions/one')
+        .send({ reviewState: 'approved' })
+        .expect(200);
+
+      await exhaust(container);
+
+      // Approval creates the farm without creating the farmer again.
+      await asAlice.get('/v1/projects/1/datasets/farms/entities/94ca23e4-6050-4699-97cc-2588ca6c1a0e')
+        .expect(200)
+        .then(({ body }) => body.currentVersion.label.should.equal('Farm 123'));
+
+      // Switching to creation on receipt does not create a duplicate.
+      await asAlice.patch('/v1/projects/1/datasets/farms?convert=true')
+        .send({ approvalRequired: false })
+        .expect(200);
+
+      await exhaust(container);
+
+      await asAlice.get('/v1/projects/1/datasets/farms/entities/94ca23e4-6050-4699-97cc-2588ca6c1a0e')
+        .expect(200)
+        .then(({ body }) => body.currentVersion.version.should.equal(1));
+      await asAlice.get('/v1/projects/1/datasets/farmers/entities/fcdb2759-69ef-4b47-b7fd-75170d326c80')
+        .expect(200)
+        .then(({ body }) => body.currentVersion.version.should.equal(1));
+    }));
   });
 
   describe('errors, entity sources and backlog', () => {
@@ -784,28 +1009,43 @@ describe('Entities from Repeats', () => {
 
       await asAlice.get('/v1/projects/1/forms/repeatEntityTrees/submissions/two/audits')
         .then(({ body }) => {
+          body.length.should.equal(3);
           body[0].action.should.equal('entity.create');
           body[1].action.should.equal('submission.backlog.hold');
+          body[2].action.should.equal('submission.create');
         });
 
       // Submission made 1 entity but also was held in the backlog
       await asAlice.get('/v1/projects/1/datasets/trees/entities')
-        .then(({ body }) => { body.length.should.equal(1); });
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          body[0].uuid.should.equal('f50cdbaf-95af-499c-a3e5-d0aea64248d9'); // freshly created
+        });
 
+      // The submission is in the backlog because the entity to update didn't have a base version
+      // but by processing the backlog, it forces that entity to be processed again as a create.
       await container.Entities.processBacklog(true);
 
       await asAlice.get('/v1/projects/1/forms/repeatEntityTrees/submissions/two/audits')
         .then(({ body }) => {
-          body[0].action.should.equal('submission.backlog.force');
+          body.length.should.equal(5);
+          body[0].action.should.equal('entity.create');
+          body[1].action.should.equal('submission.backlog.force');
+          body[2].action.should.equal('entity.create');
+          body[3].action.should.equal('submission.backlog.hold');
+          body[4].action.should.equal('submission.create');
         });
 
-      // Still only ends up with 1 entity because the other one in the submission
-      // was skipped during the force processing because a submission had already
-      // been used to make a different entity.
-      // This isn't necessarily what we want, but this whole scenario is also
-      // hopefully an edge case.
+      // Now there are two entities because the update has been processed
       await asAlice.get('/v1/projects/1/datasets/trees/entities')
-        .then(({ body }) => { body.length.should.equal(1); });
+        .then(({ body }) => { body.length.should.equal(2); });
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities/f73ea0a0-f51f-4d13-a7cb-c2123ba06f34')
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.label.should.equal('Pine - Updated');
+        });
     }));
   });
 });
