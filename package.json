@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@sentry/node": "^10.46.0",
-    "archiver": "^7.0.1",
+    "archiver": "^8.0.0",
     "bcrypt": "^6.0.0",
     "buffer-peek-stream": "^1.1.0",
     "cloneable-readable": "^3.0.0",
