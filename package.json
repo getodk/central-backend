@@ -44,7 +44,7 @@
     "semver": "^7.7.4",
     "slonik": "npm:@getodk/slonik@23.6.2-4",
     "tmp-promise": "~3",
-    "uuid": "^13.0.0",
+    "uuid": "^14.0.3",
     "yauzl": "^3.2.0",
     "zxcvbn": "^4.4.2"
   },
