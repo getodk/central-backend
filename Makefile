@@ -128,7 +128,7 @@ test-unit: node_version
 
 .PHONY: test-coverage
 test-coverage: node_version
-	NODE_CONFIG_ENV=test npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive test
+	NODE_CONFIG_ENV=test npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/mocha --recursive test/unit test/integration
 
 .PHONY: lint
 lint: node_version
