@@ -8,7 +8,7 @@ const { getById, createVersion } = require('../../../lib/model/query/entities');
 const { log } = require('../../../lib/model/query/audits');
 const Option = require('../../../lib/util/option');
 const { Entity } = require('../../../lib/model/frames');
-const { createEntities, createConflict } = require('../../util/entities');
+const { createDataset, createEntities, createConflict } = require('../../util/entities');
 
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 
@@ -2613,6 +2613,34 @@ describe('Entities API', () => {
         });
     }));
 
+    it('should create more than one batch of Entities in bulk', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const entities = Array.from({ length: 1001 }, (_, index) => ({
+        uuid: `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`,
+        label: `Person ${index + 1}`
+      }));
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ source: { name: 'people.csv' }, entities })
+        .expect(200)
+        .then(({ body }) => { body.success.should.be.true(); });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1001);
+          const labels = new Map(body.map(entity => [entity.uuid, entity.currentVersion.label]));
+          entities.forEach(({ uuid, label }) => { labels.get(uuid).should.equal(label); });
+        });
+
+      await asAlice.get('/v1/audits?action=entity.bulk.upsert')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+        });
+    }));
+
     it('should generate uuids for entities when no uuid is provided', testDataset(async (service) => {
       const asAlice = await service.login('alice');
 
@@ -2937,6 +2965,42 @@ describe('Entities API', () => {
         await asAlice.get('/v1/audits')
           .then(({ body }) => {
             body[0].action.should.not.equal('entity.bulk.upsert');
+          });
+      }));
+
+      it('should roll back bulk creates if a later batch has a soft-deleted UUID', testServiceFullTrx(async (service) => {
+        const asAlice = await service.login('alice');
+        await createDataset(asAlice, 1, 'people');
+        const deletedUuid = '12345678-1234-4123-8234-123456789abc';
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ uuid: deletedUuid, label: 'Deleted entity' })
+          .expect(200);
+        await asAlice.delete(`/v1/projects/1/datasets/people/entities/${deletedUuid}`)
+          .expect(200);
+
+        const entities = Array.from({ length: 1000 }, (_, index) => ({
+          uuid: `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`,
+          label: `Person ${index + 1}`
+        }));
+        entities.push({ uuid: deletedUuid, label: 'Person 1001' });
+
+        await asAlice.post('/v1/projects/1/datasets/people/entities')
+          .send({ source: { name: 'people.csv' }, entities })
+          .expect(409)
+          .then(({ body }) => {
+            body.code.should.equal(409.19);
+            body.message.should.equal(`The following UUID(s) cannot be used because they are associated with deleted Entities: (${deletedUuid}).`);
+          });
+
+        await asAlice.get('/v1/projects/1/datasets/people/entities')
+          .expect(200)
+          .then(({ body }) => { body.should.be.empty(); });
+        await asAlice.get(`/v1/projects/1/datasets/people/entities/${deletedUuid}?deleted=true`)
+          .expect(200)
+          .then(({ body: entity }) => {
+            entity.currentVersion.label.should.equal('Deleted entity');
+            entity.currentVersion.version.should.equal(1);
           });
       }));
     });
@@ -3421,8 +3485,9 @@ describe('Entities API', () => {
         });
     }));
 
-    it('should not update deleted entities in bulk', testDataset(async (service) => {
+    it('should reject bulk updates including a deleted entity', testServiceFullTrx(async (service) => {
       const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
       const uuids = await createEntities(asAlice, 2, 1, 'people', [], null, 'v1 label');
 
       await asAlice.delete(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
@@ -3445,10 +3510,13 @@ describe('Entities API', () => {
             }
           ]
         })
-        .expect(200);
-      // Note: This request currently succeeds but the deleted entity silently fails to update.
-      // In a future PR, we'll reject the above request when it refrences a deleted UUID.
+        .expect(404)
+        .then(({ body }) => {
+          body.code.should.equal(404.12);
+          body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
+        });
 
+      // Deleted entity was skipped
       await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}?deleted=true`)
         .expect(200)
         .then(({ body: person }) => {
@@ -3456,11 +3524,79 @@ describe('Entities API', () => {
           person.currentVersion.version.should.equal(1);
         });
 
+      // Active entity was also not updated
       await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[1]}`)
         .expect(200)
         .then(({ body: person }) => {
-          person.currentVersion.label.should.equal('active entity update');
-          person.currentVersion.version.should.equal(2);
+          person.currentVersion.label.should.equal('v1 label');
+          person.currentVersion.version.should.equal(1);
+        });
+    }));
+
+    it('should reject bulk updates including a non-existent entity and roll back other updates', testServiceFullTrx(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const [uuid] = await createEntities(asAlice, 1, 1, 'people', [], null, 'v1 label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people_update.csv' },
+          updates: [
+            { uuid, label: 'Updated entity' },
+            { uuid: NONEXISTENT_ENTITY, label: 'Non-existent entity' }
+          ]
+        })
+        .expect(404)
+        .then(({ body }) => {
+          body.code.should.equal(404.12);
+          body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuid}`)
+        .expect(200)
+        .then(({ body: entity }) => {
+          entity.currentVersion.label.should.equal('v1 label');
+          entity.currentVersion.version.should.equal(1);
+        });
+    }));
+
+    it('should roll back bulk updates when a non-existent UUID is in a later batch', testServiceFullTrx(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+
+      // Create 1000 entities to be able to update them later
+      const uuids = Array.from({ length: 1000 }, (_, index) =>
+        `00000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, '0')}`);
+      const entities = uuids.map((uuid, index) => ({
+        uuid,
+        label: `Original ${index + 1}`
+      }));
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ source: { name: 'people_create.csv' }, entities })
+        .expect(200);
+
+      // Update all 1000 entitites including one non-existent one (processed in a second batch)
+      const updates = uuids.map((uuid, index) => ({
+        uuid,
+        label: `Updated ${index + 1}`
+      }));
+      updates.push({ uuid: NONEXISTENT_ENTITY, label: 'Non-existent entity' });
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ source: { name: 'people_update.csv' }, updates })
+        .expect(404)
+        .then(({ body }) => {
+          body.code.should.equal(404.12);
+          body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1000);
+          body.forEach((entity) => {
+            entity.currentVersion.version.should.equal(1);
+          });
         });
     }));
 
@@ -3484,6 +3620,35 @@ describe('Entities API', () => {
           body.code.should.equal(400.28);
           body.message.should.equal('The entity is invalid. You specified the dataset property [favorite_candy] which does not exist.');
         });
+    }));
+
+    it('should not update an entity in a different dataset by UUID', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'trees');
+      await createDataset(asAlice, 1, 'flowers');
+      const [uuid] = await createEntities(asAlice, 1, 1, 'flowers', [], null, 'Flower label');
+
+      await asAlice.post('/v1/projects/1/datasets/trees/entities')
+        .send({
+          source: { name: 'update.csv' },
+          updates: [{ uuid, label: 'Updated flower label' }]
+        })
+        .expect(404)
+        .then(({ body }) => {
+          body.code.should.equal(404.12);
+          body.message.should.equal('Could not update all entities. Please check that each entity exists in this dataset and has not been deleted.');
+        });
+
+      await asAlice.get(`/v1/projects/1/datasets/flowers/entities/${uuid}`)
+        .expect(200)
+        .then(({ body }) => {
+          body.currentVersion.version.should.equal(1);
+          body.currentVersion.label.should.equal('Flower label');
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/trees/entities')
+        .expect(200)
+        .then(({ body }) => { body.length.should.equal(0); });
     }));
 
     it('should share one source between bulk creates and updates', testDataset(async (service) => {
@@ -3520,6 +3685,39 @@ describe('Entities API', () => {
         userAgent: null
       });
       createdSource.should.eql(updatedSource);
+    }));
+
+    it('should create one bulk upsert audit event for creates, updates, and mixed requests', testDataset(async (service) => {
+      const asAlice = await service.login('alice');
+      const uuids = await createEntities(asAlice, 2, 1, 'people', [], { first_name: 'Alice' }, 'Original label');
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people_create.csv' },
+          entities: [{ label: 'Created one' }, { label: 'Created two' }]
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people_update.csv' },
+          updates: [{ uuid: uuids[0], label: 'Updated one' }, { uuid: uuids[1], label: 'Updated two' }]
+        })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people_mixed.csv' },
+          entities: [{ label: 'Mixed create' }],
+          updates: [{ uuid: uuids[0], label: 'Mixed update' }]
+        })
+        .expect(200);
+
+      await asAlice.get('/v1/audits?action=entity.bulk.upsert')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(3);
+        });
     }));
 
     it('should increment the version in the bulk update', testDataset(async (service) => {
@@ -3677,6 +3875,87 @@ describe('Entities API', () => {
           body.currentVersion.data.should.eql({ first_name: 'Alicia', age: '10' });
           should(body.conflict).not.be.null();
         });
+    }));
+  });
+
+  describe('POST /datasets/:name/entities (bulk UUID validation)', () => {
+    it('should reject duplicate create UUIDs', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const uuid = '12345678-1234-4123-8234-123456789abc';
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv' },
+          entities: [
+            { uuid, label: 'First Entity' },
+            { uuid: `UUID:${uuid.toUpperCase()}`, label: 'Second Entity' }
+          ]
+        })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.28);
+          body.message.should.containEql(`UUID (${uuid}) appears more than once in creates`);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => { body.should.eql([]); });
+    }));
+
+    it('should reject duplicate update UUIDs', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const uuid = '12345678-1234-4123-8234-123456789abc';
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid, label: 'Original' })
+        .expect(200);
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv' },
+          entities: [{ label: 'New Entity' }],
+          updates: [
+            { uuid, label: 'First update' },
+            { uuid: `UUID:${uuid.toUpperCase()}`, label: 'Second update' }
+          ]
+        })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.28);
+          body.message.should.containEql(`UUID (${uuid}) appears more than once`);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => {
+          body.length.should.equal(1);
+          body[0].uuid.should.equal(uuid);
+          body[0].currentVersion.label.should.equal('Original');
+        });
+    }));
+
+    it('should reject UUIDs appearing in both creates and updates', testService(async (service) => {
+      const asAlice = await service.login('alice');
+      await createDataset(asAlice, 1, 'people');
+      const uuid = '12345678-1234-4123-8234-123456789abc';
+
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv' },
+          entities: [{ uuid, label: 'New Entity' }],
+          updates: [{ uuid: `UUID:${uuid.toUpperCase()}`, label: 'Updated Entity' }]
+        })
+        .expect(400)
+        .then(({ body }) => {
+          body.code.should.equal(400.28);
+          body.message.should.containEql(`UUID (${uuid}) appears in both creates and updates`);
+        });
+
+      await asAlice.get('/v1/projects/1/datasets/people/entities')
+        .expect(200)
+        .then(({ body }) => { body.should.eql([]); });
     }));
   });
 
@@ -4731,7 +5010,7 @@ describe('Entities API', () => {
     });
 
     // 10 examples described in central issue #517
-    describe('only take one entity action per submission', () => {
+    describe('only take one entity action per entity per submission', () => {
       // Example 1
       it('should create an entity from submission edited to have create flag', testService(async (service, container) => {
         const asAlice = await service.login('alice');
@@ -4833,7 +5112,7 @@ describe('Entities API', () => {
       }));
 
       // Example 3
-      it('should not create second entity with new uuid from edited submission', testService(async (service, container) => {
+      it('should create second entity with new uuid from edited submission', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4859,14 +5138,20 @@ describe('Entities API', () => {
         await exhaust(container);
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
-          .expect(404);
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '88', first_name: 'Alice' });
+            person.currentVersion.label.should.equal('Alice (88)');
+            person.currentVersion.version.should.equal(1);
+          });
 
         await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].action.should.be.eql('submission.update.version');
-            logs[1].action.should.be.eql('entity.create');
-            logs[2].action.should.be.eql('submission.create');
+            logs[0].action.should.be.eql('entity.create');
+            logs[1].action.should.be.eql('submission.update.version');
+            logs[2].action.should.be.eql('entity.create');
+            logs[3].action.should.be.eql('submission.create');
           });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -4879,8 +5164,8 @@ describe('Entities API', () => {
       }));
 
       // Example 4
-      // update is not well-formed, doesn't include baseVersion, but it doesn't run
-      it('should not update a entity from edited sub if sub already created entity', testService(async (service, container) => {
+      // update is not well-formed, form doesn't permit update, doesn't include baseVersion, but it doesn't run
+      it('should try but fail to update different entity in sub that already created an an entity', testService(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -4909,9 +5194,10 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/forms/simpleEntity/submissions/one/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].action.should.be.eql('submission.update.version');
-            logs[1].action.should.be.eql('entity.create');
-            logs[2].action.should.be.eql('submission.create');
+            logs[0].action.should.be.eql('entity.error');
+            logs[1].action.should.be.eql('submission.update.version');
+            logs[2].action.should.be.eql('entity.create');
+            logs[3].action.should.be.eql('submission.create');
           });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
@@ -4925,6 +5211,7 @@ describe('Entities API', () => {
 
       // Example 5
       it('should not update same entity from edited sub if sub already created entity', testService(async (service, container) => {
+        // Note: this is what some users wish was possible, update a submission to update the same entity
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms?publish=true')
@@ -5013,7 +5300,7 @@ describe('Entities API', () => {
       }));
 
       // Example 7
-      it('should not update different entity when submission previously updated an entity', testEntityUpdates(async (service, container) => {
+      it('should update different entity when submission previously updated an entity', testEntityUpdates(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -5030,10 +5317,13 @@ describe('Entities API', () => {
             person.currentVersion.version.should.equal(2);
           });
 
+        // create extra entity to be updated by new version of submission
+        const uuids = await createEntities(asAlice, 1, 1, 'people');
+
         await asAlice.put('/v1/projects/1/forms/updateEntity/submissions/one')
           .set('Content-Type', 'text/xml')
           .send(testData.instances.updateEntity.one
-            .replace('id="12345678-1234-4123-8234-123456789abc"', 'id="12345678-1234-4123-8234-123456789aaa"')
+            .replace('id="12345678-1234-4123-8234-123456789abc"', `id="${uuids[0]}"`)
             .replace('<instanceID>one', '<deprecatedID>one</deprecatedID><instanceID>one2'))
           .expect(200);
 
@@ -5042,12 +5332,13 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].action.should.be.eql('submission.update.version');
-            logs[1].action.should.be.eql('entity.update.version');
-            logs[2].action.should.be.eql('submission.create');
+            logs[0].action.should.be.eql('entity.update.version');
+            logs[1].action.should.be.eql('submission.update.version');
+            logs[2].action.should.be.eql('entity.update.version');
+            logs[3].action.should.be.eql('submission.create');
           });
 
-        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
+        await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}`)
           .expect(200)
           .then(({ body: person }) => {
             person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
@@ -5057,7 +5348,7 @@ describe('Entities API', () => {
       }));
 
       // Example 8
-      it('should not re-update entity when submission previously updated an entity', testEntityUpdates(async (service, container) => {
+      it('should not re-update entity when submission previously updated that entity', testEntityUpdates(async (service, container) => {
         const asAlice = await service.login('alice');
 
         await asAlice.post('/v1/projects/1/forms/updateEntity/submissions')
@@ -5178,17 +5469,28 @@ describe('Entities API', () => {
         await asAlice.get('/v1/projects/1/forms/updateEntity/submissions/one/audits')
           .expect(200)
           .then(({ body: logs }) => {
-            logs[0].action.should.be.eql('submission.update.version');
-            logs[1].action.should.be.eql('entity.update.version');
-            logs[2].action.should.be.eql('submission.create');
+            logs[0].action.should.be.eql('entity.create');
+            logs[1].action.should.be.eql('submission.update.version');
+            logs[2].action.should.be.eql('entity.update.version');
+            logs[3].action.should.be.eql('submission.create');
           });
 
+        // Original entity is left unchanged
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789abc')
           .expect(200)
           .then(({ body: person }) => {
             person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
             person.currentVersion.label.should.equal('Alicia (85)');
             person.currentVersion.version.should.equal(2);
+          });
+
+        // New entity has been created (same data as other entity but different uuid and only version 1)
+        await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-123456789aaa')
+          .expect(200)
+          .then(({ body: person }) => {
+            person.currentVersion.data.should.eql({ age: '85', first_name: 'Alicia' });
+            person.currentVersion.label.should.equal('Alicia (85)');
+            person.currentVersion.version.should.equal(1);
           });
       }));
     });

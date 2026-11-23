@@ -142,7 +142,7 @@ describe('worker: entity', () => {
       errorEvent.isEmpty().should.be.true();
     }));
 
-    it('should not make an entity when reprocessing an edited submission', testService(async (service, container) => {
+    it('should not make another entity when reprocessing an edited submission', testService(async (service, container) => {
       const asAlice = await service.login('alice');
 
       await asAlice.post('/v1/projects/1/forms?publish=true')
