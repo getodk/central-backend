@@ -1604,6 +1604,67 @@ describe('analytics task queries @slow', function () {
       datasets[0].num_entity_updates_recent.should.be.equal(datasets[0].num_entity_updates_api_recent + datasets[0].num_entity_updates_sub_recent);
     }));
 
+    it('should count bulk entity updates', testService(async (service, container) => {
+      const asAlice = await service.login('alice');
+      const firstUuid = uuid();
+      const secondUuid = uuid();
+
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'people' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets')
+        .send({ name: 'trees' }) // kept empty
+        .expect(200);
+
+      // Create two entities without a bulk operation.
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: firstUuid, label: 'first' })
+        .expect(200);
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({ uuid: secondUuid, label: 'second' })
+        .expect(200);
+
+      // Past bulk update affecting two entities.
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv' },
+          updates: [{ uuid: firstUuid, label: 'first update' }, { uuid: secondUuid, label: 'second update' }]
+        })
+        .expect(200);
+
+      await container.run(sql`UPDATE audits SET "loggedAt" = '1999-1-1T00:00:00Z' WHERE action = 'entity.bulk.upsert'`);
+
+      // Recent bulk update of the same two entities.
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv' },
+          updates: [{ uuid: firstUuid, label: 'first again' }, { uuid: secondUuid, label: 'second again' }]
+        })
+        .expect(200);
+
+      // Recent mixed operation creates one entity and updates one entity again.
+      await asAlice.post('/v1/projects/1/datasets/people/entities')
+        .send({
+          source: { name: 'people.csv' },
+          entities: [{ label: 'new person' }],
+          updates: [{ uuid: firstUuid, label: 'mixed update' }]
+        })
+        .expect(200);
+
+      const peopleId = await container.oneFirst(sql`SELECT id FROM datasets WHERE "projectId" = 1 AND name = 'people'`);
+      const emptyId = await container.oneFirst(sql`SELECT id FROM datasets WHERE "projectId" = 1 AND name = 'trees'`);
+      const datasets = await container.Analytics.getDatasets();
+      const people = datasets.find(dataset => dataset.id === peopleId);
+      const empty = datasets.find(dataset => dataset.id === emptyId);
+
+      people.num_entity_updates_bulk_total.should.equal(5);
+      people.num_entity_updates_bulk_recent.should.equal(3);
+      people.num_entity_create_bulk_total.should.equal(1); // create counts still working correctly
+      people.num_entity_create_bulk_recent.should.equal(1);
+      empty.num_entity_updates_bulk_total.should.equal(0);
+      empty.num_entity_updates_bulk_recent.should.equal(0);
+    }));
+
     it('should calculate entity creates through different sources (submission, API, bulk', testService(async (service, container) => {
       const asAlice = await service.login('alice');
       await createTestForm(service, container, testData.forms.simpleEntity, 1);
@@ -3381,6 +3442,10 @@ describe('analytics task queries @slow', function () {
           total: 2,
           recent: 1
         },
+        num_entity_updates_bulk: {
+          total: 2,
+          recent: 2
+        },
         num_entity_creates_sub: {
           total: 2,
           recent: 2
@@ -3439,6 +3504,10 @@ describe('analytics task queries @slow', function () {
           recent: 0
         },
         num_entity_updates_api: {
+          total: 0,
+          recent: 0
+        },
+        num_entity_updates_bulk: {
           total: 0,
           recent: 0
         },
