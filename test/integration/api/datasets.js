@@ -8909,6 +8909,49 @@ describe('datasets and entities', () => {
         .expect(403);
     }));
 
+    it('should reject if requested by an app-user of a deleted version of the same form', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.consumeDatasets)
+        .expect(200);
+
+      const appUser = await asAlice.post('/v1/projects/1/app-users')
+        .send({ displayName: 'test' })
+        .expect(200)
+        .then(({ body }) => body);
+      await asAlice.post(`/v1/projects/1/forms/consumeDatasets/assignments/app-user/${appUser.id}`)
+        .expect(200);
+
+      await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets.xml`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200);
+      await service.get(`/v1/key/${appUser.token}/projects/1/datasets/people/integrity`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200);
+
+      await asAlice.delete(`/v1/projects/1/forms/consumeDatasets`)
+        .expect(200);
+
+      await service.get(`/v1/key/${appUser.token}/projects/1/datasets/people/integrity`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(403);
+      await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets.xml`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(404);
+
+      await asAlice.post('/v1/projects/1/forms?publish=true&ignoreWarnings=true')
+        .send(testData.forms.consumeDatasets.replace('version="20260303145747"', 'version=2'))
+        .expect(200);
+
+      await service.get(`/v1/key/${appUser.token}/projects/1/forms/consumeDatasets.xml`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(403);
+      await service.get(`/v1/key/${appUser.token}/projects/1/datasets/people/integrity`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(403);
+    }));
+
     it('should happily return given no entities', testService(async (service) => {
       const asAlice = await service.login('alice');
 
