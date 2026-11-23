@@ -8,5 +8,8 @@
   "playwright-alice":   { "email":"alice@example.com",   "email_verified":true },
   "playwright-bob":     { "email":"bob@example.com",     "email_verified":true },
   "playwright-charlie": { "email":"charlie@example.com", "email_verified":false },
-  "playwright-dave":    {}
+  "playwright-dave":    {},
+  "playwright-esme":    { "email":"esme@example.com",    "email_verified":"false" },
+  "playwright-fred":    { "email":"fred@example.com",    "email_verified":1 },
+  "playwright-geri":    { "email":"geri@example.com",    "email_verified":"TRUE" }
 }
