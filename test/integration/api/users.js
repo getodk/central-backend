@@ -411,6 +411,25 @@ describe('api: /users', () => {
                   asAlice.get('/v1/users/current').expect(200)));
             })));
 
+        it('should send an email to db address', testService((service) =>
+          service.post('/v1/users/reset/initiate')
+            .send({ email: 'alİce@getodk.org' })
+            .expect(200)
+            .then(() => {
+              const email = global.inbox.pop();
+              global.inbox.length.should.equal(0);
+              email.to.should.eql([{ address: 'alice@getodk.org', name: '' }]);
+              email.subject.should.equal('ODK Central account password reset');
+              const token = /token=([a-z0-9!$]+)/i.exec(email.html)[1];
+
+              return service.post('/v1/users/reset/verify')
+                .send({ new: 'resetthis!' })
+                .set('Authorization', 'Bearer ' + token)
+                .expect(200)
+                .then(() => service.login({ email: 'alice@getodk.org', password: 'resetthis!' }, (asAlice) =>
+                  asAlice.get('/v1/users/current').expect(200)));
+            })));
+
         it('should delete sessions after password reset', testService(async (service) => {
           const asAlice = await service.login('alice');
           await service.post('/v1/users/reset/initiate')
