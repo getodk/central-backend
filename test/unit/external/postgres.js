@@ -90,8 +90,8 @@ describe('external/postgres', () => {
 
     describe('OK versions', () => {
       [
-        [ 180004, 'correct version' ],
-        [ 180005, 'minor version higher than expected' ],
+        [ 180007, 'correct version' ],
+        [ 180008, 'minor version higher than expected' ],
       ].forEach(([ version, description ]) => {
         it(`should not warn if ${description} (${version})`, async () => {
           await validateDb(mockProcess, mockConsole, mockPostgresWithVersion(version));
@@ -120,7 +120,7 @@ describe('external/postgres', () => {
             'Testing database connection...',
             'Connection OK.',
             'Checking PostgreSQL version...',
-            `WARN: Expected PostgreSQL v18.4 but found ${warning}`,
+            `WARN: Expected PostgreSQL v18.7 but found ${warning}`,
           ]);
 
           should(mockProcess.exitCode).be.undefined();
@@ -139,7 +139,7 @@ describe('external/postgres', () => {
           'Testing database connection...',
           'Connection OK.',
           'Checking PostgreSQL version...',
-          'ERROR: Expected PostgreSQL v18.4 but found OLDER version: v12.34.  Please upgrade to the expected version.',
+          'ERROR: Expected PostgreSQL v18.7 but found OLDER version: v12.34.  Please upgrade to the expected version.',
         ]);
 
         should(mockProcess.exitCode).eql(1);
