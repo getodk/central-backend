@@ -877,7 +877,7 @@ describe('Entities API', () => {
         .expect(200)
         .then(({ body: versions }) => {
           versions[0].should.have.property('source');
-          versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 1, userAgent: null });
+          versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 1, created: 1, updated: 0, userAgent: null });
         });
     }));
 
@@ -3073,12 +3073,12 @@ describe('Entities API', () => {
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
           .then(({ body: versions }) => {
-            versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 3, userAgent: 'central/tests' });
+            versions[0].source.should.eql({ name: 'people.csv', size: 100, count: 3, created: 3, updated: 0, userAgent: 'central/tests' });
           });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/audits')
           .then(({ body: logs }) => {
-            logs[0].details.source.should.eql({ name: 'people.csv', size: 100, count: 3, userAgent: 'central/tests' });
+            logs[0].details.source.should.eql({ name: 'people.csv', size: 100, count: 3, created: 3, updated: 0, userAgent: 'central/tests' });
           });
       }));
 
@@ -3115,7 +3115,7 @@ describe('Entities API', () => {
         const aaaSource = await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111aaa/versions')
           .then(({ body: versions }) => versions[0].source);
 
-        aaaSource.should.eql({ name: 'people.csv', size: 100, count: 2, userAgent: null });
+        aaaSource.should.eql({ name: 'people.csv', size: 100, count: 2, created: 2, updated: 0, userAgent: null });
 
         await asAlice.get('/v1/projects/1/datasets/people/entities/12345678-1234-4123-8234-111111111bbb/versions')
           .then(({ body: versions }) => {
@@ -3169,7 +3169,7 @@ describe('Entities API', () => {
 
             // bulk create event
             logs[1].action.should.equal('entity.bulk.upsert');
-            logs[1].details.source.should.eql({ name: 'people.csv', size: 100, count: 2, userAgent: 'central/tests' });
+            logs[1].details.source.should.eql({ name: 'people.csv', size: 100, count: 2, created: 2, updated: 0, userAgent: 'central/tests' });
 
             logs.length.should.equal(2);
           });
@@ -3682,6 +3682,8 @@ describe('Entities API', () => {
         name: 'people_update.csv',
         size: 100,
         count: 2,
+        created: 1,
+        updated: 1,
         userAgent: null
       });
       createdSource.should.eql(updatedSource);
@@ -3690,13 +3692,22 @@ describe('Entities API', () => {
     it('should create one bulk upsert audit event for creates, updates, and mixed requests', testDataset(async (service) => {
       const asAlice = await service.login('alice');
       const uuids = await createEntities(asAlice, 2, 1, 'people', [], { first_name: 'Alice' }, 'Original label');
+      const createdUuid = '12345678-1234-4123-8234-111111111aaa';
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
           source: { name: 'people_create.csv' },
-          entities: [{ label: 'Created one' }, { label: 'Created two' }]
+          entities: [{ uuid: createdUuid, label: 'Created one' }, { label: 'Created two' }]
         })
         .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${createdUuid}/versions`)
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[0].source.should.eql({
+            name: 'people_create.csv', count: 2, created: 2, updated: 0, userAgent: null
+          });
+        });
 
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
@@ -3705,6 +3716,14 @@ describe('Entities API', () => {
         })
         .expect(200);
 
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}/versions`)
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[1].source.should.eql({
+            name: 'people_update.csv', count: 2, created: 0, updated: 2, userAgent: null
+          });
+        });
+
       await asAlice.post('/v1/projects/1/datasets/people/entities')
         .send({
           source: { name: 'people_mixed.csv' },
@@ -3712,6 +3731,14 @@ describe('Entities API', () => {
           updates: [{ uuid: uuids[0], label: 'Mixed update' }]
         })
         .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/entities/${uuids[0]}/versions`)
+        .expect(200)
+        .then(({ body: versions }) => {
+          versions[2].source.should.eql({
+            name: 'people_mixed.csv', count: 2, created: 1, updated: 1, userAgent: null
+          });
+        });
 
       await asAlice.get('/v1/audits?action=entity.bulk.upsert')
         .expect(200)
