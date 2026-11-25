@@ -4,7 +4,7 @@
     <h:title>ODK Analytics</h:title>
     <model odk:xforms-version="1.0.0">
       <instance>
-        <data id="odk-analytics" version="v2026.3.0_1">
+        <data id="odk-analytics" version="v2026.4.0_1">
           <config>
             <email/>
             <organization/>
@@ -225,6 +225,10 @@
                 <recent/>
                 <total/>
               </num_entity_updates_api>
+              <num_entity_updates_bulk>
+                <recent/>
+                <total/>
+              </num_entity_updates_bulk>
               <num_entities_updated>
                 <recent/>
                 <total/>
@@ -235,6 +239,14 @@
                 <recent/>
                 <total/>
               </num_bulk_create_events>
+              <num_bulk_update_events>
+                <recent/>
+                <total/>
+              </num_bulk_update_events>
+              <num_bulk_create_and_update_events>
+                <recent/>
+                <total/>
+              </num_bulk_create_and_update_events>
               <biggest_bulk_upload/>
               <num_entities_with_geometry>
                 <recent/>
@@ -398,6 +410,10 @@
                 <recent/>
                 <total/>
               </num_entity_updates_api>
+              <num_entity_updates_bulk>
+                <recent/>
+                <total/>
+              </num_entity_updates_bulk>
               <num_entities_updated>
                 <recent/>
                 <total/>
@@ -408,6 +424,14 @@
                 <recent/>
                 <total/>
               </num_bulk_create_events>
+              <num_bulk_update_events>
+                <recent/>
+                <total/>
+              </num_bulk_update_events>
+              <num_bulk_create_and_update_events>
+                <recent/>
+                <total/>
+              </num_bulk_create_and_update_events>
               <biggest_bulk_upload/>
               <num_entities_with_geometry>
                 <recent/>
@@ -556,12 +580,18 @@
       <bind nodeset="/data/projects/datasets/num_entity_updates_sub/total" type="int"/>
       <bind nodeset="/data/projects/datasets/num_entity_updates_api/recent" type="int"/>
       <bind nodeset="/data/projects/datasets/num_entity_updates_api/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_updates_bulk/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_entity_updates_bulk/total" type="int"/>
       <bind nodeset="/data/projects/datasets/num_entities_updated/recent" type="int"/>
       <bind nodeset="/data/projects/datasets/num_entities_updated/total" type="int"/>
       <bind nodeset="/data/projects/datasets/num_entity_conflicts" type="int"/>
       <bind nodeset="/data/projects/datasets/num_entity_conflicts_resolved" type="int"/>
       <bind nodeset="/data/projects/datasets/num_bulk_create_events/recent" type="int"/>
       <bind nodeset="/data/projects/datasets/num_bulk_create_events/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_bulk_update_events/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_bulk_update_events/total" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_bulk_create_and_update_events/recent" type="int"/>
+      <bind nodeset="/data/projects/datasets/num_bulk_create_and_update_events/total" type="int"/>
       <bind nodeset="/data/projects/datasets/biggest_bulk_upload" type="int"/>
       <bind nodeset="/data/projects/datasets/num_entities_with_geometry/recent" type="int"/>
       <bind nodeset="/data/projects/datasets/num_entities_with_geometry/total" type="int"/>
@@ -1100,6 +1130,15 @@
                 <label>Total</label>
               </input>
             </group>
+            <group ref="/data/projects/datasets/num_entity_updates_bulk">
+              <label>Number of updates through Bulk Upload</label>
+              <input ref="/data/projects/datasets/num_entity_updates_bulk/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_entity_updates_bulk/total">
+                <label>Total</label>
+              </input>
+            </group>
             <group ref="/data/projects/datasets/num_entities_updated">
               <label>Number of modified Entities</label>
               <input ref="/data/projects/datasets/num_entities_updated/recent">
@@ -1116,11 +1155,29 @@
               <label>Number of Entities with resolved conflicts</label>
             </input>
             <group ref="/data/projects/datasets/num_bulk_create_events">
-              <label>Number of bulk uploads</label>
+              <label>Number of bulk uploads (create only)</label>
               <input ref="/data/projects/datasets/num_bulk_create_events/recent">
                 <label>in the past 45 days</label>
               </input>
               <input ref="/data/projects/datasets/num_bulk_create_events/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_bulk_update_events">
+              <label>Number of bulk uploads (update only)</label>
+              <input ref="/data/projects/datasets/num_bulk_update_events/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_bulk_update_events/total">
+                <label>Total</label>
+              </input>
+            </group>
+            <group ref="/data/projects/datasets/num_bulk_create_and_update_events">
+              <label>Number of bulk uploads (mixed create and update)</label>
+              <input ref="/data/projects/datasets/num_bulk_create_and_update_events/recent">
+                <label>in the past 45 days</label>
+              </input>
+              <input ref="/data/projects/datasets/num_bulk_create_and_update_events/total">
                 <label>Total</label>
               </input>
             </group>

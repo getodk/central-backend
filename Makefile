@@ -57,7 +57,7 @@ S3_SERVER_ARGS := -p 127.0.0.1:9000:9000 -p 127.0.0.1:9001:9001 \
 		-e MINIO_ROOT_PASSWORD=topSecret123 \
 		-e MINIO_KMS_AUTO_ENCRYPTION=on \
 		-e MINIO_KMS_SECRET_KEY=odk-minio-test-key:QfdUCrn3UQ58W5pqCS5SX4SOlec9sT8yb4rZ4zK24w0= \
-		pgsty/silo:RELEASE.2026-09-03T13-18-01Z server /data --console-address ":9001"
+		pgsty/silo:RELEASE.2026-10-26T00-00-00Z server /data --console-address ":9001"
 .PHONY: fake-s3-server-ephemeral
 fake-s3-server-ephemeral:
 	docker run --rm $(S3_SERVER_ARGS)
@@ -128,7 +128,11 @@ test-unit: node_version
 
 .PHONY: test-coverage
 test-coverage: node_version
-	NODE_CONFIG_ENV=test npx nyc -x "**/migrations/**" --reporter=lcov node_modules/.bin/_mocha --recursive test
+	NODE_CONFIG_ENV=test npx nyc \
+	    -x "**/migrations/**" \
+	    -x 'test/**' \
+	    --reporter=lcov \
+	    node_modules/.bin/mocha --recursive test/unit test/integration
 
 .PHONY: lint
 lint: node_version
