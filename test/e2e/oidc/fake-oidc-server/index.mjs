@@ -45,7 +45,7 @@ const oidc = new Provider(rootUrl, {
   features: {
     resourceIndicators: {
       enabled: true,
-      getResourceServerInfo: () => ({}),
+      getResourceServerInfo: () => ({ scope: '' }),
     },
   },
 
