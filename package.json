@@ -34,7 +34,6 @@
     "nodemailer": "^10.4.0",
     "odata-v4-parser": "~0.1",
     "openid-client": "^6.8.4",
-    "path-to-regexp": "^9.0.0",
     "pg": "^8.22.0",
     "pg-query-stream": "^4.14.0",
     "pm2": "^7.0.4",
