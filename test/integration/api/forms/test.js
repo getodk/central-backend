@@ -234,6 +234,44 @@ describe('api: /test/:key/projects/:id/forms (testing drafts)', () => {
     </mediaFile>
   </manifest>`);
                 }))))));
+
+      it('should return a manifest with integrity URL', testService(async (service) => {
+        const asAlice = await service.login('alice');
+
+        // Create dataset with name 'people'
+        await asAlice.post('/v1/projects/1/datasets')
+          .send({ name: 'people' })
+          .expect(200);
+
+        // Upload form to consume dataset as attachment (named people.csv)
+        // Dataset will get autolinked to attachment because name matches
+        await asAlice.post('/v1/projects/1/forms')
+          .send(testData.forms.consumeDatasets)
+          .set('Content-Type', 'application/xml')
+          .expect(200);
+
+        const draftToken = await asAlice.get('/v1/projects/1/forms/consumeDatasets/draft')
+          .expect(200)
+          .then(({ body }) => body.draftToken);
+
+        await service.get(`/v1/test/${draftToken}/projects/1/forms/consumeDatasets/draft/manifest`)
+          .set('X-OpenRosa-Version', '1.0')
+          .expect(200)
+          .then(({ text }) => {
+            const domain = config.get('default.env.domain');
+            text
+              .replace(/<hash>md5:[0-9a-f]+<\/hash>/, '<hash>md5:[unstable]</hash>')
+              .should.equal(`<?xml version="1.0" encoding="UTF-8"?>
+  <manifest xmlns="http://openrosa.org/xforms/xformsManifest">
+    <mediaFile type="entityList">
+      <filename>people.csv</filename>
+      <hash>md5:[unstable]</hash>
+      <downloadUrl>${domain}/v1/test/${draftToken}/projects/1/forms/consumeDatasets/draft/attachments/people.csv</downloadUrl>
+      <integrityUrl>${domain}/v1/test/${draftToken}/projects/1/datasets/people/integrity</integrityUrl>
+    </mediaFile>
+  </manifest>`);
+          });
+      }));
     });
 
     describe('.xml GET', () => {
