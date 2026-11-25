@@ -8909,6 +8909,38 @@ describe('datasets and entities', () => {
         .expect(403);
     }));
 
+    it('should reject if requested by a user from another project', testEntities(async (service) => {
+      const asAlice = await service.login('alice');
+
+      await asAlice.post('/v1/projects/1/forms?publish=true')
+        .send(testData.forms.consumeDatasets)
+        .expect(200);
+
+      const project2 = await asAlice.post('/v1/projects')
+        .set('Content-Type', 'application/json')
+        .send({ name: 'Additional Project' })
+        .expect(200)
+        .then(({ body }) => body);
+      await asAlice.post(`/v1/projects/${project2.id}/forms?publish=true`)
+        .send(testData.forms.simple.replace('id="simple"', 'id="consumeDatasets"'))
+        .expect(200);
+
+      const asChelsea = await service.login('chelsea');
+      const chelseaId = await asChelsea.get('/v1/users/current')
+        .expect(200)
+        .then(({ body }) => body.id);
+      await asAlice.post(`/v1/projects/${project2.id}/assignments/formfill/${chelseaId}`)
+        .expect(200);
+
+      await asAlice.get(`/v1/projects/1/datasets/people/integrity`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(200);
+
+      await asChelsea.get(`/v1/projects/1/datasets/people/integrity`)
+        .set('X-OpenRosa-Version', '1.0')
+        .expect(403);
+    }));
+
     it('should reject if requested by an app-user of a deleted version of the same form', testEntities(async (service) => {
       const asAlice = await service.login('alice');
 
