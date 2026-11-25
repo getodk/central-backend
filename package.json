@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@sentry/node": "^10.46.0",
-    "archiver": "^7.0.1",
+    "archiver": "^8.0.0",
     "bcrypt": "^6.0.0",
     "buffer-peek-stream": "^1.1.0",
     "cloneable-readable": "^3.0.0",
@@ -61,7 +61,7 @@
     "jsonschema": "^1.5.0",
     "lodash": "^4.17.21",
     "mocha": "^11.7.6",
-    "nock": "^14.0.16",
+    "nock": "^15.0.6",
     "node-mocks-http": "^1.17.2",
     "nodemon": "^3.1.14",
     "nyc": "^18.0.0",

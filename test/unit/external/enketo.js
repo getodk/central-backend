@@ -1,5 +1,5 @@
 const appRoot = require('app-root-path');
-const nock = require('nock');
+const { default: nock } = require('nock');
 const querystring = require('node:querystring');
 const { init } = require(appRoot + '/lib/external/enketo');
 const Problem = require(appRoot + '/lib/util/problem');
@@ -18,12 +18,12 @@ describe('external/enketo', () => {
     it('should send a properly constructed request to Enketo', () => {
       enketoNock
         .post('/enketoPath/api/v2/survey/all')
-        .reply(201, function(uri, requestBody) {
+        .reply(201, async (request) => {
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');
           const expectedQueryString = querystring.stringify({ server_url: openRosaUrl, form_id: xmlFormId });
-          this.req.headers.authorization.should.equal(`Basic ${base64Auth}`);
-          this.req.headers.cookie.should.equal('__Host-session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-          requestBody.should.equal(expectedQueryString);
+          request.headers.get('authorization').should.equal(`Basic ${base64Auth}`);
+          request.headers.get('cookie').should.equal('__Host-session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+          (await request.text()).should.equal(expectedQueryString);
           return JSON.stringify({
             enketo_id: '::stuvwxyz',
             single_once_url: 'http://enke.to/single/::::zyxwvuts',
@@ -86,7 +86,7 @@ describe('external/enketo', () => {
       let run = false;
       enketoNock
         .post('/enketoPath/api/v2/instance')
-        .reply(201, function(uri, requestBody) {
+        .reply(201, async (request) => {
           run = true;
           const base64Auth = Buffer.from('enketoApiKey:').toString('base64');
           const expectedQueryString = querystring.stringify({
@@ -97,9 +97,9 @@ describe('external/enketo', () => {
             'instance_attachments[fileone.txt]': 'http://openRosaHost:5678/v1/projects/1/forms/wellPumps/submissions/logical/versions/instance/attachments/fileone.txt',
             return_url: 'http://openRosaHost:5678/projects/1/forms/wellPumps/submissions/logical'
           });
-          this.req.headers.authorization.should.equal(`Basic ${base64Auth}`);
-          this.req.headers.cookie.should.equal('__Host-session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
-          requestBody.should.equal(expectedQueryString);
+          request.headers.get('authorization').should.equal(`Basic ${base64Auth}`);
+          request.headers.get('cookie').should.equal('__Host-session=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+          (await request.text()).should.equal(expectedQueryString);
           return JSON.stringify({ edit_url: 'http://enke.to/::editedit', code: 201 });
         });
 
