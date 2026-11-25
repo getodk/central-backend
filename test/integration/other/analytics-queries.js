@@ -1652,17 +1652,17 @@ describe('analytics task queries @slow', function () {
         .expect(200);
 
       const peopleId = await container.oneFirst(sql`SELECT id FROM datasets WHERE "projectId" = 1 AND name = 'people'`);
-      const emptyId = await container.oneFirst(sql`SELECT id FROM datasets WHERE "projectId" = 1 AND name = 'trees'`);
+      const treesId = await container.oneFirst(sql`SELECT id FROM datasets WHERE "projectId" = 1 AND name = 'trees'`);
       const datasets = await container.Analytics.getDatasets();
       const people = datasets.find(dataset => dataset.id === peopleId);
-      const empty = datasets.find(dataset => dataset.id === emptyId);
+      const trees= datasets.find(dataset => dataset.id === treesId);
 
       people.num_entity_updates_bulk_total.should.equal(5);
       people.num_entity_updates_bulk_recent.should.equal(3);
       people.num_entity_create_bulk_total.should.equal(1); // create counts still working correctly
       people.num_entity_create_bulk_recent.should.equal(1);
-      empty.num_entity_updates_bulk_total.should.equal(0);
-      empty.num_entity_updates_bulk_recent.should.equal(0);
+      trees.num_entity_updates_bulk_total.should.equal(0);
+      trees.num_entity_updates_bulk_recent.should.equal(0);
     }));
 
     it('should calculate entity creates through different sources (submission, API, bulk', testService(async (service, container) => {
