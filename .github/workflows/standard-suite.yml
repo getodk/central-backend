@@ -7,15 +7,15 @@ on:
 jobs:
   standard-tests:
     timeout-minutes: 20
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
         postgres-version:
-          - "14.23"
-          - "18"
+          - "18.4"
     steps:
     - uses: actions/checkout@v6
+    - uses: ./.github/actions/relegate-azure-mirrors
     - name: Set node version
       uses: actions/setup-node@v6
       with:

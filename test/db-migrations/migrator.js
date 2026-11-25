@@ -48,7 +48,7 @@ function runIncluding(lastMigrationToRun) {
 
   lastRunIdx = finalIdx;
 
-  log(`Ran migrations up-to-and-including ${lastMigrationToRun}:\n`, res);
+  log(`Ran migrations up-to-and-including ${lastMigrationToRun}:\n${res}`);
 }
 
 function getIndex(migrationName) {
