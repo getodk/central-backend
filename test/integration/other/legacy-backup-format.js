@@ -5,7 +5,7 @@ const { promisify } = require('node:util');
 const { readdir, readdirSync, readFile, statSync, unlinkSync, writeFile, createReadStream, createWriteStream } = require('node:fs');
 const { join, basename } = require('node:path');
 const tmp = require('tmp');
-const archiver = require('archiver');
+const { ZipArchive } = require('archiver');
 const { testTask } = require('../setup');
 const { generateManagedKey, generateLocalCipherer } = require(appRoot + '/lib/util/crypto');
 const { decryptFromLegacyArchive } = require(appRoot + '/lib/util/backup-legacy');
@@ -23,7 +23,7 @@ const { PartialPipe } = require(appRoot + '/lib/util/stream');
 // keyinfo.
 const encryptToArchive = (directory, tmpFilePath, keys) => {
   const outStream = createWriteStream(tmpFilePath);
-  const zipStream = archiver('zip', { zlib: { level: -1 } });
+  const zipStream = new ZipArchive({ zlib: { level: -1 } });
 
   // create a cipher-generator for use below.
   const [ localkey, cipherer ] = generateLocalCipherer(keys);
@@ -142,7 +142,7 @@ describe('legacy backups', () => {
       tmp.dir((_, dirpath) =>
         // eslint-disable-next-line no-shadow
         tmp.file((_, filepath) => {
-          const archive = archiver('zip', { zlib: { level: -1 } });
+          const archive = new ZipArchive({ zlib: { level: -1 } });
 
           archive.on('end', () => setTimeout((() =>
             decryptFromLegacyArchive(filepath, dirpath)

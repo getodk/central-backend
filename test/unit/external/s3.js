@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const appRoot = require('app-root-path');
-const nock = require('nock');
+const { default: nock } = require('nock');
 const should = require('should');
 const { init } = require(appRoot + '/lib/external/s3');
 
