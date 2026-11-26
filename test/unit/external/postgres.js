@@ -1,6 +1,6 @@
 const should = require('should');
 
-const { validateDb } = require('../../../lib/external/postgres');
+const { PgVersion, validateDb } = require('../../../lib/external/postgres');
 
 function mockPostgresWithVersion(version) {
   return {
@@ -15,6 +15,29 @@ function mockPostgresWithVersion(version) {
 }
 
 describe('external/postgres', () => {
+  describe('PgVersion', () => {
+    describe('.parseValue()', () => {
+      [
+        [ 12_00_01, 12_00_01 ],
+        [ '12.34',  12_00_34 ], // eslint-disable-line no-multi-spaces
+      ].forEach(([ input, expectedOutput ]) => {
+        it(`should parse ${input} to ${expectedOutput}`, () => {
+          PgVersion.parseValue(input).should.eql(expectedOutput);
+        });
+      });
+
+      [
+        undefined,
+        null,
+        '12.34-rc1',
+      ].forEach(badInput => {
+        it(`should reject input '${badInput}' (type: ${typeof badInput})`, () => {
+          (() => PgVersion.parseValue(badInput)).should.throw(/^Failed to parse version /);
+        });
+      });
+    });
+  });
+
   describe('validateDb()', () => {
     let mockProcess;
     let mockConsole;
