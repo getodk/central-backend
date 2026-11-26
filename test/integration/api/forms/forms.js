@@ -5,12 +5,13 @@ const config = require('config');
 // eslint-disable-next-line import/no-extraneous-dependencies
 const superagent = require('superagent');
 const { DateTime } = require('luxon');
-const { testService } = require('../../setup');
+const { testService, testServiceFullTrx } = require('../../setup');
 const testData = require('../../../data/xml');
 const { publishWithNote } = require('../../../util/scenarios');
 const { Form } = require(appRoot + '/lib/model/frames');
 const { exhaust } = require(appRoot + '/lib/worker/worker');
 const { omit } = require(appRoot + '/lib/util/util');
+const formsQuery = require(appRoot + '/lib/model/query/forms');
 
 describe('api: /projects/:id/forms (create, read, update)', () => {
 
@@ -729,6 +730,44 @@ describe('api: /projects/:id/forms (create, read, update)', () => {
         .send(readFileSync(appRoot + '/test/data/simple.xlsx'))
         .set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         .expect(200);
+    }));
+
+
+    it('should not allow simultaneous publishes of the same draft @slow', testServiceFullTrx(async (service) => {
+      const asAlice = await service.login('alice');
+
+      // Create a new form as a draft
+      await asAlice.post('/v1/projects/1/forms')
+        .send(testData.forms.simple2)
+        .set('Content-Type', 'application/xml')
+        .expect(200);
+
+      // Monkey-patch the getByProjectAndXmlFormId
+      const original = formsQuery.getByProjectAndXmlFormId;
+      formsQuery.getByProjectAndXmlFormId = (...args) => async (queryContainer) => {
+        const result = await original(...args)(queryContainer);
+        await new Promise(resolve => { setTimeout(resolve, 50); });
+        return result;
+      };
+
+      try {
+        // Call the publish API twice simultaneously
+        const [res1, res2] = await Promise.all([
+          asAlice.post('/v1/projects/1/forms/simple2/draft/publish'),
+          asAlice.post('/v1/projects/1/forms/simple2/draft/publish')
+        ]);
+
+        // One should succeed and one should fail with lock error
+        const statuses = [res1.status, res2.status].sort();
+        statuses.should.eql([200, 409]);
+
+        const failedRes = res1.status === 409 ? res1 : res2;
+        failedRes.body.code.should.equal(409.25);
+        failedRes.body.message.should.equal('The resource is being updated by another request.');
+      } finally {
+        // Restore original function
+        formsQuery.getByProjectAndXmlFormId = original;
+      }
     }));
   });
 
